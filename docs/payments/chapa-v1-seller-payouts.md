@@ -1,6 +1,6 @@
 # Linket seller withdrawals — Chapa v1
 
-**Status:** Implementation branch only. Test-mode acceptance and CI are required before live payouts; do not enable provider toggles or merge until signed Chapa callbacks and transfer verification have been confirmed.
+**Status:** Implementation is merged into `main`; live Chapa v1 seller payouts remain disabled with `CHAPA_V1_PAYOUTS_ENABLED=false`. Test-mode acceptance and exact provider callback verification must pass before any live payout activation.
 
 ## Architecture and screens
 
@@ -25,6 +25,23 @@ Newly seeded wallets are disabled by default. Existing enable/disable preference
 3. Run the new migration through the normal deployment process. This does **not** authorize deploying the draft implementation to production.
 4. Open Admin Finance settings; enable individual wallet providers **only after test-mode acceptance**, then approve seller account details. Existing accounts require renewed approval.
 5. Ensure the Chapa merchant's **available ETB balance** covers intended transfers. Chapa explicitly warns repeated insufficient-balance submissions can block access.
+
+## Read-only test-mode audit (no payout side effects)
+
+With a properly configured **Chapa TEST key** in Linket's platform settings, run:
+
+```bash
+php artisan chapa:v1:audit-test
+php artisan chapa:v1:audit-test --reference=EXISTING_TEST_REFERENCE
+```
+
+This command:
+- refuses non-`CHASECK_TEST-` credentials before any request;
+- makes **GET-only** calls for the v1 bank list, ETB available/ledger balance and optionally an existing transfer verification;
+- displays matching wallet slugs/IDs, status and provider verification *field names* without printing recipient account numbers or API credentials;
+- never creates transfers, changes payout states, retries submissions or touches the ledger.
+
+The command does **not** prove the actual Chapa approval callback signature derivation or enable live disbursements. Confirm callback details using genuine Chapa test-mode delivery and separately review redacted provider responses before go-live.
 
 ## Chapa v1 operations
 
