@@ -213,8 +213,20 @@ test.describe('isolated Help Center + support', () => {
 
     await allConversations.click();
     await expect(page).toHaveURL(/\/agent\/conversations/);
-    await expect(page.getByRole('link', {name: 'Admin dashboard'})).toBeVisible();
-    await page.getByRole('link', {name: 'Admin dashboard'}).click();
+    const sharedSidebar = page.locator('[data-slot="sidebar"]');
+    await expect(sharedSidebar.getByRole('link', {name: 'Insights'})).toBeVisible();
+    await expect(sharedSidebar.getByRole('link', {name: 'Support', exact: true}))
+      .toBeVisible();
+    await expect(page.locator('[data-menu-id="agent-dashboard-sidebar"]'))
+      .toHaveCount(0);
+
+    // The standard admin navigation must remain reachable on mobile, too.
+    await page.setViewportSize({width: 390, height: 844});
+    await page.locator('[data-slot="sidebar-toggle-button"]').first().click();
+    const mobileSidebar = page.getByRole('navigation', {name: 'Main navigation'});
+    await expect(mobileSidebar.getByRole('link', {name: 'Support', exact: true}))
+      .toBeVisible();
+    await mobileSidebar.getByRole('link', {name: 'Support', exact: true}).click();
     await expect(page).toHaveURL('/admin/support');
   });
 });
