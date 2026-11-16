@@ -257,32 +257,30 @@ export function Component() {
   const canSubmit = !!bankCode && validNumber && accountHolder.trim().length >= 3 && !busy;
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const methodsResponse = await apiClient.get('/api/items/withdrawal-methods');
-      setEnabledCodes((methodsResponse.data.data ?? []).map((item: {code: string}) => item.code));
-      const response = await apiClient.get('/api/items/payout-methods');
-      setAccounts(response.data.data ?? []);
+      const [methodsResponse, accountsResponse] = await Promise.all([
+        apiClient.get('/api/v1/items/withdrawal-methods'),
+        apiClient.get('/api/v1/items/payout-methods'),
+      ]);
+      const methods = methodsResponse.data?.data;
+      const destinations = accountsResponse.data?.data;
+      if (!Array.isArray(methods) || !Array.isArray(destinations)) {
+        throw new Error('Invalid payout methods response');
+      }
+
+      setEnabledCodes(
+        methods
+          .filter((method: {code: string; is_active?: boolean}) => method.is_active !== false)
+          .map((method: {code: string}) => method.code)
+      );
+      setAccounts(destinations);
       setLoadError(false);
     } catch {
+      // Do not substitute checkout receiving methods or present a blank select as valid.
       setEnabledCodes([]);
-      try {
-        const fallback = await apiClient.get('/api/v1/storefront/payment-methods');
-        const list = (fallback.data.data ?? []).map((item: Record<string, unknown>) => ({
-          id: item.id as number,
-          type: (item.provider as string) ?? 'bank_transfer',
-          bank_code: (item.provider as string) ?? null,
-          account_holder: (item.account_name as string) ?? '',
-          account_number_last_four: (item.account_ending as string) ?? '',
-          masked_account_number: item.account_ending ? `•••• ${item.account_ending}` : '••••',
-          is_active: (item.is_active as boolean) ?? true,
-          is_default: (item.is_default as boolean) ?? true,
-          status: (item.status as string) ?? 'active',
-        }));
-        setAccounts(list);
-        setLoadError(false);
-      } catch {
-        setLoadError(true);
-      }
+      setAccounts([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -334,9 +332,9 @@ export function Component() {
       };
 
       if (editingAccount) {
-        await apiClient.put(`/api/items/payout-methods/${editingAccount.id}`, payload);
+        await apiClient.put(`/api/v1/items/payout-methods/${editingAccount.id}`, payload);
       } else {
-        await apiClient.post('/api/items/payout-methods', payload);
+        await apiClient.post('/api/v1/items/payout-methods', payload);
       }
 
       setOpen(false);
@@ -355,7 +353,7 @@ export function Component() {
     setBusy(true);
     setActionError(false);
     try {
-      await apiClient.post(`/api/items/payout-methods/${account.id}/default`);
+      await apiClient.post(`/api/v1/items/payout-methods/${account.id}/default`);
       await load();
     } catch {
       setActionError(true);
@@ -369,7 +367,7 @@ export function Component() {
     setBusy(true);
     setActionError(false);
     try {
-      await apiClient.delete(`/api/items/payout-methods/${account.id}`);
+      await apiClient.delete(`/api/v1/items/payout-methods/${account.id}`);
       await load();
     } catch {
       setActionError(true);
@@ -388,7 +386,7 @@ export function Component() {
       }
       headerRightContent={
         <Button
-          disabled={loading || busy}
+          disabled={loading || busy || loadError || availableBanks.length === 0}
           onClick={openNewAccount}
           className="gap-1.5"
         >
@@ -401,7 +399,17 @@ export function Component() {
         {loading && <Spinner />}
         {loadError && (
           <p role="alert" className="text-sm text-destructive">
-            <Trans message="Unable to load payout accounts. Try again." />
+            <Trans message="Unable to load payout methods or accounts. Retry to continue." />
+          </p>
+        )}
+        {loadError && (
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+            <Trans message="Retry loading payout methods" />
+          </Button>
+        )}
+        {!loading && !loadError && availableBanks.length === 0 && (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans message="No bank or wallet payout methods are enabled. Contact Linket support." />
           </p>
         )}
         {actionError && (
@@ -411,7 +419,7 @@ export function Component() {
         )}
         {saved && (
           <p role="status" className="text-sm font-medium text-positive">
-            <Trans message="Payout account saved successfully." />
+            <Trans message="Payout account submitted for admin review." />
           </p>
         )}
 
@@ -462,7 +470,7 @@ export function Component() {
                 )}
               </Dialog.Title>
               <Dialog.Description>
-                <Trans message="Your Linket earnings will be disbursed to this verified destination." />
+                <Trans message="Admin approval is required before Linket can send earnings to this destination." />
               </Dialog.Description>
             </Dialog.Header>
 
@@ -474,7 +482,7 @@ export function Component() {
                   </label>
                   <Select.Root
                     value={bankCode}
-                    disabled={busy}
+                    disabled={busy || availableBanks.length === 0}
                     onValueChange={value => {
                       setBankCode(value ?? '');
                       setAccountNumber('');
@@ -493,6 +501,7 @@ export function Component() {
                         </span>
                       )}
                     </Select.Trigger>
+                    {availableBanks.length > 0 && (
                     <Select.Content
                       align="start"
                       className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
@@ -507,7 +516,8 @@ export function Component() {
                           </Select.Item>
                         ))}
                       </Select.Group>
-                    </Select.Content>
+                 
+                    )}   </Select.Content>
                   </Select.Root>
                 </div>
 
