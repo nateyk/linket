@@ -21,7 +21,7 @@ import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
 import {cva, type VariantProps} from 'class-variance-authority';
 import * as React from 'react';
 import {ComponentProps, createContext, ReactElement, use} from 'react';
-import {NavLink} from 'react-router';
+import {Link, NavLink} from 'react-router';
 
 type Collapsible = 'offcanvas' | 'icon' | 'none';
 
@@ -286,11 +286,13 @@ function SidebarMenuFromConfig({
   position,
   end,
   filter,
+  activeOverride,
   defaultIcons,
 }: {
   position: string;
   end?: (item: MenuItemConfig) => boolean;
   filter?: (item: MenuItemConfig) => boolean;
+  activeOverride?: (item: MenuItemConfig) => boolean;
   defaultIcons?: Record<string, ReactElement<any>>;
 }) {
   const menuConfig = useCustomMenu(position);
@@ -301,7 +303,13 @@ function SidebarMenuFromConfig({
         .map(item => (
           <Sidebar.MenuItem key={item.id}>
             <Sidebar.MenuButton
-              render={<NavLink to={item.action} end={end?.(item)} />}
+              render={
+                activeOverride?.(item) ? (
+                  <Link to={item.action} aria-current="page" />
+                ) : (
+                  <NavLink to={item.action} end={end?.(item)} />
+                )
+              }
               icon={<MenuItemIcon item={item} defaultIcons={defaultIcons} />}
             >
               <Trans message={item.label} />
