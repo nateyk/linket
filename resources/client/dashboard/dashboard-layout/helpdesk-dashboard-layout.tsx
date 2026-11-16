@@ -43,6 +43,7 @@ export function Component() {
 
 function AgentDashboardContent({adminShell = false}: {adminShell?: boolean}) {
   const isCompactLayout = useMediaQuery('(max-width: 1024px)');
+  const isConstrainedAdmin = adminShell && useMediaQuery('(max-width: 1536px)');
   const matches = useMatches();
   const customDashboardLayout = matches.some(
     m => (m.handle as {customDashboardLayout?: boolean} | undefined)
@@ -54,6 +55,7 @@ function AgentDashboardContent({adminShell = false}: {adminShell?: boolean}) {
       name="linket-agent"
       leftSidenavCanBeCompact
       compactByDefault
+      initialRightSidenavStatus={isConstrainedAdmin ? 'closed' : undefined}
       height={adminShell ? 'h-full' : 'h-screen'}
       className={
         adminShell
