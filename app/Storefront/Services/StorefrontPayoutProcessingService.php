@@ -82,8 +82,8 @@ final class StorefrontPayoutProcessingService
 
         try {
             $result = $this->provider()->createTransfer($intent->fresh());
-            $providerReference = $result['data'] ?? null;
-            if (!is_string($providerReference)
+            $providerReference = $this->queuedProviderReference($result);
+            if ($providerReference === null
                 || !hash_equals((string) $intent->merchant_reference, $providerReference)) {
                 throw new RuntimeException('Chapa did not return the submitted transfer reference.');
             }
@@ -220,6 +220,20 @@ final class StorefrontPayoutProcessingService
 
             return $intent->fresh();
         });
+    }
+
+    /** @param array<string, mixed> $response */
+    private function queuedProviderReference(array $response): ?string
+    {
+        $data = $response['data'] ?? null;
+        if (is_string($data)) {
+            return $data;
+        }
+        if (is_array($data) && is_string($data['reference'] ?? null)) {
+            return $data['reference'];
+        }
+
+        return null;
     }
 
     private function provider(): ChapaPayoutService
