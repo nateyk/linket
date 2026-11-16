@@ -173,9 +173,20 @@ final class ChapaV2Client
             return 'unauthorized';
         }
 
-        $this->jsonOrFail($response);
+        if (!$response->successful()) {
+            throw new RuntimeException('Chapa request failed.');
+        }
 
-        return 'accepted';
+        $payload = $response->json();
+        if (is_array($payload) && is_array($payload['data'] ?? null)) {
+            return 'accepted';
+        }
+
+        if (is_array($payload) && ($payload['status'] ?? null) === 'success') {
+            return 'accepted';
+        }
+
+        throw new RuntimeException('Chapa request failed.');
     }
 
     public static function centsFromMajor(string $amount): int

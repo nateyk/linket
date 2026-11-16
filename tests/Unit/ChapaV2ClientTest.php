@@ -119,7 +119,10 @@ class ChapaV2ClientTest extends TestCase
     {
         Http::fake([
             'https://api.chapa.co/v1/banks' => Http::sequence()
-                ->push(['status' => 'success', 'data' => [['id' => 855, 'slug' => 'telebirr']]])
+                ->push([
+                    'message' => 'Banks retrieved',
+                    'data' => [['id' => 855, 'slug' => 'telebirr']],
+                ])
                 ->push(['status' => 'error', 'message' => 'Invalid API key'], 401),
         ]);
 

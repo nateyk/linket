@@ -306,7 +306,7 @@ class DirectBillingContractTest extends TestCase
     public function testAdminCanStoreThePlatformChapaKeysForProUpgrades(): void
     {
         Http::fake([
-            'https://api.chapa.co/v1/banks' => Http::response(['status' => 'success', 'data' => []]),
+            'https://api.chapa.co/v1/banks' => Http::response(['message' => 'Banks retrieved', 'data' => []]),
             'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
                 'data' => ['checkout_url' => 'https://checkout.chapa.global/CHADMIN1'],
@@ -360,7 +360,7 @@ class DirectBillingContractTest extends TestCase
     public function testClassicChapaV1KeysAreStoredWhenChapaAcceptsThem(): void
     {
         Http::fake([
-            'https://api.chapa.co/v1/banks' => Http::response(['status' => 'success', 'data' => []]),
+            'https://api.chapa.co/v1/banks' => Http::response(['message' => 'Banks retrieved', 'data' => []]),
         ]);
         $admin = User::factory()->create();
         foreach (['admin.access', 'settings.update'] as $permission) {

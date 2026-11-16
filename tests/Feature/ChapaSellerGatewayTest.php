@@ -38,7 +38,7 @@ class ChapaSellerGatewayTest extends TestCase
         $this->activatePro($creator);
         Http::fake([
             'https://api.chapa.co/v1/banks' => Http::response([
-                'status' => 'success',
+                'message' => 'Banks retrieved',
                 'data' => [['slug' => 'telebirr']],
             ]),
             'https://api.chapa.co/v1/transaction/initialize' => Http::response([
