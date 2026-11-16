@@ -72,7 +72,7 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
 
         $this->assertSame(0, Artisan::call('chapa:v1:audit-test'));
         $this->assertStringContainsString('telebirr', Artisan::output());
-        $this->assertStringContainsString('100.00', Artisan::output());
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.chapa.co/v1/balances');
         Http::assertSentCount(2);
         Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
     }
