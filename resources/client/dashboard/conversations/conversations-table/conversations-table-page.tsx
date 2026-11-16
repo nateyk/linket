@@ -10,6 +10,7 @@ import {useNavigateToConversationPage} from '@app/dashboard/conversations/utils/
 import {helpdeskQueries} from '@app/dashboard/helpdesk-queries';
 import {InboxViewsPanel} from '@app/dashboard/inbox/inbox-views-panel';
 import {InboxViewsSidebar} from '@app/dashboard/inbox/inbox-views-sidebar';
+import {useAuth} from '@common/auth/use-auth';
 import {GlobalLoadingProgress} from '@common/core/global-loading-progress';
 import {DataTablePaginationFooter} from '@common/datatable/data-table-pagination-footer';
 import {DatatablePageHeaderBar} from '@common/datatable/page/datatable-page-with-header-layout';
@@ -122,6 +123,7 @@ function ConversationsDesktopView() {
 }
 
 function ConversationsMobileView() {
+  const {hasPermission} = useAuth();
   const {query, items, isEmpty, mergeIntoSearchParams} =
     useActiveViewConversations();
 
@@ -130,7 +132,7 @@ function ConversationsMobileView() {
       <GlobalLoadingProgress query={query} />
       <DatatablePageHeaderBar
         title={<ViewName />}
-        showSidebarToggleButton
+        showSidebarToggleButton={!hasPermission('admin.access')}
         padding="p-3"
         rightContent={<ViewsTriggerButton />}
       />
