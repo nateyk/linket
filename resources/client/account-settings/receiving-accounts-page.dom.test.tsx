@@ -94,7 +94,7 @@ api.get.mockImplementation((url: string) => {
     return Promise.resolve({data: {data: [
       {code: 'bank_transfer'}, {code: 'telebirr'}, {code: 'mpesa'},
       {code: 'yaya'}, {code: 'cbebirr'},
-    ]}}});
+    ]}});
   }
   return Promise.resolve({data: {data: []}});
 });
