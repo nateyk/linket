@@ -46,6 +46,21 @@ type WithdrawalMethod = {
   is_active: boolean;
 };
 
+const subscriptionGatewayUrl = '/api/v1/admin/billing/subscription-gateway';
+const financialSummaryUrl = '/api/v1/admin/marketplace/financial-summary';
+const reconcileUrl = '/api/v1/admin/marketplace/reconcile';
+
+function canSaveChapaCredentials(publicKey: string, secretKey: string, webhookSecret: string): boolean {
+  const hasPublic = publicKey.trim() !== '';
+  const hasSecret = secretKey.trim() !== '';
+  const hasWebhook = webhookSecret.trim() !== '';
+  if (hasPublic !== hasSecret) {
+    return false;
+  }
+
+  return (hasPublic && hasSecret) || hasWebhook;
+}
+
 type ReconciliationData = {
   ledger_audit: {
     is_balanced: boolean;
@@ -149,7 +164,7 @@ function ChapaPlatformGatewayTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/api/admin/billing/subscription-gateway');
+      const res = await apiClient.get(subscriptionGatewayUrl);
       setConfig(res.data.data);
     } catch {
       setStatusMsg({type: 'error', text: 'Unable to load Chapa gateway configuration.'});
@@ -164,15 +179,20 @@ function ChapaPlatformGatewayTab() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSaveChapaCredentials(publicKey, secretKey, webhookSecret)) {
+      return;
+    }
     setSaving(true);
     setStatusMsg(undefined);
     try {
       const payload: Record<string, string> = {gateway: 'chapa'};
-      if (publicKey.trim()) payload.public_key = publicKey.trim();
-      if (secretKey.trim()) payload.secret_key = secretKey.trim();
+      if (publicKey.trim() && secretKey.trim()) {
+        payload.public_key = publicKey.trim();
+        payload.secret_key = secretKey.trim();
+      }
       if (webhookSecret.trim()) payload.webhook_secret = webhookSecret.trim();
 
-      const res = await apiClient.put('/api/admin/billing/subscription-gateway', payload);
+      const res = await apiClient.put(subscriptionGatewayUrl, payload);
       setConfig(res.data.data);
       setPublicKey('');
       setSecretKey('');
@@ -224,6 +244,8 @@ function ChapaPlatformGatewayTab() {
               <Input
                 value={publicKey}
                 onChange={e => setPublicKey(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
                 placeholder={config?.public_key_masked ?? 'CHAPUBK_TEST-...'}
               />
               <Field.Description><Trans message="Your Chapa API v2 public key." /></Field.Description>
@@ -235,6 +257,8 @@ function ChapaPlatformGatewayTab() {
                 type="password"
                 value={secretKey}
                 onChange={e => setSecretKey(e.target.value)}
+                autoComplete="new-password"
+                spellCheck={false}
                 placeholder={config?.secret_configured ? '••••••••••••••••' : 'CHASECK_TEST-...'}
               />
               <Field.Description><Trans message="Validated directly against Chapa before saving." /></Field.Description>
@@ -247,6 +271,8 @@ function ChapaPlatformGatewayTab() {
               type="password"
               value={webhookSecret}
               onChange={e => setWebhookSecret(e.target.value)}
+              autoComplete="new-password"
+              spellCheck={false}
               placeholder={config?.webhook_secret_configured ? '••••••••••••••••' : 'Enter webhook secret...'}
             />
             <Field.Description><Trans message="Used to verify HMAC-SHA256 signatures on inbound Chapa webhooks." /></Field.Description>
@@ -264,7 +290,13 @@ function ChapaPlatformGatewayTab() {
             <Field.Description><Trans message="Register this endpoint in your Chapa Merchant Dashboard." /></Field.Description>
           </Field.Root>
 
-          <Button type="submit" color="primary" disabled={saving || (!publicKey.trim() && !secretKey.trim() && !webhookSecret.trim())}>
+          {(publicKey.trim() !== '') !== (secretKey.trim() !== '') && (
+            <p role="alert" className="text-sm text-destructive">
+              <Trans message="Enter the public key and the secret key together." />
+            </p>
+          )}
+
+          <Button type="submit" color="primary" disabled={saving || !canSaveChapaCredentials(publicKey, secretKey, webhookSecret)}>
             {saving ? <Trans message="Saving & validating..." /> : <Trans message="Save Chapa credentials" />}
           </Button>
         </form>
@@ -403,7 +435,7 @@ function ReconciliationAuditTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/api/admin/marketplace/financial-summary');
+      const res = await apiClient.get(financialSummaryUrl);
       setData(res.data.data);
     } catch {
       setError('Unable to load reconciliation summary.');
@@ -421,7 +453,7 @@ function ReconciliationAuditTab() {
     setReport(undefined);
     setError(undefined);
     try {
-      const res = await apiClient.post('/api/admin/marketplace/reconcile', {dry_run: dryRun});
+      const res = await apiClient.post(reconcileUrl, {dry_run: dryRun});
       const d = res.data.data;
       setReport(
         `Reconciliation complete (${d.dry_run ? 'Dry Run' : 'Applied'}): ${d.matured_orders_count} matured orders, ${d.reconciled_payments_count} payments, ${d.reconciled_payouts_count} payouts processed.`
