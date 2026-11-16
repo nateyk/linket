@@ -26,7 +26,12 @@ class ChapaPayoutService
     {
         $aliases = [
             'cbe' => 'cbe_bank',
-            'coop' => 'ebirr',
+            'boa' => 'boa_bank',
+            'dashen' => 'dashen_bank',
+            'awash' => 'awash_bank',
+            'hibret' => 'hibret_bank',
+            'wegagen' => 'wegagen_bank',
+            'zemen' => 'zemen_bank',
             'yaya_wallet' => 'yaya',
             'm-pesa' => 'mpesa',
             'cbe_birr' => 'cbebirr',
@@ -59,6 +64,11 @@ class ChapaPayoutService
             throw new RuntimeException('The payout method is disabled or is not supported by Chapa v1.');
         }
 
+        if (!$payout->payoutMethod?->is_active
+            || $payout->payoutMethod->status !== 'active'
+            || !$payout->payoutMethod->approved_at) {
+            throw new RuntimeException('Seller receiving account approval was revoked.');
+        }
         $code = strtolower((string) ($payout->bank_code_snapshot ?: $method->code));
         if ($code === 'bank_transfer' || blank($payout->account_holder_snapshot)) {
             throw new RuntimeException('Payout recipient details require admin review before dispatch.');
@@ -66,6 +76,9 @@ class ChapaPayoutService
 
         $bank = $this->resolveBank($code);
         $accountNumber = preg_replace('/[\s+\-]/', '', (string) $intent->destination_snapshot);
+        if (in_array($code, self::WALLET_CODES, true)) {
+            $accountNumber = $this->normalizeMobile($accountNumber);
+        }
         if (!is_string($accountNumber) || !preg_match('/^\d{8,20}$/', $accountNumber)) {
             throw new RuntimeException('Invalid payout destination; update and reapprove the receiving account.');
         }
@@ -96,6 +109,16 @@ class ChapaPayoutService
         );
     }
 
+    private function normalizeMobile(string $number): string
+    {
+        // Chapa may render Ethiopian wallet numbers as 09xxxxxxxx or 2519xxxxxxxx.
+        if (preg_match('/^0([79]\d{8})$/', $number, $matches)) {
+            return '251'.$matches[1];
+        }
+
+        return $number;
+    }
+
     /** Check callback recipient details against the immutable approved payout snapshot. */
     public function approvalMatches(StorefrontPayoutIntent $intent, array $payload): bool
     {
@@ -106,6 +129,10 @@ class ChapaPayoutService
         $actualBank = strtolower(trim((string) ($payload['bank'] ?? '')));
         $actualNumber = preg_replace('/[\s+\-]/', '', (string) ($payload['account_number'] ?? ''));
         $expectedNumber = preg_replace('/[\s+\-]/', '', (string) $intent->destination_snapshot);
+        if (in_array($code, self::WALLET_CODES, true)) {
+            $actualNumber = $this->normalizeMobile($actualNumber);
+            $expectedNumber = $this->normalizeMobile($expectedNumber);
+        }
         $amount = (string) ($payload['amount'] ?? '');
 
         return $payout !== null
