@@ -262,6 +262,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->createAuthSchema();
         $this->createPayoutDestinationSchema();
         $this->createPayoutRequestSchema();
+        (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
     }
 
     private function createAuthSchema(): void
@@ -395,7 +396,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'permissionables', 'permissions', 'roles', 'user_sessions',
             'workspace_user', 'workspaces', 'users',
             'digital_product_payout_request_activities',
-            'digital_product_earnings_ledger', 'payout_requests',
+            'digital_product_earnings_ledger', 'storefront_payout_intents', 'payout_requests',
             'digital_product_payout_methods', 'digital_product_withdrawal_methods',
         ];
         foreach ($tables as $table) {
