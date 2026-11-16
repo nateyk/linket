@@ -95,7 +95,7 @@ test('caps legacy withdraw-all to the approved Chapa method maximum', async () =
       });
     }
     if (url.includes('/payout-requests')) {
-      return Promise.resolve({data: {data: [], meta: {total: 0}}});
+      return Promise.resolve({data: {data: [], links: [], meta: {current_page: 1, last_page: 1, per_page: 10, total: 0}}});
     }
     if (url === '/api/v1/items/payout-method') {
       return Promise.resolve({data: {data: {
