@@ -258,6 +258,8 @@ class PayoutSystemTest extends TestCase
         }
 
         $this->assertSame('processing', $payout->fresh()->status);
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId, false);
+        $this->assertSame(10000, $summary['reserved_payout_cents']);
         $this->assertDatabaseMissing('storefront_payout_intents', ['payout_request_id' => $payout->id]);
         Http::assertNothingSent();
     }
