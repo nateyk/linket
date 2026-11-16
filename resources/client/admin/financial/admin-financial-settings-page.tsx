@@ -373,7 +373,9 @@ function PayoutMethodsTab() {
       <Card.Root>
         <Card.Header>
           <Card.Title><Trans message="Withdrawal providers" /></Card.Title>
-          <Card.Description><Trans message="Enable only providers accepted in your Chapa v1 account. Disabled methods cannot receive new withdrawals." /></Card.Description>
+          <Card.Description>
+            <Trans message="Enabled Chapa v1 ETB banks and wallets appear in seller payout account setup. PayPal and manual payouts are legacy methods and are not available as Chapa receiving accounts." />
+          </Card.Description>
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <p className="text-xs text-muted-foreground">
               <Trans message="Configure Chapa Transfer Approval URL in your merchant dashboard:" /> <code>/api/v1/chapa/transfer-approval</code>
