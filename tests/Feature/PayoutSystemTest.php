@@ -212,7 +212,7 @@ class PayoutSystemTest extends TestCase
      * Full admin state-machine flow: requested -> processing -> paid releases
      * the reservation, marks paid, and records a debit statement-like entry.
      */
-    public function testAdminCanProcessAndPayOutRequest(): void
+    public function testAdminCannotMarkChapaWithdrawalPaidWithoutVerification(): void
     {
         [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
 
@@ -221,15 +221,19 @@ class PayoutSystemTest extends TestCase
         $this->assertNotNull($updated->processing_at);
         $this->assertStringContainsString('Looks good', $updated->activities->last()->note);
 
-        $paid = app(PayoutRequestService::class)->transition($updated, 'mark_paid', $admin->id, ['transfer_reference' => 'CHAPA-1234']);
-        $this->assertSame('paid', $paid->status);
-        $this->assertNotNull($paid->paid_at);
-        $this->assertSame('CHAPA-1234', $paid->transfer_reference);
+        try {
+            app(PayoutRequestService::class)->transition($updated, 'mark_paid', $admin->id, [
+                'transfer_reference' => 'UNVERIFIED',
+            ]);
+            $this->fail('Manual status update must not settle a Chapa withdrawal.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('status', $e->errors());
+        }
 
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertNull($payout->fresh()->paid_at);
         $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
-        $this->assertSame(0, $summary['reserved_payout_cents']);
-        $this->assertSame(0, $summary['pending_payout_cents']);
-        $this->assertSame($paid->amount_cents, $summary['paid_out_cents']);
+        $this->assertSame($payout->amount_cents, $summary['reserved_payout_cents']);
     }
 
     /**
@@ -272,10 +276,10 @@ class PayoutSystemTest extends TestCase
     {
         [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
         $processing = app(PayoutRequestService::class)->transition($payout, 'start_processing', $admin->id, ['note' => 'ok']);
-        $paid = app(PayoutRequestService::class)->transition($processing, 'mark_paid', $admin->id, ['transfer_reference' => 'ref']);
+        $processing->update(['status' => 'paid', 'paid_at' => now()]);
 
         $this->expectException(ValidationException::class);
-        app(PayoutRequestService::class)->transition($paid, 'reject', $admin->id, ['reason' => 'no']);
+        app(PayoutRequestService::class)->transition($processing->fresh(), 'reject', $admin->id, ['reason' => 'no']);
     }
 
     /**
@@ -495,9 +499,9 @@ class PayoutSystemTest extends TestCase
 
         $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
-        ])->assertOk()->assertJsonPath('data.status', 'paid');
+        ])->assertStatus(422);
 
-        $this->assertStringStartsWith('CHAPA-TX-', $response->json('data.transfer_reference'));
+        $this->assertSame('processing', $payout->fresh()->status);
     }
 
     /**
@@ -530,9 +534,9 @@ class PayoutSystemTest extends TestCase
 
         $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
-        ])->assertOk()->assertJsonPath('data.status', 'paid');
+        ])->assertStatus(422);
 
-        $this->assertStringStartsWith('CHAPA-TX-', $response->json('data.transfer_reference'));
+        $this->assertSame('processing', $payout->fresh()->status);
     }
 
     public function testChapaPayoutLogsNeverContainSensitiveGatewayData(): void
@@ -640,9 +644,9 @@ class PayoutSystemTest extends TestCase
 
         $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
-        ])->assertOk()->assertJsonPath('data.status', 'paid');
+        ])->assertStatus(422);
 
-        $this->assertStringStartsWith('MANUAL-', $response->json('data.transfer_reference'));
+        $this->assertSame('processing', $payout->fresh()->status);
     }
 
     /**
@@ -792,6 +796,11 @@ class PayoutSystemTest extends TestCase
             'creator_id' => $creator->id,
             'withdrawal_method_id' => $withdrawalMethod->id,
             'type' => $withdrawalMethod->code,
+            'bank_code' => 'cbe',
+            'is_active' => true,
+            'status' => 'active',
+            'approved_at' => now(),
+            'approved_by' => $creator->id,
             'account_holder' => 'Test Creator',
             'destination' => '1234567890',
             'display_label' => 'Bank transfer ending in 7890',
