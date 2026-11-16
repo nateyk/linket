@@ -52,12 +52,6 @@ final class AdminSubscriptionGatewayController extends Controller
                     'secret_key' => __('Enter the public key and the secret key.'),
                 ]);
             }
-            if (ChapaV2Client::isLegacyKey($publicKey) || ChapaV2Client::isLegacyKey($secretKey)) {
-                throw ValidationException::withMessages([
-                    'public_key' => __('These are Chapa v1 keys. In the Chapa dashboard, open Settings, then API Keys, and copy the v2 public and private keys. Test keys start with CHAPA_TEST_ and live keys start with CHAPA_LIVE_.'),
-                    'secret_key' => __('These are Chapa v1 keys. In the Chapa dashboard, open Settings, then API Keys, and copy the v2 public and private keys. Test keys start with CHAPA_TEST_ and live keys start with CHAPA_LIVE_.'),
-                ]);
-            }
             try {
                 $status = app(ChapaV2Client::class)->secretStatus($secretKey);
             } catch (ConnectionException|RuntimeException $exception) {

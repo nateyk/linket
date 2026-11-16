@@ -12,6 +12,8 @@ use Throwable;
 
 final class ChapaV2Client
 {
+    private const V1_BASE_URL = 'https://api.chapa.co/v1';
+
     public function __construct(
         private string $baseUrl = 'https://api.chapa.global/v2',
     ) {}
@@ -40,19 +42,22 @@ final class ChapaV2Client
             throw new RuntimeException('Chapa merchant reference exceeds 20 characters.');
         }
 
+        $customer = $payment['customer'] ?? [];
         $body = array_filter([
-            'amount' => $payment['amount_cents'],
+            'amount' => self::majorFromCents($payment['amount_cents']),
             'currency' => $payment['currency'],
-            'merchant_reference' => $payment['merchant_reference'],
+            'email' => $customer['email'] ?? null,
+            'first_name' => $customer['first_name'] ?? null,
+            'last_name' => $customer['last_name'] ?? null,
+            'phone_number' => $customer['phone_number'] ?? null,
+            'tx_ref' => $payment['merchant_reference'],
             'callback_url' => $payment['callback_url'] ?? null,
             'return_url' => $payment['return_url'] ?? null,
-            'customer' => $payment['customer'] ?? null,
             'customization' => $payment['customization'] ?? null,
-            'meta' => $payment['meta'] ?? null,
         ], fn (mixed $value): bool => $value !== null);
 
-        $response = $this->send($secret, $payment['idempotency_key'])
-            ->post($this->baseUrl.'/payments/hosted', $body);
+        $response = $this->send($secret)
+            ->post(self::V1_BASE_URL.'/transaction/initialize', $body);
 
         $payload = $this->jsonOrFail($response);
         $checkoutUrl = data_get($payload, 'data.checkout_url');
@@ -129,11 +134,25 @@ final class ChapaV2Client
     public function verifyPayment(string $secret, string $reference): array
     {
         $response = $this->send($secret)
-            ->get($this->baseUrl.'/payments/'.rawurlencode($reference).'/verify');
+            ->get(self::V1_BASE_URL.'/transaction/verify/'.rawurlencode($reference));
 
         $payload = $this->jsonOrFail($response);
+        $data = (array) ($payload['data'] ?? []);
+        if (array_key_exists('amount', $data)) {
+            $data['amount'] = $this->majorAmount($data['amount']);
+        }
+        if (!isset($data['merchant_reference']) && is_string($data['tx_ref'] ?? null)) {
+            $data['merchant_reference'] = $data['tx_ref'];
+        }
+        if (!isset($data['chapa_reference']) && is_string($data['reference'] ?? null)) {
+            $data['chapa_reference'] = $data['reference'];
+        }
+        $customer = (array) ($data['customer'] ?? []);
+        if (!isset($data['email']) && is_string($customer['email'] ?? null)) {
+            $data['email'] = $customer['email'];
+        }
 
-        return (array) ($payload['data'] ?? []);
+        return $data;
     }
 
     public function secretAuthenticates(string $secret): bool
@@ -141,15 +160,10 @@ final class ChapaV2Client
         return $this->secretStatus($secret) === 'accepted';
     }
 
-    public static function isLegacyKey(string $key): bool
-    {
-        return preg_match('/^(?:CHAPUBK|CHASECK)(?:_TEST)?-/i', $key) === 1;
-    }
-
     /** @return 'accepted'|'unauthorized'|'environment_mismatch' */
     public function secretStatus(string $secret): string
     {
-        $response = $this->request($secret)->get($this->baseUrl.'/payments/methods');
+        $response = $this->request($secret)->get(self::V1_BASE_URL.'/banks');
 
         if ($response->status() === 403 && $response->json('error.code') === 'INVALID_VALUE') {
             return 'environment_mismatch';
@@ -228,6 +242,23 @@ final class ChapaV2Client
         }
 
         return $payload;
+    }
+
+    private function majorAmount(mixed $amount): string
+    {
+        if (is_string($amount) && str_contains($amount, '.')) {
+            return self::majorFromCents(self::centsFromMajor($amount));
+        }
+
+        if (is_int($amount) || (is_string($amount) && ctype_digit($amount))) {
+            return self::majorFromCents(((int) $amount) * 100);
+        }
+
+        if (is_float($amount)) {
+            return self::majorFromCents(self::centsFromMajor(number_format($amount, 2, '.', '')));
+        }
+
+        return (string) $amount;
     }
 
     private function referenceFromCheckoutUrl(string $checkoutUrl): ?string

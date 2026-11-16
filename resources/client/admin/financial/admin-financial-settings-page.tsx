@@ -50,12 +50,6 @@ const subscriptionGatewayUrl = '/api/v1/admin/billing/subscription-gateway';
 const financialSummaryUrl = '/api/v1/admin/marketplace/financial-summary';
 const reconcileUrl = '/api/v1/admin/marketplace/reconcile';
 
-const legacyChapaKeyMessage = 'These are Chapa v1 keys. In the Chapa dashboard, open Settings, then API Keys, and copy the v2 public and private keys. Test keys start with CHAPA_TEST_ and live keys start with CHAPA_LIVE_.';
-
-function isLegacyChapaKey(value: string): boolean {
-  return /^(?:CHAPUBK|CHASECK)(?:_TEST)?-/i.test(value.trim());
-}
-
 function canSaveChapaCredentials(publicKey: string, secretKey: string, webhookSecret: string): boolean {
   const hasPublic = publicKey.trim() !== '';
   const hasSecret = secretKey.trim() !== '';
@@ -114,7 +108,7 @@ export function Component() {
               <Tabs.List variant="line" className="w-max justify-start">
                 <Tabs.Tab value="chapa" className="flex-none">
                   <CreditCardIcon className="size-4" />
-                  <Trans message="Platform Chapa v2" />
+                  <Trans message="Platform Chapa" />
                 </Tabs.Tab>
                 <Tabs.Tab value="currency" className="flex-none">
                   <CoinsIcon className="size-4" />
@@ -188,10 +182,6 @@ function ChapaPlatformGatewayTab() {
     if (!canSaveChapaCredentials(publicKey, secretKey, webhookSecret)) {
       return;
     }
-    if (isLegacyChapaKey(publicKey) || isLegacyChapaKey(secretKey)) {
-      setStatusMsg({type: 'error', text: legacyChapaKeyMessage});
-      return;
-    }
     setSaving(true);
     setStatusMsg(undefined);
     try {
@@ -256,9 +246,9 @@ function ChapaPlatformGatewayTab() {
                 onChange={e => setPublicKey(e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
-                placeholder={config?.public_key_masked ?? 'CHAPA_TEST_...'}
+                placeholder={config?.public_key_masked ?? 'CHAPUBK_TEST-...'}
               />
-              <Field.Description><Trans message="From Chapa Settings, then API Keys. Test keys start with CHAPA_TEST_ and live keys start with CHAPA_LIVE_." /></Field.Description>
+              <Field.Description><Trans message="Your Chapa public key. Test keys start with CHAPUBK_TEST- and live keys start with CHAPUBK-." /></Field.Description>
             </Field.Root>
 
             <Field.Root>
@@ -269,9 +259,9 @@ function ChapaPlatformGatewayTab() {
                 onChange={e => setSecretKey(e.target.value)}
                 autoComplete="new-password"
                 spellCheck={false}
-                placeholder={config?.secret_configured ? '••••••••••••••••' : 'CHAPA_TEST_...'}
+                placeholder={config?.secret_configured ? '••••••••••••••••' : 'CHASECK_TEST-...'}
               />
-              <Field.Description><Trans message="Private key from that same page. Chapa checks it before saving." /></Field.Description>
+              <Field.Description><Trans message="Secret key from the same page. Chapa checks it before saving." /></Field.Description>
             </Field.Root>
           </div>
 

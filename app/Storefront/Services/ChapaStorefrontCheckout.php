@@ -92,11 +92,11 @@ final class ChapaStorefrontCheckout
 
         $attempt->update([
             'status' => StorefrontPaymentAttempt::STATUS_PENDING,
-            'chapa_reference' => $session->chapaReference,
-            'checkout_url' => $session->checkoutUrl,
+            'chapa_reference' => $session['chapa_reference'],
+            'checkout_url' => $session['checkout_url'],
         ]);
 
-        $order->setAttribute('chapaCheckoutUrl', $session->checkoutUrl);
+        $order->setAttribute('chapaCheckoutUrl', $session['checkout_url']);
 
         return $order;
     }
@@ -218,20 +218,24 @@ final class ChapaStorefrontCheckout
     }
 
     /** @param array<string, mixed> $buyer */
+    /** @param array<string, mixed> $buyer
+     * @return array{checkout_url: string, chapa_reference: string|null}
+     */
     private function initiatePlatformSession(
         DigitalProduct $product,
         array $buyer,
         string $reference,
         string $idempotencyKey,
-    ): \Nateyk\Chapa\Dto\HostedCheckoutSession {
+    ): array {
         $customer = $this->formatCustomer($buyer);
         $returnUrl = url('storefront/chapa/return/'.$reference);
         $callbackUrl = url('billing/chapa/webhook');
 
-        return $this->manager()->platformClient()->payments()->hostedTyped([
-            'amount' => (int) $product->price_cents,
+        return app(ChapaV2Client::class)->createHostedPayment((string) $this->manager()->platformSecret(), [
+            'amount_cents' => (int) $product->price_cents,
             'currency' => 'ETB',
             'merchant_reference' => $reference,
+            'idempotency_key' => $idempotencyKey,
             'callback_url' => $callbackUrl,
             'return_url' => $returnUrl,
             'customer' => $customer === [] ? null : $customer,
@@ -239,7 +243,7 @@ final class ChapaStorefrontCheckout
                 'title' => (string) config('app.name'),
                 'description' => Str::limit((string) $product->title, 150),
             ],
-        ], $idempotencyKey);
+        ]);
     }
 
     /**

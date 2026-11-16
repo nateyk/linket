@@ -14,10 +14,8 @@ use App\Storefront\Services\ChapaStorefrontCheckout;
 use App\Storefront\Services\CreatorVerificationAllowance;
 use App\Storefront\Services\StorefrontPaymentReferenceGenerator;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
-use Nateyk\Chapa\ChapaClient;
-use Nateyk\Chapa\Http\RawResponse;
-use Nateyk\Chapa\Http\Transport;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
@@ -77,32 +75,18 @@ class ChapaStorefrontCheckoutTest extends TestCase
         parent::tearDown();
     }
 
-    private function mockChapaClient(): ChapaClient
-    {
-        $transport = $this->createMock(Transport::class);
-        $transport->method('send')->willReturn(
-            new RawResponse(200, (string) json_encode([
-                'status' => 'success',
-                'data' => [
-                    'checkout_url' => 'https://checkout.chapa.global/test1234',
-                    'chapa_reference' => 'CHP-TEST-REF-99',
-                ],
-            ]))
-        );
-
-        return new ChapaClient(
-            privateKey: 'sec-test-platform',
-            webhookSecret: 'wh-secret',
-            transport: $transport,
-        );
-    }
-
     #[DataProvider('creatorPlanCases')]
     public function testPlatformChapaCheckoutSucceedsForCreators(bool $isPro, string $expectedPolicy): void
     {
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
+                'status' => 'success',
+                'data' => ['checkout_url' => 'https://checkout.chapa.co/checkout/payment/test1234'],
+            ]),
+        ]);
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->method('isEnabled')->willReturn(true);
-        $manager->method('platformClient')->willReturn($this->mockChapaClient());
+        $manager->method('platformSecret')->willReturn('sec-test-platform');
 
         $checkout = (new ChapaStorefrontCheckout(
             chapaManager: $manager,
@@ -129,7 +113,7 @@ class ChapaStorefrontCheckoutTest extends TestCase
         $this->assertSame($expectedPolicy, $order->monetization_policy);
         $this->assertSame('pending_payment', $order->status);
         $this->assertSame('chapa', $order->payment_gateway);
-        $this->assertSame('https://checkout.chapa.global/test1234', $order->chapaCheckoutUrl);
+        $this->assertSame('https://checkout.chapa.co/checkout/payment/test1234', $order->chapaCheckoutUrl);
         $this->assertSame(15000, $order->gross_amount_cents);
 
         $attempt = StorefrontPaymentAttempt::query()->where('order_id', $order->id)->first();

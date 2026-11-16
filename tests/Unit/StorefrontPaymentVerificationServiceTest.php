@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
@@ -11,10 +12,8 @@ use App\Storefront\Services\MarketplaceReconciliationService;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
 use App\Storefront\StorefrontWebhookHandler;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
-use Nateyk\Chapa\ChapaClient;
-use Nateyk\Chapa\Http\RawResponse;
-use Nateyk\Chapa\Http\Transport;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
@@ -74,32 +73,37 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         parent::tearDown();
     }
 
-    private function mockChapaClient(
-        string $status = 'SUCCESS',
-        int $amount = 15000,
+    private function fakeChapaVerification(
+        string $status = 'success',
+        int $amountCents = 15000,
         string $currency = 'ETB',
         string $ref = 'lk-validref12345',
-    ): ChapaClient {
-        $transport = $this->createMock(Transport::class);
-        $transport->method('send')->willReturn(
-            new RawResponse(200, (string) json_encode([
-                'status' => 'success',
-                'data' => [
-                    'status' => $status,
-                    'amount' => $amount,
-                    'currency' => $currency,
-                    'merchant_reference' => $ref,
-                    'chapa_reference' => 'CHP-VERIFIED-99',
-                    'email' => 'buyer@test.com',
-                ],
-            ]))
-        );
+    ): void {
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/*' => Http::response(
+                $this->verificationPayload($status, $amountCents, $currency, $ref),
+            ),
+        ]);
+    }
 
-        return new ChapaClient(
-            privateKey: 'sec-test',
-            webhookSecret: 'wh-secret',
-            transport: $transport,
-        );
+    /** @return array<string, mixed> */
+    private function verificationPayload(
+        string $status,
+        int $amountCents,
+        string $currency,
+        string $ref,
+    ): array {
+        return [
+            'status' => 'success',
+            'data' => [
+                'status' => strtolower($status),
+                'amount' => ChapaV2Client::majorFromCents($amountCents),
+                'currency' => $currency,
+                'tx_ref' => $ref,
+                'reference' => 'CHP-VERIFIED-99',
+                'email' => 'buyer@test.com',
+            ],
+        ];
     }
 
     private function createOrderAndAttempt(
@@ -135,9 +139,9 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         $ref = 'lk-validref12345';
         [$order, $attempt] = $this->createOrderAndAttempt(15000, 'ETB', $ref);
 
-        $client = $this->mockChapaClient('SUCCESS', 15000, 'ETB', $ref);
+        $this->fakeChapaVerification('success', 15000, 'ETB', $ref);
         $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($client);
+        $manager->method('platformSecret')->willReturn('platform-secret');
 
         $handler = $this->createMock(StorefrontWebhookHandler::class);
         $handler->expects($this->once())
@@ -169,9 +173,9 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         $ref = 'lk-validref12345';
         [$order, $attempt] = $this->createOrderAndAttempt(15000, 'ETB', $ref);
 
-        $client = $this->mockChapaClient($status, $amount, $currency, $ref);
+        $this->fakeChapaVerification($status, $amount, $currency, $ref);
         $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($client);
+        $manager->method('platformSecret')->willReturn('platform-secret');
 
         $handler = $this->createMock(StorefrontWebhookHandler::class);
         $handler->expects($this->never())->method('fulfill');
@@ -203,10 +207,14 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
     {
         $ref = 'lk-validref12345';
         [$order, $attempt] = $this->createOrderAndAttempt(ref: $ref);
-        $pending = $this->mockChapaClient(status: 'PENDING', ref: $ref);
-        $success = $this->mockChapaClient(ref: $ref);
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/*' => Http::sequence()
+                ->push($this->verificationPayload('pending', 15000, 'ETB', $ref))
+                ->push($this->verificationPayload('success', 15000, 'ETB', $ref))
+                ->push($this->verificationPayload('success', 15000, 'ETB', $ref)),
+        ]);
         $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($pending, $success, $success);
+        $manager->method('platformSecret')->willReturn('platform-secret');
         $handler = $this->createMock(StorefrontWebhookHandler::class);
         $handler->expects($this->once())->method('fulfill')
             ->willReturnCallback(static function (StorefrontOrder $paidOrder): void {
@@ -237,9 +245,13 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
             'verification_data' => ['status' => 'PENDING'],
             'error_message' => 'Verification mismatch: status=PENDING, amount=15000, currency=ETB',
         ]);
-        $success = $this->mockChapaClient(ref: $ref);
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/*' => Http::sequence()
+                ->push($this->verificationPayload('success', 15000, 'ETB', $ref))
+                ->push($this->verificationPayload('success', 15000, 'ETB', $ref)),
+        ]);
         $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($success);
+        $manager->method('platformSecret')->willReturn('platform-secret');
         $handler = $this->createMock(StorefrontWebhookHandler::class);
         $handler->expects($this->once())->method('fulfill');
         $verification = new StorefrontPaymentVerificationService($manager, $handler);
@@ -259,7 +271,7 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         $attempt->update(['status' => StorefrontPaymentAttempt::STATUS_SUCCESSFUL, 'verified_at' => now()]);
 
         $manager = $this->createMock(LinketChapaManager::class);
-        $manager->expects($this->never())->method('platformClient');
+        $manager->expects($this->never())->method('platformSecret');
 
         $handler = $this->createMock(StorefrontWebhookHandler::class);
         $handler->expects($this->never())->method('fulfill');

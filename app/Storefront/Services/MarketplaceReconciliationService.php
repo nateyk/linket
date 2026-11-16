@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Storefront\Services;
 
+use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Ledger\BalanceQuery;
@@ -167,18 +168,30 @@ class MarketplaceReconciliationService
     private function reconcileSinglePaymentAttempt(StorefrontPaymentAttempt $attempt): bool
     {
         try {
-            $verified = $this->manager()->platformClient()->payments()->verifyTyped($attempt->merchant_reference);
+            $verified = app(ChapaV2Client::class)->verifyPayment(
+                (string) $this->manager()->platformSecret(),
+                $attempt->merchant_reference,
+            );
+            $status = strtoupper((string) ($verified['status'] ?? ''));
+            $amountCents = ChapaV2Client::centsFromMajor((string) ($verified['amount'] ?? '0'));
+            $currency = strtoupper((string) ($verified['currency'] ?? ''));
+            $reference = (string) ($verified['merchant_reference'] ?? '');
+            $matches = $status === 'SUCCESS'
+                && $amountCents === (int) $attempt->amount_cents
+                && $currency === strtoupper((string) $attempt->currency)
+                && $reference !== ''
+                && hash_equals($reference, $attempt->merchant_reference);
 
-            if ($verified->matchesPayment($attempt->amount_cents, $attempt->currency, $attempt->merchant_reference)) {
+            if ($matches) {
                 $this->verificationService()->verifyAndFulfill($attempt->merchant_reference);
                 return true;
             }
 
-            if ($verified->status === 'FAILED') {
+            if ($status === 'FAILED') {
                 $attempt->update([
                     'status' => StorefrontPaymentAttempt::STATUS_FAILED,
                     'error_message' => 'Payment verification confirmed failed by Chapa API.',
-                    'verification_data' => $verified->raw,
+                    'verification_data' => $verified,
                 ]);
                 return true;
             }

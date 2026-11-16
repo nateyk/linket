@@ -22,7 +22,9 @@ use App\Storefront\Services\StorefrontPayoutProcessingService;
 use App\Storefront\StorefrontWebhookHandler;
 use Common\Billing\Models\Product;
 use Illuminate\Database\Schema\Blueprint;
+use App\Payments\Chapa\ChapaV2Client;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Nateyk\Chapa\ChapaClient;
@@ -161,11 +163,21 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             'amount_cents' => $grossAmountCents,
         ]);
 
-        $chapaClient = $this->createMockChapaClient(
-            MockChapaConfig::forPayment('SUCCESS', $grossAmountCents, $merchantRef),
-        );
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/'.$merchantRef => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'success',
+                    'amount' => ChapaV2Client::majorFromCents($grossAmountCents),
+                    'currency' => 'ETB',
+                    'tx_ref' => $merchantRef,
+                    'reference' => 'CHP-VERIFIED-99',
+                    'email' => 'buyer@test.com',
+                ],
+            ]),
+        ]);
         $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
+        $chapaManager->method('platformSecret')->willReturn('platform-secret');
 
         $webhookHandler = $this->createMock(StorefrontWebhookHandler::class);
         $webhookHandler->expects($this->once())->method('fulfill');
