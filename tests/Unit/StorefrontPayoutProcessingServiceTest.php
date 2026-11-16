@@ -8,6 +8,8 @@ use App\Storefront\ChapaPayoutService;
 use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Models\PayoutRequest;
+use App\Storefront\Models\DigitalProductWithdrawalMethod;
+use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\StorefrontPayoutIntent;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Illuminate\Database\Schema\Blueprint;
@@ -86,6 +88,45 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
                 'currency' => 'ETB',
             ],
         ];
+    }
+
+    public function testSignedApprovalPayloadMatchesExactApprovedWalletSnapshot(): void
+    {
+        $payout = new PayoutRequest([
+            'status' => 'processing',
+            'bank_code_snapshot' => 'telebirr',
+            'account_holder_snapshot' => 'Abebe Seller',
+        ]);
+        $payout->setRelation('withdrawalMethod', new DigitalProductWithdrawalMethod([
+            'is_active' => true,
+            'code' => 'telebirr',
+        ]));
+        $payout->setRelation('payoutMethod', new DigitalProductPayoutMethod([
+            'is_active' => true,
+            'status' => 'active',
+            'approved_at' => now(),
+        ]));
+        $intent = new StorefrontPayoutIntent([
+            'merchant_reference' => 'lk-po-CALLBACK-01',
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+            'destination_snapshot' => '0911223344',
+            'status' => StorefrontPayoutIntent::STATUS_SUBMITTED,
+        ]);
+        $intent->setRelation('payoutRequest', $payout);
+
+        $payload = [
+            'reference' => 'lk-po-CALLBACK-01',
+            'amount' => '500.00',
+            'bank' => 'telebirr',
+            'account_name' => 'Abebe Seller',
+            'account_number' => '251911223344',
+        ];
+        $service = new ChapaPayoutService();
+        $this->assertTrue($service->approvalMatches($intent, $payload));
+        $this->assertFalse($service->approvalMatches($intent, [...$payload, 'amount' => '500.01']));
+        $this->assertFalse($service->approvalMatches($intent, [...$payload, 'account_number' => '251911223345']));
+        $this->assertFalse($service->approvalMatches($intent, [...$payload, 'reference' => 'wrong-reference']));
     }
 
     public function testPrepareIntentReusesStableReference(): void
