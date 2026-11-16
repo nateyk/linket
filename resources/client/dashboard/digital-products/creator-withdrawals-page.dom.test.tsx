@@ -83,7 +83,7 @@ describe('CreatorWithdrawalsPage', () => {
       display_label: 'Telebirr (•••• 3344)',
       status: 'active',
       approved_at: '2026-11-15T12:00:00Z',
-      withdrawal_method: {code: 'telebirr', is_active: true},
+      withdrawal_method: {code: 'telebirr', is_active: true, minimum_amount_cents: 0, maximum_amount_cents: 30000},
       is_active: true,
       is_default: true,
     },
@@ -98,7 +98,7 @@ describe('CreatorWithdrawalsPage', () => {
       display_label: 'CBE (•••• 6789)',
       status: 'active',
       approved_at: '2026-11-15T12:00:00Z',
-      withdrawal_method: {code: 'bank_transfer', is_active: true},
+      withdrawal_method: {code: 'bank_transfer', is_active: true, minimum_amount_cents: 15000, maximum_amount_cents: 18000},
       is_active: true,
       is_default: false,
     },
@@ -163,7 +163,10 @@ describe('CreatorWithdrawalsPage', () => {
     const requestBtn = await screen.findByRole('button', {name: /Request withdrawal/i});
     fireEvent.click(requestBtn);
 
-    expect(screen.getByText('Minimum withdrawal is 100.00 ETB.')).toBeTruthy();
+    expect(screen.getByText('Minimum withdrawal')).toBeTruthy();
+    const minField = screen.getByLabelText(/Withdrawal amount/i) as HTMLInputElement;
+    expect(minField.min).toBe('1');
+    expect(minField.max).toBe('300');
 
     const destinationSelect = screen.getByLabelText(/Destination account/i) as HTMLSelectElement;
     expect(destinationSelect.value).toBe('1');
@@ -178,6 +181,31 @@ describe('CreatorWithdrawalsPage', () => {
       expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/items/payout-requests', {
         amount_cents: 20000,
         payout_method_id: 1,
+      });
+    });
+  });
+
+  it('enforces the selected approved bank method limits and caps Max accordingly', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', {name: /Request withdrawal/i}));
+    const select = screen.getByLabelText(/Destination account/i) as HTMLSelectElement;
+    fireEvent.change(select, {target: {value: '2'}});
+
+    const amountInput = screen.getByLabelText(/Withdrawal amount/i) as HTMLInputElement;
+    expect(amountInput.min).toBe('150');
+    expect(amountInput.max).toBe('180');
+    fireEvent.change(amountInput, {target: {value: '100'}});
+    expect((screen.getByRole('button', {name: /Confirm withdrawal/i}) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Max'}));
+    expect(amountInput.value).toBe('180.00');
+    fireEvent.click(screen.getByRole('button', {name: /Confirm withdrawal/i}));
+
+    await waitFor(() => {
+      expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/items/payout-requests', {
+        amount_cents: 18000,
+        payout_method_id: 2,
       });
     });
   });
