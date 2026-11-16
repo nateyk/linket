@@ -246,39 +246,24 @@ function WithdrawalStatCards({
   loading: boolean;
 }) {
   return (
-    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
       <WithdrawalMetricCard
         icon={LandmarkIcon}
-        tone="text-amber-600 bg-amber-500/10 dark:text-amber-400"
-        label="Available balance"
-        scope="Ready to withdraw"
+        label="Available Balance"
         valueInCents={available}
         currency={currency}
         loading={loading}
       />
       <WithdrawalMetricCard
         icon={Clock3Icon}
-        tone="text-blue-600 bg-blue-500/10 dark:text-blue-400"
-        label="Settling funds"
-        scope="Clearing period"
-        valueInCents={summary?.held_earnings_cents ?? 0}
-        currency={currency}
-        loading={loading}
-      />
-      <WithdrawalMetricCard
-        icon={Clock3Icon}
-        tone="text-muted-foreground bg-muted"
-        label="Pending withdrawals"
-        scope="Reserved for active requests"
+        label="Pending Withdrawn"
         valueInCents={summary?.reserved_payout_cents ?? 0}
         currency={currency}
         loading={loading}
       />
       <WithdrawalMetricCard
         icon={CheckCircleIcon}
-        tone="text-positive bg-positive/10"
-        label="Total withdrawn"
-        scope="Successfully settled"
+        label="Total Withdraw"
         valueInCents={summary?.paid_out_cents ?? 0}
         currency={currency}
         loading={loading}
@@ -289,17 +274,13 @@ function WithdrawalStatCards({
 
 function WithdrawalMetricCard({
   icon: Icon,
-  tone,
   label,
-  scope,
   valueInCents,
   currency,
   loading,
 }: {
   icon: LucideIcon;
-  tone: string;
   label: string;
-  scope: string;
   valueInCents: number;
   currency: string;
   loading: boolean;
@@ -310,11 +291,8 @@ function WithdrawalMetricCard({
         <Card.Title className="truncate text-sm font-normal text-muted-foreground">
           <Trans message={label} />
         </Card.Title>
-        <Card.Description className="text-xs">
-          <Trans message={scope} />
-        </Card.Description>
         <Card.Action>
-          <span className={`flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4 ${tone}`}>
+          <span className="flex size-9 items-center justify-center rounded-card-sm bg-muted text-muted-foreground [&>svg]:size-4">
             <Icon aria-hidden="true" />
           </span>
         </Card.Action>
@@ -377,8 +355,8 @@ function WithdrawalHistoryTable({
                 <Table.Cell colSpan={7} className="p-0">
                   <TableEmptyState
                     icon={InboxIcon}
-                    message="No withdrawals yet"
-                    description="Request a withdrawal once you have cleared sales."
+                    message="You do not have any withdrawals"
+                    description="When you have withdrawal requests, you will be able to see them here."
                   />
                 </Table.Cell>
               </Table.Row>

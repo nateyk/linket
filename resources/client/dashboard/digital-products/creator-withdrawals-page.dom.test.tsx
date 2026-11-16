@@ -129,16 +129,13 @@ describe('CreatorWithdrawalsPage', () => {
   it('renders metric cards with correct monetary values and labels', async () => {
     renderPage();
 
-    expect(await screen.findByText('Available balance')).toBeTruthy();
+    expect(await screen.findByText('Available Balance')).toBeTruthy();
     expect(screen.getByText('500.00 ETB')).toBeTruthy();
 
-    expect(screen.getByText('Settling funds')).toBeTruthy();
-    expect(screen.getByText('200.00 ETB')).toBeTruthy();
-
-    expect(screen.getByText('Pending withdrawals')).toBeTruthy();
+    expect(screen.getByText('Pending Withdrawn')).toBeTruthy();
     expect(screen.getByText('100.00 ETB')).toBeTruthy();
 
-    expect(screen.getByText('Total withdrawn')).toBeTruthy();
+    expect(screen.getByText('Total Withdraw')).toBeTruthy();
     expect(screen.getByText('150.00 ETB')).toBeTruthy();
   });
 
@@ -205,6 +202,9 @@ describe('CreatorWithdrawalsPage', () => {
     });
 
     renderPage();
+
+    expect(await screen.findByText('You do not have any withdrawals')).toBeTruthy();
+    expect(screen.getByText('When you have withdrawal requests, you will be able to see them here.')).toBeTruthy();
 
     const requestBtn = await screen.findByRole('button', {name: /Request withdrawal/i});
     fireEvent.click(requestBtn);
