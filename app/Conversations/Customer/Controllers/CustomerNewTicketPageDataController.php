@@ -17,7 +17,23 @@ class CustomerNewTicketPageDataController extends BaseController
         $isAgent = Auth::user()?->isAgent();
 
         $config = settings('hc.newTicket.appearance');
-        $config['attributeIds'] = array_values($config['attributeIds'] ?? []);
+        $config = is_array($config) ? $config : [];
+        // Subject and description are required by ticket creation. Keep
+        // them visible even on installations with incomplete appearance data.
+        $requiredIds = CustomAttribute::query()
+            ->where('type', 'conversation')
+            ->whereIn('key', ['subject', 'description'])
+            ->where('permission', CustomAttribute::PERMISSION_USER_CAN_EDIT)
+            ->pluck('id')
+            ->all();
+        $config['attributeIds'] = array_values(array_unique(array_merge(
+            $requiredIds,
+            $config['attributeIds'] ?? [],
+        )));
+        $config['title'] ??= 'New ticket';
+        $config['submitButtonText'] ??= 'Submit ticket';
+        $config['sidebarTitle'] ??= 'Support';
+        $config['sidebarTips'] ??= [];
         $attributeIds = $config['attributeIds'];
 
         $attributes = CustomAttribute::query()

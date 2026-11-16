@@ -10,7 +10,7 @@ interface Props {
 export function FeedView({data}: Props) {
   const query = useConversationMessages(data.conversation.id);
   return (
-    <div className="compact-scrollbar flex-auto overflow-y-auto px-16 py-16">
+    <div className="compact-scrollbar flex-auto overflow-y-auto px-4 py-4">
       <MessagesInfiniteScrollContainer query={query}>
         {query.data?.items.map((message, index) => (
           <FeedContentItem

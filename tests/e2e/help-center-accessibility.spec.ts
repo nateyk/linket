@@ -1,5 +1,4 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import {loadIsolatedHcFixture, loginToHc} from './help-center-isolated-helpers';
 import {expect, test, type Page} from '@playwright/test';
 
 type Fixture = {
@@ -10,23 +9,7 @@ type Fixture = {
   category: {name: string};
 };
 
-function fixture(): Fixture {
-  const host = new URL(process.env.E2E_BASE_URL ?? 'http://localhost:5173').hostname;
-  expect(['127.0.0.1', 'localhost', 'linket.ddev.site']).toContain(host);
-  const data = JSON.parse(
-    fs.readFileSync(path.resolve('storage/app/e2e/hc-fixture.json'), 'utf8'),
-  ) as Fixture;
-  expect(data.database.toLowerCase()).toContain('test');
-  return data;
-}
-
-async function login(page: Page, account: Fixture['admin']) {
-  await page.goto('/login');
-  await page.getByRole('textbox', {name: 'Email Address'}).fill(account.email);
-  await page.getByRole('textbox', {name: 'Password'}).fill(account.password);
-  await page.getByRole('button', {name: 'Login'}).click();
-  await expect(page).not.toHaveURL(/\/login$/, {timeout: 45_000});
-}
+const fixture = () => loadIsolatedHcFixture<Fixture>();
 
 async function expectNoHorizontalOverflow(page: Page, width: number) {
   await page.setViewportSize({width, height: 800});
@@ -64,7 +47,7 @@ test.describe('Help Center accessibility acceptance (isolated browser)', () => {
     page,
   }) => {
     test.setTimeout(90_000);
-    await login(page, fixture().a11y_accounts.dialog);
+    await loginToHc(page, fixture().a11y_accounts.dialog);
     await page.goto('/admin/help/arrange');
     const trigger = page.getByRole('button', {name: 'New category'});
     await trigger.focus();
@@ -81,7 +64,7 @@ test.describe('Help Center accessibility acceptance (isolated browser)', () => {
 
   test('admin tabs and category actions are keyboard reachable', async ({page}) => {
     test.setTimeout(90_000);
-    await login(page, fixture().a11y_accounts.navigation);
+    await loginToHc(page, fixture().a11y_accounts.navigation);
     await page.goto('/admin/help/arrange');
     const articles = page.getByRole('tab', {name: 'All articles'});
     await articles.focus();
@@ -102,7 +85,7 @@ test.describe('Help Center accessibility acceptance (isolated browser)', () => {
     page,
   }, testInfo) => {
     test.setTimeout(90_000);
-    await login(page, fixture().a11y_accounts.responsive);
+    await loginToHc(page, fixture().a11y_accounts.responsive);
     await page.goto('/admin/help/arrange');
     for (const width of [320, 390, 640]) {
       await expectNoHorizontalOverflow(page, width);

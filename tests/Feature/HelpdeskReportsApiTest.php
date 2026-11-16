@@ -1,6 +1,8 @@
 <?php
 
+use App\Conversations\Events\ConversationCreated;
 use App\Conversations\Models\Conversation;
+use App\Reports\Actions\ConversationsOverviewReport\HelpdeskReportCache;
 use App\Conversations\Models\ConversationItem;
 use App\Models\User;
 use Common\Permissions\Models\Permission;
@@ -133,6 +135,36 @@ test('staff notes do not inflate public agent reply metrics', function () {
         ->assertOk()
         ->assertJsonPath('newConversations.datasets.0.total', 1)
         ->assertJsonPath('agents.datasets.0.totalAgentReplies', 1);
+});
+
+test('creating a support ticket invalidates cached report totals immediately', function () {
+    Cache::flush();
+    $reporter = createReportsAgent();
+    $customer = User::factory()->create();
+
+    $before = statefulReports()
+        ->actingAs($reporter)
+        ->getJson('/api/v1/reports/conversations/ticket')
+        ->assertOk()
+        ->json('newConversations.datasets.0.total');
+    $revision = HelpdeskReportCache::revision();
+
+    $ticket = Conversation::query()->create([
+        'user_id' => $customer->id,
+        'subject' => 'New report cache invalidation ticket',
+        'type' => 'ticket',
+        'assigned_to' => Conversation::ASSIGNED_AGENT,
+        'status_category' => Conversation::STATUS_OPEN,
+    ]);
+    event(new ConversationCreated($ticket));
+
+    expect(HelpdeskReportCache::revision())->not->toBe($revision);
+
+    statefulReports()
+        ->actingAs($reporter)
+        ->getJson('/api/v1/reports/conversations/ticket')
+        ->assertOk()
+        ->assertJsonPath('newConversations.datasets.0.total', $before + 1);
 });
 
 test('guest cannot load helpdesk reports', function () {

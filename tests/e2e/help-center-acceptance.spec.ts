@@ -1,5 +1,4 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import {loadIsolatedHcFixture, loginToHc} from './help-center-isolated-helpers';
 import {expect, test, type Browser, type Page} from '@playwright/test';
 
 type Credentials = {email: string; password: string};
@@ -14,28 +13,7 @@ type HcFixture = {
   draft_article: {id: number; title: string; url: string};
 };
 
-function fixture(): HcFixture {
-  // The suite mutates data. Never allow an arbitrary remote URL to be targeted
-  // even when a fixture file exists on the developer's machine.
-  const host = new URL(process.env.E2E_BASE_URL ?? 'http://localhost:5173').hostname;
-  expect(
-    ['127.0.0.1', 'localhost', 'linket.ddev.site'].includes(host),
-    `Refusing destructive E2E tests against non-local host: ${host}`,
-  ).toBe(true);
-  const filename = path.resolve('storage/app/e2e/hc-fixture.json');
-  expect(fs.existsSync(filename), 'Run linket:prepare-hc-e2e against the disposable test database').toBe(true);
-  const data = JSON.parse(fs.readFileSync(filename, 'utf8')) as HcFixture;
-  expect(data.database.toLowerCase()).toContain('test');
-  return data;
-}
-
-async function login(page: Page, credentials: Credentials) {
-  await page.goto('/login');
-  await page.getByRole('textbox', {name: 'Email Address'}).fill(credentials.email);
-  await page.getByRole('textbox', {name: 'Password'}).fill(credentials.password);
-  await page.getByRole('button', {name: 'Login'}).click();
-  await expect(page).not.toHaveURL(/\/login$/, {timeout: 45_000});
-}
+const fixture = () => loadIsolatedHcFixture<HcFixture>();
 
 function uniqueName(subject: string): string {
   return `E2E ${subject} ${Date.now()} ${Math.random().toString(36).slice(2, 8)}`;
@@ -188,7 +166,7 @@ test.describe('isolated Help Center product acceptance', () => {
   test('admin creates a category and section without leaving the shared admin shell', async ({page}) => {
     test.setTimeout(120_000);
     const {admin} = fixture();
-    await login(page, admin);
+    await loginToHc(page, admin);
     await page.goto('/admin/help/arrange');
     const categoryName = uniqueName('Category');
     const sectionName = uniqueName('Section');
@@ -231,7 +209,7 @@ test.describe('isolated Help Center product acceptance', () => {
     const initialBody = 'Initial article body for ' + title;
     const revisedBody = 'Revised article body for ' + title;
 
-    await login(page, admin);
+    await loginToHc(page, admin);
     await createDraftArticle(page, section.id, title, initialBody);
     await saveDraftAndCheckMobileEditor(page, revisedBody);
     await verifyGuestPublishingAndRemoval(page, browser, title, revisedBody);
@@ -251,7 +229,7 @@ test.describe('isolated Help Center product acceptance', () => {
     test.setTimeout(120_000);
     const {admin, agent, published_article: published} = fixture();
 
-    await login(page, admin);
+    await loginToHc(page, admin);
     await page.goto(published.url);
     const adminEdit = page.getByRole('link', {name: 'Edit article'});
     await expect(adminEdit).toHaveAttribute('href', `/admin/help/articles/${published.id}/edit`);
@@ -264,7 +242,7 @@ test.describe('isolated Help Center product acceptance', () => {
     });
     try {
       const agentPage = await agentContext.newPage();
-      await login(agentPage, agent);
+      await loginToHc(agentPage, agent);
       await agentPage.goto(published.url);
       const agentEdit = agentPage.getByRole('link', {name: 'Edit article'});
       await expect(agentEdit).toHaveAttribute('href', `/agent/hc/articles/${published.id}/edit`);
@@ -279,7 +257,7 @@ test.describe('isolated Help Center product acceptance', () => {
   test('an agent can manage content without switching into the admin shell; buyer cannot edit', async ({page, browser}) => {
     test.setTimeout(120_000);
     const {agent, buyer, draft_article: draft} = fixture();
-    await login(page, agent);
+    await loginToHc(page, agent);
     await page.goto('/agent/hc/arrange');
     await expect(page).toHaveURL(/\/agent\/hc\/arrange/);
     await expect(page.getByRole('button', {name: 'New category'})).toBeVisible();
@@ -289,7 +267,7 @@ test.describe('isolated Help Center product acceptance', () => {
     const buyerContext = await browser.newContext({baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173'});
     try {
       const buyerPage = await buyerContext.newPage();
-      await login(buyerPage, buyer);
+      await loginToHc(buyerPage, buyer);
       await buyerPage.goto(`/agent/hc/articles/${draft.id}/edit`);
       // The route guard must prevent displaying an editor with draft content.
       await expect(buyerPage.getByRole('button', {name: 'Save', exact: true})).toHaveCount(0);

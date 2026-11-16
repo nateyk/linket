@@ -61,8 +61,10 @@ class HelpdeskReports
             timezone: $params['timezone'] ?? null,
         );
 
+        $revision = HelpdeskReportCache::revision();
+
         return cache()->remember(
-            "helpdesk-platform-v2-{$this->modelType}-{$preset}-{$dateRange->start->timestamp}-{$dateRange->end->timestamp}",
+            "helpdesk-platform-v3-{$revision}-{$this->modelType}-{$preset}-{$dateRange->start->timestamp}-{$dateRange->end->timestamp}",
             now()->addMinutes(settings('cache.report_minutes', 60)),
             fn() => $this->generateReport($preset, $dateRange),
         );
