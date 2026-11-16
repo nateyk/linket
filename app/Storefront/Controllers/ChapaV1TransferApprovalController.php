@@ -9,6 +9,7 @@ use App\Storefront\Models\StorefrontPayoutIntent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Public server-to-server Chapa v1 transfer approval URL.
@@ -28,13 +29,18 @@ final class ChapaV1TransferApprovalController extends Controller
             return response()->json(['message' => 'Transfer not approved'], 400);
         }
 
-        $payload = $request->validate([
+        $validator = Validator::make($request->all(), [
             'reference' => ['required', 'string', 'max:190'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'bank' => ['required', 'string', 'max:100'],
             'account_name' => ['required', 'string', 'max:160'],
             'account_number' => ['required', 'string', 'max:100'],
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Transfer not approved'], 400);
+        }
+        $payload = $validator->validated();
 
         $intent = StorefrontPayoutIntent::query()
             ->with('payoutRequest')
