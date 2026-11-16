@@ -117,7 +117,11 @@ test('caps legacy withdraw-all to the approved Chapa method maximum', async () =
   }) as never);
 
   renderPage();
-  fireEvent.click(await screen.findByRole('button', {name: 'Withdraw'}));
+  const withdrawButton = await screen.findByRole('button', {name: 'Withdraw'});
+  await waitFor(() => {
+    expect((withdrawButton as HTMLButtonElement).disabled).toBe(false);
+  });
+  fireEvent.click(withdrawButton);
   fireEvent.click(await screen.findByRole('button', {name: /Confirm withdrawal/i}));
   await waitFor(() => {
     expect(vi.mocked(apiClient.post)).toHaveBeenCalledWith('/api/v1/items/payout-requests', {
