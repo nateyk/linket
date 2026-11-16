@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Storefront\Controllers;
+
+use App\Storefront\ChapaPayoutService;
+use App\Storefront\Models\StorefrontPayoutIntent;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
+
+/**
+ * Public server-to-server Chapa v1 transfer approval URL.
+ * Return 200 only for a previously approved, matching, durable withdrawal.
+ */
+final class ChapaV1TransferApprovalController extends Controller
+{
+    public function __invoke(Request $request, ChapaPayoutService $service): JsonResponse
+    {
+        $secret = (string) config('services.chapa.transfer_approval_secret', '');
+        $signature = (string) $request->header('Chapa-Signature', '');
+
+        // Chapa v1 documents HMAC SHA256 of the approval secret with itself as the key.
+        // The sandbox's real callback must be checked before enabling live withdrawals.
+        if ($secret === '' || !preg_match('/^[0-9a-f]{64}$/i', $signature)
+            || !hash_equals(hash_hmac('sha256', $secret, $secret), strtolower($signature))) {
+            return response()->json(['message' => 'Transfer not approved'], 400);
+        }
+
+        $payload = $request->validate([
+            'reference' => ['required', 'string', 'max:190'],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'bank' => ['required', 'string', 'max:100'],
+            'account_name' => ['required', 'string', 'max:160'],
+            'account_number' => ['required', 'string', 'max:100'],
+        ]);
+
+        $intent = StorefrontPayoutIntent::query()
+            ->with('payoutRequest')
+            ->where('merchant_reference', $payload['reference'])
+            ->first();
+
+        if (!$intent || !$service->approvalMatches($intent, $payload)) {
+            return response()->json(['message' => 'Transfer not approved'], 400);
+        }
+
+        // Idempotent callback: no transfer dispatch and no ledger mutation here.
+        return response()->json(['message' => 'Transfer approved'], 200);
+    }
+}
