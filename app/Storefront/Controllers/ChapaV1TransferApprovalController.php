@@ -19,6 +19,9 @@ final class ChapaV1TransferApprovalController extends Controller
 {
     public function __invoke(Request $request, ChapaPayoutService $service): JsonResponse
     {
+        if (!config('services.chapa.payouts_enabled', false)) {
+            return response()->json(['message' => 'Transfer not approved'], 400);
+        }
         $secret = (string) config('services.chapa.transfer_approval_secret', '');
         $signature = (string) $request->header('Chapa-Signature', '');
 
