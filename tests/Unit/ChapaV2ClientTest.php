@@ -67,6 +67,28 @@ class ChapaV2ClientTest extends TestCase
         }
     }
 
+    public function testItMapsNestedCustomerEmailWhenVerifying(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/ref-email-map' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'reference' => 'CH-EMAIL',
+                    'tx_ref' => 'ref-email-map',
+                    'amount' => '50.25',
+                    'currency' => 'ETB',
+                    'status' => 'success',
+                    'customer' => ['email' => 'buyer@example.com'],
+                ],
+            ]),
+        ]);
+
+        $data = (new ChapaV2Client())->verifyPayment('platform-secret', 'ref-email-map');
+
+        $this->assertSame('buyer@example.com', $data['email']);
+        $this->assertSame('50.25', $data['amount']);
+    }
+
     public function testItVerifiesAPaymentByReference(): void
     {
         Http::fake([
