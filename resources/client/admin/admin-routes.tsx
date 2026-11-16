@@ -246,7 +246,7 @@ export const adminRoutes: RouteObject[] = [
       },
       {
         path: 'payment-activity',
-        lazy: () => import('@app/admin/digital-products/admin-payment-activity-page'),
+        loader: () => redirect('/admin/financial/payment-activity'),
       },
       {
         path: 'kyc-verifications',
@@ -255,11 +255,12 @@ export const adminRoutes: RouteObject[] = [
       },
       {
         path: 'withdrawals',
-        lazy: () => import('@app/admin/withdrawals/admin-withdrawals-page'),
+        loader: () => redirect('/admin/financial/withdrawals'),
       },
       {
         path: 'withdrawals/:withdrawalId/review',
-        lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
+        loader: ({params}) =>
+          redirect(`/admin/financial/withdrawals/${params.withdrawalId}/review`),
       },
       {
         path: 'financial',
@@ -293,6 +294,18 @@ export const adminRoutes: RouteObject[] = [
           {
             path: 'withdrawal-methods/:methodId/edit',
             lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
+          },
+          {
+            path: 'withdrawals',
+            lazy: () => import('@app/admin/withdrawals/admin-withdrawals-page'),
+          },
+          {
+            path: 'withdrawals/:withdrawalId/review',
+            lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
+          },
+          {
+            path: 'payment-activity',
+            lazy: () => import('@app/admin/digital-products/admin-payment-activity-page'),
           },
           {
             path: 'reconciliation',
