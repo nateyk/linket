@@ -29,6 +29,7 @@ use App\HelpCenter\Policies\HcArticlePolicy;
 use App\Team\Models\AgentInvite;
 use App\Team\Models\Group;
 use App\Team\Policies\GroupPolicy;
+use App\Reports\Actions\ConversationsOverviewReport\HelpdeskReportCache;
 use App\Reports\Policies\HelpdeskReportPolicy;
 use App\Triggers\Models\Trigger;
 use App\Triggers\Policies\TriggerPolicy;
@@ -99,6 +100,19 @@ class SupportServiceProvider extends ServiceProvider
 
     protected function registerEvents(): void
     {
+        // Report date-range caches are versioned whenever platform ticket
+        // activity changes. Domain events dispatch synchronously in requests.
+        foreach ([
+            ConversationCreated::class,
+            ConversationMessageCreated::class,
+            ConversationsAssignedToAgent::class,
+            ConversationsUpdated::class,
+        ] as $eventClass) {
+            Event::listen($eventClass, function (): void {
+                HelpdeskReportCache::invalidate();
+            });
+        }
+
         Event::listen(UsersDeleted::class, DeleteUserRelations::class);
 
         Event::listen(UserCreated::class, function (UserCreated $e) {

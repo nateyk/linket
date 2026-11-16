@@ -52,7 +52,7 @@ class MetricDateRange
     }
 
     protected function parseTimestamp(
-        string|null $timestamp = null,
+        string|null $timestamp,
         string $timezone,
         CarbonImmutable $fallback,
     ): CarbonImmutable {
@@ -89,7 +89,7 @@ class MetricDateRange
         );
     }
 
-    protected function setGranularity(string $granularity = null): void
+    protected function setGranularity(?string $granularity = null): void
     {
         // set unit specified by user
         if ($granularity) {

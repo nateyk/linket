@@ -55,6 +55,27 @@ class CreateCustomerTicketTest extends TestCase
         );
     }
 
+    public function test_new_ticket_form_always_includes_required_subject_and_description(): void
+    {
+        $buyer = User::factory()->create();
+        $this->grantPermission($buyer, 'conversations.create');
+
+        $response = $this->stateful()
+            ->actingAs($buyer)
+            ->getJson('/api/v1/helpdesk/customer-new-ticket-page-config')
+            ->assertOk();
+
+        $attributes = collect($response->json('attributes'));
+        $subject = $attributes->firstWhere('key', 'subject');
+        $description = $attributes->firstWhere('key', 'description');
+
+        $this->assertNotNull($subject);
+        $this->assertNotNull($description);
+        $this->assertContains($subject['id'], $response->json('config.attributeIds'));
+        $this->assertContains($description['id'], $response->json('config.attributeIds'));
+        $this->assertNotEmpty($response->json('config.submitButtonText'));
+    }
+
     public function test_guests_cannot_list_or_view_customer_tickets(): void
     {
         $this->stateful()
