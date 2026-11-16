@@ -112,7 +112,7 @@ describe('CreatorWithdrawalsPage', () => {
       if (url.startsWith('/api/v1/items/payout-requests')) {
         return Promise.resolve({data: {data: mockPayouts, total: 2, per_page: 25, current_page: 1}});
       }
-      if (url === '/api/items/payout-methods') {
+      if (url === '/api/v1/items/payout-methods') {
         return Promise.resolve({data: {data: mockDestinations}});
       }
       return Promise.reject(new Error(`Unexpected url: ${url}`));
@@ -201,7 +201,7 @@ describe('CreatorWithdrawalsPage', () => {
       if (url.startsWith('/api/v1/items/payout-requests')) {
         return Promise.resolve({data: {data: [], total: 0, per_page: 25, current_page: 1}});
       }
-      if (url === '/api/items/payout-methods') {
+      if (url === '/api/v1/items/payout-methods') {
         return Promise.resolve({data: {data: []}});
       }
       return Promise.reject(new Error(`Unexpected url: ${url}`));

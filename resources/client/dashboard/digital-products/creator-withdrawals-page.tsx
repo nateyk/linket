@@ -114,7 +114,7 @@ export function Component() {
       const [salesRes, payoutsRes, destsRes] = await Promise.all([
         apiClient.get('/api/v1/items/sales'),
         apiClient.get(`/api/v1/items/payout-requests?page=${page}`),
-        apiClient.get('/api/items/payout-methods'),
+        apiClient.get('/api/v1/items/payout-methods'),
       ]);
       setSummary(salesRes.data.summary);
       setPayouts(payoutsRes.data.data ?? []);
