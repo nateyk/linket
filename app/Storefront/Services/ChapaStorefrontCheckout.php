@@ -88,7 +88,7 @@ final class ChapaStorefrontCheckout
             'status' => StorefrontPaymentAttempt::STATUS_INITIALIZING,
         ]);
 
-        $session = $this->initiatePlatformSession($product, $buyer, $reference, $attempt->idempotency_key);
+        $session = $this->initiatePlatformSession($order, $product, $buyer, $reference, $attempt->idempotency_key);
 
         $attempt->update([
             'status' => StorefrontPaymentAttempt::STATUS_PENDING,
@@ -148,13 +148,14 @@ final class ChapaStorefrontCheckout
         ]);
 
         $customer = $this->formatCustomer($buyer);
-        $returnUrl = url('storefront/chapa/return/'.$reference);
+        $callbackUrl = StorefrontChapaReturnUrls::verificationHandler($reference);
+        $returnUrl = StorefrontChapaReturnUrls::browserSuccessUrl($order);
         $hosted = app(ChapaV2Client::class)->createHostedPayment($gateway->secret_key, [
             'amount_cents' => (int) $product->price_cents,
             'currency' => 'ETB',
             'merchant_reference' => $reference,
             'idempotency_key' => $order->uuid,
-            'callback_url' => $returnUrl,
+            'callback_url' => $callbackUrl,
             'return_url' => $returnUrl,
             'customer' => $customer === [] ? null : $customer,
             'customization' => [
@@ -222,13 +223,14 @@ final class ChapaStorefrontCheckout
      * @return array{checkout_url: string, chapa_reference: string|null}
      */
     private function initiatePlatformSession(
+        StorefrontOrder $order,
         DigitalProduct $product,
         array $buyer,
         string $reference,
         string $idempotencyKey,
     ): array {
         $customer = $this->formatCustomer($buyer);
-        $returnUrl = url('storefront/chapa/return/'.$reference);
+        $returnUrl = StorefrontChapaReturnUrls::browserSuccessUrl($order);
         $callbackUrl = url('billing/chapa/webhook');
 
         return app(ChapaV2Client::class)->createHostedPayment((string) $this->manager()->platformSecret(), [

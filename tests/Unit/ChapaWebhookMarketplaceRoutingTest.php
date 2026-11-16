@@ -198,10 +198,33 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         }
         $this->app->instance(StorefrontPaymentVerificationService::class, $verifier);
 
-        $controller = new ChapaStorefrontReturnController();
-        $response = $controller->handle($ref);
+        $this->post('/storefront/chapa/return/'.$ref)->assertNoContent();
+    }
 
-        $this->assertSame(204, $response->getStatusCode());
+    public function testMarketplaceReturnRedirectsBuyersAfterPayment(): void
+    {
+        $ref = 'lk-return-redirect';
+        $order = StorefrontOrder::query()->create([
+            'uuid' => 'order-uuid-redirect',
+            'status' => 'pending_payment',
+            'chapa_tx_ref' => $ref,
+        ]);
+
+        StorefrontPaymentAttempt::query()->create([
+            'order_id' => $order->id,
+            'merchant_reference' => $ref,
+            'idempotency_key' => 'idemp-'.$ref,
+            'amount_cents' => 15000,
+            'currency' => 'ETB',
+            'status' => StorefrontPaymentAttempt::STATUS_PENDING,
+        ]);
+
+        $verifier = $this->createMock(StorefrontPaymentVerificationService::class);
+        $verifier->expects($this->once())->method('verifyAndFulfill')->with($ref)->willReturn($order);
+        $this->app->instance(StorefrontPaymentVerificationService::class, $verifier);
+
+        $this->get('/storefront/chapa/return/'.$ref)
+            ->assertRedirect('/find-my-purchase/orders?highlight=order-uuid-redirect');
     }
 
     public static function returnOutcomeCases(): array
