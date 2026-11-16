@@ -39,8 +39,11 @@ final class ChapaV1TransferVerificationGuard
         $currency = strtoupper((string) ($data['currency'] ?? ''));
 
         if (!hash_equals((string) $intent->merchant_reference, $reference)
-            || $currency !== strtoupper((string) $intent->currency)
-            || preg_match('/^\d+(?:\.\d{1,2})?$/', $amount) !== 1
+            || $currency !== strtoupper((string) $intent->currency)) {
+            throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
+        }
+
+        if (preg_match('/^\d+(?:\.\d{1,2})?$/', $amount) !== 1
             || $this->amountCents($amount) !== (int) $intent->amount_cents) {
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
