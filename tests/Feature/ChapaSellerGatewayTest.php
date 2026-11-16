@@ -125,7 +125,7 @@ class ChapaSellerGatewayTest extends TestCase
         $order = $this->chapaOrderAwaitingReturn();
 
         $this->fakeVerification($order, amount: 5000, currency: 'ETB', reference: (string) $order->chapa_tx_ref);
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/transaction/verify/'.$order->chapa_tx_ref));
 
         $this->assertSame('pending_payment', $order->fresh()->status);
@@ -137,7 +137,7 @@ class ChapaSellerGatewayTest extends TestCase
         $order = $this->chapaOrderAwaitingReturn();
 
         $this->fakeVerification($order, amount: 10000, currency: 'USD', reference: (string) $order->chapa_tx_ref);
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/transaction/verify/'.$order->chapa_tx_ref));
 
         $this->assertSame('pending_payment', $order->fresh()->status);
@@ -149,7 +149,7 @@ class ChapaSellerGatewayTest extends TestCase
         $order = $this->chapaOrderAwaitingReturn();
 
         $this->fakeVerification($order, amount: 10000, currency: 'ETB', reference: 'wrongrefwrongrefwr');
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/transaction/verify/'.$order->chapa_tx_ref));
 
         $this->assertSame('pending_payment', $order->fresh()->status);
@@ -260,8 +260,8 @@ class ChapaSellerGatewayTest extends TestCase
         $subscription->update(['ends_at' => now()->subDay(), 'renews_at' => now()->subDay()]);
         $this->assertFalse(app(CreatorVerificationAllowance::class)->isPro($creator->fresh()));
 
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
 
         $this->assertSame('paid', $order->fresh()->status);
         $this->assertSame(1, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());

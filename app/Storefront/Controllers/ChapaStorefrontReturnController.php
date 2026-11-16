@@ -7,14 +7,16 @@ use App\Storefront\Models\CreatorChapaGateway;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
+use App\Storefront\Services\StorefrontChapaReturnUrls;
 use App\Storefront\StorefrontWebhookHandler;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 
 class ChapaStorefrontReturnController extends Controller
 {
-    public function handle(string $txRef): Response
+    public function handle(string $txRef): Response|RedirectResponse
     {
         $attempt = StorefrontPaymentAttempt::query()
             ->where('merchant_reference', $txRef)
@@ -22,7 +24,8 @@ class ChapaStorefrontReturnController extends Controller
 
         if ($attempt) {
             $this->fulfillPlatformAttempt($attempt, $txRef);
-            return response()->noContent();
+
+            return $this->respondAfterReturn($attempt->fresh('order')?->order);
         }
 
         $order = StorefrontOrder::query()
@@ -32,6 +35,15 @@ class ChapaStorefrontReturnController extends Controller
 
         if ($order->status !== 'paid') {
             $this->fulfillIfVerified($order);
+        }
+
+        return $this->respondAfterReturn($order);
+    }
+
+    private function respondAfterReturn(?StorefrontOrder $order): Response|RedirectResponse
+    {
+        if ($order !== null && request()->isMethod('GET') && ! request()->expectsJson()) {
+            return redirect()->to(StorefrontChapaReturnUrls::browserSuccessUrl($order->fresh()));
         }
 
         return response()->noContent();
