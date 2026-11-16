@@ -163,6 +163,30 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertNull($payout->fresh()->paid_at);
     }
 
+    public function testNestedProviderQueueResponseWithExactReferenceIsAccepted(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('createTransfer')->once()->andReturnUsing(
+            fn (StorefrontPayoutIntent $intent) => [
+                'status' => 'success',
+                'data' => [
+                    'id' => 123,
+                    'reference' => $intent->merchant_reference,
+                    'status' => 'pending',
+                ],
+            ],
+        );
+
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(chapaPayoutService: $provider);
+        $intent = $service->prepareIntent($payout);
+        $queued = $service->submitPayout($intent);
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $queued->status);
+        $this->assertSame($intent->merchant_reference, $queued->chapa_reference);
+        $this->assertSame('processing', $payout->fresh()->status);
+    }
+
     public function testUnexpectedQueuedTransferReferenceRemainsUncertainAndCannotBeResent(): void
     {
         $provider = Mockery::mock(ChapaPayoutService::class);
