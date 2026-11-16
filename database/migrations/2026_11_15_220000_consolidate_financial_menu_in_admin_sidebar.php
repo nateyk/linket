@@ -14,22 +14,6 @@ return new class extends Migration
 
     private const FINANCIAL_ID = 'admin-financial';
 
-    /** @var list<string> */
-    private const OBSOLETE_ACTIONS = [
-        '/admin/financial/payment-gateways',
-        '/admin/financial/withdrawal-methods',
-        '/admin/withdrawals',
-        '/admin/payment-activity',
-    ];
-
-    /** @var list<string> */
-    private const OBSOLETE_IDS = [
-        'admin-payment-gateways',
-        'admin-withdrawal-methods',
-        'admin-withdrawals',
-        'admin-payment-activity',
-    ];
-
     public function up(): void
     {
         $setting = DB::table('settings')->where('name', 'menus')->first();
@@ -40,44 +24,10 @@ return new class extends Migration
 
         $changed = false;
         foreach ($menus as &$menu) {
-            if (! in_array('admin-sidebar', $menu['positions'] ?? [], true)) {
-                continue;
-            }
-
-            $items = $menu['items'] ?? [];
-            $insertionIndex = $this->determineInsertionIndex($items);
-
-            $filtered = [];
-            foreach ($items as $item) {
-                $action = $item['action'] ?? null;
-                $id = $item['id'] ?? null;
-                if (in_array($action, self::OBSOLETE_ACTIONS, true) || in_array($id, self::OBSOLETE_IDS, true)) {
-                    $changed = true;
-                    continue;
-                }
-                $filtered[] = $item;
-            }
-
-            if (! $this->hasFinancialItem($filtered)) {
-                $financialItem = [
-                    'id' => self::FINANCIAL_ID,
-                    'label' => 'Financial',
-                    'action' => self::FINANCIAL_ACTION,
-                    'type' => 'route',
-                    'permissions' => ['admin.access'],
-                ];
-
-                $targetIndex = min($insertionIndex, count($filtered));
-                array_splice($filtered, $targetIndex, 0, [$financialItem]);
+            if ($this->isTargetMenu($menu)) {
+                $menu['items'] = $this->consolidateItems($menu['items'] ?? []);
                 $changed = true;
             }
-
-            foreach ($filtered as $index => &$item) {
-                $item['order'] = $index;
-            }
-            unset($item);
-
-            $menu['items'] = $filtered;
         }
         unset($menu);
 
@@ -90,12 +40,68 @@ return new class extends Migration
         }
     }
 
+    private function isTargetMenu(array $menu): bool
+    {
+        return in_array('admin-sidebar', $menu['positions'] ?? [], true);
+    }
+
+    private function consolidateItems(array $items): array
+    {
+        $targetIndex = $this->findInsertionIndex($items);
+        $cleanItems = array_values(array_filter($items, fn (array $item): bool => ! $this->isObsolete($item)));
+
+        if (! $this->hasFinancialItem($cleanItems)) {
+            $insertAt = min($targetIndex, count($cleanItems));
+            array_splice($cleanItems, $insertAt, 0, [$this->financialItem()]);
+        }
+
+        return $this->reindexOrders($cleanItems);
+    }
+
+    private function isObsolete(array $item): bool
+    {
+        $action = $item['action'] ?? '';
+        $id = $item['id'] ?? '';
+
+        return match ($action) {
+            '/admin/financial/payment-gateways',
+            '/admin/financial/withdrawal-methods',
+            '/admin/withdrawals',
+            '/admin/payment-activity' => true,
+            default => match ($id) {
+                'admin-payment-gateways',
+                'admin-withdrawal-methods',
+                'admin-withdrawals',
+                'admin-payment-activity' => true,
+                default => false,
+            },
+        };
+    }
+
+    private function findInsertionIndex(array $items): int
+    {
+        foreach ($items as $index => $item) {
+            if ($this->isObsolete($item)) {
+                return $index;
+            }
+        }
+
+        foreach ($items as $index => $item) {
+            $action = $item['action'] ?? '';
+            if ($action === '/admin/items' || $action === '/admin/digital-products') {
+                return $index + 1;
+            }
+        }
+
+        return count($items);
+    }
+
     private function hasFinancialItem(array $items): bool
     {
         foreach ($items as $item) {
-            if (($item['id'] ?? null) === self::FINANCIAL_ID
-                || ($item['action'] ?? null) === self::FINANCIAL_ACTION
-                || ($item['action'] ?? null) === '/admin/financial/general') {
+            $action = $item['action'] ?? '';
+            $id = $item['id'] ?? '';
+            if ($id === self::FINANCIAL_ID || $action === self::FINANCIAL_ACTION || $action === '/admin/financial/general') {
                 return true;
             }
         }
@@ -103,35 +109,25 @@ return new class extends Migration
         return false;
     }
 
-    private function determineInsertionIndex(array $items): int
+    private function financialItem(): array
     {
-        // 1. Prefer the position of the first obsolete financial item if present.
-        foreach ($items as $index => $item) {
-            $action = $item['action'] ?? null;
-            $id = $item['id'] ?? null;
-            if (in_array($action, self::OBSOLETE_ACTIONS, true) || in_array($id, self::OBSOLETE_IDS, true)) {
-                return $index;
-            }
-        }
+        return [
+            'id' => self::FINANCIAL_ID,
+            'label' => 'Financial',
+            'action' => self::FINANCIAL_ACTION,
+            'type' => 'route',
+            'permissions' => ['admin.access'],
+        ];
+    }
 
-        // 2. Next prefer right after items/digital-products.
-        foreach ($items as $index => $item) {
-            if (($item['id'] ?? null) === 'digital-products-admin'
-                || ($item['action'] ?? null) === '/admin/items'
-                || ($item['action'] ?? null) === '/admin/digital-products') {
-                return $index + 1;
-            }
+    private function reindexOrders(array $items): array
+    {
+        foreach ($items as $index => &$item) {
+            $item['order'] = $index;
         }
+        unset($item);
 
-        // 3. Next prefer right before KYC verifications.
-        foreach ($items as $index => $item) {
-            if (($item['id'] ?? null) === 'admin-kyc-verifications'
-                || ($item['action'] ?? null) === '/admin/kyc-verifications') {
-                return $index;
-            }
-        }
-
-        return count($items);
+        return $items;
     }
 
     public function down(): void
