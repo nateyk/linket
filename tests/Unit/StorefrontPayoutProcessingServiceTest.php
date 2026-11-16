@@ -215,8 +215,27 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
 
             $this->assertSame('processing', $payout->fresh()->status);
             $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $intent->fresh()->status);
-            Mockery::close();
         }
+    }
+
+    public function testMatchingRecipientFromVerificationAllowsSettlement(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $response = $this->verified();
+        $response['data']['account_number'] = '1000123456789';
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($response);
+
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('disbursePayout')->once();
+
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger, chapaPayoutService: $provider
+        );
+        $verified = $service->verifyPayout($this->intent($payout));
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $verified->status);
+        $this->assertSame('paid', $payout->fresh()->status);
     }
 
     public function testMismatchedRecipientFromVerificationCannotDisburse(): void
