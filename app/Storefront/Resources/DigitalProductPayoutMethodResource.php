@@ -24,6 +24,8 @@ class DigitalProductPayoutMethodResource extends JsonResource
                 'name' => $this->withdrawalMethod?->name,
                 'code' => $this->withdrawalMethod?->code,
                 'is_active' => (bool) $this->withdrawalMethod?->is_active,
+                'minimum_amount_cents' => max(100, (int) $this->withdrawalMethod?->minimum_amount_cents),
+                'maximum_amount_cents' => $this->withdrawalMethod?->maximum_amount_cents,
             ]),
             'bank_code' => $this->bank_code,
             'bank_name' => $this->bank_name,

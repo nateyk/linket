@@ -170,6 +170,31 @@ class PayoutSystemTest extends TestCase
     }
 
     /**
+     * A zero-valued administrator minimum cannot create a payout Chapa v1
+     * would refuse to transfer (minimum 1.00 ETB).
+     */
+    public function testZeroProviderMinimumStillRequiresOneEtb(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 5000);
+        $this->createPayoutMethod($creator, $workspaceId, minimum: 0);
+
+        foreach ([0, 99] as $cents) {
+            try {
+                app(PayoutRequestService::class)->create($creator->id, $workspaceId, $cents);
+                $this->fail('Expected the effective 1.00 ETB minimum to reject this amount.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('amount_cents', $exception->errors());
+            }
+        }
+
+        $this->assertSame(0, PayoutRequest::query()->where('creator_id', $creator->id)->count());
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 100);
+        $this->assertSame(100, $payout->amount_cents);
+    }
+
+    /**
      * Requesting above the withdrawal method maximum is rejected.
      */
     public function testRequestAboveMaximumFails(): void

@@ -84,7 +84,12 @@ export type PayoutDestination = {
   is_default: boolean;
   status?: string;
   approved_at?: string | null;
-  withdrawal_method?: {code: string; is_active: boolean} | null;
+  withdrawal_method?: {
+    code: string;
+    is_active: boolean;
+    minimum_amount_cents?: number | null;
+    maximum_amount_cents?: number | null;
+  } | null;
 };
 
 const statusLabels: Record<PayoutStatus, string> = {
@@ -478,14 +483,21 @@ function RequestWithdrawalModal({
   useEffect(() => {
     if (open) {
       setSelectedDestId(defaultDest?.id ?? null);
-      setAmountStr((available / 100).toFixed(2));
+      const limit = defaultDest?.withdrawal_method?.maximum_amount_cents;
+      setAmountStr((Math.min(available, limit || available) / 100).toFixed(2));
       setSubmitError(undefined);
     }
   }, [open, defaultDest, available]);
 
   const activeDestinations = approvedDestinations;
+  const selectedDest = approvedDestinations.find(d => d.id === selectedDestId);
+  const methodMinCents = selectedDest?.withdrawal_method?.minimum_amount_cents ?? 0;
+  const methodMaxCents = selectedDest?.withdrawal_method?.maximum_amount_cents;
+  const minimumCents = Math.max(100, methodMinCents);
+  const maximumCents = Math.min(available, methodMaxCents || available);
   const amountCents = Math.round((parseFloat(amountStr) || 0) * 100);
-  const isValidAmount = amountCents >= 10000 && amountCents <= available;
+  const isValidAmount = !!selectedDest && amountCents >= minimumCents &&
+    amountCents <= maximumCents;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -571,7 +583,7 @@ function RequestWithdrawalModal({
                     <button
                       type="button"
                       className="text-primary hover:underline"
-                      onClick={() => setAmountStr((available / 100).toFixed(2))}
+                      onClick={() => setAmountStr((maximumCents / 100).toFixed(2))}
                     >
                       <Trans message="Max" />
                     </button>
@@ -580,8 +592,8 @@ function RequestWithdrawalModal({
                     id="withdraw-amount"
                     type="number"
                     step="0.01"
-                    min="100"
-                    max={available / 100}
+                    min={minimumCents / 100}
+                    max={maximumCents / 100}
                     className="flex h-9 w-full rounded-input border bg-background px-3 text-sm focus-visible:outline-2"
                     value={amountStr}
                     onChange={e => setAmountStr(e.target.value)}
@@ -589,9 +601,15 @@ function RequestWithdrawalModal({
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    <Trans message="Minimum withdrawal is 100.00 ETB." />
+                    <Trans message="Minimum withdrawal" />: <FormattedCurrency value={minimumCents / 100} currency={currency} />
                   </p>
                 </div>
+
+                {maximumCents < minimumCents && (
+                  <p role="status" className="text-xs text-muted-foreground">
+                    <Trans message="The available balance is below the selected payout method minimum." />
+                  </p>
+                )}
 
                 {submitError && (
                   <p role="alert" className="text-xs text-destructive">{submitError}</p>
