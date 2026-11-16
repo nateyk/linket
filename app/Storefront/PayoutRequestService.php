@@ -42,7 +42,11 @@ class PayoutRequestService
                 throw ValidationException::withMessages(['withdrawal_method' => __('Choose an active withdrawal method before requesting a payout.')]);
             }
 
-            if ($amountCents < $method->minimum_amount_cents || ($method->maximum_amount_cents && $amountCents > $method->maximum_amount_cents)) {
+            // Chapa v1 transfers require at least 1.00 ETB, even if Finance
+            // configures a lower provider minimum.
+            $effectiveMinimumCents = max(100, (int) $method->minimum_amount_cents);
+            if ($amountCents < $effectiveMinimumCents
+                || ($method->maximum_amount_cents && $amountCents > $method->maximum_amount_cents)) {
                 throw ValidationException::withMessages(['amount_cents' => __('This amount is outside the selected withdrawal method limits.')]);
             }
 
