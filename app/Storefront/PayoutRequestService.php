@@ -202,7 +202,8 @@ class PayoutRequestService
             throw ValidationException::withMessages(['withdrawal_method' => __('The selected provider cannot be disbursed with Chapa v1.')]);
         }
 
-        if ($payout->payoutIntents()->exists()) {
+        $existingIntent = $payout->payoutIntents()->first();
+        if ($existingIntent && $existingIntent->status !== StorefrontPayoutIntent::STATUS_PREPARED) {
             throw ValidationException::withMessages(['status' => __('Transfer already initiated. Verify its existing reference; never resubmit it.')]);
         }
 
@@ -213,7 +214,7 @@ class PayoutRequestService
         $provider->assertSufficientBalance((int) $payout->amount_cents);
 
         $processingService = app(StorefrontPayoutProcessingService::class);
-        $intent = $processingService->prepareIntent($payout, $payout->withdrawalMethod?->code ?? 'bank_transfer');
+        $intent = $existingIntent ?? $processingService->prepareIntent($payout, $payout->withdrawalMethod?->code ?? 'bank_transfer');
         $intent = $processingService->submitPayout($intent);
 
         $this->activity($payout, $actorId, 'chapa_transfer_submitted', "Chapa v1 reference: {$intent->merchant_reference}; status: {$intent->status}");
