@@ -57,12 +57,10 @@ describe('AdminFinancialLayout', () => {
     expect(screen.getByText('General defaults')).toBeTruthy();
     expect(screen.getByText('Payment gateways')).toBeTruthy();
     expect(screen.getByText('Receiving accounts')).toBeTruthy();
+    expect(screen.getByText('Withdrawals')).toBeTruthy();
+    expect(screen.getByText('Payment activity')).toBeTruthy();
     expect(screen.getByText('Withdrawal methods')).toBeTruthy();
     expect(screen.getByText('Ledger & reconciliation')).toBeTruthy();
-
-    // Operational quick links
-    expect(screen.getByText('Withdrawals queue')).toBeTruthy();
-    expect(screen.getByText('Payment activity')).toBeTruthy();
 
     // Child content rendered in outlet
     expect(screen.getByTestId('financial-outlet')).toBeTruthy();

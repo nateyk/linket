@@ -1,5 +1,6 @@
 import {AdminSidebarIcons} from '@app/admin/admin-config';
 import {
+  isObsoleteAdminSidebarItem,
   isSettingsNavOnlyAdminItem,
   shouldEndMatchSidebarItem,
 } from '@common/admin/admin-sidebar-nav-end';
@@ -24,7 +25,7 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
-import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon, CreditCardIcon, CoinsIcon, LandmarkIcon} from 'lucide-react';
+import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, LandmarkIcon} from 'lucide-react';
 import {JSXElementConstructor, use, useState} from 'react';
 import {Link, NavLink, useLocation, useSearchParams} from 'react-router';
 
@@ -41,23 +42,18 @@ export function AdminSidebar() {
     onDigitalProducts && searchParams.get('scope') === 'updated';
   const allProductsActive = onDigitalProducts && !updatedActive;
   const [productsOpen, setProductsOpen] = useState(onDigitalProducts);
-  const hasTransactions = adminMenu?.items.some(
-    item => item.action === '/admin/payment-activity',
+  const hasFinancial = adminMenu?.items.some(
+    item =>
+      item.action === '/admin/financial' ||
+      item.action === '/admin/financial/general',
   );
   const hasKyc = adminMenu?.items.some(
     item => item.action === '/admin/kyc-verifications',
   );
-  const hasWithdrawals = adminMenu?.items.some(
-    item => item.action === '/admin/withdrawals',
-  );
-  const hasPaymentGateways = adminMenu?.items.some(
-    item => item.action === '/admin/financial/payment-gateways',
-  );
-  const hasWithdrawalMethods = adminMenu?.items.some(
-    item => item.action === '/admin/financial/withdrawal-methods',
-  );
   const visibleMenuItems = (adminMenu?.items ?? []).filter(
-    item => !isSettingsNavOnlyAdminItem(item.action),
+    item =>
+      !isSettingsNavOnlyAdminItem(item.action) &&
+      !isObsoleteAdminSidebarItem(item.action),
   );
 
   return (
@@ -88,7 +84,8 @@ export function AdminSidebar() {
               }
               filter={item =>
                 item.action !== DIGITAL_PRODUCTS_PATH &&
-                !isSettingsNavOnlyAdminItem(item.action)
+                !isSettingsNavOnlyAdminItem(item.action) &&
+                !isObsoleteAdminSidebarItem(item.action)
               }
             />
             {isCompactMode ? (
@@ -164,15 +161,15 @@ export function AdminSidebar() {
                 </Sidebar.MenuItem>
               </Sidebar.Menu>
             )}
-            {(!hasTransactions || !hasKyc || !hasWithdrawals || !hasPaymentGateways || !hasWithdrawalMethods) && (
+            {(!hasFinancial || !hasKyc) && (
               <Sidebar.Menu>
-                {!hasTransactions && (
+                {!hasFinancial && (
                   <Sidebar.MenuItem>
                     <Sidebar.MenuButton
-                      render={<NavLink to="/admin/payment-activity" />}
-                      icon={<WalletCardsIcon />}
+                      render={<NavLink to="/admin/financial" />}
+                      icon={<LandmarkIcon />}
                     >
-                      <Trans message="Transactions" />
+                      <Trans message="Financial" />
                     </Sidebar.MenuButton>
                   </Sidebar.MenuItem>
                 )}
@@ -183,36 +180,6 @@ export function AdminSidebar() {
                       icon={<ShieldCheckIcon />}
                     >
                       <Trans message="Verification" />
-                    </Sidebar.MenuButton>
-                  </Sidebar.MenuItem>
-                )}
-                {!hasWithdrawals && (
-                  <Sidebar.MenuItem>
-                    <Sidebar.MenuButton
-                      render={<NavLink to="/admin/withdrawals" />}
-                      icon={<CreditCardIcon />}
-                    >
-                      <Trans message="Withdrawals" />
-                    </Sidebar.MenuButton>
-                  </Sidebar.MenuItem>
-                )}
-                {!hasPaymentGateways && (
-                  <Sidebar.MenuItem>
-                    <Sidebar.MenuButton
-                      render={<NavLink to="/admin/financial/payment-gateways" />}
-                      icon={<LandmarkIcon />}
-                    >
-                      <Trans message="Payment Gateways" />
-                    </Sidebar.MenuButton>
-                  </Sidebar.MenuItem>
-                )}
-                {!hasWithdrawalMethods && (
-                  <Sidebar.MenuItem>
-                    <Sidebar.MenuButton
-                      render={<NavLink to="/admin/financial/withdrawal-methods" />}
-                      icon={<CoinsIcon />}
-                    >
-                      <Trans message="Receiving accounts" />
                     </Sidebar.MenuButton>
                   </Sidebar.MenuItem>
                 )}

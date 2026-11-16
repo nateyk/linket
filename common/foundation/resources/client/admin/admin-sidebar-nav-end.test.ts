@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'vitest';
 import {
+  isObsoleteAdminSidebarItem,
   isSettingsNavOnlyAdminItem,
   shouldEndMatchSidebarItem,
 } from './admin-sidebar-nav-end';
@@ -10,6 +11,18 @@ const siblings = [
   {action: '/admin/settings/hc'},
   {action: '/admin/blog'},
 ];
+
+describe('isObsoleteAdminSidebarItem', () => {
+  test('identifies scattered financial items that are obsolete in main admin sidebar', () => {
+    expect(isObsoleteAdminSidebarItem('/admin/financial/payment-gateways')).toBe(true);
+    expect(isObsoleteAdminSidebarItem('/admin/financial/withdrawal-methods')).toBe(true);
+    expect(isObsoleteAdminSidebarItem('/admin/withdrawals')).toBe(true);
+    expect(isObsoleteAdminSidebarItem('/admin/payment-activity')).toBe(true);
+    expect(isObsoleteAdminSidebarItem('/admin/financial')).toBe(false);
+    expect(isObsoleteAdminSidebarItem('/admin/financial/general')).toBe(false);
+    expect(isObsoleteAdminSidebarItem('/admin/kyc-verifications')).toBe(false);
+  });
+});
 
 describe('isSettingsNavOnlyAdminItem', () => {
   test('keeps Livechat and AI Agent inside Settings', () => {

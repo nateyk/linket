@@ -8,8 +8,19 @@ const settingsNavOnlyActions = new Set([
   '/admin/settings/livechat',
 ]);
 
+const obsoleteMainSidebarActions = new Set([
+  '/admin/financial/payment-gateways',
+  '/admin/financial/withdrawal-methods',
+  '/admin/withdrawals',
+  '/admin/payment-activity',
+]);
+
 export function isSettingsNavOnlyAdminItem(action: string | undefined): boolean {
   return action != null && settingsNavOnlyActions.has(action);
+}
+
+export function isObsoleteAdminSidebarItem(action: string | undefined): boolean {
+  return action != null && obsoleteMainSidebarActions.has(action);
 }
 
 /**

@@ -23,3 +23,21 @@ describe('admin products navigation', () => {
     expect(source).toContain('item.action !== DIGITAL_PRODUCTS_PATH');
   });
 });
+
+describe('admin financial navigation consolidation', () => {
+  test('filters obsolete separate financial items from main sidebar menu', () => {
+    expect(source).toContain('isObsoleteAdminSidebarItem');
+  });
+
+  test('renders a single Financial fallback link if not in menu config', () => {
+    expect(source).toContain('<Trans message="Financial" />');
+    expect(source).toContain('render={<NavLink to="/admin/financial" />}');
+  });
+
+  test('does not render separate obsolete financial fallback items', () => {
+    expect(source).not.toContain('!hasPaymentGateways');
+    expect(source).not.toContain('!hasWithdrawalMethods');
+    expect(source).not.toContain('!hasTransactions');
+    expect(source).not.toContain('!hasWithdrawals');
+  });
+});
