@@ -215,7 +215,7 @@ describe('CreatorWithdrawalsPage', () => {
     const requestBtn = await screen.findByRole('button', {name: /Request withdrawal/i});
     fireEvent.click(requestBtn);
 
-    expect(await screen.findByText('No payout account configured')).toBeTruthy();
+    expect(await screen.findByText('No approved payout account')).toBeTruthy();
     const configureLink = screen.getByRole('button', {name: /Configure payout accounts/i});
     expect(configureLink.getAttribute('href')).toBe('/account-settings/receiving-accounts');
   });
