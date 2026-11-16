@@ -30,7 +30,12 @@ class ChapaV1TransferApprovalContractTest extends TestCase
         config()->set('services.chapa.transfer_approval_secret', self::SECRET);
         config()->set('services.chapa.payouts_enabled', true);
         Http::fake();
+        $this->createSchema();
+        $this->seedApprovedTransfer();
+    }
 
+    private function createSchema(): void
+    {
         Schema::create('digital_product_withdrawal_methods', function (Blueprint $table): void {
             $table->id();
             $table->string('code');
@@ -67,7 +72,10 @@ class ChapaV1TransferApprovalContractTest extends TestCase
             $table->timestamps();
         });
         (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
+    }
 
+    private function seedApprovedTransfer(): void
+    {
         $withdrawalMethod = DigitalProductWithdrawalMethod::query()->create([
             'code' => 'telebirr',
             'is_active' => true,
