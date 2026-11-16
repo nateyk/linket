@@ -208,7 +208,9 @@ class PayoutRequestService
 
         // Ensure the current Chapa v1 directory accepts this bank/wallet BEFORE
         // allocating a durable payout reference and making an uncertain POST.
-        app(ChapaPayoutService::class)->resolveBank($payout->bank_code_snapshot);
+        $provider = app(ChapaPayoutService::class);
+        $provider->resolveBank($payout->bank_code_snapshot);
+        $provider->assertSufficientBalance((int) $payout->amount_cents);
 
         $processingService = app(StorefrontPayoutProcessingService::class);
         $intent = $processingService->prepareIntent($payout, $payout->withdrawalMethod?->code ?? 'bank_transfer');
