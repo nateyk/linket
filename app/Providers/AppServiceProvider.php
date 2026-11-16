@@ -298,6 +298,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Storefront\Commands\GenerateCommissionInvoices::class,
             \App\Storefront\Commands\EnforceCommissionRestrictions::class,
             \App\Storefront\Commands\ReconcileMarketplaceFinancesCommand::class,
+            \App\Storefront\Commands\AuditChapaV1TestModeCommand::class,
         ]);
 
         $this->app->singleton(Agent::class, function () {
