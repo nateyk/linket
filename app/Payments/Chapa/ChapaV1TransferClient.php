@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Payments\Chapa;
 
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -49,12 +50,12 @@ final class ChapaV1TransferClient
     public function create(string $secret, array $payload): array
     {
         $response = $this->request($secret)->post(self::BASE_URL.'/transfers', $payload);
-        $json = $response->json();
-        if (!$response->successful() || !is_array($json) || strtolower((string) ($json['status'] ?? '')) !== 'success') {
+        $data = $this->successfulPayload($response);
+        if ($data === null) {
             throw new RuntimeException('Chapa did not accept the transfer. Check the transfer reference before retrying.');
         }
 
-        return $json;
+        return $data;
     }
 
     /** @return array<string, mixed> */
@@ -73,11 +74,30 @@ final class ChapaV1TransferClient
     public function balance(string $secret): array
     {
         $response = $this->request($secret)->get(self::BASE_URL.'/balances');
-        $json = $response->json();
-        if (!$response->successful() || !is_array($json) || strtolower((string) ($json['status'] ?? '')) !== 'success') {
+        $data = $this->successfulPayload($response);
+        if ($data === null) {
             throw new RuntimeException('Unable to retrieve Chapa available balance.');
         }
 
-        return $json;
+        return $data;
     }
+    /** @return array<string, mixed>|null */
+    private function successfulPayload(Response $response): ?array
+    {
+        if (!$response->successful()) {
+            return null;
+        }
+
+        $data = $response->json();
+        if (!is_array($data)) {
+            return null;
+        }
+
+        if (strtolower((string) ($data['status'] ?? '')) !== 'success') {
+            return null;
+        }
+
+        return $data;
+    }
+
 }
