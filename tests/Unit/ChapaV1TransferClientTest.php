@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Payments\Chapa\ChapaV1TransferClient;
+use App\Payments\Chapa\LinketChapaManager;
+use App\Storefront\ChapaPayoutService;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Tests\TestCase;
@@ -72,6 +74,28 @@ class ChapaV1TransferClientTest extends TestCase
             'account_name' => 'Test Seller',
             'bank_code' => 855,
         ]);
+    }
+
+    public function testInsufficientChapaAvailableBalanceBlocksPayoutBeforeTransfer(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/balances' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    ['currency' => 'ETB', 'available_balance' => 10.00, 'ledger_balance' => 1000.00],
+                ],
+            ], 200),
+        ]);
+        $manager = $this->createMock(LinketChapaManager::class);
+        $manager->method('platformSecret')->willReturn('CHASECK_TEST-platform');
+        $this->app->instance(LinketChapaManager::class, $manager);
+
+        $this->expectExceptionMessage('available ETB balance is insufficient');
+        try {
+            app(ChapaPayoutService::class)->assertSufficientBalance(1500);
+        } finally {
+            Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+        }
     }
 
     public function testNoSecretPreventsExternalNetworkCall(): void
