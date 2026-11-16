@@ -172,6 +172,7 @@ class ChapaV1TransferApprovalContractTest extends TestCase
     public function testWrongSignatureAndMissingApprovalSecretFailClosed(): void
     {
         $this->assertSame(400, $this->requestApproval([], str_repeat('0', 64))->status());
+        $this->assertSame(400, $this->requestApproval([], str_repeat('0', 63))->status());
         config()->set('services.chapa.transfer_approval_secret', '');
         $this->assertSame(400, $this->requestApproval()->status());
         Http::assertNothingSent();
