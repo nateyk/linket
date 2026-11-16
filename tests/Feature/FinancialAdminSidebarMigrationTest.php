@@ -2,8 +2,20 @@
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 uses(DatabaseTransactions::class);
+
+beforeEach(function () {
+    if (! Schema::hasTable('settings')) {
+        Schema::create('settings', function ($table) {
+            $table->id();
+            $table->string('name')->unique();
+            $table->text('value')->nullable();
+            $table->timestamps();
+        });
+    }
+});
 
 function sampleAdminMenuWithScatteredFinancialItems(): array
 {

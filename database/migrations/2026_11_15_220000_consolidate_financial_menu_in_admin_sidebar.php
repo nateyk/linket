@@ -4,10 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Consolidate scattered financial sidebar menus (payment gateways, receiving accounts,
- * withdrawals, payment activity) into a single top-level Financial hub entry.
- */
 return new class extends Migration
 {
     private const FINANCIAL_ACTION = '/admin/financial';
@@ -16,97 +12,95 @@ return new class extends Migration
 
     public function up(): void
     {
-        $setting = DB::table('settings')->where('name', 'menus')->first();
-        $menus = json_decode($setting?->value ?? '', true);
+        $raw = DB::table('settings')->where('name', 'menus')->value('value');
+        $menus = json_decode((string) $raw, true);
+
         if (! is_array($menus)) {
             return;
         }
 
-        $changed = false;
-        foreach ($menus as &$menu) {
-            if ($this->isTargetMenu($menu)) {
-                $menu['items'] = $this->consolidateItems($menu['items'] ?? []);
-                $changed = true;
-            }
-        }
-        unset($menu);
+        $updated = array_map($this->consolidateMenu(...), $menus);
 
-        if ($changed) {
-            DB::table('settings')->where('name', 'menus')->update([
-                'value' => json_encode($menus, JSON_UNESCAPED_SLASHES),
-                'updated_at' => now(),
-            ]);
-            Cache::forget('settings.public');
+        if ($updated === $menus) {
+            return;
         }
+
+        DB::table('settings')->where('name', 'menus')->update([
+            'value' => json_encode($updated, JSON_UNESCAPED_SLASHES),
+            'updated_at' => now(),
+        ]);
+
+        Cache::forget('settings.public');
     }
 
-    private function isTargetMenu(array $menu): bool
+    private function consolidateMenu(mixed $menu): mixed
     {
-        return in_array('admin-sidebar', $menu['positions'] ?? [], true);
-    }
-
-    private function consolidateItems(array $items): array
-    {
-        $targetIndex = $this->findInsertionIndex($items);
-        $cleanItems = array_values(array_filter($items, fn (array $item): bool => ! $this->isObsolete($item)));
-
-        if (! $this->hasFinancialItem($cleanItems)) {
-            $insertAt = min($targetIndex, count($cleanItems));
-            array_splice($cleanItems, $insertAt, 0, [$this->financialItem()]);
+        if (! is_array($menu) || ! in_array('admin-sidebar', $menu['positions'] ?? [], true)) {
+            return $menu;
         }
 
-        return $this->reindexOrders($cleanItems);
+        $items = $menu['items'] ?? [];
+        $clean = array_values(array_filter($items, $this->isRetainedItem(...)));
+
+        if ($this->hasFinancialItem($clean)) {
+            $menu['items'] = $this->assignOrders($clean);
+
+            return $menu;
+        }
+
+        $target = $this->findInsertIndex($items, count($clean));
+        array_splice($clean, $target, 0, [$this->financialItem()]);
+
+        $menu['items'] = $this->assignOrders($clean);
+
+        return $menu;
+    }
+
+    private function isRetainedItem(mixed $item): bool
+    {
+        return is_array($item) && ! $this->isObsolete($item);
     }
 
     private function isObsolete(array $item): bool
     {
-        $action = $item['action'] ?? '';
-        $id = $item['id'] ?? '';
-
-        return match ($action) {
+        $obsolete = [
             '/admin/financial/payment-gateways',
             '/admin/financial/withdrawal-methods',
             '/admin/withdrawals',
-            '/admin/payment-activity' => true,
-            default => match ($id) {
-                'admin-payment-gateways',
-                'admin-withdrawal-methods',
-                'admin-withdrawals',
-                'admin-payment-activity' => true,
-                default => false,
-            },
-        };
+            '/admin/payment-activity',
+            'admin-payment-gateways',
+            'admin-withdrawal-methods',
+            'admin-withdrawals',
+            'admin-payment-activity',
+        ];
+
+        return in_array($item['action'] ?? '', $obsolete, true)
+            || in_array($item['id'] ?? '', $obsolete, true);
     }
 
-    private function findInsertionIndex(array $items): int
+    private function findInsertIndex(array $items, int $fallback): int
     {
-        foreach ($items as $index => $item) {
-            if ($this->isObsolete($item)) {
-                return $index;
-            }
+        $obsoleteIndex = collect($items)->search($this->isObsolete(...));
+        if ($obsoleteIndex !== false) {
+            return min((int) $obsoleteIndex, $fallback);
         }
 
-        foreach ($items as $index => $item) {
-            $action = $item['action'] ?? '';
-            if ($action === '/admin/items' || $action === '/admin/digital-products') {
-                return $index + 1;
-            }
+        $productIndex = collect($items)->search(
+            fn (array $item): bool => in_array($item['action'] ?? '', ['/admin/items', '/admin/digital-products'], true)
+        );
+        if ($productIndex !== false) {
+            return min((int) $productIndex + 1, $fallback);
         }
 
-        return count($items);
+        return $fallback;
     }
 
     private function hasFinancialItem(array $items): bool
     {
-        foreach ($items as $item) {
-            $action = $item['action'] ?? '';
-            $id = $item['id'] ?? '';
-            if ($id === self::FINANCIAL_ID || $action === self::FINANCIAL_ACTION || $action === '/admin/financial/general') {
-                return true;
-            }
-        }
-
-        return false;
+        return collect($items)->contains(
+            fn (array $item): bool => ($item['id'] ?? '') === self::FINANCIAL_ID
+                || in_array($item['action'] ?? '', [self::FINANCIAL_ACTION, '/admin/financial/general'], true)
+        );
     }
 
     private function financialItem(): array
@@ -120,19 +114,17 @@ return new class extends Migration
         ];
     }
 
-    private function reindexOrders(array $items): array
+    private function assignOrders(array $items): array
     {
-        foreach ($items as $index => &$item) {
-            $item['order'] = $index;
-        }
-        unset($item);
-
-        return $items;
+        return array_values(array_map(
+            fn (int $index, array $item): array => array_merge($item, ['order' => $index]),
+            array_keys($items),
+            $items
+        ));
     }
 
     public function down(): void
     {
-        // Leave customized navigation intact; rolling back a deployment must
-        // not disrupt custom menu configurations.
+        // No-op: sidebar menu consolidation is forward-only.
     }
 };
