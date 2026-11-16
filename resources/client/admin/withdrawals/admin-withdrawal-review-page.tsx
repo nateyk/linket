@@ -60,6 +60,7 @@ export type Payout = {
   withdrawalMethod?: {
     id?: number;
     name?: string;
+    code?: string;
     destination_label?: string | null;
     instructions?: string | null;
     minimum_amount_cents?: number | null;
@@ -409,7 +410,7 @@ function Stage1Section({
       <div className="flex items-center justify-between">
         <div>
           <p className="font-semibold text-sm"><Trans message="Stage 1: Approval & Reservation" /></p>
-          <p className="text-xs text-muted-foreground"><Trans message="Approving transitions status to Processing and locks creator funds in ledger." /></p>
+          <p className="text-xs text-muted-foreground"><Trans message="Funds were reserved when the seller requested withdrawal. Approval moves it into Processing." /></p>
         </div>
         {payout.status === 'processing' && <Badge variant="positive"><Trans message="Approved" /></Badge>}
       </div>
@@ -438,27 +439,42 @@ function Stage2Section({
   saving: boolean;
   onSubmitTransfer: () => void;
 }) {
-  const hasSuccessfulIntent = !!payout.latest_payout_intent;
+  const intent = payout.latest_payout_intent;
+  const isManual = payout.withdrawalMethod?.code === 'other';
+  const intentLabel: Record<string, string> = {
+    prepared: 'Prepared',
+    submitted: 'Submission unconfirmed',
+    provider_pending: 'Queued — awaiting settlement',
+    successful: 'Settled',
+    failed: 'Transfer failed',
+  };
+
   return (
     <div className="rounded-input border p-4 space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="font-semibold text-sm"><Trans message="Stage 2: Submit Transfer (Chapa v1)" /></p>
-          <p className="text-xs text-muted-foreground"><Trans message="Dispatches disbursement request to Chapa platform API." /></p>
+          <p className="text-xs text-muted-foreground"><Trans message="Sends a transfer request through the Linket platform Chapa account." /></p>
         </div>
-        {payout.latest_payout_intent && (
-          <Badge variant={payout.latest_payout_intent.status === 'success' ? 'positive' : 'outline'}>
-            {payout.latest_payout_intent.status}
+        {intent && (
+          <Badge variant={intent.status === 'successful' ? 'positive' : 'outline'}>
+            {intentLabel[intent.status] ?? intent.status.replaceAll('_', ' ')}
           </Badge>
         )}
       </div>
-      {payout.status === 'processing' && !hasSuccessfulIntent && (
-        <div className="pt-2">
-          <Button color="primary" disabled={saving} onClick={onSubmitTransfer}>
-            <SendIcon />
-            <Trans message="Submit transfer to Chapa" />
-          </Button>
-        </div>
+      {payout.status === 'processing' && !intent && !isManual && (
+        <Button color="primary" disabled={saving} onClick={onSubmitTransfer}>
+          <SendIcon />
+          <Trans message="Submit transfer to Chapa" />
+        </Button>
+      )}
+      {intent?.status === 'submitted' && (
+        <p role="status" className="text-xs text-muted-foreground">
+          <Trans message="Transfer outcome is uncertain. Do not resubmit; verify the existing Chapa reference." />
+        </p>
+      )}
+      {intent?.status === 'submitted' && intent.last_error && (
+        <p className="text-xs text-muted-foreground">{intent.last_error}</p>
       )}
     </div>
   );
@@ -478,6 +494,11 @@ function Stage3Section({
   const [manualRef, setManualRef] = useState('');
   const [manualNote, setManualNote] = useState('');
   const [showManual, setShowManual] = useState(false);
+  const status = payout.latest_payout_intent?.status;
+  const canVerify = payout.status === 'processing' &&
+    (status === 'submitted' || status === 'provider_pending');
+  const canSettleManually = payout.status === 'processing' &&
+    payout.withdrawalMethod?.code === 'other' && !payout.latest_payout_intent;
 
   return (
     <div className="rounded-input border p-4 space-y-3">
@@ -486,18 +507,18 @@ function Stage3Section({
         <p className="text-xs text-muted-foreground"><Trans message="Only Chapa-confirmed settlement marks a wallet or bank payout paid." /></p>
       </div>
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        {payout.latest_payout_intent && (
+        {canVerify && (
           <Button color="primary" disabled={saving} onClick={onVerifySettlement}>
             <ShieldCheckIcon />
             <Trans message="Verify settlement with Chapa" />
           </Button>
         )}
-        {payout.withdrawalMethod?.name === 'Manual payout' && !payout.latest_payout_intent && <Button variant="outline" onClick={() => setShowManual(!showManual)}>
+        {canSettleManually && <Button variant="outline" onClick={() => setShowManual(!showManual)}>
           <Trans message="Record manual settlement" />
         </Button>}
       </div>
 
-      {showManual && payout.withdrawalMethod?.name === 'Manual payout' && !payout.latest_payout_intent && (
+      {showManual && canSettleManually && (
         <div className="mt-4 rounded-input border border-muted bg-muted/20 p-4 space-y-3">
           <Field.Root>
             <Field.Label><Trans message="Manual transfer reference" /></Field.Label>

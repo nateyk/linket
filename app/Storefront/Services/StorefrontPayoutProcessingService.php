@@ -134,8 +134,33 @@ final class StorefrontPayoutProcessingService
         if (in_array($status, ['failed', 'reversed', 'rejected'], true)) {
             return $this->releaseFailed($intent, $raw);
         }
+        if (in_array($status, ['pending', 'queued', 'processing'], true)) {
+            return $this->recordPendingVerification($intent, $raw);
+        }
 
         return $intent->fresh();
+    }
+
+    private function recordPendingVerification(StorefrontPayoutIntent $intent, array $raw): StorefrontPayoutIntent
+    {
+        return DB::transaction(function () use ($intent, $raw): StorefrontPayoutIntent {
+            $intent = StorefrontPayoutIntent::query()->lockForUpdate()->findOrFail($intent->id);
+            $payout = $intent->payoutRequest()->lockForUpdate()->firstOrFail();
+            if ($payout->status !== 'processing' || !$intent->isPending()) {
+                return $intent;
+            }
+
+            // Chapa verified the reference but has not confirmed settlement.
+            // Clear uncertainty without releasing or disbursing creator funds.
+            $intent->update([
+                'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+                'last_error' => null,
+                'verified_at' => now(),
+                'verification_data' => $raw,
+            ]);
+
+            return $intent->fresh();
+        });
     }
 
     private function settle(StorefrontPayoutIntent $intent, array $raw): StorefrontPayoutIntent
