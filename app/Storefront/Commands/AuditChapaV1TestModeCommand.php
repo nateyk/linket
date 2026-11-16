@@ -68,6 +68,22 @@ final class AuditChapaV1TestModeCommand extends Command
     /** @param array<string, mixed> $response */
     private function showBalance(array $response): void
     {
+        $balance = $this->requireEtbBalance($response);
+        $available = $balance['available_balance'] ?? null;
+        $ledger = $balance['ledger_balance'] ?? null;
+        if (!is_numeric($available) || !is_numeric($ledger)) {
+            throw new RuntimeException('Incomplete ETB balance schema.');
+        }
+
+        $this->line('ETB available (test): '.number_format((float) $available, 2, '.', ''));
+        $this->line('ETB ledger (test): '.number_format((float) $ledger, 2, '.', ''));
+    }
+
+    /** @param array<string, mixed> $response
+     * @return array<string, mixed>
+     */
+    private function requireEtbBalance(array $response): array
+    {
         $balances = $response['data'] ?? null;
         if (!is_array($balances)) {
             throw new RuntimeException('Unexpected Chapa balance schema.');
@@ -80,14 +96,7 @@ final class AuditChapaV1TestModeCommand extends Command
             throw new RuntimeException('No ETB balance in Chapa test response.');
         }
 
-        $available = $etb['available_balance'] ?? null;
-        $ledger = $etb['ledger_balance'] ?? null;
-        if (!is_numeric($available) || !is_numeric($ledger)) {
-            throw new RuntimeException('Incomplete ETB balance schema.');
-        }
-
-        $this->line('ETB available (test): '.number_format((float) $available, 2, '.', ''));
-        $this->line('ETB ledger (test): '.number_format((float) $ledger, 2, '.', ''));
+        return $etb;
     }
 
     /** @param array<string, mixed> $response */
