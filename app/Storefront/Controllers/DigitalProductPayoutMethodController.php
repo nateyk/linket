@@ -6,6 +6,7 @@ namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
+use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Resources\DigitalProductPayoutMethodResource;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Http\JsonResponse;
@@ -128,6 +129,7 @@ class DigitalProductPayoutMethodController extends Controller
     public function updateMethod(Request $request, DigitalProductPayoutMethod $payoutMethod): DigitalProductPayoutMethodResource
     {
         abort_unless($payoutMethod->creator_id === $request->user()->id, 404);
+        $this->assertNoPendingWithdrawals($payoutMethod);
 
         $data = $this->validatePayload($request);
         $withdrawalMethod = $this->resolveWithdrawalMethod(
@@ -190,6 +192,7 @@ class DigitalProductPayoutMethodController extends Controller
     public function destroy(Request $request, DigitalProductPayoutMethod $payoutMethod): Response
     {
         abort_unless($payoutMethod->creator_id === $request->user()->id, 404);
+        $this->assertNoPendingWithdrawals($payoutMethod);
 
         DB::transaction(function () use ($payoutMethod): void {
             $wasDefault = $payoutMethod->is_default;
@@ -285,6 +288,7 @@ class DigitalProductPayoutMethodController extends Controller
             'note' => 'nullable|string|max:1000',
         ]);
         abort_unless($payoutMethod->is_active, 422, __('Inactive account cannot be approved.'));
+        $this->assertNoPendingWithdrawals($payoutMethod);
         abort_unless($payoutMethod->withdrawalMethod?->is_active, 422, __('This withdrawal provider is disabled.'));
         abort_unless($payoutMethod->status !== DigitalProductPayoutMethod::STATUS_DEACTIVATED, 422);
 
@@ -297,6 +301,20 @@ class DigitalProductPayoutMethodController extends Controller
         ]);
 
         return new DigitalProductPayoutMethodResource($payoutMethod->fresh('withdrawalMethod'));
+    }
+
+    private function assertNoPendingWithdrawals(DigitalProductPayoutMethod $method): void
+    {
+        $hasPending = PayoutRequest::query()
+            ->where('digital_product_payout_method_id', $method->id)
+            ->whereIn('status', ['requested', 'processing'])
+            ->exists();
+
+        if ($hasPending) {
+            throw ValidationException::withMessages([
+                'payout_method' => __('This account has an unsettled withdrawal. Wait for verified settlement before modifying it.'),
+            ]);
+        }
     }
 
     private function extractLastFour(string $destination): string
