@@ -138,15 +138,30 @@ final class ChapaV2Client
 
     public function secretAuthenticates(string $secret): bool
     {
+        return $this->secretStatus($secret) === 'accepted';
+    }
+
+    public static function isLegacyKey(string $key): bool
+    {
+        return preg_match('/^(?:CHAPUBK|CHASECK)(?:_TEST)?-/i', $key) === 1;
+    }
+
+    /** @return 'accepted'|'unauthorized'|'environment_mismatch' */
+    public function secretStatus(string $secret): string
+    {
         $response = $this->request($secret)->get($this->baseUrl.'/payments/methods');
 
+        if ($response->status() === 403 && $response->json('error.code') === 'INVALID_VALUE') {
+            return 'environment_mismatch';
+        }
+
         if (in_array($response->status(), [401, 403], true)) {
-            return false;
+            return 'unauthorized';
         }
 
         $this->jsonOrFail($response);
 
-        return true;
+        return 'accepted';
     }
 
     public static function centsFromMajor(string $amount): int

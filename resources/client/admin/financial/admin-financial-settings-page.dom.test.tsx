@@ -158,10 +158,10 @@ describe('AdminFinancialSettingsPage', () => {
 
     const inputs = screen.getAllByRole('textbox');
     // Public key input
-    fireEvent.change(inputs[0], {target: {value: 'CHAPUBK_TEST-validkey123'}});
+    fireEvent.change(inputs[0], {target: {value: 'CHAPA_TEST_validkey123'}});
 
     const secretInput = document.querySelector('input[type="password"]') as HTMLInputElement;
-    fireEvent.change(secretInput, {target: {value: 'CHASECK_TEST-validsecret456'}});
+    fireEvent.change(secretInput, {target: {value: 'CHAPA_TEST_validsecret456'}});
 
     const submitBtn = screen.getByRole('button', {name: /Save Chapa credentials/i});
     expect(submitBtn.hasAttribute('disabled')).toBe(false);
@@ -172,8 +172,8 @@ describe('AdminFinancialSettingsPage', () => {
         '/api/v1/admin/billing/subscription-gateway',
         expect.objectContaining({
           gateway: 'chapa',
-          public_key: 'CHAPUBK_TEST-validkey123',
-          secret_key: 'CHASECK_TEST-validsecret456',
+          public_key: 'CHAPA_TEST_validkey123',
+          secret_key: 'CHAPA_TEST_validsecret456',
         }),
       );
     });
@@ -193,6 +193,24 @@ describe('AdminFinancialSettingsPage', () => {
 
     const submitBtn = screen.getByRole('button', {name: /Save Chapa credentials/i});
     expect(submitBtn.hasAttribute('disabled')).toBe(true);
+    expect(mockApiClient.put).not.toHaveBeenCalled();
+  });
+
+  it('explains that CHAPUBK and CHASECK keys are Chapa v1 keys and does not submit them', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
+    });
+
+    const inputs = screen.getAllByRole('textbox');
+    fireEvent.change(inputs[0], {target: {value: 'CHAPUBK_TEST-examplepublic'}});
+    const secretInput = document.querySelector('input[type="password"]') as HTMLInputElement;
+    fireEvent.change(secretInput, {target: {value: 'CHASECK_TEST-examplesecret'}});
+
+    fireEvent.click(screen.getByRole('button', {name: /Save Chapa credentials/i}));
+
+    expect(await screen.findByText(/These are Chapa v1 keys/)).toBeTruthy();
     expect(mockApiClient.put).not.toHaveBeenCalled();
   });
 
