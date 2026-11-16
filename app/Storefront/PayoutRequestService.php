@@ -29,7 +29,9 @@ class PayoutRequestService
             $accountQuery = DigitalProductPayoutMethod::query()
                 ->with('withdrawalMethod')
                 ->where('creator_id', $creatorId)
-                ->where('is_active', true);
+                ->where('is_active', true)
+                ->where('status', DigitalProductPayoutMethod::STATUS_ACTIVE)
+                ->whereNotNull('approved_at');
 
             $account = $payoutMethodId
                 ? $accountQuery->where('id', $payoutMethodId)->lockForUpdate()->first()
@@ -61,6 +63,8 @@ class PayoutRequestService
                 'payout_method_label' => $account->display_label,
                 'withdrawal_method_name' => $method->name,
                 'payout_destination' => $account->destination,
+                'account_holder_snapshot' => $account->account_holder,
+                'bank_code_snapshot' => $account->bank_code,
                 'currency' => config('storefront.currency', 'ETB'),
                 'amount_cents' => $amountCents,
                 'status' => 'requested',
@@ -106,17 +110,23 @@ class PayoutRequestService
                 throw ValidationException::withMessages(['status' => __('This payout can no longer be changed.')]);
             }
 
-            $transferReference = $data['transfer_reference'] ?? null;
-            $autoTransfer = (bool) ($data['auto_transfer'] ?? false);
+            // Automated transfers must only be marked paid by verified Chapa settlement.
+            if ($target === 'paid' && ($payout->withdrawalMethod?->code !== 'other'
+                || $payout->payoutIntents()->exists()
+                || (bool) ($data['auto_transfer'] ?? false))) {
+                throw ValidationException::withMessages([
+                    'status' => __('Use Chapa settlement verification. A queued transfer is not a paid withdrawal.'),
+                ]);
+            }
 
-            if ($target === 'paid') {
-                if ($autoTransfer && in_array($payout->withdrawalMethod?->code, ['bank_transfer', 'telebirr'], true)) {
-                    $transferReference = app(ChapaPayoutService::class)->createTransfer($payout);
-                } elseif ($autoTransfer) {
-                    $transferReference = 'MANUAL-'.strtoupper(substr(md5($payout->id.time()), 0, 12));
-                } elseif (blank($transferReference)) {
-                    throw ValidationException::withMessages(['transfer_reference' => __('A transfer reference is required before marking a payout paid.')]);
-                }
+            if (in_array($target, ['rejected', 'cancelled'], true) && $payout->payoutIntents()->exists()) {
+                throw ValidationException::withMessages([
+                    'status' => __('A transfer already exists. Verify its final status before releasing reserved funds.'),
+                ]);
+            }
+            $transferReference = $data['transfer_reference'] ?? null;
+            if ($target === 'paid' && blank($transferReference)) {
+                throw ValidationException::withMessages(['transfer_reference' => __('Manual settlement reference is required.')]);
             }
 
             $updates = ['status' => $target];
@@ -164,15 +174,28 @@ class PayoutRequestService
 
     public function submitChapaPayout(PayoutRequest $payout, int $actorId): StorefrontPayoutIntent
     {
-        if (!in_array($payout->status, ['requested', 'processing'], true)) {
-            throw ValidationException::withMessages(['status' => __('Payout must be requested or processing to submit to Chapa.')]);
+        if ($payout->status !== 'processing') {
+            throw ValidationException::withMessages(['status' => __('An administrator must approve the withdrawal before Chapa submission.')]);
+        }
+
+        $payout->load(['payoutMethod', 'withdrawalMethod']);
+        if (!$payout->withdrawalMethod?->is_active
+            || !$payout->payoutMethod?->is_active
+            || $payout->payoutMethod->status !== DigitalProductPayoutMethod::STATUS_ACTIVE
+            || !$payout->payoutMethod->approved_at
+            || blank($payout->account_holder_snapshot)
+            || blank($payout->bank_code_snapshot)) {
+            throw ValidationException::withMessages(['payout_method' => __('The approved receiving account is unavailable or was modified.')]);
+        }
+        if ($payout->payoutIntents()->exists()) {
+            throw ValidationException::withMessages(['status' => __('Transfer already initiated. Verify its existing reference; never resubmit it.')]);
         }
 
         $processingService = app(StorefrontPayoutProcessingService::class);
         $intent = $processingService->prepareIntent($payout, $payout->withdrawalMethod?->code ?? 'bank_transfer');
         $intent = $processingService->submitPayout($intent);
 
-        $this->activity($payout, $actorId, 'chapa_transfer_submitted', "Submitted transfer via Chapa ({$intent->merchant_reference})");
+        $this->activity($payout, $actorId, 'chapa_transfer_submitted', "Chapa v1 reference: {$intent->merchant_reference}; status: {$intent->status}");
 
         return $intent;
     }
