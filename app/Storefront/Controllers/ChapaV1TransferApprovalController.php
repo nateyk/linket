@@ -25,10 +25,7 @@ final class ChapaV1TransferApprovalController extends Controller
         $secret = (string) config('services.chapa.transfer_approval_secret', '');
         $signature = (string) $request->header('Chapa-Signature', '');
 
-        // Chapa v1 documents HMAC SHA256 of the approval secret with itself as the key.
-        // The sandbox's real callback must be checked before enabling live withdrawals.
-        if ($secret === '' || !preg_match('/^[0-9a-f]{64}$/i', $signature)
-            || !hash_equals(hash_hmac('sha256', $secret, $secret), strtolower($signature))) {
+        if (!$this->isValidSignature($secret, $signature)) {
             return response()->json(['message' => 'Transfer not approved'], 400);
         }
 
@@ -57,4 +54,18 @@ final class ChapaV1TransferApprovalController extends Controller
         // Idempotent callback: no transfer dispatch and no ledger mutation here.
         return response()->json(['message' => 'Transfer approved'], 200);
     }
+    private function isValidSignature(string $secret, string $signature): bool
+    {
+        if ($secret === '') {
+            return false;
+        }
+
+        if (preg_match('/^[0-9a-f]{64}$/i', $signature) !== 1) {
+            return false;
+        }
+
+        // Keep fail-closed until a real Chapa v1 test-mode callback confirms this format.
+        return hash_equals(hash_hmac('sha256', $secret, $secret), strtolower($signature));
+    }
+
 }
