@@ -1,5 +1,4 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import {loadIsolatedHcFixture, loginToHc} from './help-center-isolated-helpers';
 import {expect, test} from '@playwright/test';
 
 type HcFixture = {
@@ -21,25 +20,7 @@ type HcFixture = {
   };
 };
 
-function loadFixture(): HcFixture {
-  const fixturePath = path.resolve('storage/app/e2e/hc-fixture.json');
-  expect(
-    fs.existsSync(fixturePath),
-    'hc fixture missing — run linket:prepare-hc-e2e',
-  ).toBeTruthy();
-  const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as HcFixture;
-  expect(fixture.database.toLowerCase()).toContain('test');
-  return fixture;
-}
-
-async function login(page: import('@playwright/test').Page, email: string, password: string) {
-  await page.context().clearCookies();
-  await page.goto('/login');
-  await page.getByRole('textbox', {name: 'Email Address'}).fill(email);
-  await page.getByRole('textbox', {name: 'Password'}).fill(password);
-  await page.getByRole('button', {name: 'Login'}).click();
-  await page.waitForURL(url => !url.pathname.endsWith('/login'), {timeout: 45_000});
-}
+const loadFixture = () => loadIsolatedHcFixture<HcFixture>();
 
 test.describe('isolated Help Center + support', () => {
   test.skip(
@@ -98,7 +79,7 @@ test.describe('isolated Help Center + support', () => {
       const creds = fixture[persona];
 
       await page.setViewportSize({width: 1280, height: 900});
-      await login(page, creds.email, creds.password);
+      await loginToHc(page, creds);
 
       await page.goto(fixture.routes.help_landing);
       await expect(page.getByText(fixture.published_article.title).first()).toBeVisible({
@@ -134,7 +115,7 @@ test.describe('isolated Help Center + support', () => {
     test.setTimeout(150_000);
     const fixture = loadFixture();
 
-    await login(page, fixture.buyer.email, fixture.buyer.password);
+    await loginToHc(page, fixture.buyer);
     await page.goto(fixture.ticket.customer_url);
     await expect(page.getByText(fixture.ticket.subject).first()).toBeVisible({timeout: 30000});
     await expect(page.getByText(/reviewing your request/i).first()).toBeVisible({timeout: 15000});
@@ -143,7 +124,7 @@ test.describe('isolated Help Center + support', () => {
     await page.goto('/logout').catch(() => undefined);
     await page.context().clearCookies();
 
-    await login(page, fixture.admin.email, fixture.admin.password);
+    await loginToHc(page, fixture.admin);
     await page.goto(fixture.ticket.agent_url);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(
@@ -158,7 +139,7 @@ test.describe('isolated Help Center + support', () => {
     test.setTimeout(120_000);
     const fixture = loadFixture();
 
-    await login(page, fixture.admin.email, fixture.admin.password);
+    await loginToHc(page, fixture.admin);
 
     await page.goto(fixture.routes.admin_hc_settings);
     await expect(

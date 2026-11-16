@@ -28,9 +28,9 @@ interface Props {
 }
 export function ConversationPageToolbar({data}: Props) {
   return (
-    <InboxSectionHeader gap="gap-4">
+    <InboxSectionHeader gap="gap-2" className="min-w-0 max-2xl:h-auto max-2xl:min-h-14 max-2xl:flex-wrap max-2xl:py-2">
       <ToggleConversationListButton />
-      <div className="text-overflow-ellipsis mr-24 min-w-0 overflow-hidden">
+      <div className="text-overflow-ellipsis mr-auto min-w-0 overflow-hidden">
         <ConversationSubject data={data} />
       </div>
       <MoreOptionsButton data={data} />

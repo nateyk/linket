@@ -18,7 +18,7 @@ export const FeedBubble = forwardRef(function FeedBubble(
       ref={ref}
       onClick={onClick}
       className={clsx(
-        'w-max max-w-full rounded-panel p-14 text-sm leading-normal',
+        'w-max max-w-full rounded-panel p-3.5 text-sm leading-normal',
         getColor(color),
         allowBreak
           ? 'break-words'
