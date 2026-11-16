@@ -23,6 +23,7 @@ class DigitalProductPayoutMethodResource extends JsonResource
                 'id' => $this->withdrawalMethod?->id,
                 'name' => $this->withdrawalMethod?->name,
                 'code' => $this->withdrawalMethod?->code,
+                'is_active' => (bool) $this->withdrawalMethod?->is_active,
             ]),
             'bank_code' => $this->bank_code,
             'bank_name' => $this->bank_name,
