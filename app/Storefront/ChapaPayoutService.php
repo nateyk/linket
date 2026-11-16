@@ -1,212 +1,125 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Storefront;
 
-use App\Payments\Chapa\ChapaV2Client;
-use App\Payments\ChapaGateway;
-use App\Storefront\Models\PayoutRequest;
+use App\Payments\Chapa\ChapaV1TransferClient;
+use App\Payments\Chapa\LinketChapaManager;
+use App\Storefront\Models\StorefrontPayoutIntent;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use RuntimeException;
 
+/** Chapa v1 transfer destination validation and provider dispatch. */
 class ChapaPayoutService
 {
+    public const WALLET_CODES = ['telebirr', 'mpesa', 'yaya', 'cbebirr'];
 
-    public function createTransfer(PayoutRequest $payout): string
-    {
-        $method = $payout->withdrawalMethod;
-
-        if (!$method) {
-            throw new RuntimeException('No withdrawal method associated with payout.');
-        }
-
-        if (!$method->is_active) {
-            throw new RuntimeException('Withdrawal method is not active.');
-        }
-
-        $destination = $payout->payout_destination;
-
-        return match ($method->code) {
-            'bank_transfer' => $this->createBankTransfer($payout, $destination),
-            'telebirr' => $this->createTelebirrTransfer($payout, $destination),
-            default => $this->createManualTransfer($payout, $method->code),
-        };
-    }
-
-    public function verifyTransfer(string $reference): array
-    {
-        Log::info('Verifying Chapa transfer', ['reference' => $reference]);
-
-        $data = app(ChapaV2Client::class)->verifyPayout(
-            app(ChapaGateway::class)->platformSecret(),
-            $reference,
-        );
-
-        Log::info('Chapa transfer verification response', [
-            'reference' => $reference,
-            'status' => $data['status'] ?? null,
-        ]);
-
-        if (!isset($data['status'])) {
-            throw new RuntimeException('Chapa transfer verification failed.');
-        }
-
-        return $data;
-    }
-
+    /** @return array<int, array<string, mixed>> */
     public function getBanks(): array
     {
-        return Cache::remember('chapa:banks', 3600, function () {
-            Log::info('Fetching Chapa banks list');
-
-            return app(ChapaV2Client::class)->payoutBanks(app(ChapaGateway::class)->platformSecret());
-        });
+        return Cache::remember('chapa:v1:transfer-banks', 1800, fn () => app(ChapaV1TransferClient::class)
+            ->banks(app(LinketChapaManager::class)->platformSecret()));
     }
 
-    public function validateBankCode(string $bankCode): bool
+    public function resolveBank(string $code): array
     {
-        $banks = $this->getBanks();
-        $code = strtoupper($bankCode);
+        $aliases = [
+            'cbe' => 'cbe_bank',
+            'coop' => 'ebirr',
+            'yaya_wallet' => 'yaya',
+            'm-pesa' => 'mpesa',
+            'cbe_birr' => 'cbebirr',
+        ];
+        $code = strtolower(trim($code));
+        $slug = $aliases[$code] ?? $code;
+        foreach ($this->getBanks() as $bank) {
+            if ((string) ($bank['slug'] ?? '') === $slug
+                || (string) ($bank['id'] ?? '') === $code) {
+                if (empty($bank['is_active']) || empty($bank['active'])
+                    || strtoupper((string) ($bank['currency'] ?? '')) !== 'ETB') {
+                    throw new RuntimeException('This Chapa payout destination is not available for ETB.');
+                }
 
-        return collect($banks)->contains(function ($bank) use ($code) {
-            return strtoupper($bank['slug']) === $code
-                || strtoupper($bank['swift']) === $code
-                || (isset($bank['id']) && (string)$bank['id'] === $code);
-        });
-    }
-
-    public function findBankByCode(string $bankCode): ?array
-    {
-        $banks = $this->getBanks();
-        $code = strtoupper($bankCode);
-
-        return collect($banks)->first(function ($bank) use ($code) {
-            return strtoupper($bank['slug']) === $code
-                || strtoupper($bank['swift']) === $code
-                || (isset($bank['id']) && (string)$bank['id'] === $code);
-        });
-    }
-
-    private function createBankTransfer(PayoutRequest $payout, string $destination): string
-    {
-        $bankCode = $this->extractBankCode($destination);
-        if (!$bankCode) {
-            throw new RuntimeException('Bank code not found in destination. Please include bank code in account details (format: BANKCODE:ACCOUNTNUMBER).');
+                return $bank;
+            }
         }
 
-        if (!$this->validateBankCode($bankCode)) {
-            throw new RuntimeException("Invalid bank code: {$bankCode}. Please use a valid bank code from Chapa's bank list.");
+        throw new RuntimeException('The selected destination is not supported by the current Chapa bank list.');
+    }
+
+    /** @return array<string, mixed> */
+    public function createTransfer(StorefrontPayoutIntent $intent): array
+    {
+        $payout = $intent->payoutRequest()->with(['withdrawalMethod', 'payoutMethod'])->firstOrFail();
+        $method = $payout->withdrawalMethod;
+        if (!$method || !$method->is_active || !in_array($method->code, [
+            'bank_transfer', ...self::WALLET_CODES,
+        ], true)) {
+            throw new RuntimeException('The payout method is disabled or is not supported by Chapa v1.');
         }
 
-        $transferReference = $this->transferReference($payout);
-        $bank = $this->findBankByCode($bankCode);
-
-        Log::info('Initiating Chapa bank transfer', [
-            'payout_id' => $payout->id,
-            'reference' => $transferReference,
-            'amount' => number_format($payout->amount_cents / 100, 2, '.', ''),
-            'currency' => $payout->currency,
-            'bank_code' => $bankCode,
-        ]);
-
-        $result = $this->sendPayout($payout, $transferReference, [
-            'account_name' => $payout->payoutMethod?->account_holder ?? 'Unknown',
-            'account_number' => $this->extractAccountNumber($destination),
-            'bank_slug' => (string) ($bank['slug'] ?? $bankCode),
-        ], "Payout #{$payout->id}");
-
-        Log::info('Chapa bank transfer response', [
-            'payout_id' => $payout->id,
-            'reference' => $transferReference,
-            'status' => $result['status'] ?? null,
-        ]);
-
-        return $transferReference;
-    }
-
-    private function createTelebirrTransfer(PayoutRequest $payout, string $destination): string
-    {
-        $transferReference = $this->transferReference($payout);
-
-        Log::info('Initiating Chapa Telebirr transfer', [
-            'payout_id' => $payout->id,
-            'reference' => $transferReference,
-            'amount' => number_format($payout->amount_cents / 100, 2, '.', ''),
-            'currency' => $payout->currency,
-            'bank_code' => 'TELEBIRR',
-        ]);
-
-        $result = $this->sendPayout($payout, $transferReference, [
-            'account_name' => $payout->payoutMethod?->account_holder ?? 'Unknown',
-            'account_number' => $this->extractPhoneNumber($destination),
-            'bank_slug' => 'telebirr',
-        ], "Telebirr payout #{$payout->id}");
-
-        Log::info('Chapa Telebirr transfer response', [
-            'payout_id' => $payout->id,
-            'reference' => $transferReference,
-            'status' => $result['status'] ?? null,
-        ]);
-
-        return $transferReference;
-    }
-
-    private function createManualTransfer(PayoutRequest $payout, string $method): string
-    {
-        $transferReference = 'MANUAL-' . strtoupper(substr(md5($payout->id . time()), 0, 12));
-        Log::info('Manual payout reference generated', [
-            'payout_id' => $payout->id,
-            'reference' => $transferReference,
-            'method' => $method,
-        ]);
-
-        return $transferReference;
-    }
-
-    /** @param array{account_name: string, account_number: string, bank_slug: string} $account
-     * @return array<string, mixed>
-     */
-    private function sendPayout(PayoutRequest $payout, string $reference, array $account, string $reason): array
-    {
-        return app(ChapaV2Client::class)->createPayout(app(ChapaGateway::class)->platformSecret(), [
-            'amount_cents' => (int) $payout->amount_cents,
-            'currency' => (string) $payout->currency,
-            'merchant_reference' => $reference,
-            'idempotency_key' => (string) Str::uuid(),
-            'account' => $account,
-            'reason' => $reason,
-        ]);
-    }
-
-    private function transferReference(PayoutRequest $payout): string
-    {
-        return 'CHAPA-TX-'.strtoupper(substr(md5($payout->id.time()), 0, 11));
-    }
-
-    private function extractBankCode(string $destination): ?string
-    {
-        // Expect format: "BANKCODE:ACCOUNTNUMBER" or just account number with bank code stored separately
-        if (str_contains($destination, ':')) {
-            [$bankCode] = explode(':', $destination, 2);
-            return strtoupper(trim($bankCode));
+        $code = strtolower((string) ($payout->bank_code_snapshot ?: $method->code));
+        if ($code === 'bank_transfer' || blank($payout->account_holder_snapshot)) {
+            throw new RuntimeException('Payout recipient details require admin review before dispatch.');
         }
 
-        return null;
-    }
-
-    private function extractAccountNumber(string $destination): string
-    {
-        if (str_contains($destination, ':')) {
-            [$bankCode, $accountNumber] = explode(':', $destination, 2);
-            return trim($accountNumber);
+        $bank = $this->resolveBank($code);
+        $accountNumber = preg_replace('/[\s+\-]/', '', (string) $intent->destination_snapshot);
+        if (!is_string($accountNumber) || !preg_match('/^\d{8,20}$/', $accountNumber)) {
+            throw new RuntimeException('Invalid payout destination; update and reapprove the receiving account.');
         }
 
-        return $destination;
+        if (strtoupper((string) $intent->currency) !== 'ETB' || (int) $intent->amount_cents < 100) {
+            throw new RuntimeException('Chapa v1 payouts require a valid ETB amount.');
+        }
+
+        return app(ChapaV1TransferClient::class)->create(
+            app(LinketChapaManager::class)->platformSecret(),
+            [
+                'account_name' => (string) $payout->account_holder_snapshot,
+                'account_number' => $accountNumber,
+                'amount' => number_format(((int) $intent->amount_cents) / 100, 2, '.', ''),
+                'currency' => 'ETB',
+                'reference' => (string) $intent->merchant_reference,
+                'bank_code' => (int) $bank['id'],
+            ],
+        );
     }
 
-    private function extractPhoneNumber(string $destination): string
+    /** @return array<string, mixed> */
+    public function verifyTransfer(string $reference): array
     {
-        return preg_replace('/\D/', '', $destination);
+        return app(ChapaV1TransferClient::class)->verify(
+            app(LinketChapaManager::class)->platformSecret(),
+            $reference,
+        );
+    }
+
+    /** Check callback recipient details against the immutable approved payout snapshot. */
+    public function approvalMatches(StorefrontPayoutIntent $intent, array $payload): bool
+    {
+        $payout = $intent->payoutRequest;
+        $code = strtolower((string) $payout?->bank_code_snapshot);
+        $aliases = ['cbe' => 'cbe_bank', 'm-pesa' => 'mpesa', 'cbe_birr' => 'cbebirr'];
+        $expectedBank = $aliases[$code] ?? $code;
+        $actualBank = strtolower(trim((string) ($payload['bank'] ?? '')));
+        $actualNumber = preg_replace('/[\s+\-]/', '', (string) ($payload['account_number'] ?? ''));
+        $expectedNumber = preg_replace('/[\s+\-]/', '', (string) $intent->destination_snapshot);
+        $amount = (string) ($payload['amount'] ?? '');
+
+        return $payout !== null
+            && $payout->status === 'processing'
+            && in_array($intent->status, [
+                StorefrontPayoutIntent::STATUS_SUBMITTED,
+                StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+            ], true)
+            && (string) ($payload['reference'] ?? '') === (string) $intent->merchant_reference
+            && $expectedBank !== ''
+            && hash_equals($expectedBank, $actualBank)
+            && hash_equals((string) $expectedNumber, (string) $actualNumber)
+            && hash_equals((string) $payout->account_holder_snapshot, (string) ($payload['account_name'] ?? ''))
+            && is_numeric($amount)
+            && (int) round(((float) $amount) * 100) === (int) $intent->amount_cents;
     }
 }
