@@ -15,6 +15,8 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class DigitalProductPayoutMethodController extends Controller
 {
@@ -97,7 +99,7 @@ class DigitalProductPayoutMethodController extends Controller
                 'display_label' => $displayLabel,
                 'is_active' => true,
                 'is_default' => $isDefault,
-                'status' => DigitalProductPayoutMethod::STATUS_ACTIVE,
+                'status' => DigitalProductPayoutMethod::STATUS_PENDING,
             ]);
         });
 
@@ -158,6 +160,10 @@ class DigitalProductPayoutMethodController extends Controller
                 'destination' => $data['destination'],
                 'account_number_last_four' => $lastFour,
                 'display_label' => $displayLabel,
+                'status' => DigitalProductPayoutMethod::STATUS_PENDING,
+                'approved_by' => null,
+                'approved_at' => null,
+                'review_note' => null,
                 'is_default' => $request->has('is_default') ? $request->boolean('is_default') : $payoutMethod->is_default,
             ]);
         });
@@ -217,25 +223,62 @@ class DigitalProductPayoutMethodController extends Controller
             'bank_code' => 'nullable|string|max:64',
             'bank_name' => 'nullable|string|max:160',
             'account_holder' => 'required|string|max:160',
-            'destination' => 'required|string|max:500',
+            'destination' => ['required', 'string', 'max:100', 'regex:/^[0-9+ -]+$/'],
             'is_default' => 'nullable|boolean',
         ]);
     }
 
-    private function resolveWithdrawalMethod(?int $withdrawalMethodId, ?string $type, ?string $bankCode): ?DigitalProductWithdrawalMethod
+    private function resolveWithdrawalMethod(?int $withdrawalMethodId, ?string $type, ?string $bankCode): DigitalProductWithdrawalMethod
     {
-        if ($withdrawalMethodId) {
-            return DigitalProductWithdrawalMethod::query()->active()->find($withdrawalMethodId);
+        $wallets = ['telebirr', 'mpesa', 'yaya', 'cbebirr'];
+        $bankCode = strtolower(trim((string) $bankCode));
+        $code = in_array($bankCode, $wallets, true) ? $bankCode : 'bank_transfer';
+        if ($code === 'bank_transfer' && ($bankCode === '' || $bankCode === 'other')) {
+            throw ValidationException::withMessages(['bank_code' => __('Select a supported bank or wallet.')]);
         }
 
-        $code = match (strtolower((string) ($bankCode ?: $type))) {
-            'telebirr' => 'telebirr',
-            'paypal' => 'paypal',
-            default => 'bank_transfer',
-        };
+        $query = DigitalProductWithdrawalMethod::query()->active()->where('code', $code);
+        $method = $query->first();
+        if (!$method || ($withdrawalMethodId !== null && $method->id !== $withdrawalMethodId)) {
+            throw ValidationException::withMessages(['withdrawal_method_id' => __('This payout method is unavailable.')]);
+        }
 
-        return DigitalProductWithdrawalMethod::query()->active()->where('code', $code)->first()
-            ?? DigitalProductWithdrawalMethod::query()->active()->first();
+        return $method;
+    }
+
+    public function adminIndex(): AnonymousResourceCollection
+    {
+        Gate::authorize('admin.access');
+
+        return DigitalProductPayoutMethodResource::collection(
+            DigitalProductPayoutMethod::query()
+                ->with(['creator', 'withdrawalMethod'])
+                ->latest('id')
+                ->paginate(50),
+        );
+    }
+
+    public function review(Request $request, DigitalProductPayoutMethod $payoutMethod): DigitalProductPayoutMethodResource
+    {
+        Gate::authorize('admin.access');
+
+        $data = $request->validate([
+            'decision' => 'required|in:approve,reject',
+            'note' => 'nullable|string|max:1000',
+        ]);
+        abort_unless($payoutMethod->is_active, 422, __('Inactive account cannot be approved.'));
+        abort_unless($payoutMethod->withdrawalMethod?->is_active, 422, __('This withdrawal provider is disabled.'));
+        abort_unless($payoutMethod->status !== DigitalProductPayoutMethod::STATUS_DEACTIVATED, 422);
+
+        $approved = $data['decision'] === 'approve';
+        $payoutMethod->update([
+            'status' => $approved ? DigitalProductPayoutMethod::STATUS_ACTIVE : DigitalProductPayoutMethod::STATUS_REJECTED,
+            'approved_by' => $approved ? $request->user()->id : null,
+            'approved_at' => $approved ? now() : null,
+            'review_note' => $data['note'] ?? null,
+        ]);
+
+        return new DigitalProductPayoutMethodResource($payoutMethod->fresh('withdrawalMethod'));
     }
 
     private function extractLastFour(string $destination): string
