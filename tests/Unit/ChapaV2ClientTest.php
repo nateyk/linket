@@ -144,6 +144,34 @@ class ChapaV2ClientTest extends TestCase
         $this->assertSame('environment_mismatch', (new ChapaV2Client())->secretStatus('CHAPA_LIVE_examplesecret'));
     }
 
+    public function testItAcceptsLegacyBanksEnvelopeWithStatusSuccess(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/banks' => Http::response([
+                'status' => 'success',
+                'message' => 'Banks retrieved',
+            ]),
+        ]);
+
+        $this->assertTrue((new ChapaV2Client())->secretAuthenticates('CHASECK_TEST-legacy'));
+    }
+
+    public function testItRejectsMalformedBanksPayloads(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/banks' => Http::response([
+                'message' => 'Unexpected response',
+            ]),
+        ]);
+
+        try {
+            (new ChapaV2Client())->secretStatus('CHASECK_TEST-malformed');
+            $this->fail('Malformed Chapa banks response must be rejected.');
+        } catch (RuntimeException) {
+            $this->addToAssertionCount(1);
+        }
+    }
+
     public function testItConvertsMajorCurrencyAmountsToIntegerCents(): void
     {
         $this->assertSame(10000, ChapaV2Client::centsFromMajor('100.00'));
