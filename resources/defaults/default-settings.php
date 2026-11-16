@@ -109,6 +109,12 @@ return [
                     ],
                     [
                         'type' => 'route',
+                        'label' => 'Withdrawals',
+                        'action' => '/dashboard/withdrawals',
+                        'id' => 'creator-withdrawals-dashboard',
+                    ],
+                    [
+                        'type' => 'route',
                         'label' => 'Insights',
                         'action' => '/dashboard/insights',
                         'id' => 318,
@@ -226,6 +232,12 @@ return [
                         'label' => 'Orders & Sales',
                         'action' => '/dashboard/orders',
                         'id' => 'sales-payouts-mobile',
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Withdrawals',
+                        'action' => '/dashboard/withdrawals',
+                        'id' => 'creator-withdrawals-mobile',
                     ],
                 ],
             ],
