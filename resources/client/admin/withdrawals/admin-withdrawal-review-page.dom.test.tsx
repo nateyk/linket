@@ -146,6 +146,7 @@ describe('AdminWithdrawalReviewPage', () => {
         data: {
           ...basePayout,
           status: 'processing',
+          withdrawalMethod: {name: 'Manual payout', code: 'other'},
         },
       },
     });
