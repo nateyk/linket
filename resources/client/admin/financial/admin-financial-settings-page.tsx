@@ -374,6 +374,14 @@ function PayoutMethodsTab() {
         <Card.Header>
           <Card.Title><Trans message="Withdrawal providers" /></Card.Title>
           <Card.Description><Trans message="Enable only providers accepted in your Chapa v1 account. Disabled methods cannot receive new withdrawals." /></Card.Description>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <p className="text-xs text-muted-foreground">
+              <Trans message="Configure Chapa Transfer Approval URL in your merchant dashboard:" /> <code>/api/v1/chapa/transfer-approval</code>
+            </p>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods" />}>
+              <Trans message="Manage provider limits" />
+            </Button>
+          </div>
         </Card.Header>
         <Card.Content>
           <Table.Root>
