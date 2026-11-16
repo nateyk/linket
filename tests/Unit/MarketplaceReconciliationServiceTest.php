@@ -7,6 +7,7 @@ namespace Tests\Unit;
 use App\Models\User;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Ledger\AccountCodes;
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\JournalPostingService;
@@ -218,13 +219,21 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(10),
         ]);
 
-        $chapaClient = $this->createMockChapaClient(ReconciliationChapaMockConfig::forPayout('lk-po-settled-103', 135000));
-        $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
-
-        $payoutProcessor = new StorefrontPayoutProcessingService(chapaManager: $chapaManager, creatorLedger: $ledger);
+        $provider = $this->createMock(ChapaPayoutService::class);
+        $provider->method('verifyTransfer')->willReturn([
+            'status' => 'success',
+            'data' => [
+                'status' => 'success',
+                'reference' => 'lk-po-settled-103',
+                'amount' => '1350.00',
+                'currency' => 'ETB',
+            ],
+        ]);
+        $payoutProcessor = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger,
+            chapaPayoutService: $provider,
+        );
         $service = new MarketplaceReconciliationService(
-            chapaManager: $chapaManager,
             payoutProcessingService: $payoutProcessor,
             creatorLedger: $ledger,
         );
