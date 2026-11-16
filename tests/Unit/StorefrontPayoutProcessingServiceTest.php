@@ -173,6 +173,31 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertSame(1, (int) $second->attempts);
     }
 
+    public function testPendingVerificationClearsUncertaintyButKeepsCreatorFundsReserved(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($this->verified('pending'));
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+        $ledger->shouldNotReceive('releasePayoutReservation');
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $intent->update([
+            'status' => StorefrontPayoutIntent::STATUS_SUBMITTED,
+            'last_error' => 'Submission uncertain.',
+        ]);
+
+        $service = new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider);
+        $verified = $service->verifyPayout($intent);
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $verified->status);
+        $this->assertNull($verified->last_error);
+        $this->assertNotNull($verified->verified_at);
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertNull($payout->fresh()->paid_at);
+    }
+
     public function testVerifiedSuccessfulTransferDisbursesOnlyOnce(): void
     {
         $provider = Mockery::mock(ChapaPayoutService::class);
