@@ -9,7 +9,7 @@
 - Admin withdrawal queue `/admin/withdrawals` follows **Requested → Processing (approved) → Chapa transfer queued → Verified settlement → Paid**, or **Verified failure → Rejected**, releasing the ledger reserve.
 - The payout account approval and withdrawal approval are separate permissions/steps. Only admin-approved account snapshots can be sent to Chapa. No seller API keys are used.
 - No manual paid transition is permitted for Chapa bank/mobile-money payouts. The provider queue response is pending, not settlement.
-- A Chapa queued-transfer response must echo the immutable submitted merchant reference. Missing or different references remain **submission uncertain**, never trigger a second POST, and require verification or manual investigation.
+- A Chapa queued-transfer response must echo the immutable submitted merchant reference, either as a string or in `data.reference` (both appear in Chapa documentation/examples). Missing or different references remain **submission uncertain**, never trigger a second POST, and require verification or manual investigation.
 - Before recording verified success/failure, the lookup must itself succeed and match the reference, ETB amount and currency. If Chapa includes the recipient account number, it must also match the immutable destination snapshot. Unknown or conflicting responses leave funds reserved for review.
 - Test cases cover no secret, invalid reference, amount mismatches, uncertain provider responses, duplicate submission and exactly-once ledger settlement.
 
