@@ -502,22 +502,22 @@ export function Component() {
                       )}
                     </Select.Trigger>
                     {availableBanks.length > 0 && (
-                    <Select.Content
-                      align="start"
-                      className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
-                    >
-                      <Select.Group>
-                        {availableBanks.map(bank => (
-                          <Select.Item key={bank.code} value={bank.code} className="min-h-12">
-                            <span className="flex min-w-0 items-center gap-2.5 py-1">
-                              <BankLogo code={bank.code} name={bank.name} compact decorative />
-                              <span className="min-w-0 whitespace-normal font-medium">{bank.name}</span>
-                            </span>
-                          </Select.Item>
-                        ))}
-                      </Select.Group>
-                 
-                    )}   </Select.Content>
+                      <Select.Content
+                        align="start"
+                        className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
+                      >
+                        <Select.Group>
+                          {availableBanks.map(bank => (
+                            <Select.Item key={bank.code} value={bank.code} className="min-h-12">
+                              <span className="flex min-w-0 items-center gap-2.5 py-1">
+                                <BankLogo code={bank.code} name={bank.name} compact decorative />
+                                <span className="min-w-0 whitespace-normal font-medium">{bank.name}</span>
+                              </span>
+                            </Select.Item>
+                          ))}
+                        </Select.Group>
+                      </Select.Content>
+                    )}
                   </Select.Root>
                 </div>
 
