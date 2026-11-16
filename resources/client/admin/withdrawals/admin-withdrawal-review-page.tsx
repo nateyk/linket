@@ -438,12 +438,12 @@ function Stage2Section({
   saving: boolean;
   onSubmitTransfer: () => void;
 }) {
-  const hasSuccessfulIntent = payout.latest_payout_intent && payout.latest_payout_intent.status !== 'failed';
+  const hasSuccessfulIntent = !!payout.latest_payout_intent;
   return (
     <div className="rounded-input border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-semibold text-sm"><Trans message="Stage 2: Submit Transfer (Chapa v2)" /></p>
+          <p className="font-semibold text-sm"><Trans message="Stage 2: Submit Transfer (Chapa v1)" /></p>
           <p className="text-xs text-muted-foreground"><Trans message="Dispatches disbursement request to Chapa platform API." /></p>
         </div>
         {payout.latest_payout_intent && (
@@ -452,7 +452,7 @@ function Stage2Section({
           </Badge>
         )}
       </div>
-      {!hasSuccessfulIntent && (
+      {payout.status === 'processing' && !hasSuccessfulIntent && (
         <div className="pt-2">
           <Button color="primary" disabled={saving} onClick={onSubmitTransfer}>
             <SendIcon />
@@ -483,7 +483,7 @@ function Stage3Section({
     <div className="rounded-input border p-4 space-y-3">
       <div>
         <p className="font-semibold text-sm"><Trans message="Stage 3: Confirm Verified Settlement" /></p>
-        <p className="text-xs text-muted-foreground"><Trans message="Verify transfer status directly with Chapa or record manual transfer reference." /></p>
+        <p className="text-xs text-muted-foreground"><Trans message="Only Chapa-confirmed settlement marks a wallet or bank payout paid." /></p>
       </div>
       <div className="flex flex-wrap items-center gap-3 pt-2">
         {payout.latest_payout_intent && (
@@ -492,12 +492,12 @@ function Stage3Section({
             <Trans message="Verify settlement with Chapa" />
           </Button>
         )}
-        <Button variant="outline" onClick={() => setShowManual(!showManual)}>
+        {payout.withdrawalMethod?.name === 'Manual payout' && !payout.latest_payout_intent && <Button variant="outline" onClick={() => setShowManual(!showManual)}>
           <Trans message="Record manual settlement" />
-        </Button>
+        </Button>}
       </div>
 
-      {showManual && (
+      {showManual && payout.withdrawalMethod?.name === 'Manual payout' && !payout.latest_payout_intent && (
         <div className="mt-4 rounded-input border border-muted bg-muted/20 p-4 space-y-3">
           <Field.Root>
             <Field.Label><Trans message="Manual transfer reference" /></Field.Label>

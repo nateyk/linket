@@ -56,16 +56,16 @@ export type BankOption = {
 
 export const ETHIOPIAN_BANKS: BankOption[] = [
   {code: 'telebirr', name: 'Telebirr (Ethio Telecom)', type: 'telebirr'},
+  {code: 'mpesa', name: 'M-Pesa', type: 'mpesa'},
+  {code: 'yaya', name: 'Yaya Wallet', type: 'yaya'},
   {code: 'cbe', name: 'Commercial Bank of Ethiopia (CBE)', type: 'bank_transfer'},
   {code: 'boa', name: 'Bank of Abyssinia (BOA)', type: 'bank_transfer'},
   {code: 'dashen', name: 'Dashen Bank', type: 'bank_transfer'},
   {code: 'awash', name: 'Awash Bank', type: 'bank_transfer'},
-  {code: 'cbebirr', name: 'CBE Birr', type: 'telebirr'},
-  {code: 'coop', name: 'Cooperative Bank of Oromia', type: 'bank_transfer'},
+  {code: 'cbebirr', name: 'CBE Birr', type: 'cbebirr'},
   {code: 'hibret', name: 'Hibret Bank', type: 'bank_transfer'},
   {code: 'wegagen', name: 'Wegagen Bank', type: 'bank_transfer'},
   {code: 'zemen', name: 'Zemen Bank', type: 'bank_transfer'},
-  {code: 'other', name: 'Other Bank / Account', type: 'bank_transfer'},
 ];
 
 const logos: Record<string, string> = {awash, boa, cbe, cbebirr, dashen, telebirr};
@@ -114,9 +114,10 @@ function isValidAccountNumber(number: string, bankCode: string): boolean {
   const trimmed = number.trim();
   const normalized = trimmed.replace(/[\s-]+/g, '');
   if (!/^[0-9+ -]{8,100}$/.test(trimmed)) return false;
-  if (bankCode === 'telebirr' || bankCode === 'cbebirr') {
+  if (['telebirr', 'cbebirr', 'mpesa'].includes(bankCode)) {
     return /^(?:0\d{9}|\+251\d{9})$/.test(normalized);
   }
+  if (bankCode === 'yaya') return /^\d{12}$/.test(normalized);
   if (bankCode === 'cbe') return /^\d{13}$/.test(normalized);
   if (bankCode === 'boa') return /^(?:\d{8}|\d{10}|\d{16})$/.test(normalized);
   return true;
@@ -175,6 +176,11 @@ function PayoutAccountCard({
                 <h2 className="min-w-0 truncate text-sm font-semibold text-foreground">
                   {displayName}
                 </h2>
+                {account.status !== 'active' && (
+                  <Badge variant="outline" className="text-xs">
+                    {account.status === 'pending_verification' ? 'Awaiting approval' : 'Needs review'}
+                  </Badge>
+                )}
                 {account.is_default && (
                   <Badge variant="positive" className="gap-1 text-xs font-medium">
                     <CheckIcon className="size-3" />
@@ -225,6 +231,7 @@ function PayoutAccountCard({
 
 export function Component() {
   const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
+  const [enabledCodes, setEnabledCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [actionError, setActionError] = useState(false);
@@ -240,6 +247,10 @@ export function Component() {
   const [isDefault, setIsDefault] = useState(false);
 
   const selectedBank = ETHIOPIAN_BANKS.find(b => b.code === bankCode);
+  const walletCodes = ['telebirr', 'mpesa', 'yaya', 'cbebirr'];
+  const availableBanks = ETHIOPIAN_BANKS.filter(b =>
+    enabledCodes.includes(walletCodes.includes(b.code) ? b.code : 'bank_transfer')
+  );
   const validNumber = isValidAccountNumber(accountNumber, bankCode);
   const invalidNumber = accountNumber.trim().length > 0 && !validNumber;
   const invalidName = accountHolder.trim().length > 0 && accountHolder.trim().length < 3;
@@ -247,10 +258,13 @@ export function Component() {
 
   const load = useCallback(async () => {
     try {
+      const methodsResponse = await apiClient.get('/api/items/withdrawal-methods');
+      setEnabledCodes((methodsResponse.data.data ?? []).map((item: {code: string}) => item.code));
       const response = await apiClient.get('/api/items/payout-methods');
       setAccounts(response.data.data ?? []);
       setLoadError(false);
     } catch {
+      setEnabledCodes([]);
       try {
         const fallback = await apiClient.get('/api/v1/storefront/payment-methods');
         const list = (fallback.data.data ?? []).map((item: Record<string, unknown>) => ({
@@ -304,7 +318,7 @@ export function Component() {
   };
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || !selectedBank || !availableBanks.some(b => b.code === bankCode)) return;
     setBusy(true);
     setFormError(false);
     setSaved(false);
@@ -484,7 +498,7 @@ export function Component() {
                       className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
                     >
                       <Select.Group>
-                        {ETHIOPIAN_BANKS.map(bank => (
+                        {availableBanks.map(bank => (
                           <Select.Item key={bank.code} value={bank.code} className="min-h-12">
                             <span className="flex min-w-0 items-center gap-2.5 py-1">
                               <BankLogo code={bank.code} name={bank.name} compact decorative />
@@ -499,7 +513,7 @@ export function Component() {
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="payout-account-number" className="text-sm font-medium">
-                    {bankCode === 'telebirr' || bankCode === 'cbebirr' ? (
+                    {['telebirr', 'cbebirr', 'mpesa', 'yaya'].includes(bankCode) ? (
                       <Trans message="Phone number (e.g. 0911223344)" />
                     ) : (
                       <Trans message="Account number" />
@@ -510,7 +524,7 @@ export function Component() {
                     id="payout-account-number"
                     aria-label="Account or wallet number"
                     className="h-11 font-mono"
-                    inputMode={bankCode === 'telebirr' || bankCode === 'cbebirr' ? 'tel' : 'numeric'}
+                    inputMode={['telebirr', 'cbebirr', 'mpesa', 'yaya'].includes(bankCode) ? 'tel' : 'numeric'}
                     autoComplete="off"
                     value={accountNumber}
                     disabled={busy}

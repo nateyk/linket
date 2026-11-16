@@ -17,6 +17,7 @@ class DigitalProductPayoutMethod extends StorefrontModel
     public const STATUS_ACTIVE = 'active';
     public const STATUS_PENDING = 'pending_verification';
     public const STATUS_DEACTIVATED = 'deactivated';
+    public const STATUS_REJECTED = 'rejected';
 
     protected $fillable = [
         'workspace_id',
@@ -33,6 +34,9 @@ class DigitalProductPayoutMethod extends StorefrontModel
         'is_default',
         'status',
         'metadata',
+        'approved_by',
+        'approved_at',
+        'review_note',
     ];
 
     protected $hidden = ['destination'];
@@ -45,6 +49,7 @@ class DigitalProductPayoutMethod extends StorefrontModel
         'is_active' => 'boolean',
         'is_default' => 'boolean',
         'metadata' => 'array',
+        'approved_at' => 'datetime',
     ];
 
     public function creator(): BelongsTo

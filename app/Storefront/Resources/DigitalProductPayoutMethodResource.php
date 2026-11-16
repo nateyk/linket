@@ -23,6 +23,7 @@ class DigitalProductPayoutMethodResource extends JsonResource
                 'id' => $this->withdrawalMethod?->id,
                 'name' => $this->withdrawalMethod?->name,
                 'code' => $this->withdrawalMethod?->code,
+                'is_active' => (bool) $this->withdrawalMethod?->is_active,
             ]),
             'bank_code' => $this->bank_code,
             'bank_name' => $this->bank_name,
@@ -32,7 +33,14 @@ class DigitalProductPayoutMethodResource extends JsonResource
             'display_label' => $this->display_label,
             'is_active' => (bool) $this->is_active,
             'is_default' => (bool) $this->is_default,
-            'status' => $this->status ?? DigitalProductPayoutMethod::STATUS_ACTIVE,
+            'status' => $this->status ?? DigitalProductPayoutMethod::STATUS_PENDING,
+            'approved_at' => $this->approved_at,
+            'review_note' => $this->when($request->user()?->can('admin.access'), $this->review_note),
+            'creator' => $this->when($request->user()?->can('admin.access') && $this->relationLoaded('creator'), fn () => [
+                'id' => $this->creator?->id,
+                'name' => $this->creator?->name,
+                'email' => $this->creator?->email,
+            ]),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

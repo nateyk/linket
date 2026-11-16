@@ -89,6 +89,16 @@ if (!(Element.prototype as unknown as {getAnimations?: unknown}).getAnimations) 
   (Element.prototype as unknown as {getAnimations: () => []}).getAnimations = () => [];
 }
 
+api.get.mockImplementation((url: string) => {
+  if (url === '/api/items/withdrawal-methods') {
+    return Promise.resolve({data: {data: [
+      {code: 'bank_transfer'}, {code: 'telebirr'}, {code: 'mpesa'},
+      {code: 'yaya'}, {code: 'cbebirr'},
+    ]}});
+  }
+  return Promise.resolve({data: {data: []}});
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -122,7 +132,9 @@ it('lists payout accounts with default badges and masked account numbers', async
     status: 'active',
   };
 
-  api.get.mockResolvedValue({data: {data: [account1, account2]}});
+  api.get.mockImplementation((url: string) => url === '/api/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: [account1, account2]}}));
 
   render(<Component />);
 
@@ -134,7 +146,9 @@ it('lists payout accounts with default badges and masked account numbers', async
 });
 
 it('opens modal and creates a new payout destination via POST /api/items/payout-methods', async () => {
-  api.get.mockResolvedValue({data: {data: []}});
+  api.get.mockImplementation((url: string) => url === '/api/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: []}}));
   api.post.mockResolvedValue({data: {data: {id: 10}}});
 
   render(<Component />);
@@ -174,7 +188,9 @@ it('edits an existing payout destination via PUT /api/items/payout-methods/:id',
     status: 'active',
   };
 
-  api.get.mockResolvedValue({data: {data: [account]}});
+  api.get.mockImplementation((url: string) => url === '/api/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: [account]}}));
   api.put.mockResolvedValue({data: {data: {...account, account_holder: 'Updated Holder'}}});
 
   render(<Component />);
@@ -215,7 +231,9 @@ it('sets a destination as default via POST /api/items/payout-methods/:id/default
     status: 'active',
   };
 
-  api.get.mockResolvedValue({data: {data: [account]}});
+  api.get.mockImplementation((url: string) => url === '/api/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: [account]}}));
   api.post.mockResolvedValue({data: {}});
 
   render(<Component />);
@@ -244,7 +262,9 @@ it('removes a payout destination via DELETE /api/items/payout-methods/:id', asyn
     status: 'active',
   };
 
-  api.get.mockResolvedValue({data: {data: [account]}});
+  api.get.mockImplementation((url: string) => url === '/api/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: [account]}}));
   api.delete.mockResolvedValue({data: {}});
 
   render(<Component />);
@@ -260,7 +280,9 @@ it('removes a payout destination via DELETE /api/items/payout-methods/:id', asyn
 });
 
 it('displays info popover explaining Linket withdrawal payouts', async () => {
-  api.get.mockResolvedValue({data: {data: []}});
+  api.get.mockImplementation((url: string) => url === '/api/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: []}}));
 
   render(<Component />);
 

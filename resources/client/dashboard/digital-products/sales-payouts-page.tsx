@@ -70,7 +70,10 @@ type Payout = {
 
 type PayoutMethod = {
   id: number;
-  type: 'bank_transfer' | 'paypal' | 'other';
+  type: string;
+  status?: string;
+  approved_at?: string | null;
+  withdrawal_method?: {code: string; is_active: boolean} | null;
   withdrawal_method_id?: number | null;
   account_holder: string;
   display_label: string;
@@ -117,7 +120,9 @@ export function Component() {
         const methodResponse = await apiClient.get(
           '/api/v1/items/payout-method',
         );
-        setMethod(methodResponse.data.data ?? undefined);
+        const candidate = methodResponse.data.data as PayoutMethod | undefined;
+        setMethod(candidate?.status === 'active' && candidate.approved_at
+          && candidate.withdrawal_method?.is_active === true ? candidate : undefined);
       } catch {
         setMethod(undefined);
       }
@@ -619,14 +624,14 @@ function WithdrawDialog({
                     <Trans message="No payout method set up" />
                   </p>
                   <p className="mt-1 text-muted-foreground">
-                    <Trans message="Add a withdrawal method in your account settings before requesting a payout." />
+                    <Trans message="Configure a payout destination and have it approved before requesting a withdrawal." />
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-3"
                     nativeButton={false}
-                    render={<Link to="/account-settings/billing" />}
+                    render={<Link to="/account-settings/receiving-accounts" />}
                   >
                     <Trans message="Set up now" />
                   </Button>

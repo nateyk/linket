@@ -171,7 +171,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         }
     }
 
-    public function testMarkPaidRequiresExplicitReferenceWhenManual(): void
+    public function testAutomatedBankPayoutCannotBeMarkedPaidWithoutVerification(): void
     {
         $payout = $this->createTestPayoutRequest('processing');
         $service = new PayoutRequestService();
@@ -180,28 +180,29 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             $service->transition($payout, 'mark_paid', 1, ['transfer_reference' => '   ']);
             $this->fail('Expected ValidationException for blank reference.');
         } catch (ValidationException $e) {
-            $this->assertArrayHasKey('transfer_reference', $e->errors());
+            $this->assertArrayHasKey('status', $e->errors());
         }
 
         $this->assertEquals('processing', $payout->fresh()->status);
     }
 
-    public function testMarkPaidDisbursesLedgerWithoutSwallowingExceptions(): void
+    public function testAutomatedBankPayoutDoesNotDisburseWithAnUnverifiedReference(): void
     {
         $payout = $this->createTestPayoutRequest('processing');
 
         $ledgerMock = Mockery::mock(CreatorLedgerService::class);
-        $ledgerMock->shouldReceive('disbursePayout')->once()->with(Mockery::type(PayoutRequest::class));
+        $ledgerMock->shouldNotReceive('disbursePayout');
         $this->app->instance(CreatorLedgerService::class, $ledgerMock);
 
-        $updated = (new PayoutRequestService())->transition($payout, 'mark_paid', 1, [
-            'transfer_reference' => 'CBE-TX-998877',
-            'note' => 'Paid via counter transfer',
-        ]);
-
-        $this->assertEquals('paid', $updated->status);
-        $this->assertEquals('CBE-TX-998877', $updated->transfer_reference);
-        $this->assertNotNull($updated->paid_at);
+        try {
+            (new PayoutRequestService())->transition($payout, 'mark_paid', 1, [
+                'transfer_reference' => 'UNVERIFIED-EXTERNAL-REF',
+            ]);
+            $this->fail('Expected unverified payment to be rejected.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('status', $e->errors());
+        }
+        $this->assertSame('processing', $payout->fresh()->status);
     }
 
     private function createTestPayoutMethod(array $overrides = []): DigitalProductPayoutMethod
@@ -219,6 +220,9 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'display_label' => 'CBE (•••• 6789)',
             'is_active' => true,
             'is_default' => true,
+            'status' => 'active',
+            'approved_at' => now(),
+            'approved_by' => 1,
         ], $overrides));
     }
 
@@ -230,6 +234,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'amount_cents' => 20000,
             'currency' => 'ETB',
             'status' => $status,
+            'withdrawal_method_id' => $this->bankMethod->id,
         ]);
     }
 
@@ -257,6 +262,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->createAuthSchema();
         $this->createPayoutDestinationSchema();
         $this->createPayoutRequestSchema();
+        (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
     }
 
     private function createAuthSchema(): void
@@ -331,6 +337,9 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             $t->boolean('is_active')->default(true);
             $t->boolean('is_default')->default(false);
             $t->string('status', 32)->default('active');
+            $t->unsignedBigInteger('approved_by')->nullable();
+            $t->timestamp('approved_at')->nullable();
+            $t->text('review_note')->nullable();
             $t->json('metadata')->nullable();
             $t->timestamps();
         });
@@ -347,6 +356,8 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             $t->string('payout_method_label')->nullable();
             $t->string('withdrawal_method_name')->nullable();
             $t->text('payout_destination')->nullable();
+            $t->string('account_holder_snapshot')->nullable();
+            $t->string('bank_code_snapshot')->nullable();
             $t->string('currency', 12)->default('ETB');
             $t->unsignedBigInteger('amount_cents');
             $t->string('status', 32)->default('requested');
@@ -385,7 +396,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'permissionables', 'permissions', 'roles', 'user_sessions',
             'workspace_user', 'workspaces', 'users',
             'digital_product_payout_request_activities',
-            'digital_product_earnings_ledger', 'payout_requests',
+            'digital_product_earnings_ledger', 'storefront_payout_intents', 'payout_requests',
             'digital_product_payout_methods', 'digital_product_withdrawal_methods',
         ];
         foreach ($tables as $table) {

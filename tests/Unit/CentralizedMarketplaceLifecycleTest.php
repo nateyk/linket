@@ -7,6 +7,8 @@ namespace Tests\Unit;
 use App\Models\User;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Commission\CommissionPolicy;
+use App\Storefront\ChapaPayoutService;
+use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\JournalPostingService;
@@ -221,7 +223,7 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             'creator_id' => $creatorId,
             'amount_cents' => $amountCents,
             'currency' => 'ETB',
-            'status' => 'requested',
+            'status' => 'processing',
             'payout_destination' => 'CBE:100012345678',
         ]);
         $ledgerService->reserveForPayout($payoutRequest, $amountCents);
@@ -230,15 +232,17 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         $this->assertSame(0, $balancesAfterReserve['available']);
         $this->assertSame($amountCents, $balancesAfterReserve['reserved']);
 
-        $chapaClient = $this->createMockChapaClient(
-            MockChapaConfig::forPayout('SUCCESS', $amountCents),
-        );
-        $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
-
+        $provider = $this->createMock(ChapaPayoutService::class);
+        $provider->method('createTransfer')->willReturn([
+            'status' => 'success', 'message' => 'Transfer Queued Successfully', 'data' => 'queued',
+        ]);
+        $provider->method('verifyTransfer')->willReturnCallback(fn (string $ref): array => [
+            'status' => 'success',
+            'data' => ['status' => 'success', 'reference' => $ref, 'amount' => '1350.00', 'currency' => 'ETB'],
+        ]);
         $payoutProcessingService = new StorefrontPayoutProcessingService(
-            chapaManager: $chapaManager,
             creatorLedger: $ledgerService,
+            chapaPayoutService: $provider,
         );
 
         $intent = $payoutProcessingService->prepareIntent($payoutRequest);
@@ -273,21 +277,28 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             'creator_id' => $creatorId,
             'amount_cents' => $amountCents,
             'currency' => 'ETB',
-            'status' => 'requested',
+            'status' => 'processing',
             'payout_destination' => 'CBE:100099999999',
         ]);
         $ledgerService->reserveForPayout($payout, $amountCents);
 
-        $chapaClient = $this->createMockChapaClient(
-            MockChapaConfig::forPayout('FAILED', $amountCents),
-        );
-        $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
-
+        $provider = $this->createMock(ChapaPayoutService::class);
+        $provider->method('createTransfer')->willReturn([
+            'status' => 'success', 'message' => 'Transfer Queued Successfully', 'data' => 'queued',
+        ]);
+        $provider->method('verifyTransfer')->willReturnCallback(fn (string $ref): array => [
+            'status' => 'success',
+            'data' => ['status' => 'failed', 'reference' => $ref, 'amount' => '750.00', 'currency' => 'ETB'],
+        ]);
         $processingService = new StorefrontPayoutProcessingService(
-            chapaManager: $chapaManager,
             creatorLedger: $ledgerService,
+            chapaPayoutService: $provider,
         );
+
+        $finance = $this->createMock(DigitalProductFinance::class);
+        $finance->expects($this->once())->method('record');
+        $this->app->instance(DigitalProductFinance::class, $finance);
+
         $intent = $processingService->prepareIntent($payout);
         $processingService->submitPayout($intent);
 
