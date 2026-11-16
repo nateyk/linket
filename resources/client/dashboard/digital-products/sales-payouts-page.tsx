@@ -73,6 +73,7 @@ type PayoutMethod = {
   type: string;
   status?: string;
   approved_at?: string | null;
+  withdrawal_method?: {code: string; is_active: boolean} | null;
   withdrawal_method_id?: number | null;
   account_holder: string;
   display_label: string;
@@ -120,7 +121,8 @@ export function Component() {
           '/api/v1/items/payout-method',
         );
         const candidate = methodResponse.data.data as PayoutMethod | undefined;
-        setMethod(candidate?.status === 'active' && candidate.approved_at ? candidate : undefined);
+        setMethod(candidate?.status === 'active' && candidate.approved_at
+          && candidate.withdrawal_method?.is_active === true ? candidate : undefined);
       } catch {
         setMethod(undefined);
       }
