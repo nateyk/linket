@@ -145,6 +145,77 @@ it('lists payout accounts with default badges and masked account numbers', async
   expect(screen.getByText('Default')).toBeTruthy();
 });
 
+it('shows only admin-enabled Chapa v1 banks and wallets in seller dropdown', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/items/withdrawal-methods') {
+      return Promise.resolve({data: {data: [
+        {code: 'bank_transfer', is_active: true},
+        {code: 'telebirr', is_active: true},
+        {code: 'mpesa', is_active: false},
+        {code: 'yaya', is_active: false},
+        {code: 'cbebirr', is_active: false},
+        {code: 'paypal', is_active: true},
+        {code: 'other', is_active: true},
+      ]}});
+    }
+    if (url === '/api/v1/items/payout-methods') {
+      return Promise.resolve({data: {data: []}});
+    }
+    return Promise.reject(new Error('Unexpected API route: ' + url));
+  });
+
+  render(<Component />);
+  expect(await screen.findByText('No payout accounts yet')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', {name: 'Add payout account'}));
+
+  const options = Array.from(
+    (screen.getByLabelText('Bank or Wallet') as HTMLSelectElement).options,
+  ).map(option => option.value);
+
+  expect(options).toContain('telebirr');
+  expect(options).toContain('cbe');
+  expect(options).toContain('awash');
+  expect(options).not.toContain('mpesa');
+  expect(options).not.toContain('yaya');
+  expect(options).not.toContain('cbebirr');
+  expect(options).not.toContain('paypal');
+  expect(options).not.toContain('other');
+  expect(api.get).toHaveBeenCalledWith('/api/v1/items/withdrawal-methods');
+  expect(api.get).toHaveBeenCalledWith('/api/v1/items/payout-methods');
+});
+
+it('keeps account creation disabled if no providers are enabled', async () => {
+  api.get.mockImplementation((url: string) =>
+    url === '/api/v1/items/withdrawal-methods'
+      ? Promise.resolve({data: {data: []}})
+      : Promise.resolve({data: {data: []}}),
+  );
+
+  render(<Component />);
+
+  expect(await screen.findByText(
+    'No bank or wallet payout methods are enabled. Contact Linket support.',
+  )).toBeTruthy();
+  expect((screen.getByRole('button', {name: 'Add payout account'}) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it('shows retry instead of a blank picker when provider loading fails', async () => {
+  api.get.mockImplementation((url: string) =>
+    url === '/api/v1/items/withdrawal-methods'
+      ? Promise.reject(new Error('Network unavailable'))
+      : Promise.resolve({data: {data: []}}),
+  );
+
+  render(<Component />);
+
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Unable to load payout methods or accounts. Retry to continue.',
+  );
+  expect(screen.getByRole('button', {name: 'Retry loading payout methods'})).toBeTruthy();
+  expect((screen.getByRole('button', {name: 'Add payout account'}) as HTMLButtonElement).disabled).toBe(true);
+  expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/payment-methods');
+});
+
 it('opens modal and creates a new payout destination via POST /api/v1/items/payout-methods', async () => {
   api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
     ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
