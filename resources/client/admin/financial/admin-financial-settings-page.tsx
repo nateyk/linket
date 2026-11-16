@@ -36,6 +36,16 @@ type GatewayConfig = {
   webhook_url: string;
 };
 
+type PayoutAccountReview = {
+  id: number;
+  account_holder: string;
+  display_label?: string;
+  masked_account_number?: string;
+  bank_code?: string;
+  status: string;
+  creator?: {id: number; name: string; email: string};
+};
+
 type WithdrawalMethod = {
   id: number;
   name: string;
@@ -307,78 +317,150 @@ function ChapaPlatformGatewayTab() {
 
 function PayoutMethodsTab() {
   const [methods, setMethods] = useState<WithdrawalMethod[]>([]);
+  const [accounts, setAccounts] = useState<PayoutAccountReview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string>();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/api/v1/admin/financial/withdrawal-methods');
-      setMethods(res.data.data ?? []);
-    } catch {
-      // ignore
+      const [methodRes, accountRes] = await Promise.all([
+        apiClient.get('/api/v1/admin/financial/withdrawal-methods'),
+        apiClient.get('/api/v1/admin/financial/payout-accounts'),
+      ]);
+      setMethods(methodRes.data.data ?? []);
+      setAccounts(accountRes.data.data ?? []);
+      setError(undefined);
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
+
+  const toggleMethod = async (method: WithdrawalMethod, enabled: boolean) => {
+    setBusyId('method-' + method.id);
+    try {
+      await apiClient.put('/api/v1/admin/financial/withdrawal-methods/' + method.id, {is_active: enabled});
+      await load();
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const reviewAccount = async (account: PayoutAccountReview, decision: 'approve' | 'reject') => {
+    setBusyId('account-' + account.id);
+    try {
+      await apiClient.post('/api/v1/admin/financial/payout-accounts/' + account.id + '/review', {decision});
+      await load();
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e));
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   if (loading) return <TabLoadingSpinner />;
 
   return (
-    <Card.Root>
-      <Card.Header>
-        <div className="flex items-center justify-between">
-          <div>
-            <Card.Title><Trans message="Supported withdrawal methods" /></Card.Title>
-            <Card.Description>
-              <Trans message="Banks and mobile wallets available for creator withdrawals with configured limits." />
-            </Card.Description>
-          </div>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods" />}>
-            <Trans message="Creator receiving accounts" />
-          </Button>
-        </div>
-      </Card.Header>
-      <Card.Content>
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head><Trans message="Method" /></Table.Head>
-              <Table.Head><Trans message="Code" /></Table.Head>
-              <Table.Head><Trans message="Min withdrawal" /></Table.Head>
-              <Table.Head><Trans message="Max withdrawal" /></Table.Head>
-              <Table.Head><Trans message="Status" /></Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {methods.length === 0 ? (
+    <div className="space-y-4">
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <Card.Root>
+        <Card.Header>
+          <Card.Title><Trans message="Withdrawal providers" /></Card.Title>
+          <Card.Description><Trans message="Enable only providers accepted in your Chapa v1 account. Disabled methods cannot receive new withdrawals." /></Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <Table.Root>
+            <Table.Header>
               <Table.Row>
-                <Table.Cell colSpan={5} className="text-center py-6 text-muted-foreground">
-                  <Trans message="No withdrawal methods configured." />
-                </Table.Cell>
+                <Table.Head><Trans message="Provider" /></Table.Head>
+                <Table.Head><Trans message="Minimum" /></Table.Head>
+                <Table.Head><Trans message="Maximum" /></Table.Head>
+                <Table.Head><Trans message="Enabled" /></Table.Head>
               </Table.Row>
-            ) : (
-              methods.map(m => (
+            </Table.Header>
+            <Table.Body>
+              {methods.map(m => (
                 <Table.Row key={m.id}>
                   <Table.Cell className="font-medium">{m.name}</Table.Cell>
-                  <Table.Cell className="font-mono text-xs text-muted-foreground">{m.code}</Table.Cell>
-                  <Table.Cell>{m.minimum_amount_cents ? formatMoney(m.minimum_amount_cents, 'ETB') : '100.00 ETB'}</Table.Cell>
+                  <Table.Cell>{formatMoney(m.minimum_amount_cents ?? 0, 'ETB')}</Table.Cell>
                   <Table.Cell>{m.maximum_amount_cents ? formatMoney(m.maximum_amount_cents, 'ETB') : 'Unlimited'}</Table.Cell>
                   <Table.Cell>
-                    <Badge variant={m.is_active ? 'positive' : 'outline'}>
-                      {m.is_active ? <Trans message="Active" /> : <Trans message="Inactive" />}
-                    </Badge>
+                    <Switch
+                      checked={m.is_active}
+                      disabled={busyId !== null}
+                      onCheckedChange={enabled => void toggleMethod(m, enabled)}
+                      aria-label={m.name + ' payouts'}
+                    />
                   </Table.Cell>
                 </Table.Row>
-              ))
-            )}
-          </Table.Body>
-        </Table.Root>
-      </Card.Content>
-    </Card.Root>
+              ))}
+              {methods.length === 0 && (
+                <Table.Row><Table.Cell colSpan={4}><Trans message="No withdrawal methods available." /></Table.Cell></Table.Row>
+              )}
+            </Table.Body>
+          </Table.Root>
+        </Card.Content>
+      </Card.Root>
+      <Card.Root>
+        <Card.Header>
+          <Card.Title><Trans message="Seller receiving account approvals" /></Card.Title>
+          <Card.Description><Trans message="Review the recipient name and masked destination before enabling withdrawals. Editing account details resets approval." /></Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <Table.Root>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head><Trans message="Seller" /></Table.Head>
+                <Table.Head><Trans message="Destination" /></Table.Head>
+                <Table.Head><Trans message="Status" /></Table.Head>
+                <Table.Head><Trans message="Review" /></Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {accounts.map(a => (
+                <Table.Row key={a.id}>
+                  <Table.Cell>
+                    <p className="font-medium">{a.creator?.name ?? a.account_holder}</p>
+                    <p className="text-xs text-muted-foreground">{a.creator?.email ?? a.account_holder}</p>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <p>{a.display_label ?? a.bank_code ?? 'Account'}</p>
+                    <p className="font-mono text-xs text-muted-foreground">{a.masked_account_number ?? '••••'}</p>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Badge variant={a.status === 'active' ? 'positive' : 'outline'}>{a.status.replaceAll('_', ' ')}</Badge>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="flex flex-wrap gap-2">
+                      {a.status !== 'active' && (
+                        <Button size="sm" disabled={busyId !== null} onClick={() => void reviewAccount(a, 'approve')}>
+                          <Trans message="Approve" />
+                        </Button>
+                      )}
+                      {a.status !== 'rejected' && (
+                        <Button size="sm" variant="outline" disabled={busyId !== null} onClick={() => void reviewAccount(a, 'reject')}>
+                          <Trans message="Reject" />
+                        </Button>
+                      )}
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+              {accounts.length === 0 && (
+                <Table.Row><Table.Cell colSpan={4}><Trans message="No seller payout accounts to review." /></Table.Cell></Table.Row>
+              )}
+            </Table.Body>
+          </Table.Root>
+        </Card.Content>
+      </Card.Root>
+    </div>
   );
 }
 
