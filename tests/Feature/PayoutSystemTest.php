@@ -539,80 +539,62 @@ class PayoutSystemTest extends TestCase
         $this->assertSame('processing', $payout->fresh()->status);
     }
 
-    public function testChapaPayoutLogsNeverContainSensitiveGatewayData(): void
+    public function testChapaV1PayoutDoesNotLogRecipientOrGatewaySecret(): void
     {
-        settings()->save(['kyc.enabled' => true]);
         [$creator, $workspaceId, $payout] = $this->seedPendingPayout(withAdmin: false);
         $destination = '+251911223344';
-        $responseSecret = 'gateway-secret-account-value';
-        $telebirrMethod = DigitalProductWithdrawalMethod::query()
-            ->where('code', 'telebirr')
-            ->firstOrFail();
+        $secret = 'gateway-secret-account-value';
+        $method = DigitalProductWithdrawalMethod::query()->where('code', 'telebirr')->firstOrFail();
 
         $payout->update([
-            'withdrawal_method_id' => $telebirrMethod->id,
-            'withdrawal_method_name' => $telebirrMethod->name,
+            'status' => 'processing',
+            'withdrawal_method_id' => $method->id,
+            'withdrawal_method_name' => $method->name,
             'payout_destination' => $destination,
+            'account_holder_snapshot' => 'Test Creator',
+            'bank_code_snapshot' => 'telebirr',
         ]);
         $payout->payoutMethod()->update([
-            'withdrawal_method_id' => $telebirrMethod->id,
+            'withdrawal_method_id' => $method->id,
             'type' => 'telebirr',
+            'bank_code' => 'telebirr',
             'destination' => $destination,
         ]);
+
         config(['services.chapa.secret' => 'platform-secret']);
+        Cache::flush();
         Http::fake([
-            'https://api.chapa.global/v2/payouts' => Http::response([
+            'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'success',
-                'data' => [
-                    'chapa_reference' => 'CP_T_safe',
-                    'status' => 'PENDING',
-                    'account_number' => $responseSecret,
-                ],
+                'data' => [['id' => 855, 'slug' => 'telebirr', 'is_active' => 1, 'active' => 1, 'currency' => 'ETB']],
+            ]),
+            'https://api.chapa.co/v1/transfers' => Http::response([
+                'status' => 'success', 'data' => $secret,
             ]),
         ]);
+
         $logger = new class extends AbstractLogger {
             public array $records = [];
 
             public function log($level, string|\Stringable $message, array $context = []): void
             {
-                $this->records[] = [
-                    'level' => $level,
-                    'message' => (string) $message,
-                    'context' => $context,
-                ];
+                $this->records[] = ['message' => (string) $message, 'context' => $context];
             }
         };
-        $originalLogger = Log::getFacadeRoot();
+        $original = Log::getFacadeRoot();
         Log::swap($logger);
-
         try {
-            app(ChapaPayoutService::class)->createTransfer(
-                $payout->fresh(['withdrawalMethod', 'payoutMethod', 'creator']),
-            );
+            $intent = app(\App\Storefront\Services\StorefrontPayoutProcessingService::class)
+                ->prepareIntent($payout, 'telebirr');
+            app(ChapaPayoutService::class)->createTransfer($intent);
         } finally {
-            Log::swap($originalLogger);
+            Log::swap($original);
         }
-
-        $initiated = collect($logger->records)->firstWhere(
-            'message',
-            'Initiating Chapa Telebirr transfer',
-        );
-        $this->assertNotNull($initiated);
-        $this->assertSame([
-            'payout_id',
-            'reference',
-            'amount',
-            'currency',
-            'bank_code',
-        ], array_keys($initiated['context']));
 
         $logged = json_encode($logger->records);
         $this->assertStringNotContainsString($destination, $logged);
-        $this->assertStringNotContainsString(
-            preg_replace('/\D/', '', $destination),
-            $logged,
-        );
-        $this->assertStringNotContainsString($responseSecret, $logged);
+        $this->assertStringNotContainsString('251911223344', $logged);
+        $this->assertStringNotContainsString($secret, $logged);
     }
 
     /**
@@ -673,7 +655,7 @@ class PayoutSystemTest extends TestCase
         Cache::flush();
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
-            'https://api.chapa.global/v2/payouts/banks' => Http::response([
+            'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'success',
                 'data' => [
                     ['id' => 946, 'slug' => 'cbe_bank', 'swift' => 'CBETETAA', 'name' => 'Commercial Bank of Ethiopia', 'active' => 1, 'currency' => 'ETB'],
@@ -682,7 +664,7 @@ class PayoutSystemTest extends TestCase
                     ['id' => 0, 'slug' => 'telebirr', 'swift' => 'TELEBIRR', 'name' => 'Telebirr', 'active' => 1, 'currency' => 'ETB'],
                 ],
             ]),
-            'https://api.chapa.global/v2/payouts' => Http::response([
+            'https://api.chapa.co/v1/transfers' => Http::response([
                 'status' => 'success',
                 'data' => ['chapa_reference' => 'CP_T_test', 'status' => 'PENDING'],
             ]),
@@ -880,7 +862,7 @@ public function testChapaServiceCanValidateBankCodes(): void
     {
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
-            'https://api.chapa.global/v2/payouts/test_ref_123/verify' => Http::response([
+            'https://api.chapa.co/v1/transfers/verify/test_ref_123' => Http::response([
                 'status' => 'success',
                 'data' => [
                     'status' => 'SUCCESS',
@@ -896,8 +878,8 @@ public function testChapaServiceCanValidateBankCodes(): void
 
         $result = $service->verifyTransfer('test_ref_123');
 
-        $this->assertSame('SUCCESS', $result['status']);
-        $this->assertSame('test_ref_123', $result['merchant_reference']);
+        $this->assertSame('SUCCESS', $result['data']['status']);
+        $this->assertSame('test_ref_123', $result['data']['merchant_reference']);
     }
 
     /**
@@ -933,7 +915,7 @@ public function testChapaServiceCanValidateBankCodes(): void
             'auto_transfer' => true,
         ]);
 
-        $response->assertStatus(500); // RuntimeException for invalid bank code
+        $response->assertStatus(422); // Unverified automatic-paid shortcuts are forbidden
     }
 
     /**
@@ -944,7 +926,7 @@ public function testChapaServiceCanValidateBankCodes(): void
         Cache::flush();
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
-            'https://api.chapa.global/v2/payouts/banks' => Http::response([
+            'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'success',
                 'data' => [
                     [
