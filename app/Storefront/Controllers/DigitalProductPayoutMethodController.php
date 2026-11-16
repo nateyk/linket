@@ -217,15 +217,33 @@ class DigitalProductPayoutMethodController extends Controller
      */
     private function validatePayload(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'withdrawal_method_id' => 'nullable|integer|exists:digital_product_withdrawal_methods,id',
             'type' => 'nullable|string|max:64',
-            'bank_code' => 'nullable|string|max:64',
+            'bank_code' => 'required|string|max:64',
             'bank_name' => 'nullable|string|max:160',
-            'account_holder' => 'required|string|max:160',
+            'account_holder' => 'required|string|min:3|max:160',
             'destination' => ['required', 'string', 'max:100', 'regex:/^[0-9+ -]+$/'],
             'is_default' => 'nullable|boolean',
         ]);
+
+        $code = strtolower(trim((string) $data['bank_code']));
+        $number = preg_replace('/[\s-]/', '', (string) $data['destination']);
+        $valid = match ($code) {
+            'telebirr', 'cbebirr', 'mpesa' => (bool) preg_match('/^(?:0[79]\d{8}|(?:\+?251)[79]\d{8})$/', $number),
+            'yaya' => (bool) preg_match('/^\d{12}$/', $number),
+            'cbe' => (bool) preg_match('/^\d{13}$/', $number),
+            'boa' => (bool) preg_match('/^(?:\d{8}|\d{10}|\d{16})$/', $number),
+            'other', 'coop' => false,
+            default => (bool) preg_match('/^\d{8,20}$/', $number),
+        };
+        if (!$valid) {
+            throw ValidationException::withMessages([
+                'destination' => __('Enter a valid account or wallet number for the selected provider.'),
+            ]);
+        }
+
+        return $data;
     }
 
     private function resolveWithdrawalMethod(?int $withdrawalMethodId, ?string $type, ?string $bankCode): DigitalProductWithdrawalMethod
