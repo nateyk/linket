@@ -216,14 +216,16 @@ test.describe('isolated Help Center + support', () => {
     const sharedSidebar = page.locator('[data-slot="sidebar"]');
     await expect(sharedSidebar.getByRole('link', {name: 'Insights'})).toBeVisible();
     await expect(sharedSidebar.getByRole('link', {name: 'Support', exact: true}))
-      .toBeVisible();
+      .toHaveAttribute('aria-current', 'page');
     await expect(page.locator('[data-menu-id="agent-dashboard-sidebar"]'))
       .toHaveCount(0);
 
     // The standard admin navigation must remain reachable on mobile, too.
     await page.setViewportSize({width: 390, height: 844});
-    await page.locator('[data-slot="sidebar-toggle-button"]').first().click();
     const mobileSidebar = page.getByRole('navigation', {name: 'Main navigation'});
+    if (!(await mobileSidebar.isVisible())) {
+      await page.locator('[data-slot="sidebar-toggle-button"]').first().click();
+    }
     await expect(mobileSidebar.getByRole('link', {name: 'Support', exact: true}))
       .toBeVisible();
     await mobileSidebar.getByRole('link', {name: 'Support', exact: true}).click();
