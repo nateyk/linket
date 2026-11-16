@@ -202,7 +202,8 @@ class PayoutSystemTest extends TestCase
         $account = $this->createPayoutMethod($creator, $workspaceId, maximum: 20000);
         $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 10000);
 
-        $account->withdrawalMethod->update(['maximum_amount_cents' => 5000]);
+        DigitalProductWithdrawalMethod::query()->findOrFail($account->withdrawal_method_id)
+            ->update(['maximum_amount_cents' => 5000]);
 
         try {
             app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
@@ -223,7 +224,8 @@ class PayoutSystemTest extends TestCase
         $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 10000);
         app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
 
-        $account->withdrawalMethod->update(['maximum_amount_cents' => 5000]);
+        DigitalProductWithdrawalMethod::query()->findOrFail($account->withdrawal_method_id)
+            ->update(['maximum_amount_cents' => 5000]);
         config()->set('services.chapa.payouts_enabled', true);
         Http::fake();
 
