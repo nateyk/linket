@@ -194,6 +194,51 @@ class PayoutSystemTest extends TestCase
         $this->assertSame(100, $payout->amount_cents);
     }
 
+    public function testFinanceLimitChangeBlocksApprovalOfAnExistingWithdrawal(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 30000);
+        $account = $this->createPayoutMethod($creator, $workspaceId, maximum: 20000);
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 10000);
+
+        $account->withdrawalMethod->update(['maximum_amount_cents' => 5000]);
+
+        try {
+            app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+            $this->fail('A withdrawal beyond the current maximum must not be approved.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $this->assertSame('requested', $payout->fresh()->status);
+    }
+
+    public function testFinanceLimitChangeBlocksDispatchAfterAdminApproval(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 30000);
+        $account = $this->createPayoutMethod($creator, $workspaceId, maximum: 20000);
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 10000);
+        app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+
+        $account->withdrawalMethod->update(['maximum_amount_cents' => 5000]);
+        config()->set('services.chapa.payouts_enabled', true);
+        Http::fake();
+
+        try {
+            app(PayoutRequestService::class)->submitChapaPayout($payout->fresh(), $creator->id);
+            $this->fail('A withdrawal beyond the current maximum must not be dispatched.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertDatabaseMissing('storefront_payout_intents', ['payout_request_id' => $payout->id]);
+        Http::assertNothingSent();
+    }
+
     /**
      * Requesting above the withdrawal method maximum is rejected.
      */
