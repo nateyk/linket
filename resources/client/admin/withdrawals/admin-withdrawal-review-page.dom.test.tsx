@@ -179,7 +179,7 @@ describe('AdminWithdrawalReviewPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Settled')).toBeTruthy();
+    expect(await screen.findByText('This withdrawal was settled and marked as paid.')).toBeTruthy();
     expect(screen.queryByRole('button', {name: /Verify settlement with Chapa/i})).toBeNull();
     expect(screen.queryByRole('button', {name: /Submit transfer to Chapa/i})).toBeNull();
   });
