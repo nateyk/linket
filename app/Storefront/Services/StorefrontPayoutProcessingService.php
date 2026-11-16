@@ -51,6 +51,7 @@ final class StorefrontPayoutProcessingService
                 'withdrawal_code' => $withdrawalCode,
                 'destination_snapshot' => (string) $locked->payout_destination,
                 'status' => StorefrontPayoutIntent::STATUS_PREPARED,
+                'attempts' => 0,
             ]);
         });
     }
