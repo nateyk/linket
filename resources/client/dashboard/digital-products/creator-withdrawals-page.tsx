@@ -82,6 +82,8 @@ export type PayoutDestination = {
   display_label: string;
   is_active: boolean;
   is_default: boolean;
+  status?: string;
+  approved_at?: string | null;
 };
 
 const statusLabels: Record<PayoutStatus, string> = {
@@ -463,7 +465,8 @@ function RequestWithdrawalModal({
   destinations: PayoutDestination[];
   onSuccess: () => Promise<void>;
 }) {
-  const defaultDest = destinations.find(d => d.is_default && d.is_active) ?? destinations.find(d => d.is_active);
+  const approvedDestinations = destinations.filter(d => d.is_active && d.status === 'active' && !!d.approved_at);
+  const defaultDest = approvedDestinations.find(d => d.is_default) ?? approvedDestinations[0];
   const [selectedDestId, setSelectedDestId] = useState<number | null>(null);
   const [amountStr, setAmountStr] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -477,7 +480,7 @@ function RequestWithdrawalModal({
     }
   }, [open, defaultDest, available]);
 
-  const activeDestinations = destinations.filter(d => d.is_active);
+  const activeDestinations = approvedDestinations;
   const amountCents = Math.round((parseFloat(amountStr) || 0) * 100);
   const isValidAmount = amountCents >= 10000 && amountCents <= available;
 
@@ -515,10 +518,10 @@ function RequestWithdrawalModal({
             {activeDestinations.length === 0 ? (
               <div className="flex flex-col gap-3 rounded-card border border-primary/20 bg-primary/5 p-4 text-sm">
                 <p className="font-semibold text-primary">
-                  <Trans message="No payout account configured" />
+                  <Trans message="No approved payout account" />
                 </p>
                 <p className="text-muted-foreground">
-                  <Trans message="Add a bank or mobile wallet destination before requesting a withdrawal." />
+                  <Trans message="Add a bank or mobile wallet and have the account approved before requesting a withdrawal." />
                 </p>
                 <Button
                   variant="default"
