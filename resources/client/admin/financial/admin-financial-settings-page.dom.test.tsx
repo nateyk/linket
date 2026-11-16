@@ -87,13 +87,13 @@ describe('AdminFinancialSettingsPage', () => {
 
   beforeEach(() => {
     mockApiClient.get.mockImplementation((url: string) => {
-      if (url.includes('/api/admin/billing/subscription-gateway')) {
+      if (url === '/api/v1/admin/billing/subscription-gateway') {
         return Promise.resolve({data: {data: baseGatewayConfig}});
       }
       if (url.includes('/api/v1/admin/financial/withdrawal-methods')) {
         return Promise.resolve({data: {data: baseWithdrawalMethods}});
       }
-      if (url.includes('/api/admin/marketplace/financial-summary')) {
+      if (url === '/api/v1/admin/marketplace/financial-summary') {
         return Promise.resolve({data: {data: baseReconciliationSummary}});
       }
       return Promise.reject(new Error(`Unhandled GET url: ${url}`));
@@ -143,6 +143,7 @@ describe('AdminFinancialSettingsPage', () => {
     });
 
     expect(screen.getByText('Connected')).toBeTruthy();
+    expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/admin/billing/subscription-gateway');
     expect(
       screen.getByDisplayValue('https://linket.test/api/v1/billing/gateways/chapa/webhook'),
     ).toBeTruthy();
@@ -168,7 +169,7 @@ describe('AdminFinancialSettingsPage', () => {
 
     await waitFor(() => {
       expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/api/admin/billing/subscription-gateway',
+        '/api/v1/admin/billing/subscription-gateway',
         expect.objectContaining({
           gateway: 'chapa',
           public_key: 'CHAPUBK_TEST-validkey123',
@@ -178,6 +179,21 @@ describe('AdminFinancialSettingsPage', () => {
     });
 
     expect(await screen.findByText('Chapa credentials validated and saved.')).toBeTruthy();
+  });
+
+  it('does not send a public key without the matching secret key', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
+    });
+
+    const inputs = screen.getAllByRole('textbox');
+    fireEvent.change(inputs[0], {target: {value: 'CHAPUBK_TEST-onlypublic'}});
+
+    const submitBtn = screen.getByRole('button', {name: /Save Chapa credentials/i});
+    expect(submitBtn.hasAttribute('disabled')).toBe(true);
+    expect(mockApiClient.put).not.toHaveBeenCalled();
   });
 
   it('switches to payout methods tab and lists supported banks and limits', async () => {
@@ -245,7 +261,8 @@ describe('AdminFinancialSettingsPage', () => {
     fireEvent.click(reconcileBtn);
 
     await waitFor(() => {
-      expect(mockApiClient.post).toHaveBeenCalledWith('/api/admin/marketplace/reconcile', {
+      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/admin/marketplace/financial-summary');
+      expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/admin/marketplace/reconcile', {
         dry_run: false,
       });
     });
