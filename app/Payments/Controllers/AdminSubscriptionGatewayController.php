@@ -52,8 +52,14 @@ final class AdminSubscriptionGatewayController extends Controller
                     'secret_key' => __('Enter the public key and the secret key.'),
                 ]);
             }
+            if (ChapaV2Client::isLegacyKey($publicKey) || ChapaV2Client::isLegacyKey($secretKey)) {
+                throw ValidationException::withMessages([
+                    'public_key' => __('These are Chapa v1 keys. In the Chapa dashboard, open Settings, then API Keys, and copy the v2 public and private keys. Test keys start with CHAPA_TEST_ and live keys start with CHAPA_LIVE_.'),
+                    'secret_key' => __('These are Chapa v1 keys. In the Chapa dashboard, open Settings, then API Keys, and copy the v2 public and private keys. Test keys start with CHAPA_TEST_ and live keys start with CHAPA_LIVE_.'),
+                ]);
+            }
             try {
-                $accepted = app(ChapaV2Client::class)->secretAuthenticates($secretKey);
+                $status = app(ChapaV2Client::class)->secretStatus($secretKey);
             } catch (ConnectionException|RuntimeException $exception) {
                 Log::warning('Chapa credential validation could not reach Chapa.', [
                     'exception' => $exception::class,
@@ -63,7 +69,12 @@ final class AdminSubscriptionGatewayController extends Controller
                     'secret_key' => __('Chapa could not be reached to validate this secret key.'),
                 ]);
             }
-            if (!$accepted) {
+            if ($status === 'environment_mismatch') {
+                throw ValidationException::withMessages([
+                    'secret_key' => __('This private key is for the other Chapa environment. Use the test key while the business is in test mode, or the live key while it is live.'),
+                ]);
+            }
+            if ($status !== 'accepted') {
                 throw ValidationException::withMessages([
                     'secret_key' => __('Chapa did not accept this secret key.'),
                 ]);
