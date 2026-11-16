@@ -126,7 +126,7 @@ jobs:
         with:
           php-version: '8.4'
           extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
-          coverage: none
+          coverage: pcov
           tools: composer:v2
 
       # The old hardcoded ~/.composer/cache/files did not exist on Ubuntu;
@@ -213,7 +213,18 @@ jobs:
           bash scripts/tests/test-chatgpt-staging-preflight.sh
 
       - name: PHP tests - zero failures required
-        run: php artisan test --compact
+        run: |
+          set -euo pipefail
+          mkdir -p build/coverage
+          php artisan test --compact --coverage
+
+      - name: Upload PHP coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./build/coverage/php-clover.xml
+          disable_search: true
+          fail_ci_if_error: false
 
       - name: Validate Laravel deploy caches
         shell: bash
