@@ -215,6 +215,27 @@ class PayoutSystemTest extends TestCase
         $this->assertSame('requested', $payout->fresh()->status);
     }
 
+    public function testIncreasedProviderMinimumBlocksOldWithdrawalApproval(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 10000);
+        $account = $this->createPayoutMethod($creator, $workspaceId, minimum: 100);
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 1000);
+
+        DigitalProductWithdrawalMethod::query()->findOrFail($account->withdrawal_method_id)
+            ->update(['minimum_amount_cents' => 1500]);
+
+        try {
+            app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+            $this->fail('An outdated withdrawal below the new minimum must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $this->assertSame('requested', $payout->fresh()->status);
+    }
+
     public function testFinanceLimitChangeBlocksDispatchAfterAdminApproval(): void
     {
         $creator = $this->createVerifiedCreator();
