@@ -212,34 +212,42 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertSame('processing', $payout->fresh()->status);
     }
 
-    public function testProviderFailureEnvelopeCannotDisburseOrReleaseFunds(): void
+    public function testFailedProviderLookupCannotDisburse(): void
     {
-        foreach (['success', 'failed'] as $transferStatus) {
-            $provider = Mockery::mock(ChapaPayoutService::class);
-            $response = $this->verified($transferStatus);
-            $response['status'] = 'failed';
-            $provider->shouldReceive('verifyTransfer')->once()->andReturn($response);
+        $this->assertFailedProviderLookupLeavesFundsReserved('success');
+    }
 
-            $ledger = Mockery::mock(CreatorLedgerService::class);
-            $ledger->shouldNotReceive('disbursePayout');
-            $ledger->shouldNotReceive('releasePayoutReservation');
+    public function testFailedProviderLookupCannotRelease(): void
+    {
+        $this->assertFailedProviderLookupLeavesFundsReserved('failed');
+    }
 
-            $payout = $this->payout();
-            $intent = $this->intent($payout);
-            $service = new StorefrontPayoutProcessingService(
-                creatorLedger: $ledger, chapaPayoutService: $provider
-            );
+    private function assertFailedProviderLookupLeavesFundsReserved(string $transferStatus): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $response = $this->verified($transferStatus);
+        $response['status'] = 'failed';
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($response);
 
-            try {
-                $service->verifyPayout($intent);
-                $this->fail('A failed provider lookup must not change the payout.');
-            } catch (RuntimeException $exception) {
-                $this->assertStringContainsString('verification lookup', $exception->getMessage());
-            }
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+        $ledger->shouldNotReceive('releasePayoutReservation');
 
-            $this->assertSame('processing', $payout->fresh()->status);
-            $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $intent->fresh()->status);
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger, chapaPayoutService: $provider
+        );
+
+        try {
+            $service->verifyPayout($intent);
+            $this->fail('A failed provider lookup must not change the payout.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('verification lookup', $exception->getMessage());
         }
+
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $intent->fresh()->status);
     }
 
     public function testMatchingRecipientFromVerificationAllowsSettlement(): void
