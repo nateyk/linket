@@ -225,6 +225,11 @@ class PayoutSystemTest extends TestCase
         $this->assertSame('paid', $paid->status);
         $this->assertNotNull($paid->paid_at);
         $this->assertSame('CHAPA-1234', $paid->transfer_reference);
+
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
+        $this->assertSame(0, $summary['reserved_payout_cents']);
+        $this->assertSame(0, $summary['pending_payout_cents']);
+        $this->assertSame($paid->amount_cents, $summary['paid_out_cents']);
     }
 
     /**

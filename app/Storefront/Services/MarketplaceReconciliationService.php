@@ -115,8 +115,17 @@ class MarketplaceReconciliationService
      */
     public function reconcilePendingPaymentAttempts(int $staleMinutes = 15): int
     {
+        $attempts = StorefrontPaymentAttempt::query()->where(function (Builder $query): void {
+            $query->where('status', StorefrontPaymentAttempt::STATUS_PENDING)
+                ->orWhere(function (Builder $query): void {
+                    // Older verification code wrote provider PENDING responses as failures.
+                    $query->where('status', StorefrontPaymentAttempt::STATUS_FAILED)
+                        ->where('verification_data->status', 'PENDING');
+                });
+        });
+
         return $this->reconcileStaleRecords(
-            StorefrontPaymentAttempt::query()->where('status', StorefrontPaymentAttempt::STATUS_PENDING),
+            $attempts,
             $staleMinutes,
             fn (StorefrontPaymentAttempt $attempt): bool => $this->reconcileSinglePaymentAttempt($attempt),
         );

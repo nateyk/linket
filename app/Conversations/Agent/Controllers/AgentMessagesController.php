@@ -13,9 +13,14 @@ class AgentMessagesController extends BaseController
     {
         $conversation = Conversation::findOrFail($conversationId);
 
-        $this->authorize('show', $conversation);
+        // Internal notes belong in the agent channel only. Customers must
+        // use the customer messages endpoint, which filters staff notes.
+        $this->authorize('update', $conversation);
 
-        $pagination = (new PaginateConversationItems())->execute($conversation);
+        $pagination = (new PaginateConversationItems())->execute(
+            $conversation,
+            includePrivateNotes: true,
+        );
 
         return $this->success([
             'pagination' => $pagination,

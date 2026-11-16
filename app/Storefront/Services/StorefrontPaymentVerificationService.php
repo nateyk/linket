@@ -36,6 +36,10 @@ class StorefrontPaymentVerificationService
             ->payments()
             ->verifyTyped($merchantReference);
 
+        if ($verified->status === 'PENDING') {
+            throw new RuntimeException('Payment verification is pending.');
+        }
+
         if (!$verified->matchesPayment($attempt->amount_cents, $attempt->currency, $merchantReference)) {
             $this->recordVerificationFailure($attempt, $verified);
             throw new RuntimeException('Payment verification mismatch: unexpected status, amount, or currency.');
@@ -71,6 +75,7 @@ class StorefrontPaymentVerificationService
             'chapa_reference' => $verified->chapaReference,
             'verified_at' => now(),
             'verification_data' => $verified->raw,
+            'error_message' => null,
         ]);
     }
 
