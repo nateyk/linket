@@ -158,10 +158,10 @@ describe('AdminFinancialSettingsPage', () => {
 
     const inputs = screen.getAllByRole('textbox');
     // Public key input
-    fireEvent.change(inputs[0], {target: {value: 'CHAPA_TEST_validkey123'}});
+    fireEvent.change(inputs[0], {target: {value: 'CHAPUBK_TEST-validkey123'}});
 
     const secretInput = document.querySelector('input[type="password"]') as HTMLInputElement;
-    fireEvent.change(secretInput, {target: {value: 'CHAPA_TEST_validsecret456'}});
+    fireEvent.change(secretInput, {target: {value: 'CHASECK_TEST-validsecret456'}});
 
     const submitBtn = screen.getByRole('button', {name: /Save Chapa credentials/i});
     expect(submitBtn.hasAttribute('disabled')).toBe(false);
@@ -172,8 +172,8 @@ describe('AdminFinancialSettingsPage', () => {
         '/api/v1/admin/billing/subscription-gateway',
         expect.objectContaining({
           gateway: 'chapa',
-          public_key: 'CHAPA_TEST_validkey123',
-          secret_key: 'CHAPA_TEST_validsecret456',
+          public_key: 'CHAPUBK_TEST-validkey123',
+          secret_key: 'CHASECK_TEST-validsecret456',
         }),
       );
     });
@@ -196,7 +196,7 @@ describe('AdminFinancialSettingsPage', () => {
     expect(mockApiClient.put).not.toHaveBeenCalled();
   });
 
-  it('explains that CHAPUBK and CHASECK keys are Chapa v1 keys and does not submit them', async () => {
+  it('submits classic CHAPUBK and CHASECK keys', async () => {
     renderComponent();
 
     await waitFor(() => {
@@ -210,8 +210,16 @@ describe('AdminFinancialSettingsPage', () => {
 
     fireEvent.click(screen.getByRole('button', {name: /Save Chapa credentials/i}));
 
-    expect(await screen.findByText(/These are Chapa v1 keys/)).toBeTruthy();
-    expect(mockApiClient.put).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockApiClient.put).toHaveBeenCalledWith(
+        '/api/v1/admin/billing/subscription-gateway',
+        expect.objectContaining({
+          public_key: 'CHAPUBK_TEST-examplepublic',
+          secret_key: 'CHASECK_TEST-examplesecret',
+        }),
+      );
+    });
+    expect(screen.queryByText(/These are Chapa v1 keys/)).toBeNull();
   });
 
   it('switches to payout methods tab and lists supported banks and limits', async () => {

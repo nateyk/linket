@@ -273,7 +273,7 @@ class DirectBillingContractTest extends TestCase
     {
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
-            'https://api.chapa.global/v2/payments/hosted' => Http::response([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
                 'data' => ['checkout_url' => 'https://checkout.chapa.global/CHPRO1'],
             ]),
@@ -306,8 +306,8 @@ class DirectBillingContractTest extends TestCase
     public function testAdminCanStoreThePlatformChapaKeysForProUpgrades(): void
     {
         Http::fake([
-            'https://api.chapa.global/v2/payments/methods' => Http::response(['status' => 'success', 'data' => []]),
-            'https://api.chapa.global/v2/payments/hosted' => Http::response([
+            'https://api.chapa.co/v1/banks' => Http::response(['status' => 'success', 'data' => []]),
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
                 'data' => ['checkout_url' => 'https://checkout.chapa.global/CHADMIN1'],
             ]),
@@ -335,14 +335,14 @@ class DirectBillingContractTest extends TestCase
             'product_id' => $plan->id,
             'price_id' => $price->id,
         ])->assertOk()->assertJsonPath('checkout_url', 'https://checkout.chapa.global/CHADMIN1');
-        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.chapa.global/v2/payments/hosted'
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.chapa.co/v1/transaction/initialize'
             && $request->hasHeader('Authorization', 'Bearer admin-subscription-secret'));
     }
 
     public function testRejectedPlatformChapaSecretIsNotStored(): void
     {
         Http::fake([
-            'https://api.chapa.global/v2/payments/methods' => Http::response(['status' => 'failed'], 401),
+            'https://api.chapa.co/v1/banks' => Http::response(['status' => 'failed'], 401),
         ]);
         $admin = User::factory()->create();
         foreach (['admin.access', 'settings.update'] as $permission) {
@@ -357,31 +357,32 @@ class DirectBillingContractTest extends TestCase
         $this->assertDatabaseMissing('settings', ['name' => 'billing.chapa.secret_key']);
     }
 
-    public function testLegacyChapaV1KeysAreRejectedBeforeChapaIsCalled(): void
+    public function testClassicChapaV1KeysAreStoredWhenChapaAcceptsThem(): void
     {
         Http::fake([
-            'https://api.chapa.global/*' => Http::response(['status' => 'success', 'data' => []]),
+            'https://api.chapa.co/v1/banks' => Http::response(['status' => 'success', 'data' => []]),
         ]);
         $admin = User::factory()->create();
         foreach (['admin.access', 'settings.update'] as $permission) {
             $admin->permissions()->attach(\Common\Permissions\Models\Permission::query()->firstOrCreate(['name' => $permission]));
         }
 
-        $this->stateful()->actingAs($admin)->putJson('/api/v1/admin/billing/subscription-gateway', [
+        $saved = $this->stateful()->actingAs($admin)->putJson('/api/v1/admin/billing/subscription-gateway', [
             'public_key' => 'CHAPUBK_TEST-examplepublic',
             'secret_key' => 'CHASECK_TEST-examplesecret',
             'gateway' => 'chapa',
-        ])->assertInvalid(['secret_key' => 'Chapa v1']);
+        ]);
 
-        Http::assertNothingSent();
-        $this->assertDatabaseMissing('settings', ['name' => 'billing.chapa.secret_key']);
-        $this->assertDatabaseMissing('settings', ['name' => 'billing.chapa.public_key']);
+        $saved->assertOk()->assertJsonPath('data.secret_configured', true);
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.chapa.co/v1/banks'
+            && $request->hasHeader('Authorization', 'Bearer CHASECK_TEST-examplesecret'));
+        $this->assertSame('CHASECK_TEST-examplesecret', app(\App\Payments\ChapaGateway::class)->platformSecret());
     }
 
     public function testChapaEnvironmentMismatchDoesNotStorePlatformKeys(): void
     {
         Http::fake([
-            'https://api.chapa.global/v2/payments/methods' => Http::response([
+            'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'error',
                 'message' => 'API key environment does not match business environment.',
                 'error' => ['code' => 'INVALID_VALUE'],
@@ -405,7 +406,7 @@ class DirectBillingContractTest extends TestCase
     public function testPlatformChapaCredentialsWithInternalWhitespaceAreRejectedBeforeChapaIsCalled(): void
     {
         Http::fake([
-            'https://api.chapa.global/*' => Http::response(['status' => 'success', 'data' => []]),
+            'https://api.chapa.co/*' => Http::response(['status' => 'success', 'data' => []]),
         ]);
         $admin = User::factory()->create();
         foreach (['admin.access', 'settings.update'] as $permission) {
@@ -426,7 +427,7 @@ class DirectBillingContractTest extends TestCase
     public function testUnreachableChapaDoesNotStorePlatformKeys(): void
     {
         Http::fake([
-            'https://api.chapa.global/*' => Http::failedConnection(),
+            'https://api.chapa.co/*' => Http::failedConnection(),
         ]);
         $admin = User::factory()->create();
         foreach (['admin.access', 'settings.update'] as $permission) {
@@ -446,7 +447,7 @@ class DirectBillingContractTest extends TestCase
     public function testPlatformChapaCredentialUpdatesAreRateLimited(): void
     {
         Http::fake([
-            'https://api.chapa.global/*' => Http::response(['status' => 'success', 'data' => []]),
+            'https://api.chapa.co/*' => Http::response(['status' => 'success', 'data' => []]),
         ]);
         $admin = User::factory()->create();
         foreach (['admin.access', 'settings.update'] as $permission) {

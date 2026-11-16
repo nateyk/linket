@@ -75,9 +75,11 @@ class ChapaStorefrontReturnController extends Controller
         }
 
         $reference = (string) ($data['merchant_reference'] ?? '');
+        $amount = $data['amount'] ?? null;
+        $amountCents = is_string($amount) ? ChapaV2Client::centsFromMajor($amount) : (int) $amount;
         if (
-            ($data['status'] ?? null) !== 'SUCCESS'
-            || (int) ($data['amount'] ?? 0) !== (int) $order->gross_amount_cents
+            strtolower((string) ($data['status'] ?? '')) !== 'success'
+            || $amountCents !== (int) $order->gross_amount_cents
             || strtoupper((string) ($data['currency'] ?? '')) !== 'ETB'
             || $reference === ''
             || !hash_equals((string) $order->chapa_tx_ref, $reference)

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Storefront\Services;
 
+use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
 use App\Storefront\StorefrontWebhookHandler;
 use Illuminate\Support\Facades\DB;
-use Nateyk\Chapa\Dto\VerifiedTransaction;
 use RuntimeException;
 
 class StorefrontPaymentVerificationService
@@ -31,17 +31,24 @@ class StorefrontPaymentVerificationService
             return $order;
         }
 
-        $verified = $this->manager()
-            ->platformClient()
-            ->payments()
-            ->verifyTyped($merchantReference);
+        $verified = $this->verify($merchantReference);
+        $status = strtoupper((string) ($verified['status'] ?? ''));
 
-        if ($verified->status === 'PENDING') {
+        if ($status === 'PENDING') {
             throw new RuntimeException('Payment verification is pending.');
         }
 
-        if (!$verified->matchesPayment($attempt->amount_cents, $attempt->currency, $merchantReference)) {
-            $this->recordVerificationFailure($attempt, $verified);
+        $amountCents = ChapaV2Client::centsFromMajor((string) ($verified['amount'] ?? '0'));
+        $currency = strtoupper((string) ($verified['currency'] ?? ''));
+        $reference = (string) ($verified['merchant_reference'] ?? '');
+        $matches = $status === 'SUCCESS'
+            && $amountCents === (int) $attempt->amount_cents
+            && $currency === strtoupper((string) $attempt->currency)
+            && $reference !== ''
+            && hash_equals($reference, $merchantReference);
+
+        if (!$matches) {
+            $this->recordVerificationFailure($attempt, $verified, $status, $amountCents, $currency);
             throw new RuntimeException('Payment verification mismatch: unexpected status, amount, or currency.');
         }
 
@@ -57,7 +64,7 @@ class StorefrontPaymentVerificationService
             }
 
             $this->recordVerificationSuccess($lockedAttempt, $verified);
-            $buyerEmail = is_string($verified->raw['email'] ?? null) ? $verified->raw['email'] : $order->buyer_email;
+            $buyerEmail = is_string($verified['email'] ?? null) ? $verified['email'] : $order->buyer_email;
 
             $this->handler()->fulfill($order, $buyerEmail, [
                 'payment_gateway' => 'chapa',
@@ -68,23 +75,39 @@ class StorefrontPaymentVerificationService
         }, 3);
     }
 
-    private function recordVerificationSuccess(StorefrontPaymentAttempt $attempt, VerifiedTransaction $verified): void
+    /** @return array<string, mixed> */
+    private function verify(string $merchantReference): array
+    {
+        return app(ChapaV2Client::class)->verifyPayment(
+            (string) $this->manager()->platformSecret(),
+            $merchantReference,
+        );
+    }
+
+    /** @param array<string, mixed> $verified */
+    private function recordVerificationSuccess(StorefrontPaymentAttempt $attempt, array $verified): void
     {
         $attempt->update([
             'status' => StorefrontPaymentAttempt::STATUS_SUCCESSFUL,
-            'chapa_reference' => $verified->chapaReference,
+            'chapa_reference' => $verified['chapa_reference'] ?? null,
             'verified_at' => now(),
-            'verification_data' => $verified->raw,
+            'verification_data' => $verified,
             'error_message' => null,
         ]);
     }
 
-    private function recordVerificationFailure(StorefrontPaymentAttempt $attempt, VerifiedTransaction $verified): void
-    {
+    /** @param array<string, mixed> $verified */
+    private function recordVerificationFailure(
+        StorefrontPaymentAttempt $attempt,
+        array $verified,
+        string $status,
+        int $amountCents,
+        string $currency,
+    ): void {
         $attempt->update([
             'status' => StorefrontPaymentAttempt::STATUS_FAILED,
-            'verification_data' => $verified->raw,
-            'error_message' => "Verification mismatch: status={$verified->status}, amount={$verified->amount}, currency={$verified->currency}",
+            'verification_data' => $verified,
+            'error_message' => "Verification mismatch: status={$status}, amount={$amountCents}, currency={$currency}",
         ]);
     }
 

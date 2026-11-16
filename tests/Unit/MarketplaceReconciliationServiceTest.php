@@ -21,7 +21,9 @@ use App\Storefront\Services\StorefrontPayoutProcessingService;
 use App\Storefront\StorefrontWebhookHandler;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
+use App\Payments\Chapa\ChapaV2Client;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Nateyk\Chapa\ChapaClient;
@@ -153,9 +155,21 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(30),
         ]);
 
-        $chapaClient = $this->createMockChapaClient(ReconciliationChapaMockConfig::forPayment($merchantRef, 200000));
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/'.$merchantRef => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'success',
+                    'amount' => ChapaV2Client::majorFromCents(200000),
+                    'currency' => 'ETB',
+                    'tx_ref' => $merchantRef,
+                    'reference' => 'CHP-VERIFIED-99',
+                    'email' => 'buyer@test.com',
+                ],
+            ]),
+        ]);
         $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
+        $chapaManager->method('platformSecret')->willReturn('platform-secret');
 
         $webhookHandler = $this->createMock(StorefrontWebhookHandler::class);
         $webhookHandler->expects($this->once())->method('fulfill');
