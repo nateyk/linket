@@ -49,6 +49,9 @@ final class ChapaV1TransferVerificationGuard
     private function amountCents(string $amount): int
     {
         [$major, $minor] = array_pad(explode('.', $amount, 2), 2, '0');
+        if (strlen(ltrim($major, '0')) > 16) {
+            throw new RuntimeException('Chapa returned an out-of-range transfer amount.');
+        }
 
         return ((int) $major * 100) + (int) str_pad($minor, 2, '0');
     }
