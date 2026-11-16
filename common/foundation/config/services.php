@@ -58,6 +58,7 @@ return [
     'chapa' => [
         'secret' => env('CHAPA_SECRET_KEY'),
         'webhook_secret' => env('CHAPA_WEBHOOK_SECRET'),
+        'transfer_approval_secret' => env('CHAPA_TRANSFER_APPROVAL_SECRET'),
     ],
 
     'verify_et' => [
