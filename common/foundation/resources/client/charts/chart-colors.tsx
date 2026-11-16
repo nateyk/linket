@@ -3,7 +3,7 @@ import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 // Legacy theme palettes are optional in the Linket dashboard bootstrap.
 // Keep canvas colors valid when no BeDesk theme record is present.
 const primaryColor =
-  getBootstrapData().themes?.[0]?.values?.['--be-primary'] ?? '0 73 204';
+  getBootstrapData()?.themes?.[0]?.values?.['--be-primary'] ?? '0 73 204';
 export const ChartColors = [
   [
     `rgb(${primaryColor.replaceAll(' ', ',')})`,
