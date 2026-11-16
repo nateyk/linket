@@ -66,7 +66,7 @@ function AgentDashboardContent({adminShell = false}: {adminShell?: boolean}) {
           <HelpdeskDashboardSidebar />
         </DashboardSidenav>
       )}
-      {adminShell && isCompactLayout && (
+      {adminShell && (
         <div className="dashboard-grid-navbar flex h-12 items-center gap-2 border-b bg-card px-3">
           <LinketDashboardLayout.SidebarToggle />
           <span className="min-w-0 flex-1 truncate text-sm font-semibold">
