@@ -84,6 +84,7 @@ export type PayoutDestination = {
   is_default: boolean;
   status?: string;
   approved_at?: string | null;
+  withdrawal_method?: {code: string; is_active: boolean} | null;
 };
 
 const statusLabels: Record<PayoutStatus, string> = {
@@ -465,7 +466,9 @@ function RequestWithdrawalModal({
   destinations: PayoutDestination[];
   onSuccess: () => Promise<void>;
 }) {
-  const approvedDestinations = destinations.filter(d => d.is_active && d.status === 'active' && !!d.approved_at);
+  const approvedDestinations = destinations.filter(d =>
+    d.is_active && d.status === 'active' && !!d.approved_at && d.withdrawal_method?.is_active === true
+  );
   const defaultDest = approvedDestinations.find(d => d.is_default) ?? approvedDestinations[0];
   const [selectedDestId, setSelectedDestId] = useState<number | null>(null);
   const [amountStr, setAmountStr] = useState<string>('');
