@@ -43,7 +43,7 @@ final class StorefrontPayoutProcessingService
 
             return StorefrontPayoutIntent::query()->create([
                 'payout_request_id' => $locked->id,
-                'merchant_reference' => $this->refGenerator()->generate('po'),
+                'merchant_reference' => $this->generatePayoutReference(),
                 'idempotency_key' => (string) Str::uuid(),
                 'amount_cents' => (int) $locked->amount_cents,
                 'currency' => strtoupper((string) ($locked->currency ?: 'ETB')),
@@ -210,6 +210,18 @@ final class StorefrontPayoutProcessingService
     private function provider(): ChapaPayoutService
     {
         return $this->chapaPayoutService ?? app(ChapaPayoutService::class);
+    }
+
+    private function generatePayoutReference(): string
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $reference = 'lk-po-'.Str::random(12);
+            if (!StorefrontPayoutIntent::query()->where('merchant_reference', $reference)->exists()) {
+                return $reference;
+            }
+        }
+
+        throw new RuntimeException('Unable to allocate a unique payout transfer reference.');
     }
 
     private function refGenerator(): StorefrontPaymentReferenceGenerator
