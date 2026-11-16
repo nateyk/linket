@@ -97,7 +97,7 @@ class PayoutRequestService
     public function transition(PayoutRequest $payout, string $action, int $actorId, array $data = []): PayoutRequest
     {
         return DB::transaction(function () use ($payout, $action, $actorId, $data): PayoutRequest {
-            $payout = PayoutRequest::query()->with('withdrawalMethod')->lockForUpdate()->findOrFail($payout->id);
+            $payout = PayoutRequest::query()->with(['withdrawalMethod', 'payoutMethod'])->lockForUpdate()->findOrFail($payout->id);
             $target = match ($action) {
                 'start_processing' => 'processing',
                 'mark_paid' => 'paid',
@@ -108,6 +108,15 @@ class PayoutRequestService
 
             if (!self::canTransition($payout->status, $target)) {
                 throw ValidationException::withMessages(['status' => __('This payout can no longer be changed.')]);
+            }
+
+            if ($target === 'processing' && (!$payout->withdrawalMethod?->is_active
+                || !$payout->payoutMethod?->is_active
+                || $payout->payoutMethod->status !== DigitalProductPayoutMethod::STATUS_ACTIVE
+                || !$payout->payoutMethod->approved_at)) {
+                throw ValidationException::withMessages([
+                    'payout_method' => __('Approve the receiving account and enable its provider before approving withdrawal.'),
+                ]);
             }
 
             // Automated transfers must only be marked paid by verified Chapa settlement.
@@ -187,9 +196,19 @@ class PayoutRequestService
             || blank($payout->bank_code_snapshot)) {
             throw ValidationException::withMessages(['payout_method' => __('The approved receiving account is unavailable or was modified.')]);
         }
+        if (!in_array($payout->withdrawalMethod->code, [
+            'bank_transfer', ...ChapaPayoutService::WALLET_CODES,
+        ], true)) {
+            throw ValidationException::withMessages(['withdrawal_method' => __('The selected provider cannot be disbursed with Chapa v1.')]);
+        }
+
         if ($payout->payoutIntents()->exists()) {
             throw ValidationException::withMessages(['status' => __('Transfer already initiated. Verify its existing reference; never resubmit it.')]);
         }
+
+        // Ensure the current Chapa v1 directory accepts this bank/wallet BEFORE
+        // allocating a durable payout reference and making an uncertain POST.
+        app(ChapaPayoutService::class)->resolveBank($payout->bank_code_snapshot);
 
         $processingService = app(StorefrontPayoutProcessingService::class);
         $intent = $processingService->prepareIntent($payout, $payout->withdrawalMethod?->code ?? 'bank_transfer');
