@@ -153,7 +153,11 @@ class AdminPayoutRequestsController extends Controller
             $intent = app(PayoutRequestService::class)->submitChapaPayout($payoutRequest, $request->user()->id);
 
             return response()->json([
-                'message' => __('Payout transfer submitted to Chapa.'),
+                'message' => match ($intent->status) {
+                    'provider_pending' => __('Chapa queued the transfer; verify settlement before marking it paid.'),
+                    'submitted' => __('Transfer submission is uncertain. Verify this reference with Chapa; do not resend.'),
+                    default => __('Payout transfer status requires administrator review.'),
+                },
                 'data' => new AdminPayoutRequestResource($payoutRequest->fresh(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])),
                 'intent_id' => $intent->id,
                 'merchant_reference' => $intent->merchant_reference,
