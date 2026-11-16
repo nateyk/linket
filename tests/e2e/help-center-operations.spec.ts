@@ -126,25 +126,34 @@ async function assignTicket(admin: Page, ticketId: number): Promise<void> {
   await expect(admin.getByText(/^e2e-hc-agent-/).first()).toBeVisible();
 }
 
+async function postAgentMessage(
+  admin: Page,
+  ticketId: number,
+  body: string,
+  type: 'message' | 'note',
+): Promise<void> {
+  await admin.locator('.tiptap[contenteditable="true"]').last().fill(body);
+  const response = matchResponse(
+    admin,
+    '/api/v1/helpdesk/agent/conversations/' + ticketId + '/messages',
+    'POST',
+  );
+  await admin.getByRole('button', {name: type === 'message' ? 'Send reply' : 'Add note'}).click();
+  expect((await (await response).json()).message.type).toBe(type);
+  await admin.goto('/agent/conversations/' + ticketId);
+}
+
 async function submitPublicReply(admin: Page, ticketId: number, reply: string): Promise<void> {
   await admin.getByRole('button', {name: 'Resolved', exact: true}).last().click();
   await admin.getByText('Open', {exact: true}).last().click();
-  await admin.locator('.tiptap[contenteditable="true"]').last().fill(reply);
-  const response = matchResponse(admin, '/api/v1/helpdesk/agent/conversations/' + ticketId + '/messages', 'POST');
-  await admin.getByRole('button', {name: 'Send reply'}).click();
-  expect((await (await response).json()).message.type).toBe('message');
-  await admin.goto('/agent/conversations/' + ticketId);
+  await postAgentMessage(admin, ticketId, reply, 'message');
   await expect(admin.getByText(reply).first()).toBeVisible({timeout: 30_000});
 }
 
 async function submitPrivateNote(admin: Page, ticketId: number, note: string): Promise<void> {
   await admin.getByRole('button', {name: 'Message', exact: true}).click();
   await admin.getByText('Note', {exact: true}).last().click();
-  await admin.locator('.tiptap[contenteditable="true"]').last().fill(note);
-  const response = matchResponse(admin, '/api/v1/helpdesk/agent/conversations/' + ticketId + '/messages', 'POST');
-  await admin.getByRole('button', {name: 'Add note'}).click();
-  expect((await (await response).json()).message.type).toBe('note');
-  await admin.goto('/agent/conversations/' + ticketId);
+  await postAgentMessage(admin, ticketId, note, 'note');
   await expect(admin.locator('#feed-container').getByText(note))
     .toBeVisible({timeout: 15_000});
 }
