@@ -41,7 +41,7 @@ function FinancialDesktopNav() {
       </DashboardLayout.SectionHeader>
       <div className="compact-scrollbar flex flex-col gap-1 overflow-y-auto p-3 md:py-5">
         <div className="mb-2 px-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          <Trans message="Settings & Gateways" />
+          <Trans message="Financial Hub" />
         </div>
         {financialNavItems.map(item => {
           const Icon = item.icon;
@@ -53,7 +53,13 @@ function FinancialDesktopNav() {
               pathname.startsWith('/admin/financial/withdrawal-methods') &&
               !pathname.includes('/legacy')) ||
             (item.to === '/admin/financial/withdrawal-methods/legacy' &&
-              pathname.includes('/legacy'));
+              pathname.includes('/legacy')) ||
+            (item.to === '/admin/financial/withdrawals' &&
+              (pathname.startsWith('/admin/financial/withdrawals') ||
+                pathname.startsWith('/admin/withdrawals'))) ||
+            (item.to === '/admin/financial/payment-activity' &&
+              (pathname.startsWith('/admin/financial/payment-activity') ||
+                pathname.startsWith('/admin/payment-activity')));
 
           return (
             <NavLink
@@ -85,42 +91,6 @@ function FinancialDesktopNav() {
             </NavLink>
           );
         })}
-
-        <div className="mt-5 mb-2 px-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          <Trans message="Operations" />
-        </div>
-        <NavLink
-          to="/admin/withdrawals"
-          className={({isActive}) =>
-            clsx(
-              'flex items-center gap-2.5 rounded-card px-3 py-2 text-sm transition-colors',
-              isActive
-                ? 'bg-accent font-medium text-accent-foreground'
-                : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
-            )
-          }
-        >
-          <CreditCardIcon className="size-4 shrink-0 text-muted-foreground" />
-          <span className="truncate">
-            <Trans message="Withdrawals queue" />
-          </span>
-        </NavLink>
-        <NavLink
-          to="/admin/payment-activity"
-          className={({isActive}) =>
-            clsx(
-              'flex items-center gap-2.5 rounded-card px-3 py-2 text-sm transition-colors',
-              isActive
-                ? 'bg-accent font-medium text-accent-foreground'
-                : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
-            )
-          }
-        >
-          <CircleDollarSignIcon className="size-4 shrink-0 text-muted-foreground" />
-          <span className="truncate">
-            <Trans message="Payment activity" />
-          </span>
-        </NavLink>
       </div>
     </DashboardLayout.Section>
   );
@@ -140,7 +110,13 @@ export function FinancialMobileNav() {
           pathname.startsWith('/admin/financial/withdrawal-methods') &&
           !pathname.includes('/legacy')) ||
         (item.to === '/admin/financial/withdrawal-methods/legacy' &&
-          pathname.includes('/legacy')),
+          pathname.includes('/legacy')) ||
+        (item.to === '/admin/financial/withdrawals' &&
+          (pathname.startsWith('/admin/financial/withdrawals') ||
+            pathname.startsWith('/admin/withdrawals'))) ||
+        (item.to === '/admin/financial/payment-activity' &&
+          (pathname.startsWith('/admin/financial/payment-activity') ||
+            pathname.startsWith('/admin/payment-activity'))),
     ) || financialNavItems[0];
 
   return (
