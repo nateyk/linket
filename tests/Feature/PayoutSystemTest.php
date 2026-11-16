@@ -369,10 +369,11 @@ class PayoutSystemTest extends TestCase
             'note' => 'Processing',
         ])->assertOk();
 
-        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'transfer_reference' => 'CHAPA-REF-999',
-        ])->assertOk()->assertJsonPath('data.status', 'paid');
-        $this->assertSame('CHAPA-REF-999', $response->json('data.transfer_reference'));
+        ])->assertStatus(422);
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertNull($payout->fresh()->paid_at);
     }
 
     public function testNonAdminCannotAccessAdminPayoutRoutes(): void
