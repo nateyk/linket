@@ -145,7 +145,17 @@ class ChapaPayoutService
     {
         $payout = $intent->payoutRequest;
         $code = strtolower((string) $payout?->bank_code_snapshot);
-        $aliases = ['cbe' => 'cbe_bank', 'm-pesa' => 'mpesa', 'cbe_birr' => 'cbebirr'];
+        $aliases = [
+            'cbe' => 'cbe_bank',
+            'boa' => 'boa_bank',
+            'dashen' => 'dashen_bank',
+            'awash' => 'awash_bank',
+            'hibret' => 'hibret_bank',
+            'wegagen' => 'wegagen_bank',
+            'zemen' => 'zemen_bank',
+            'm-pesa' => 'mpesa',
+            'cbe_birr' => 'cbebirr',
+        ];
         $expectedBank = $aliases[$code] ?? $code;
         $actualBank = strtolower(trim((string) ($payload['bank'] ?? '')));
         $actualNumber = preg_replace('/[\s+\-]/', '', (string) ($payload['account_number'] ?? ''));
@@ -158,6 +168,10 @@ class ChapaPayoutService
 
         return $payout !== null
             && $payout->status === 'processing'
+            && $payout->withdrawalMethod?->is_active
+            && $payout->payoutMethod?->is_active
+            && $payout->payoutMethod->status === 'active'
+            && $payout->payoutMethod->approved_at !== null
             && in_array($intent->status, [
                 StorefrontPayoutIntent::STATUS_SUBMITTED,
                 StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
