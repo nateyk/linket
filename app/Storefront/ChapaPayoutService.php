@@ -53,6 +53,27 @@ class ChapaPayoutService
         throw new RuntimeException('The selected destination is not supported by the current Chapa bank list.');
     }
 
+    public function findBankByCode(string $code): ?array
+    {
+        $code = strtoupper(trim($code));
+        foreach ($this->getBanks() as $bank) {
+            if (!empty($bank['active']) && !empty($bank['is_active'])
+                && strtoupper((string) ($bank['currency'] ?? '')) === 'ETB'
+                && (strtoupper((string) ($bank['slug'] ?? '')) === $code
+                    || strtoupper((string) ($bank['swift'] ?? '')) === $code
+                    || (string) ($bank['id'] ?? '') === $code)) {
+                return $bank;
+            }
+        }
+
+        return null;
+    }
+
+    public function validateBankCode(string $code): bool
+    {
+        return $this->findBankByCode($code) !== null;
+    }
+
     /** @return array<string, mixed> */
     public function createTransfer(StorefrontPayoutIntent $intent): array
     {
