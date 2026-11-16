@@ -90,6 +90,9 @@ describe('AdminFinancialSettingsPage', () => {
       if (url === '/api/v1/admin/billing/subscription-gateway') {
         return Promise.resolve({data: {data: baseGatewayConfig}});
       }
+      if (url === '/api/v1/admin/financial/payout-accounts') {
+        return Promise.resolve({data: {data: []}});
+      }
       if (url.includes('/api/v1/admin/financial/withdrawal-methods')) {
         return Promise.resolve({data: {data: baseWithdrawalMethods}});
       }
@@ -232,14 +235,13 @@ describe('AdminFinancialSettingsPage', () => {
     fireEvent.click(screen.getByRole('tab', {name: /Payout methods/i}));
 
     await waitFor(() => {
-      expect(screen.getByText('Supported withdrawal methods')).toBeTruthy();
+      expect(screen.getByText('Withdrawal providers')).toBeTruthy();
     });
 
     expect(screen.getByText('Commercial Bank of Ethiopia (CBE)')).toBeTruthy();
     expect(screen.getByText('Telebirr')).toBeTruthy();
-    expect(screen.getByText('cbe')).toBeTruthy();
-    expect(screen.getByText('telebirr')).toBeTruthy();
-    expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
+    expect(screen.getByRole('switch', {name: 'Telebirr payouts'})).toBeTruthy();
+    expect(screen.getByText('Seller receiving account approvals')).toBeTruthy();
   });
 
   it('switches to commissions & policy tab and renders marketplace rules', async () => {
