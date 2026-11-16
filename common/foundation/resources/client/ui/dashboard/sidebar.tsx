@@ -21,7 +21,7 @@ import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
 import {cva, type VariantProps} from 'class-variance-authority';
 import * as React from 'react';
 import {ComponentProps, createContext, ReactElement, use} from 'react';
-import {Link, NavLink} from 'react-router';
+import {Link, NavLink, useLocation} from 'react-router';
 
 type Collapsible = 'offcanvas' | 'icon' | 'none';
 
@@ -54,12 +54,25 @@ function SidebarRoot({
 }) {
   const ctx = use(DashboardLayoutContext);
   const {trans} = useTrans();
+  const location = useLocation();
+  const previousLocationKey = React.useRef(location.key);
   const landmarkLabel = trans(message('Main navigation'));
   let variant = propsVariant ?? ctx.defaultSectionVariant;
   const status =
     side === 'left' ? ctx.leftSidebar.status : ctx.rightSidebar.status;
   const setStatus =
     side === 'left' ? ctx.leftSidebar.setStatus : ctx.rightSidebar.setStatus;
+
+  // Close the mobile drawer after navigation, not during a link's click.
+  // Closing synchronously in the parent nav can unmount a React Router
+  // link before its navigation commits.
+  React.useEffect(() => {
+    if (previousLocationKey.current === location.key) return;
+    previousLocationKey.current = location.key;
+    if (ctx.isMobileMode && status === 'expanded') {
+      setStatus('collapsed');
+    }
+  }, [ctx.isMobileMode, location.key, setStatus, status]);
 
   if (ctx.isMobileMode || forceOverlayMode) {
     return (
@@ -79,7 +92,7 @@ function SidebarRoot({
               onClick={ignoreEventsFromPortal(e => {
                 const target = e.target as HTMLElement;
                 if (
-                  (target.closest('button') || target.closest('a')) &&
+                  target.closest('button') &&
                   !target.closest('button[data-slot="collapsible-trigger"]') &&
                   !target.closest('button[data-slot="sidebar-trigger"]') &&
                   !target.closest('button[aria-haspopup]')
