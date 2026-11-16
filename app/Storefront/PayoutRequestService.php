@@ -208,16 +208,16 @@ class PayoutRequestService
             || blank($payout->bank_code_snapshot)) {
             throw ValidationException::withMessages(['payout_method' => __('The approved receiving account is unavailable or was modified.')]);
         }
-        if (!in_array($payout->withdrawalMethod->code, [
-            'bank_transfer', ...ChapaPayoutService::WALLET_CODES,
-        ], true)) {
-            throw ValidationException::withMessages(['withdrawal_method' => __('The selected provider cannot be disbursed with Chapa v1.')]);
-        }
-
         if (!$this->isWithinCurrentMethodLimits($payout)) {
             throw ValidationException::withMessages([
                 'amount_cents' => __('The provider withdrawal limits changed. Review the request before transfer.'),
             ]);
+        }
+
+        if (!in_array($payout->withdrawalMethod->code, [
+            'bank_transfer', ...ChapaPayoutService::WALLET_CODES,
+        ], true)) {
+            throw ValidationException::withMessages(['withdrawal_method' => __('The selected provider cannot be disbursed with Chapa v1.')]);
         }
 
         $existingIntent = $payout->payoutIntents()->first();
