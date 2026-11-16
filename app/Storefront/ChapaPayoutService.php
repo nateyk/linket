@@ -74,6 +74,32 @@ class ChapaPayoutService
         return $this->findBankByCode($code) !== null;
     }
 
+    public function assertSufficientBalance(int $amountCents): void
+    {
+        $response = app(ChapaV1TransferClient::class)->balance(
+            app(LinketChapaManager::class)->platformSecret(),
+        );
+        $balances = $response['data'] ?? null;
+        if (!is_array($balances)) {
+            throw new RuntimeException('Chapa did not return a valid available-balance report.');
+        }
+
+        foreach ($balances as $balance) {
+            if (!is_array($balance) || strtoupper((string) ($balance['currency'] ?? '')) !== 'ETB') {
+                continue;
+            }
+
+            $available = $balance['available_balance'] ?? null;
+            if (!is_numeric($available) || (int) round(((float) $available) * 100) < $amountCents) {
+                throw new RuntimeException('Chapa available ETB balance is insufficient for this withdrawal.');
+            }
+
+            return;
+        }
+
+        throw new RuntimeException('Chapa did not report an available ETB transfer balance.');
+    }
+
     /** @return array<string, mixed> */
     public function createTransfer(StorefrontPayoutIntent $intent): array
     {
