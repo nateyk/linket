@@ -63,7 +63,6 @@ export const ETHIOPIAN_BANKS: BankOption[] = [
   {code: 'dashen', name: 'Dashen Bank', type: 'bank_transfer'},
   {code: 'awash', name: 'Awash Bank', type: 'bank_transfer'},
   {code: 'cbebirr', name: 'CBE Birr', type: 'cbebirr'},
-  {code: 'coop', name: 'Cooperative Bank of Oromia', type: 'bank_transfer'},
   {code: 'hibret', name: 'Hibret Bank', type: 'bank_transfer'},
   {code: 'wegagen', name: 'Wegagen Bank', type: 'bank_transfer'},
   {code: 'zemen', name: 'Zemen Bank', type: 'bank_transfer'},
