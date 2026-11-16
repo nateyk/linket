@@ -73,20 +73,21 @@ final class AuditChapaV1TestModeCommand extends Command
             throw new RuntimeException('Unexpected Chapa balance schema.');
         }
 
-        foreach ($balances as $balance) {
-            if (is_array($balance) && strtoupper((string) ($balance['currency'] ?? '')) === 'ETB') {
-                $available = $balance['available_balance'] ?? null;
-                $ledger = $balance['ledger_balance'] ?? null;
-                if (!is_numeric($available) || !is_numeric($ledger)) {
-                    throw new RuntimeException('Incomplete ETB balance schema.');
-                }
-                $this->line('ETB available (test): '.number_format((float) $available, 2, '.', ''));
-                $this->line('ETB ledger (test): '.number_format((float) $ledger, 2, '.', ''));
-                return;
-            }
+        $etb = collect($balances)->first(fn ($item) =>
+            is_array($item) && strtoupper((string) ($item['currency'] ?? '')) === 'ETB'
+        );
+        if (!is_array($etb)) {
+            throw new RuntimeException('No ETB balance in Chapa test response.');
         }
 
-        throw new RuntimeException('No ETB balance in Chapa test response.');
+        $available = $etb['available_balance'] ?? null;
+        $ledger = $etb['ledger_balance'] ?? null;
+        if (!is_numeric($available) || !is_numeric($ledger)) {
+            throw new RuntimeException('Incomplete ETB balance schema.');
+        }
+
+        $this->line('ETB available (test): '.number_format((float) $available, 2, '.', ''));
+        $this->line('ETB ledger (test): '.number_format((float) $ledger, 2, '.', ''));
     }
 
     /** @param array<string, mixed> $response */
