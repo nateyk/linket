@@ -76,6 +76,23 @@ class ChapaV1PayoutModeTest extends TestCase
         $mode->assertDispatchReady();
     }
 
+    public function testSandboxStatusSimulationIsOnlyAddedForTestKeys(): void
+    {
+        config()->set('services.chapa.test_transfer_status', 'failed');
+        $payload = ['reference' => 'test-reference', 'amount' => '1.00'];
+
+        $this->assertSame('failed', $this->gate('CHASECK_TEST-fixture')->withTestStatus($payload)['status']);
+        $this->assertSame($payload, $this->gate('CHASECK-live-fixture')->withTestStatus($payload));
+        $this->assertSame($payload, $this->gate('')->withTestStatus($payload));
+    }
+
+    public function testUnsupportedSandboxStatusIsRejected(): void
+    {
+        config()->set('services.chapa.test_transfer_status', 'paid');
+        $this->expectException(RuntimeException::class);
+        $this->gate('CHASECK_TEST-fixture')->withTestStatus(['reference' => 'test']);
+    }
+
     public function testMissingKeyCannotDispatchWithTestSwitch(): void
     {
         config()->set('services.chapa.test_payouts_enabled', true);
