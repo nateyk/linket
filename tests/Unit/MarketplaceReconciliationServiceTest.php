@@ -95,6 +95,15 @@ class MarketplaceReconciliationServiceTest extends TestCase
             $table->timestamps();
         });
 
+        // Maturity reads completed refund reversals before releasing escrow.
+        Schema::create('digital_product_payment_refunds', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('storefront_order_id');
+            $table->string('status', 32)->default('completed');
+            $table->unsignedBigInteger('creator_earnings_reversal_cents')->default(0);
+            $table->timestamps();
+        });
+
         (new (require database_path('migrations/2026_11_14_200000_create_storefront_journal_tables.php')))->up();
         (new (require database_path('migrations/2026_11_14_210000_create_storefront_payment_attempts_table.php')))->up();
         (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
@@ -107,6 +116,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
         Schema::dropIfExists('storefront_journal_lines');
         Schema::dropIfExists('storefront_journal_entries');
         Schema::dropIfExists('payout_requests');
+        Schema::dropIfExists('digital_product_payment_refunds');
         Schema::dropIfExists('storefront_orders');
         Schema::dropIfExists('user_sessions');
         Schema::dropIfExists('users');
