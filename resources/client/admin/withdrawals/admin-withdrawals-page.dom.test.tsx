@@ -141,6 +141,11 @@ it('filters by date and method through the existing server query-state contract'
   expect(fixture.setQueryState).toHaveBeenCalledWith({date_from: '2026-11-01', page: 1});
   expect(fixture.setQueryState).toHaveBeenCalledWith({date_to: '2026-11-17', page: 1});
   expect(fixture.setQueryState).toHaveBeenCalledWith({withdrawal_method: 'Telebirr', page: 1});
+  fireEvent.click(screen.getByRole('button', {name: 'Reset filters'}));
+  expect(fixture.setQueryState).toHaveBeenCalledWith({
+    query: '', status: null, transfer_status: null,
+    date_from: null, date_to: null, withdrawal_method: null, page: 1,
+  });
   const refresh = screen.getByRole('button', {name: 'Refresh withdrawals'});
   fireEvent.click(refresh);
   expect(fixture.refetch).toHaveBeenCalledOnce();
