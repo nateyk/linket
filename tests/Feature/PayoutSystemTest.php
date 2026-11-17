@@ -720,6 +720,7 @@ class PayoutSystemTest extends TestCase
 
         config(['services.chapa.secret' => 'CHASECK_TEST-log-fixture',
             'services.chapa.test_payouts_enabled' => true,
+            'services.chapa.test_transfer_status' => 'failed',
             'services.chapa.transfer_approval_secret' => 'synthetic-approval-fixture',
             'services.chapa.payouts_enabled' => false]);
         Cache::flush();
@@ -751,6 +752,9 @@ class PayoutSystemTest extends TestCase
             Log::swap($original);
         }
 
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/v1/transfers')
+            && $request->data()['status'] === 'failed'
+            && $request->data()['currency'] === 'ETB');
         $logged = json_encode($logger->records);
         $this->assertStringNotContainsString($destination, $logged);
         $this->assertStringNotContainsString('251911223344', $logged);
