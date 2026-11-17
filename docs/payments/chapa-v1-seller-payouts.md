@@ -34,12 +34,12 @@ This is a **sandbox-only** activation. Test database records do not change the
 semantics of a LIVE Chapa credential; a LIVE key can move real money.
 
 1. In the platform Chapa settings, configure the **TEST** secret key
-   (prefix \`CHASECK_TEST-\`). Do not paste this key into tickets or commits.
+   (prefix `CHASECK_TEST-`). Do not paste this key into tickets or commits.
 2. Configure the Chapa transfer approval secret on the server and register
-   \`https://linket.agrigebeya.com/api/v1/chapa/transfer-approval\` in the
+   `https://linket.agrigebeya.com/api/v1/chapa/transfer-approval` in the
    matching Chapa **TEST** merchant dashboard.
-3. Set \`CHAPA_V1_TEST_PAYOUTS_ENABLED=true\` (enabled by default in this
-   rollout) and keep \`CHAPA_V1_PAYOUTS_ENABLED=false\`. Refresh Laravel
+3. Set `CHAPA_V1_TEST_PAYOUTS_ENABLED=true` (enabled by default in this
+   rollout) and keep `CHAPA_V1_PAYOUTS_ENABLED=false`. Refresh Laravel
    configuration cache using the normal deployment process.
 4. In **Admin → Payout accounts**, approve a *synthetic test creator's*
    receiving account; in Finance settings, enable that test withdrawal
@@ -63,11 +63,11 @@ semantics of a LIVE Chapa credential; a LIVE key can move real money.
 The review API only exposes mode name, enabled state, and whether the approval
 secret is configured; it never returns any secrets. The sandbox toggle does
 **not** enable a LIVE key. Live payout dispatch requires the existing,
-separate \`CHAPA_V1_PAYOUTS_ENABLED\` production switch.
+separate `CHAPA_V1_PAYOUTS_ENABLED` production switch.
 
 **Acceptance:** Chapa's real server-approval signature derivation and transfer
 verification payload still need observation using real Chapa test deliveries.
-Synthetic \`Http::fake()\` tests prove our application guards, not provider
+Synthetic `Http::fake()` tests prove our application guards, not provider
 acceptance. Do not enable real transfers on the strength of fixture data.
 
 ## Read-only test-mode audit (no payout side effects)
