@@ -111,7 +111,10 @@ final class MarketplaceEvidenceJournal
             return $error;
         }
 
-        return $this->totals($entry) === $expected ? null : 'journal_amount_mismatch';
+        $actual = $this->totals($entry);
+        ksort($actual);
+        ksort($expected);
+        return $actual === $expected ? null : 'journal_amount_mismatch';
     }
 
     private function contextError(StorefrontJournalEntry $entry, int $creator,
