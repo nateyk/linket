@@ -470,13 +470,10 @@ export function Component() {
                 <Card.Content className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-medium">
-                      <Trans message="Receiving accounts" />
+                      <Trans message="Payout accounts" />
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      <Trans
-                        message=":count on file. Review ownership and Verify.et registration from Receiving accounts."
-                        values={{count: detail.receiving_accounts.length}}
-                      />
+                      <Trans message="Review this creator's Chapa bank and wallet payout destinations in the admin payout accounts queue." />
                     </p>
                   </div>
                   <Button
@@ -485,16 +482,11 @@ export function Component() {
                     nativeButton={false}
                     render={
                       <Link
-                        to={
-                          detail.links.receiving_accounts +
-                          (profile.email
-                            ? `?search=${encodeURIComponent(profile.email)}`
-                            : '')
-                        }
+                        to="/admin/payout-accounts"
                       />
                     }
                   >
-                    <Trans message="Open receiving accounts" />
+                    <Trans message="Open payout accounts" />
                   </Button>
                 </Card.Content>
               </Card.Root>
