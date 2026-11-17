@@ -68,6 +68,18 @@ describe('AdminWithdrawalReviewPage', () => {
       </DashboardLayoutContextProvider>,
     );
 
+  it('shows a recoverable error and retry when withdrawal details cannot load', async () => {
+    mockApiClient.get.mockRejectedValueOnce(new Error('temporary failure'));
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'Try again'})).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', {name: 'Try again'}));
+
+    await waitFor(() => expect(mockApiClient.get).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Withdrawal request #123')).toBeTruthy();
+  });
+
   it('renders withdrawal request details, creator info, and activity log', async () => {
     renderPage();
 
