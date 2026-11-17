@@ -40,6 +40,24 @@ describe('admin financial routes and redirects', () => {
     expect(response.headers.get('Location')).toBe('/admin/payout-accounts');
   });
 
+  it('retires Verify.et-only admin pages without losing Chapa settings', async () => {
+    const financialRoute = adminChildren.find(r => r.path === 'financial');
+    const financialChildren = financialRoute?.children as RouteObject[];
+    const legacy = [
+      adminChildren.find(r => r.path === 'items/payment-methods'),
+      financialChildren.find(r => r.path === 'payment-gateways'),
+    ];
+    for (const route of legacy) {
+      expect(route?.loader).toBeTypeOf('function');
+      expect(route?.lazy).toBeUndefined();
+      const response = await (route!.loader as any)({
+        params: {},
+        request: new Request('http://localhost/admin/financial/payment-gateways'),
+      });
+      expect(response.headers.get('Location')).toBe('/admin/financial/general');
+    }
+  });
+
   it('redirects /admin/withdrawals to /admin/financial/withdrawals', async () => {
     const route = adminChildren.find(r => r.path === 'withdrawals');
     expect(route).toBeDefined();
