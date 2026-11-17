@@ -102,6 +102,42 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->assertTrue($index[0]['is_default']);
     }
 
+    public function testReceivingAccountNormalizesBankAndRecipientBeforeApproval(): void
+    {
+        $response = (new DigitalProductPayoutMethodController())->store($this->makePayoutRequest([
+            'withdrawal_method_id' => $this->telebirrMethod->id,
+            'bank_code' => '  TeLeBiRr  ',
+            'bank_name' => '  Telebirr Wallet  ',
+            'account_holder' => '  Abebe Bikila  ',
+            'destination' => ' +251911223344 ',
+        ]));
+
+        $this->assertSame(201, $response->getStatusCode());
+        $account = DigitalProductPayoutMethod::query()->firstOrFail();
+        $this->assertSame('telebirr', $account->bank_code);
+        $this->assertSame('Abebe Bikila', $account->account_holder);
+        $this->assertSame('+251911223344', $account->destination);
+        $this->assertSame('Telebirr Wallet', $account->bank_name);
+        $this->assertSame(DigitalProductPayoutMethod::STATUS_PENDING, $account->status);
+    }
+
+    public function testAccountHolderCannotPassLengthValidationWithOnlyPadding(): void
+    {
+        $controller = new DigitalProductPayoutMethodController();
+        try {
+            $controller->store($this->makePayoutRequest([
+                'withdrawal_method_id' => $this->bankMethod->id,
+                'bank_code' => 'cbe',
+                'account_holder' => 'A  ',
+            ]));
+            $this->fail('Short account holder must be rejected after trimming.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('account_holder', $exception->errors());
+        }
+
+        $this->assertSame(0, DigitalProductPayoutMethod::query()->count());
+    }
+
     public function testDefaultDestinationLifecycleAndFallback(): void
     {
         $controller = new DigitalProductPayoutMethodController();
