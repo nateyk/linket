@@ -7,7 +7,8 @@ use App\Telegram\Support\TelegramNotificationChannels;
 use App\Telegram\Support\TelegramNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Telegram\TelegramMessage;
 
@@ -55,33 +56,46 @@ class NewServiceInquiryNotification extends Notification implements ShouldQueue
         return ServiceInquiry::query()->whereKey($this->inquiryId)->exists();
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): ReactEmailMailable
     {
         $inquiry = $this->inquiry();
+        $heading = __('Hello, :name', ['name' => $notifiable->name ?? __('there')]);
 
         if (!$inquiry) {
-            return (new MailMessage())
-                ->subject(__('New service inquiry'))
-                ->line(__('Open your dashboard to view the latest inquiries.'));
+            return ReactEmailMessage::toNotifiable(
+                $notifiable,
+                __('New service inquiry'),
+                __('New service inquiry'),
+                $heading,
+                [__('Open your dashboard to view the latest inquiries.')],
+                __('View inquiry'),
+                url('/dashboard/services/inquiries'),
+            );
         }
 
-        $mail = (new MailMessage())
-            ->subject(__('New inquiry for ":service"', ['service' => $inquiry->service?->title ?? __('your service')]))
-            ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
-            ->line(__(':name wants to talk about your service.', ['name' => $inquiry->name]))
-            ->line(__('Email: :email', ['email' => $inquiry->email]));
-
+        $lines = [
+            __(':name wants to talk about your service.', ['name' => $inquiry->name]),
+            __('Email: :email', ['email' => $inquiry->email]),
+        ];
         if ($inquiry->phone) {
-            $mail->line(__('Phone: :phone', ['phone' => $inquiry->phone]));
+            $lines[] = __('Phone: :phone', ['phone' => $inquiry->phone]);
         }
-
         if ($inquiry->package) {
-            $mail->line(__('Package: :package', ['package' => $inquiry->package->name]));
+            $lines[] = __('Package: :package', ['package' => $inquiry->package->name]);
         }
+        $lines[] = __('Message: :message', ['message' => $inquiry->message]);
 
-        return $mail
-            ->line(__('Message: :message', ['message' => $inquiry->message]))
-            ->action(__('View inquiry'), url('/dashboard/services/inquiries'));
+        $subject = __('New inquiry for ":service"', ['service' => $inquiry->service?->title ?? __('your service')]);
+
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            $heading,
+            $lines,
+            __('View inquiry'),
+            url('/dashboard/services/inquiries'),
+        );
     }
 
     public function toTelegram(object $notifiable): TelegramMessage

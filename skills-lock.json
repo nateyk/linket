@@ -1,23 +1,30 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "migrate-radix-to-base": {
       "source": "shadcn/ui",
       "sourceType": "github",
       "skillPath": "skills/migrate-radix-to-base/SKILL.md",
-      "computedHash": "e1f2030ee5059be3dff0812ca0e4b995ee9fa3132176f049ebe6c90346a6755e"
+      "computedHash": "7644de21e9aa533904def58c30f809ae6574c3cabc6396ab8b03dee751e8ffbe"
+    },
+    "react-email": {
+      "source": "resend/react-email",
+      "commit": "72fd75e27169b18fb202610a78de47e5fe0fe849",
+      "sourceType": "github",
+      "skillPath": "skills/react-email/SKILL.md",
+      "computedHash": "a8c0238afbc32c6c279b5594cea69e11e53f591dec16bb60d8c77e26fb4bc672"
     },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",
       "skillPath": "skills/shadcn/SKILL.md",
-      "computedHash": "f615de216e085a84e31593ad0fa9062232adc40cd87b7c7ab2b8e49abf6500be"
+      "computedHash": "c60d0a14a6c6f798b07e51093d9627917ca3425b92f5d419eaa57b9b15be89de"
     },
     "verify-et-api": {
       "source": "NegusNati/verify-et-api",
       "sourceType": "github",
       "skillPath": "skills/verify-et-api/SKILL.md",
-      "computedHash": "0df120494bae53315138b370144cc1dbd465a5f3e9f3b28f9ed9a91f40e6642c"
+      "computedHash": "0b131ec1b5b4441c5e392d4509d2d4555e9f5065897cdc014dcf0c5dbb48821a"
     }
   }
 }

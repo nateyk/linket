@@ -10,6 +10,7 @@ const registry: Record<string, () => Promise<TemplateModule>> = {
   'order-confirmation': () => import('../emails/order-confirmation'),
   'verify-email': () => import('../emails/verify-email'),
   'password-reset': () => import('../emails/password-reset'),
+  message: () => import('../emails/message'),
 };
 
 function parseArgs(argv: string[]) {

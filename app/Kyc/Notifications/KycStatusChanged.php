@@ -4,7 +4,8 @@ namespace App\Kyc\Notifications;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 
 class KycStatusChanged extends Notification
@@ -52,26 +53,41 @@ class KycStatusChanged extends Notification
         ];
     }
 
-    public function toMail(User $notifiable): MailMessage
+    public function toMail(User $notifiable): ReactEmailMailable
     {
-        $mail = new MailMessage();
+        $heading = __('Hi :name!', ['name' => $notifiable->name]);
+        $action = __('Go to verification');
+        $url = url('/account-settings/verification');
+
         if ($this->status === 'approved') {
-            $mail->subject(__('Verification approved'))
-                ->greeting(__('Hi :name!', ['name' => $notifiable->name]))
-                ->line(__('Your account has been successfully verified.'))
-                ->line(__('You can now request payouts for your product sales.'));
-        } else {
-            $mail->subject(__('Verification rejected'))
-                ->greeting(__('Hi :name!', ['name' => $notifiable->name]))
-                ->line(__('Your account verification was rejected.'))
-                ->line(__('Reason: :reason', [
-                    'reason' => $this->rejectionReason ?? __('No reason provided.'),
-                ]))
-                ->line(__('You can submit a new verification request from your account settings.'));
+            return ReactEmailMessage::toNotifiable(
+                $notifiable,
+                __('Verification approved'),
+                __('Your account verification has been approved.'),
+                $heading,
+                [
+                    __('Your account has been successfully verified.'),
+                    __('You can now request payouts for your product sales.'),
+                ],
+                $action,
+                $url,
+            );
         }
-        return $mail->action(
-            __('Go to verification'),
-            url('/account-settings/verification'),
+
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            __('Verification rejected'),
+            __('Your account verification was rejected.'),
+            $heading,
+            [
+                __('Your account verification was rejected.'),
+                __('Reason: :reason', [
+                    'reason' => $this->rejectionReason ?? __('No reason provided.'),
+                ]),
+                __('You can submit a new verification request from your account settings.'),
+            ],
+            $action,
+            $url,
         );
     }
 }
