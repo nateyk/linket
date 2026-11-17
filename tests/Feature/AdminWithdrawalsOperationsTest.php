@@ -16,6 +16,15 @@ class AdminWithdrawalsOperationsTest extends TestCase
 {
     use DatabaseTransactions;
 
+    private function stateful(): static
+    {
+        $csrfToken = 'admin-withdrawals-operations';
+
+        return $this->withSession(['_token' => $csrfToken])
+            ->withHeader('Referer', config('app.url'))
+            ->withHeader('X-CSRF-TOKEN', $csrfToken);
+    }
+
     public function test_admin_counters_are_scoped_and_grouped_by_currency(): void
     {
         [$creator, $workspaceId] = $this->creatorWorkspace();
@@ -26,7 +35,7 @@ class AdminWithdrawalsOperationsTest extends TestCase
         $this->request($otherCreator, $otherWorkspaceId, ['status' => 'paid', 'amount_cents' => 2500, 'currency' => 'ETB', 'withdrawal_method_name' => 'M-Pesa']);
 
         Http::fake();
-        $response = $this->actingAs($this->admin(), 'sanctum')
+        $response = $this->stateful()->actingAs($this->admin(), 'sanctum')
             ->getJson('/api/v1/admin/withdrawals?perPage=10')
             ->assertOk();
 
@@ -45,7 +54,7 @@ class AdminWithdrawalsOperationsTest extends TestCase
         $this->assertSame(4, PayoutRequest::query()->count());
         $response->assertDontSee('payout_destination');
 
-        $this->actingAs($this->admin(), 'sanctum')
+        $this->stateful()->actingAs($this->admin(), 'sanctum')
             ->getJson('/api/v1/admin/withdrawals?search='.rawurlencode($creator->email))
             ->assertOk()
             ->assertJsonPath('meta.counters.requested.total', 2)
@@ -60,7 +69,7 @@ class AdminWithdrawalsOperationsTest extends TestCase
         $this->request($creator, $workspaceId, ['status' => 'requested', 'amount_cents' => 9900, 'currency' => 'ETB', 'withdrawal_method_name' => 'CBE Birr']);
         $this->request($creator, $workspaceId, ['status' => 'paid', 'amount_cents' => 4000, 'currency' => 'ETB', 'withdrawal_method_name' => 'Telebirr']);
 
-        $this->actingAs($this->admin(), 'sanctum')
+        $this->stateful()->actingAs($this->admin(), 'sanctum')
             ->getJson('/api/v1/admin/withdrawals?status=requested&withdrawal_method=Telebirr&date_from='
                 .now()->subDays(3)->format('Y-m-d').'&date_to='.now()->subDay()->format('Y-m-d'))
             ->assertOk()
@@ -73,7 +82,7 @@ class AdminWithdrawalsOperationsTest extends TestCase
 
     public function test_invalid_date_filter_fails_validation_without_querying_payouts(): void
     {
-        $this->actingAs($this->admin(), 'sanctum')
+        $this->stateful()->actingAs($this->admin(), 'sanctum')
             ->getJson('/api/v1/admin/withdrawals?date_from=not-a-date')->assertUnprocessable();
     }
 
@@ -81,7 +90,7 @@ class AdminWithdrawalsOperationsTest extends TestCase
     {
         [$creator] = $this->creatorWorkspace();
 
-        $this->actingAs($creator, 'sanctum')
+        $this->stateful()->actingAs($creator, 'sanctum')
             ->getJson('/api/v1/admin/withdrawals')->assertForbidden();
     }
 
