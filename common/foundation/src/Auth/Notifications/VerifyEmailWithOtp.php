@@ -2,9 +2,9 @@
 
 namespace Common\Auth\Notifications;
 
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailRenderer;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\HtmlString;
 
 class VerifyEmailWithOtp extends Notification
 {
@@ -17,44 +17,22 @@ class VerifyEmailWithOtp extends Notification
         return ['mail'];
     }
 
-    public function toMail($notifiable): MailMessage
+    public function toMail($notifiable): ReactEmailMailable
     {
-        $accountSettingsUrl = url('account-settings');
-        $pStyle =
-            'line-height: 30px; text-align: left; font-weight: normal; font-style: normal; letter-spacing: 0.48px; color: #718096';
-
-        $title = __('Your :site security code is:', [
-            'site' => config('app.name'),
+        $rendered = app(ReactEmailRenderer::class)->render('verify-email', [
+            'otp' => $this->otp,
+            'expiresInMinutes' => 30,
+            'accountSettingsUrl' => url('account-settings'),
+            'siteName' => config('app.name'),
         ]);
-        $accountSettingsTxt = __('Account settings');
 
-        return (new MailMessage())
-            ->subject(
-                __('Your :site security code is :code', [
-                    'site' => config('app.name'),
-                    'code' => $this->otp,
-                ]),
-            )
-            ->greeting(new HtmlString("<h1 style=\"$pStyle\">$title</h1>"))
-            ->line(
-                new HtmlString(
-                    '<b style="font-size: 48px; font-style: normal; font-weight: bold; padding: 20px 0; line-height: 54px; color: #3d4852">' .
-                        $this->otp .
-                        '</b>',
-                ),
-            )
-            ->line(
-               new HtmlString( __(
-                   'If you did not request this code, please go to your :link and change your password right away.',
-                   [
-                       'link' => "<a href=\"$accountSettingsUrl\">$accountSettingsTxt</a>",
-                   ],
-               )),
-            )
-            ->line(
-                __('This code will expire in :minutes minutes.', [
-                    'minutes' => 30,
-                ]),
-            );
+        return new ReactEmailMailable(
+            html: $rendered['html'],
+            text: $rendered['text'],
+            subjectLine: __('Your :site security code is :code', [
+                'site' => config('app.name'),
+                'code' => $this->otp,
+            ]),
+        );
     }
 }
