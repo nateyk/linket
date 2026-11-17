@@ -147,6 +147,12 @@ if [[ ! -f "$RELEASE_DIR/public/build/manifest.json" ]]; then
     fail "public/build/manifest.json missing and no node fallback available — deploy artifact must contain built assets"
   fi
 fi
+if [[ ! -s "$RELEASE_DIR/scripts/dist/render-email.cjs" ]]; then
+  fail "Verified artifact missing scripts/dist/render-email.cjs (React Email production renderer)"
+fi
+if ! command -v node >/dev/null 2>&1; then
+  fail "Node.js is required on the deploy host to render React Email templates"
+fi
 
 # ---------- secure storage BEFORE shared writes or Artisan ----------
 # Extraction keeps public artifact modes. All subsequent generated files (including
