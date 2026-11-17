@@ -43,6 +43,7 @@ describe('AdminWithdrawalReviewPage', () => {
     status: 'requested',
     payout_method_label: 'Telebirr (•••• 4321)',
     withdrawal_method_name: 'Telebirr',
+    payout_mode: {mode: 'test', enabled: true, approval_configured: true, test_only: true},
     payout_destination: '+251911223344',
     created_at: '2026-11-15T10:00:00Z',
     creator: {id: 42, name: 'Abebe Bikila', email: 'abebe@example.test'},
@@ -123,6 +124,36 @@ describe('AdminWithdrawalReviewPage', () => {
     await waitFor(() => {
       expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/admin/withdrawals/123/submit-transfer');
     });
+  });
+
+  it('blocks test transfer until the approval secret is configured', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {data: {
+        ...basePayout,
+        status: 'processing',
+        payout_mode: {mode: 'test', enabled: true, approval_configured: false, test_only: true},
+      }},
+    });
+    renderPage();
+
+    const submit = await screen.findByRole('button', {name: /Submit transfer to Chapa/i});
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Configure test credentials and the transfer approval secret/)).toBeTruthy();
+    expect(screen.getByText(/Chapa test mode/)).toBeTruthy();
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+  });
+
+  it('does not activate live disbursements with sandbox-only toggle', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {data: {
+        ...basePayout,
+        status: 'processing',
+        payout_mode: {mode: 'live', enabled: false, approval_configured: true, test_only: false},
+      }},
+    });
+    renderPage();
+    expect((await screen.findByRole('button', {name: /Submit transfer to Chapa/i}) as HTMLButtonElement).disabled).toBe(true);
+    expect(mockApiClient.post).not.toHaveBeenCalled();
   });
 
   it('verifies settlement with Chapa (Stage 3)', async () => {
