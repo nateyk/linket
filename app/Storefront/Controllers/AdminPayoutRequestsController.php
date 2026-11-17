@@ -102,6 +102,8 @@ class AdminPayoutRequestsController extends Controller
     private function withdrawalCounters(Builder $query): array
     {
         $rows = (clone $query)
+            ->withoutEagerLoads()
+            ->reorder()
             ->selectRaw('status, currency, COUNT(*) AS request_count, SUM(amount_cents) AS total_cents')
             ->groupBy('status', 'currency')
             ->get();
