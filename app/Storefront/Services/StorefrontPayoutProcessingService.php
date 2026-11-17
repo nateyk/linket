@@ -82,9 +82,14 @@ final class StorefrontPayoutProcessingService
 
         try {
             $result = $this->provider()->createTransfer($intent->fresh());
+            $providerReference = $this->queuedProviderReference($result);
+            if ($providerReference === null
+                || !hash_equals((string) $intent->merchant_reference, $providerReference)) {
+                throw new RuntimeException('Chapa did not return the submitted transfer reference.');
+            }
             $intent->update([
                 'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
-                'chapa_reference' => is_string($result['data'] ?? null) ? $result['data'] : $intent->merchant_reference,
+                'chapa_reference' => $providerReference,
                 'last_error' => null,
             ]);
             $intent->payoutRequest()->update(['transfer_reference' => $intent->merchant_reference]);
@@ -112,22 +117,7 @@ final class StorefrontPayoutProcessingService
         }
 
         $raw = $this->provider()->verifyTransfer((string) $intent->merchant_reference);
-        $data = $raw['data'] ?? null;
-        if (!is_array($data)) {
-            throw new RuntimeException('Chapa did not return verifiable transfer details.');
-        }
-
-        $reference = (string) ($data['reference'] ?? $data['tx_ref'] ?? $data['merchant_reference'] ?? '');
-        $amount = (string) ($data['amount'] ?? '');
-        $currency = strtoupper((string) ($data['currency'] ?? ''));
-        if (!hash_equals((string) $intent->merchant_reference, $reference)
-            || $currency !== strtoupper((string) $intent->currency)
-            || !preg_match('/^\d+(?:\.\d{1,2})?$/', $amount)
-            || (int) round(((float) $amount) * 100) !== (int) $intent->amount_cents) {
-            throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
-        }
-
-        $status = strtolower((string) ($data['status'] ?? ''));
+        $status = app(ChapaV1TransferVerificationGuard::class)->status($intent, $raw);
         if (in_array($status, ['success', 'successful', 'completed', 'paid'], true)) {
             return $this->settle($intent, $raw);
         }
@@ -230,6 +220,20 @@ final class StorefrontPayoutProcessingService
 
             return $intent->fresh();
         });
+    }
+
+    /** @param array<string, mixed> $response */
+    private function queuedProviderReference(array $response): ?string
+    {
+        $data = $response['data'] ?? null;
+        if (is_string($data)) {
+            return $data;
+        }
+        if (is_array($data) && is_string($data['reference'] ?? null)) {
+            return $data['reference'];
+        }
+
+        return null;
     }
 
     private function provider(): ChapaPayoutService
