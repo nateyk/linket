@@ -57,8 +57,12 @@ it('counts legacy unverified orders without changing their payment or delivery s
         'digital_product_id' => $product->id,
         'creator_id' => $creator->id,
         'buyer_email' => 'synthetic-buyer@example.test',
+        'buyer_name' => 'Synthetic Buyer',
         'currency' => 'ETB',
         'gross_amount_cents' => 4000,
+        'commission_bps' => 1000,
+        'platform_fee_cents' => 400,
+        'creator_earnings_cents' => 3600,
         'status' => 'verifying',
         'payment_gateway' => 'verify_et',
     ]);
