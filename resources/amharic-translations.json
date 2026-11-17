@@ -424,6 +424,8 @@
   "Declined after review": "ከግምገማ በኋላ ውድቅ የተደረጉ",
   "Cancelled requests": "የተሰረዙ ጥያቄዎች",
   "All methods": "ሁሉም ዘዴዎች",
+  "Chapa test mode · simulated transfer, no real money": "የቻፓ የሙከራ ሁኔታ · የተመሰለ ዝውውር፣ እውነተኛ ገንዘብ አይተላለፍም",
+  "Chapa payout dispatch is unavailable. Configure test credentials and the transfer approval secret.": "የቻፓ የክፍያ ዝውውር አልተነቃም። የሙከራ ቁልፎችን እና የዝውውር ማጽደቂያ ሚስጥር ያዘጋጁ።",
   "Reset filters": "ማጣሪያዎችን አጽዳ",
   "Withdrawal request was not found.": "የገንዘብ ማውጣት ጥያቄው አልተገኘም።",
   "From date": "ከቀን",
