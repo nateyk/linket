@@ -7,6 +7,7 @@ namespace App\Storefront;
 use App\Payments\Chapa\ChapaV1TransferClient;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Support\EtbMajorAmount;
 use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 
@@ -18,8 +19,17 @@ class ChapaPayoutService
     /** @return array<int, array<string, mixed>> */
     public function getBanks(): array
     {
-        return Cache::remember('chapa:v1:transfer-banks', 1800, fn () => app(ChapaV1TransferClient::class)
-            ->banks(app(LinketChapaManager::class)->platformSecret()));
+        $secret = app(LinketChapaManager::class)->platformSecret();
+        if (blank($secret)) {
+            throw new RuntimeException('Chapa secret is not configured.');
+        }
+
+        // The active bank catalog is merchant-specific. Never reuse the cached
+        // test-key result when the platform switches to a different merchant.
+        $key = 'chapa:v1:transfer-banks:'.hash('sha256', $secret);
+
+        return Cache::remember($key, 1800, fn () => app(ChapaV1TransferClient::class)
+            ->banks($secret));
     }
 
     public function resolveBank(string $code): array
@@ -90,7 +100,11 @@ class ChapaPayoutService
             }
 
             $available = $balance['available_balance'] ?? null;
-            if (!is_numeric($available) || (int) round(((float) $available) * 100) < $amountCents) {
+            $availableCents = EtbMajorAmount::cents($available);
+            if ($availableCents === null) {
+                throw new RuntimeException('Chapa returned an invalid available ETB balance.');
+            }
+            if ($availableCents < $amountCents) {
                 throw new RuntimeException('Chapa available ETB balance is insufficient for this withdrawal.');
             }
 
@@ -193,7 +207,7 @@ class ChapaPayoutService
             $actualNumber = $this->normalizeMobile($actualNumber);
             $expectedNumber = $this->normalizeMobile($expectedNumber);
         }
-        $amount = (string) ($payload['amount'] ?? '');
+        $amountCents = EtbMajorAmount::cents($payload['amount'] ?? null);
 
         return $payout !== null
             && $payout->status === 'processing'
@@ -210,7 +224,7 @@ class ChapaPayoutService
             && hash_equals($expectedBank, $actualBank)
             && hash_equals((string) $expectedNumber, (string) $actualNumber)
             && hash_equals((string) $payout->account_holder_snapshot, (string) ($payload['account_name'] ?? ''))
-            && is_numeric($amount)
-            && (int) round(((float) $amount) * 100) === (int) $intent->amount_cents;
+            && $amountCents !== null
+            && $amountCents === (int) $intent->amount_cents;
     }
 }

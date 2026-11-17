@@ -169,6 +169,23 @@ class ChapaV1TransferApprovalContractTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function testApprovalRejectsNonCentDecimalAndExponentAmounts(): void
+    {
+        foreach ([
+            '500.001',
+            '500.009',
+            '499.999',
+            '5e2',
+            '+500.00',
+            '-500.00',
+        ] as $amount) {
+            $this->assertSame(400, $this->requestApproval(['amount' => $amount])->status());
+        }
+
+        $this->assertSame('processing', PayoutRequest::query()->firstOrFail()->status);
+        Http::assertNothingSent();
+    }
+
     public function testWrongSignatureAndMissingApprovalSecretFailClosed(): void
     {
         $this->assertSame(400, $this->requestApproval([], str_repeat('0', 64))->status());
