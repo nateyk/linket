@@ -8,6 +8,7 @@ use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\PayoutRequestService;
 use App\Storefront\Resources\AdminPayoutRequestResource;
+use App\Storefront\Services\AdminPayoutTransferStatusFilter;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -61,6 +62,10 @@ class AdminPayoutRequestsController extends Controller
             $payouts->where('withdrawal_method_name', request('withdrawal_method'));
         }
 
+        if (request()->filled('transfer_status')) {
+            AdminPayoutTransferStatusFilter::apply($payouts, (string) request('transfer_status'));
+        }
+
         $filteredPayouts = $payouts->get();
 
         $counters = [
@@ -87,7 +92,7 @@ class AdminPayoutRequestsController extends Controller
         ];
 
         $paginated = $payouts->paginate((int) request('perPage', 50));
-        $paginated->appends(request()->only(['search', 'date_from', 'date_to', 'creator', 'status', 'withdrawal_method']));
+        $paginated->appends(request()->only(['search', 'date_from', 'date_to', 'creator', 'status', 'withdrawal_method', 'transfer_status']));
 
         return AdminPayoutRequestResource::collection($paginated)->additional([
             'meta' => [
