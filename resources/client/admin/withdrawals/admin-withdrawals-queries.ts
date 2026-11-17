@@ -14,6 +14,7 @@ export const adminWithdrawalsOptions = (
     date_from: params.date_from ?? '',
     date_to: params.date_to ?? '',
     withdrawal_method: params.withdrawal_method ?? '',
+    transfer_status: params.transfer_status ?? '',
   };
   return queryOptions({
     queryKey: [...adminWithdrawalsBaseKey, params],
