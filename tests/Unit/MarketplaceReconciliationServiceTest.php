@@ -10,6 +10,8 @@ use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\ChapaPayoutService;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
+use App\Storefront\Ledger\JournalEntryData;
+use App\Storefront\Ledger\JournalLineData;
 use App\Storefront\Ledger\JournalPostingService;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontJournalLine;
@@ -317,6 +319,69 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $this->assertFalse($compromisedAudit->isBalanced);
         $this->assertTrue($compromisedAudit->hasAnomalies());
         $this->assertNotEmpty($compromisedAudit->issues);
+    }
+
+    public function testAuditFlagsNegativeUsdHoldEvenWhenJournalBalances(): void
+    {
+        $creator = new User(['id' => 107, 'name' => 'Creator 107', 'email' => 'creator107@test.com']);
+        $this->seedCreator($creator);
+        $ledger = new CreatorLedgerService(new JournalPostingService());
+        $ledger->recordPlatformSale($this->seedPlatformOrder($creator, 100000, Carbon::now()->subDays(1)));
+
+        $context = ['creator_id' => $creator->id, 'workspace_id' => 2];
+        (new JournalPostingService())->post(
+            new JournalEntryData(
+                sourceType: 'audit_fixture',
+                sourceId: 107,
+                eventType: 'invalid_usd_hold',
+                currency: 'USD',
+                attributes: $context,
+            ),
+            [
+                new JournalLineData(AccountCodes::CREATOR_HELD, 1, 0, 'USD', $context),
+                new JournalLineData(AccountCodes::CREATOR_AVAILABLE, 0, 1, 'USD', $context),
+            ],
+        );
+
+        $audit = (new MarketplaceReconciliationService(creatorLedger: $ledger))->auditLedgerIntegrity();
+        $this->assertTrue($audit->isBalanced);
+        $this->assertTrue($audit->hasAnomalies());
+        $this->assertCount(1, $audit->negativeBalancesFound);
+        $this->assertSame(107, $audit->negativeBalancesFound[0]['creator_id']);
+        $this->assertSame(2, $audit->negativeBalancesFound[0]['workspace_id']);
+        $this->assertSame('USD', $audit->negativeBalancesFound[0]['balances']['currency']);
+        $this->assertSame(-1, $audit->negativeBalancesFound[0]['balances']['held']);
+    }
+
+    public function testAuditDoesNotHideWorkspaceOverdraftWithAnotherWorkspacesCredit(): void
+    {
+        $creator = new User(['id' => 108, 'name' => 'Creator 108', 'email' => 'creator108@test.com']);
+        $this->seedCreator($creator);
+        $posting = new JournalPostingService();
+
+        foreach ([2 => true, 3 => false] as $workspaceId => $creditHeld) {
+            $context = ['creator_id' => $creator->id, 'workspace_id' => $workspaceId];
+            $posting->post(
+                new JournalEntryData(
+                    sourceType: 'audit_fixture',
+                    sourceId: $workspaceId,
+                    eventType: 'workspace_liability',
+                    currency: 'ETB',
+                    attributes: $context,
+                ),
+                [
+                    new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, $creditHeld ? 1 : 0, $creditHeld ? 0 : 1, 'ETB', $context),
+                    new JournalLineData(AccountCodes::CREATOR_HELD, $creditHeld ? 0 : 1, $creditHeld ? 1 : 0, 'ETB', $context),
+                ],
+            );
+        }
+
+        $audit = (new MarketplaceReconciliationService())->auditLedgerIntegrity();
+        $this->assertTrue($audit->isBalanced);
+        $this->assertTrue($audit->hasAnomalies());
+        $this->assertCount(1, $audit->negativeBalancesFound);
+        $this->assertSame(3, $audit->negativeBalancesFound[0]['workspace_id']);
+        $this->assertSame(-1, $audit->negativeBalancesFound[0]['balances']['held']);
     }
 
     public function testArtisanCommandExecutesReconciliationSuccessfully(): void

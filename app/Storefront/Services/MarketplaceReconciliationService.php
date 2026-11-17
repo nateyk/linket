@@ -281,17 +281,37 @@ class MarketplaceReconciliationService
 
     private function auditCreatorBalances(LedgerAuditResult $result): void
     {
-        $creatorIds = StorefrontJournalLine::query()->whereNotNull('creator_id')->distinct()->pluck('creator_id');
+        // Withdrawal-facing balances are clamped to zero. Audit the signed
+        // journal amounts instead, keeping workspaces and currencies separate.
+        $accounts = [
+            AccountCodes::CREATOR_HELD => 'held',
+            AccountCodes::CREATOR_AVAILABLE => 'available',
+            AccountCodes::CREATOR_RESERVED => 'reserved',
+        ];
+        $rows = StorefrontJournalLine::query()
+            ->whereNotNull('creator_id')
+            ->whereIn('account_code', array_keys($accounts))
+            // Debit and credit columns are UNSIGNED on MySQL; subtract their
+            // separately signed sums to avoid an unsigned underflow error.
+            ->selectRaw('creator_id, workspace_id, currency, account_code, CAST(SUM(credit_cents) AS SIGNED) - CAST(SUM(debit_cents) AS SIGNED) AS signed_balance')
+            ->groupBy('creator_id', 'workspace_id', 'currency', 'account_code')
+            ->get();
 
-        foreach ($creatorIds as $creatorId) {
-            $balances = $this->creatorLedger()->getBalances(BalanceQuery::for((int) $creatorId, 'ETB'));
-            if ($this->hasNegativeBalance($balances)) {
-                $result->negativeBalancesFound[] = [
-                    'creator_id' => $creatorId,
-                    'balances' => $balances,
-                ];
-                $result->issues[] = "CRITICAL: Creator #{$creatorId} has negative balance: " . (string) json_encode($balances);
+        foreach ($rows->groupBy(fn ($row) => json_encode([$row->creator_id, $row->workspace_id, $row->currency])) as $group) {
+            $first = $group->first();
+            $balances = ['held' => 0, 'available' => 0, 'reserved' => 0, 'currency' => $first->currency];
+            foreach ($group as $row) {
+                $balances[$accounts[$row->account_code]] = (int) $row->signed_balance;
             }
+            if (!$this->hasNegativeBalance($balances)) {
+                continue;
+            }
+            $result->negativeBalancesFound[] = [
+                'creator_id' => (int) $first->creator_id,
+                'workspace_id' => $first->workspace_id === null ? null : (int) $first->workspace_id,
+                'balances' => $balances,
+            ];
+            $result->issues[] = "CRITICAL: Creator #{$first->creator_id} has negative {$first->currency} balance in workspace " . ($first->workspace_id ?? 'unassigned') . ': ' . json_encode($balances);
         }
     }
 
