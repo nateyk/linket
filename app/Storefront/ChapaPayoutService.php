@@ -151,7 +151,7 @@ class ChapaPayoutService
 
         return app(ChapaV1TransferClient::class)->create(
             app(LinketChapaManager::class)->platformSecret(),
-            [
+            app(\App\Storefront\Services\ChapaV1PayoutMode::class)->withTestStatus([
                 'account_name' => (string) $payout->account_holder_snapshot,
                 'account_number' => $accountNumber,
                 'amount' => number_format(((int) $intent->amount_cents) / 100, 2, '.', ''),
