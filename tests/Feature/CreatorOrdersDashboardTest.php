@@ -273,6 +273,74 @@ test('creator Chapa net earnings account for completed partial refunds without c
         ->assertJsonPath('summary.paid_orders_count', 1);
 });
 
+test('Chapa dashboard commerce cards use paid item quantities and net refunds, not pending or legacy data', function () {
+    [$creator, , $product] = creatorOrdersDashboardFixture();
+    $first = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa',
+        'gross_amount_cents' => 10000, 'platform_fee_cents' => 1000,
+        'creator_earnings_cents' => 9000, 'paid_at' => now(),
+    ]);
+    $second = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa',
+        'gross_amount_cents' => 5000, 'platform_fee_cents' => 500,
+        'creator_earnings_cents' => 4500, 'paid_at' => now(),
+    ]);
+    $first->items()->create([
+        'digital_product_id' => $product->id, 'title' => 'Bundle',
+        'unit_amount_cents' => 5000, 'quantity' => 2,
+    ]);
+    $second->items()->create([
+        'digital_product_id' => $product->id, 'title' => 'Guide',
+        'unit_amount_cents' => 5000, 'quantity' => 1,
+    ]);
+    DigitalProductPaymentRefund::query()->create([
+        'storefront_order_id' => $first->id, 'recorded_by' => $creator->id,
+        'amount_cents' => 4000, 'creator_earnings_reversal_cents' => 3600,
+        'platform_fee_reversal_cents' => 400, 'currency' => 'ETB',
+        'external_reference' => 'test-kpi-partial-refund',
+        'reason' => 'Synthetic refund', 'status' => DigitalProductPaymentRefund::STATUS_COMPLETED,
+        'refunded_at' => now(),
+    ]);
+
+    creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'refunded', 'payment_gateway' => 'chapa', 'gross_amount_cents' => 12000,
+    ]);
+    creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'pending_payment', 'payment_gateway' => 'chapa', 'gross_amount_cents' => 7000,
+    ]);
+    creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'verify_et', 'gross_amount_cents' => 30000,
+    ]);
+    creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa', 'currency' => 'USD', 'gross_amount_cents' => 50000,
+    ]);
+
+    creatorOrdersDashboardActAs($this, $creator);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa')
+        ->assertOk()
+        ->assertJsonPath('summary.verified_revenue_cents', 15000)
+        ->assertJsonPath('summary.net_sales_cents', 11000)
+        ->assertJsonPath('summary.paid_orders_count', 2)
+        ->assertJsonPath('summary.items_sold_count', 3)
+        ->assertJsonPath('summary.average_order_cents', 5500)
+        ->assertJsonPath('summary.creator_earnings_cents', 9900)
+        ->assertJsonPath('summary.gross_profit_cents', 9900)
+        ->assertJsonPath('summary.gross_profit_margin_percent', 90)
+        ->assertJsonPath('summary.pending_count', 1);
+});
+
+test('empty sales safely produce zero average order and zero margin', function () {
+    [$creator] = creatorOrdersDashboardFixture();
+    creatorOrdersDashboardActAs($this, $creator);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa')
+        ->assertOk()
+        ->assertJsonPath('summary.net_sales_cents', 0)
+        ->assertJsonPath('summary.paid_orders_count', 0)
+        ->assertJsonPath('summary.items_sold_count', 0)
+        ->assertJsonPath('summary.average_order_cents', 0)
+        ->assertJsonPath('summary.gross_profit_margin_percent', 0);
+});
+
 test('creator can inspect an owned order with masked account evidence and delivery state', function () {
     [$creator, , $product] = creatorOrdersDashboardFixture();
     [$otherCreator] = creatorOrdersDashboardFixture('Other product');
