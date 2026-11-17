@@ -255,7 +255,7 @@ class CreatorLedgerService
         // Do not debit another order's held escrow to refund an order whose
         // own hold was already released. A pooled held balance alone cannot
         // establish the refunding order's settlement state.
-        $released = $order->journalEntries()
+        $released = $order->exists && $order->journalEntries()
             ->where('event_type', 'funds_available')->exists();
         $fromHeld = $released ? 0 : min($breakdown->creatorCents, $balances['held']);
         $remaining = $breakdown->creatorCents - $fromHeld;
