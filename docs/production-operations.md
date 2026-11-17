@@ -20,6 +20,18 @@ Terminate TLS at the application server or a controlled reverse proxy, redirect 
 
 Set `TRUSTED_PROXIES` to the exact proxy IPs or CIDR ranges allowed to supply forwarded headers. Do not use `*` in production. If the application is not behind a proxy, leave it unset. Ensure the origin server is not publicly reachable around the proxy.
 
+### PHP intl prerequisite for PDF invoices
+
+The subscription invoice endpoint uses `laraveldaily/laravel-invoices`, whose PDF template needs the PHP `intl` extension and the `NumberFormatter` class. Before deploying PHP 8.4, enable `intl` in cPanel's PHP extensions for **both** the website's PHP handler (PHP-FPM or equivalent) and the command-line PHP binary used by the deploy job.
+
+Check the deployment CLI with:
+
+```bash
+php -r 'var_export(extension_loaded("intl") && class_exists("NumberFormatter")); echo PHP_EOL;'
+```
+
+Expect `true`. Also verify the web PHP handler has the extension enabled, because a passing CLI check does **not** prove the website has it. The deployment preflight refuses to activate a new release if its CLI PHP lacks `NumberFormatter`. Enabling it on the existing host does not require changing invoice database records or re-running a payment.
+
 ## Queue and Horizon
 
 Use Redis for queues and cache in production:
