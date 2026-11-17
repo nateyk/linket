@@ -568,7 +568,7 @@ function RecentOrders({data}: {data: CommerceInsights}) {
     <Card size="sm" className="min-w-0">
       <Card.Header>
         <Card.Title><Trans message="Recent sales" /></Card.Title>
-        <Card.Action><Link to="/admin/items/payment-methods" className="text-sm text-primary underline"><Trans message="Filter and page through payment orders" /></Link></Card.Action>
+        <Card.Action><Link to="/admin/financial/payment-activity" className="text-sm text-primary underline"><Trans message="Filter and page through payment orders" /></Link></Card.Action>
       </Card.Header>
       <Card.Content className="min-w-0 overflow-x-auto px-0!">
         {data.recent_orders.length ? (
