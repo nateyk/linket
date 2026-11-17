@@ -53,6 +53,7 @@ export const AdminSidebarIcons: Record<
   '/admin/payment-activity': <CircleDollarSignIcon />,
   '/admin/kyc-verifications': <ShieldCheckIcon />,
   '/admin/withdrawals': <CreditCardIcon />,
+  '/admin/payout-accounts': <CoinsIcon />,
   '/admin/financial/payment-gateways': <LandmarkIcon />,
   '/admin/financial/withdrawal-methods': <CoinsIcon />,
   '/admin/financial': <LandmarkIcon />,
