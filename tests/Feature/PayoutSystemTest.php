@@ -109,6 +109,12 @@ class PayoutSystemTest extends TestCase
         $workspaceId = $creator->workspaces()->first()->id;
         $this->createPayoutMethod($creator, $workspaceId);
         $this->creditSale($creator, 10000);
+        // A separate currency must not inflate the ETB earnings or produce
+        // a false mismatch on the Chapa balance summary.
+        app(DigitalProductFinance::class)->record(
+            $workspaceId, $creator->id, 'foreign-currency:' . $creator->id,
+            'sale', 50000, 'USD', ['available_at' => now()]
+        );
 
         $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
         $this->assertSame('ETB', $summary['currency']);
