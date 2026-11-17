@@ -137,10 +137,11 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
         ])->assertStatus(503);
     }
 
-    public function testVerifyEtDirectPaymentUsedWhenExplicitlySupplied(): void
+    public function testExplicitLegacyReceivingAccountCannotOverridePlatformChapa(): void
     {
         config(['services.chapa.secret' => 'platform-sec-test']);
         config(['services.verify_et.enabled' => true]);
+        $this->mockPlatformChapaClient('https://checkout.chapa.global/centralized-legacy-override', 'CHP-REF-LEGACY');
 
         $creator = User::factory()->create();
         $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
@@ -180,14 +181,18 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJsonPath('checkout_url', null)
-            ->assertJsonPath('instructions_endpoint', fn ($val) => str_contains((string) $val, '/payment-instructions'))
+            ->assertJsonPath('checkout_url', 'https://checkout.chapa.global/centralized-legacy-override')
             ->assertJsonPath('status', 'pending_payment');
 
         $orderUuid = $response->json('order_id');
         $order = StorefrontOrder::query()->where('uuid', $orderUuid)->first();
         $this->assertNotNull($order);
-        $this->assertSame('verify_et', $order->payment_gateway);
+        $this->assertSame('chapa', $order->payment_gateway);
+        $this->assertSame(StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA, $order->collection_owner);
+        $this->assertNull($order->creator_payment_method_id);
+        $this->getJson("/api/v1/public/biolinks/{$store->id}/digital-products/{$product->id}")
+            ->assertOk()
+            ->assertJsonPath('data.receiving_accounts', []);
     }
 
     private function createApprovedProduct(User $creator, $workspace, int $priceCents): DigitalProduct
