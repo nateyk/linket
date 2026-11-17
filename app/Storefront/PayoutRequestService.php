@@ -228,6 +228,11 @@ class PayoutRequestService
             throw ValidationException::withMessages(['status' => __('Transfer already initiated. Verify its existing reference; never resubmit it.')]);
         }
 
+        // Reject missing approval configuration before provider preflight or
+        // any payout intent mutation. A test-mode POST still needs a valid
+        // server approval callback to complete the queued transfer.
+        app(\App\Storefront\Services\ChapaV1PayoutMode::class)->assertDispatchReady();
+
         // Ensure the current Chapa v1 directory accepts this bank/wallet BEFORE
         // allocating a durable payout reference and making an uncertain POST.
         $provider = app(ChapaPayoutService::class);
