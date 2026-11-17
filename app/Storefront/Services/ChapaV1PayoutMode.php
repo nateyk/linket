@@ -47,6 +47,8 @@ final class ChapaV1PayoutMode
         if (!$this->approvalConfigured()) {
             throw new RuntimeException('Configure the Chapa transfer approval secret before dispatch.');
         }
+        // Validate any requested test outcome *before* creating/submitting an intent.
+        $this->withTestStatus([]);
     }
 
     /** @param array<string, mixed> $payload
