@@ -49,6 +49,26 @@ final class ChapaV1PayoutMode
         }
     }
 
+    /** @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public function withTestStatus(array $payload): array
+    {
+        if ($this->mode() !== 'test') {
+            return $payload;
+        }
+
+        $status = strtolower(trim((string) config('services.chapa.test_transfer_status', '')));
+        if ($status === '') {
+            return $payload;
+        }
+        if (!in_array($status, ['success', 'failed', 'pending'], true)) {
+            throw new RuntimeException('Invalid Chapa sandbox transfer status.');
+        }
+
+        return [...$payload, 'status' => $status];
+    }
+
     /** @return array{mode: string, enabled: bool, approval_configured: bool, test_only: bool} */
     public function status(): array
     {
