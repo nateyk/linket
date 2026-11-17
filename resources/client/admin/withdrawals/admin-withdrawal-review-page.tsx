@@ -73,6 +73,12 @@ export type Payout = {
     display_label?: string | null;
   } | null;
   latest_payout_intent?: PayoutIntent | null;
+  payout_mode?: {
+    mode: 'test' | 'live' | 'unconfigured';
+    enabled: boolean;
+    approval_configured: boolean;
+    test_only: boolean;
+  };
   activities?: {
     id: number;
     action: string;
@@ -469,6 +475,8 @@ function Stage2Section({
 }) {
   const intent = payout.latest_payout_intent;
   const isManual = payout.withdrawalMethod?.code === 'other';
+  const mode = payout.payout_mode;
+  const canSubmit = Boolean(mode?.enabled && mode?.approval_configured);
   const intentLabel: Record<string, string> = {
     prepared: 'Prepared',
     submitted: 'Submission unconfirmed',
@@ -490,8 +498,18 @@ function Stage2Section({
           </Badge>
         )}
       </div>
+      {mode?.test_only && (
+        <p role="status" className="text-xs text-muted-foreground">
+          <Trans message="Chapa test mode · simulated transfer, no real money" />
+        </p>
+      )}
+      {mode && (!mode.enabled || !mode.approval_configured) && (
+        <p role="alert" className="text-xs text-destructive">
+          <Trans message="Chapa payout dispatch is unavailable. Configure test credentials and the transfer approval secret." />
+        </p>
+      )}
       {payout.status === 'processing' && !intent && !isManual && (
-        <Button color="primary" disabled={saving} onClick={onSubmitTransfer}>
+        <Button color="primary" disabled={saving || !canSubmit} onClick={onSubmitTransfer}>
           <SendIcon />
           <Trans message="Submit transfer to Chapa" />
         </Button>
