@@ -55,7 +55,7 @@ describe('AdminFinancialLayout', () => {
 
     // Secondary navigation items
     expect(screen.getByText('General defaults')).toBeTruthy();
-    expect(screen.getByText('Payment gateways')).toBeTruthy();
+    expect(screen.queryByText('Payment gateways')).toBeNull();
     expect(screen.getByText('Receiving accounts')).toBeTruthy();
     expect(screen.getByText('Withdrawals')).toBeTruthy();
     expect(screen.getByText('Payment activity')).toBeTruthy();
@@ -67,12 +67,12 @@ describe('AdminFinancialLayout', () => {
   });
 
   it('highlights the active navigation link based on current path', () => {
-    currentPath = '/admin/financial/payment-gateways';
+    currentPath = '/admin/financial/withdrawals';
     renderLayout();
 
-    const gatewaysLink = screen.getByText('Payment gateways').closest('a');
-    expect(gatewaysLink).toBeTruthy();
-    expect(gatewaysLink?.getAttribute('data-active')).toBe('true');
+    const withdrawalsLink = screen.getByText('Withdrawals').closest('a');
+    expect(withdrawalsLink).toBeTruthy();
+    expect(withdrawalsLink?.getAttribute('data-active')).toBe('true');
 
     const generalLink = screen.getByText('General defaults').closest('a');
     expect(generalLink?.getAttribute('data-active')).toBe('false');
