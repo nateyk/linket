@@ -24,12 +24,6 @@ export const financialNavItems: FinancialNavItem[] = [
     icon: SlidersHorizontalIcon,
   },
   {
-    label: message('Payment gateways'),
-    description: message('Legacy direct buyer methods'),
-    to: '/admin/financial/payment-gateways',
-    icon: LandmarkIcon,
-  },
-  {
     label: message('Withdrawals'),
     description: message('Creator payout requests & settlements'),
     to: '/admin/financial/withdrawals',
