@@ -158,7 +158,7 @@ class ChapaPayoutService
                 'currency' => 'ETB',
                 'reference' => (string) $intent->merchant_reference,
                 'bank_code' => (int) $bank['id'],
-            ],
+            ]),
         );
     }
 
