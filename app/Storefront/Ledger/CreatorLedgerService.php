@@ -110,6 +110,13 @@ class CreatorLedgerService
     public function reserveForPayout(PayoutRequest $payout, ?int $availableBalance = null): StorefrontJournalEntry
     {
         $currency = $payout->currency ?: config('storefront.currency', 'ETB');
+        // A known insufficient cap can fail without touching the database.
+        if ($availableBalance !== null && $payout->amount_cents > $availableBalance) {
+            throw new InsufficientBalanceException(
+                "Requested payout of {$payout->amount_cents} exceeds available balance of {$availableBalance} {$currency}."
+            );
+        }
+
         // An older earnings-table balance is only a ceiling, never authority
         // to debit the Chapa journal. A deficit or unreleased hold must block
         // a withdrawal even when the legacy summary says funds are available.
