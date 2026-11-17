@@ -92,6 +92,15 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             $table->timestamps();
         });
 
+        // Ledger hold release includes completed refund reversals.
+        Schema::create('digital_product_payment_refunds', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('storefront_order_id');
+            $table->string('status', 32)->default('completed');
+            $table->unsignedBigInteger('creator_earnings_reversal_cents')->default(0);
+            $table->timestamps();
+        });
+
         Schema::create('payout_requests', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('workspace_id')->default(1);
@@ -119,6 +128,7 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         Schema::dropIfExists('storefront_journal_lines');
         Schema::dropIfExists('storefront_journal_entries');
         Schema::dropIfExists('payout_requests');
+        Schema::dropIfExists('digital_product_payment_refunds');
         Schema::dropIfExists('storefront_order_items');
         Schema::dropIfExists('storefront_orders');
         Schema::dropIfExists('user_sessions');
