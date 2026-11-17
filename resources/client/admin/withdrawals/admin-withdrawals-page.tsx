@@ -115,6 +115,16 @@ export function Component() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setQueryState({
+                    query: '', status: null, transfer_status: null,
+                    date_from: null, date_to: null, withdrawal_method: null, page: 1,
+                  })}
+                >
+                  <Trans message="Reset filters" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={query.isFetching}
                   onClick={() => void query.refetch()}
                   aria-label="Refresh withdrawals"
