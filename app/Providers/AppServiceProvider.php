@@ -299,6 +299,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Storefront\Commands\GenerateCommissionInvoices::class,
             \App\Storefront\Commands\EnforceCommissionRestrictions::class,
             \App\Storefront\Commands\ReconcileMarketplaceFinancesCommand::class,
+            \App\Storefront\Commands\AuditIndependentMarketplaceFinancesCommand::class,
             \App\Storefront\Commands\AuditChapaV1TestModeCommand::class,
         ]);
 
