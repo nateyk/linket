@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --project unit --coverage",
     "test:telegram": "vitest run resources/client/account-settings/integrations-page.dom.test.tsx resources/client/admin/settings/integrations-settings.dom.test.tsx",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "email": "email dev --dir emails --port 3000"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -95,6 +96,7 @@
     "react-colorful": "^5.6.1",
     "react-dom": "^19.1.0",
     "react-easy-crop": "^5.5.7",
+    "react-email": "^6.11.15",
     "react-error-boundary": "^6.1.0",
     "react-hook-form": "^7.79.0",
     "react-image-crop": "^11.1.2",
@@ -157,6 +159,7 @@
     "shadcn": "^4.16.2",
     "storybook": "^10.3.5",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-language-server": "^5.3.0",
     "utility-types": "^3.11.0",
