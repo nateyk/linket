@@ -62,6 +62,7 @@ return [
         'payouts_enabled' => (bool) env('CHAPA_V1_PAYOUTS_ENABLED', false),
         // Test-only dispatch uses CHASECK_TEST credentials and is never a live switch.
         'test_payouts_enabled' => (bool) env('CHAPA_V1_TEST_PAYOUTS_ENABLED', true),
+        'test_transfer_status' => env('CHAPA_V1_TEST_TRANSFER_STATUS', ''),
     ],
 
     'verify_et' => [
