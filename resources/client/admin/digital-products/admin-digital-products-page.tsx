@@ -12,8 +12,8 @@ import {Dialog} from '@shadcn/dialog/dialog';
 import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
-import {Tabs} from '@shadcn/tabs/tabs';
 import {GenericTable} from '@shadcn/table/generic-table';
+import {Tabs} from '@shadcn/tabs/tabs';
 import {TablePagination} from '@shadcn/table/utils/table-pagination';
 import {Input} from '@shadcn/forms/input/input';
 import {toast} from '@shadcn/toast/toast';
@@ -209,7 +209,10 @@ export function Component() {
             }
           >
             <div className="border-b">
-              <Tabs.List variant="line" aria-label={trans({message: 'Item views'})}>
+              <Tabs.List
+                variant="line"
+                aria-label={trans({message: 'Item views'})}
+              >
                 <Tabs.Tab value="all">
                   <Trans message="All items" />
                 </Tabs.Tab>
@@ -264,7 +267,6 @@ export function Component() {
               value={String(updated)}
               icon={<RefreshCwIcon />}
               tone={updated > 0 ? 'warning' : 'default'}
-
             />
           </div>
 
