@@ -214,6 +214,51 @@ class MarketplaceIndependentAuditTest extends TestCase
         $this->assertFalse($this->ledger->recordPlatformSale($order) !== null);
     }
 
+    public function testUnmatchedProviderRecordBlocksEvenWhenAllLocalOrdersMatch(): void
+    {
+        $order = $this->sale();
+        $extra = [
+            'reference' => 'unknown-marketplace-ref', 'amount_cents' => 10000,
+            'currency' => 'ETB', 'status' => 'success',
+        ];
+        $report = $this->audit()->audit($this->evidence([
+            'chapa_payments' => [$this->paymentEvidence($order), $extra],
+        ]));
+
+        $this->assertFalse($report['candidate_for_manual_review']);
+        $this->assertContains('provider_records_without_local_match', array_column($report['issues'], 'code'));
+    }
+
+    public function testPendingVerifyEtVerificationBlocksRetirementDespiteMatchingExport(): void
+    {
+        DB::table('direct_payment_verifications')->insert([
+            'reference' => 'verification-awaiting-review', 'status' => 'manual_review',
+            'amount_cents' => 10000, 'currency' => 'ETB',
+        ]);
+        $report = $this->audit()->audit($this->evidence([
+            'verify_et_verifications' => [[
+                'reference' => 'verification-awaiting-review',
+                'amount_cents' => 10000, 'currency' => 'ETB', 'status' => 'manual_review',
+            ]],
+        ]));
+
+        $this->assertFalse($report['candidate_for_manual_review']);
+        $this->assertSame(1, $report['verify_et_retirement']['blockers']['unresolved_verifications']);
+        $this->assertContains('verify_et_retirement_blocked', array_column($report['issues'], 'code'));
+    }
+
+    public function testAuditCommandReportsBlockedStatusWithoutChangingJournal(): void
+    {
+        $order = $this->sale();
+        $before = DB::table('storefront_journal_entries')->count();
+
+        $this->artisan('marketplace:audit-independent', ['--json' => true])
+            ->assertExitCode(1);
+
+        $this->assertSame($before, DB::table('storefront_journal_entries')->count());
+        $this->assertSame('paid', $order->fresh()->status);
+    }
+
     private function sale(): StorefrontOrder
     {
         $creator = $this->seedUser(new User([
