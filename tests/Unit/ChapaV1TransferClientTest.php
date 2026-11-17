@@ -98,6 +98,28 @@ class ChapaV1TransferClientTest extends TestCase
         }
     }
 
+    public function testFractionalCentBalanceIsRejectedInsteadOfRoundedUp(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/balances' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    ['currency' => 'ETB', 'available_balance' => '10.009', 'ledger_balance' => '100.00'],
+                ],
+            ], 200),
+        ]);
+        $manager = $this->createMock(LinketChapaManager::class);
+        $manager->method('platformSecret')->willReturn('CHASECK_TEST-local-only');
+        $this->app->instance(LinketChapaManager::class, $manager);
+
+        $this->expectExceptionMessage('invalid available ETB balance');
+        try {
+            app(ChapaPayoutService::class)->assertSufficientBalance(1000);
+        } finally {
+            Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+        }
+    }
+
     public function testNoSecretPreventsExternalNetworkCall(): void
     {
         Http::fake();
