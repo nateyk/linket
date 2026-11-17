@@ -41,6 +41,7 @@ class ReactEmailPasswordResetTest extends TestCase
                 }
 
                 $mailable->assertSeeInHtml('Reset');
+                $mailable->assertHasTo($user->email);
 
                 return true;
             },

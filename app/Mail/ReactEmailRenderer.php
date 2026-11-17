@@ -21,10 +21,15 @@ final class ReactEmailRenderer
     public function render(string $template, array $props): array
     {
         $node = $this->nodeBinary ?? 'node';
-        $script = $this->scriptPath ?? base_path('scripts/render-email.tsx');
+        $bundledCjs = base_path('scripts/dist/render-email.cjs');
+        $bundledMjs = base_path('scripts/dist/render-email.mjs');
+        $bundledScript = is_file($bundledCjs) ? $bundledCjs : (is_file($bundledMjs) ? $bundledMjs : null);
+
+        $script = $this->scriptPath ?? ($bundledScript ?? base_path('scripts/render-email.tsx'));
         $tsx = base_path('node_modules/.bin/tsx');
 
-        $command = str_ends_with($script, '.mjs')
+        $isBundledScript = str_ends_with($script, '.mjs') || str_ends_with($script, '.cjs');
+        $command = $isBundledScript
             ? [$node, $script, '--template', $template]
             : [$node, $tsx, $script, '--template', $template];
 

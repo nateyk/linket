@@ -420,7 +420,7 @@ abstract class BaseUser extends BaseModel implements
 
     public function sendPasswordResetNotification(mixed $token): void
     {
-        $this->notify(new LinketResetPasswordNotification($token));
+        $this->notify(new LinketResetPasswordNotification((string) $token));
     }
 
     public static function findAdmin(): ?self

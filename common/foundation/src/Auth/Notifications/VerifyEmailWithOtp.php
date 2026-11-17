@@ -26,13 +26,13 @@ class VerifyEmailWithOtp extends Notification
             'siteName' => config('app.name'),
         ]);
 
-        return new ReactEmailMailable(
+        return (new ReactEmailMailable(
             html: $rendered['html'],
             text: $rendered['text'],
             subjectLine: __('Your :site security code is :code', [
                 'site' => config('app.name'),
                 'code' => $this->otp,
             ]),
-        );
+        ))->to($notifiable->routeNotificationFor('mail', $this));
     }
 }

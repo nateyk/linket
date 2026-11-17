@@ -30,6 +30,11 @@ class ReactEmailVerifyEmailTest extends TestCase
             public string $email = 'user@example.test';
 
             public string $name = 'Test User';
+
+            public function routeNotificationFor(string $driver, mixed $notification = null): ?string
+            {
+                return $driver === 'mail' ? $this->email : null;
+            }
         };
 
         $notification = new VerifyEmailWithOtp('123456');
@@ -37,5 +42,6 @@ class ReactEmailVerifyEmailTest extends TestCase
 
         $this->assertInstanceOf(ReactEmailMailable::class, $mailable);
         $mailable->assertSeeInHtml('123456');
+        $mailable->assertHasTo($notifiable->email);
     }
 }

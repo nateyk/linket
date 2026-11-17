@@ -34,10 +34,10 @@ final class LinketResetPasswordNotification extends Notification
             'siteName' => config('app.name'),
         ]);
 
-        return new ReactEmailMailable(
+        return (new ReactEmailMailable(
             html: $rendered['html'],
             text: $rendered['text'],
             subjectLine: __('Reset Password Notification'),
-        );
+        ))->to($notifiable->routeNotificationFor('mail', $this));
     }
 }
