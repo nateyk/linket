@@ -54,6 +54,8 @@ class PayoutRequestService
                 throw ValidationException::withMessages(['amount_cents' => __('You already have a payout being reviewed.')]);
             }
 
+            // The finance summary caps the legacy earnings ledger at the
+            // verified, deficit-adjusted Chapa double-entry balance.
             $available = app(DigitalProductFinance::class)->summary($creatorId, $workspaceId, true)['available_for_payout_cents'];
             if ($amountCents > $available) {
                 throw ValidationException::withMessages(['amount_cents' => __('The requested payout exceeds your available balance.')]);
@@ -69,7 +71,8 @@ class PayoutRequestService
                 'payout_destination' => $account->destination,
                 'account_holder_snapshot' => $account->account_holder,
                 'bank_code_snapshot' => $account->bank_code,
-                'currency' => config('storefront.currency', 'ETB'),
+                // Chapa and journal entries use canonical uppercase currency codes.
+                'currency' => strtoupper((string) config('storefront.currency', 'ETB')),
                 'amount_cents' => $amountCents,
                 'status' => 'requested',
             ]);
