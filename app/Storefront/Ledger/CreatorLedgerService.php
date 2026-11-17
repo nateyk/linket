@@ -252,7 +252,12 @@ class CreatorLedgerService
         $context = ['creator_id' => $creatorId, 'workspace_id' => $workspaceId];
 
         $balances = $this->getBalances(BalanceQuery::for($creatorId, $currency, $workspaceId));
-        $fromHeld = min($breakdown->creatorCents, $balances['held']);
+        // Do not debit another order's held escrow to refund an order whose
+        // own hold was already released. A pooled held balance alone cannot
+        // establish the refunding order's settlement state.
+        $released = $order->journalEntries()
+            ->where('event_type', 'funds_available')->exists();
+        $fromHeld = $released ? 0 : min($breakdown->creatorCents, $balances['held']);
         $remaining = $breakdown->creatorCents - $fromHeld;
         $fromAvailable = min($remaining, $balances['available']);
         $deficit = $remaining - $fromAvailable;
