@@ -315,7 +315,7 @@ it('shows summary and orders, and sends status, search and page filters to the s
   expect(screen.queryByRole('tab', {name: /Manual review/})).toBeNull();
   expect(screen.getByText('Creator earnings')).toBeTruthy();
   expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
-  expect(screen.getByText('Track buyer payments and delivery. Only verified payments count as sales.')).toBeTruthy();
+  expect(screen.getByText('Chapa orders and payment status. Only paid orders count as sales.')).toBeTruthy();
 
   fireEvent.change(screen.getByLabelText('Payment source'), {
     target: {value: 'all'},
