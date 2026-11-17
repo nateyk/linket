@@ -11,6 +11,7 @@ use App\Storefront\Resources\AdminPayoutRequestResource;
 use App\Storefront\Services\AdminPayoutTransferStatusFilter;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -66,30 +67,7 @@ class AdminPayoutRequestsController extends Controller
             AdminPayoutTransferStatusFilter::apply($payouts, (string) request('transfer_status'));
         }
 
-        $filteredPayouts = $payouts->get();
-
-        $counters = [
-            'requested' => [
-                'total' => $filteredPayouts->where('status', 'requested')->count(),
-                'amount' => $filteredPayouts->where('status', 'requested')->sum('amount_cents'),
-            ],
-            'processing' => [
-                'total' => $filteredPayouts->where('status', 'processing')->count(),
-                'amount' => $filteredPayouts->where('status', 'processing')->sum('amount_cents'),
-            ],
-            'paid' => [
-                'total' => $filteredPayouts->where('status', 'paid')->count(),
-                'amount' => $filteredPayouts->where('status', 'paid')->sum('amount_cents'),
-            ],
-            'rejected' => [
-                'total' => $filteredPayouts->where('status', 'rejected')->count(),
-                'amount' => $filteredPayouts->where('status', 'rejected')->sum('amount_cents'),
-            ],
-            'cancelled' => [
-                'total' => $filteredPayouts->where('status', 'cancelled')->count(),
-                'amount' => $filteredPayouts->where('status', 'cancelled')->sum('amount_cents'),
-            ],
-        ];
+        $counters = $this->withdrawalCounters($payouts);
 
         $paginated = $payouts->paginate((int) request('perPage', 50));
         $paginated->appends(request()->only(['search', 'date_from', 'date_to', 'creator', 'status', 'withdrawal_method', 'transfer_status']));
@@ -100,6 +78,34 @@ class AdminPayoutRequestsController extends Controller
                 'withdrawal_methods' => $withdrawalMethods,
             ],
         ]);
+    }
+
+    /**
+     * Aggregate the filtered queue in SQL without loading every financial row
+     * or adding together different currencies.
+     *
+     * @param Builder<PayoutRequest> $query
+     * @return array<string, array{total: int, amounts_by_currency: array<string, int>}>
+     */
+    private function withdrawalCounters(Builder $query): array
+    {
+        $rows = (clone $query)
+            ->selectRaw('status, currency, COUNT(*) AS request_count, SUM(amount_cents) AS total_cents')
+            ->groupBy('status', 'currency')
+            ->get();
+
+        $counters = [];
+        foreach (['requested', 'processing', 'paid', 'rejected', 'cancelled'] as $status) {
+            $matching = $rows->where('status', $status);
+            $counters[$status] = [
+                'total' => (int) $matching->sum('request_count'),
+                'amounts_by_currency' => $matching
+                    ->mapWithKeys(fn ($row): array => [(string) $row->currency => (int) $row->total_cents])
+                    ->all(),
+            ];
+        }
+
+        return $counters;
     }
 
     public function review(PayoutRequest $payoutRequest): AdminPayoutRequestResource
