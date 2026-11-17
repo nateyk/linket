@@ -69,7 +69,16 @@ class CreatorLedgerService
             return null;
         }
 
-        $order->loadMissing('product');
+        $order->loadMissing(['product', 'refunds']);
+        // Refunds already reduce the held liability. Releasing the original
+        // sale amount would overstate withdrawable earnings after partial refunds.
+        $reversed = (int) $order->refunds
+            ->where('status', 'completed')->sum('creator_earnings_reversal_cents');
+        $remainingEarnings = max(0, (int) $order->creator_earnings_cents - $reversed);
+        if ($remainingEarnings === 0) {
+            return null;
+        }
+
         $currency = $order->currency ?: config('storefront.currency', 'ETB');
         $context = ['creator_id' => $order->creator_id, 'workspace_id' => $order->product?->workspace_id];
 
@@ -89,7 +98,7 @@ class CreatorLedgerService
         return $this->postTwoLegTransfer($entryData, [
             'from' => AccountCodes::CREATOR_HELD,
             'to' => AccountCodes::CREATOR_AVAILABLE,
-            'amount_cents' => $order->creator_earnings_cents,
+            'amount_cents' => $remainingEarnings,
             'currency' => $currency,
             'context' => $context,
         ]);
@@ -101,7 +110,15 @@ class CreatorLedgerService
     public function reserveForPayout(PayoutRequest $payout, ?int $availableBalance = null): StorefrontJournalEntry
     {
         $currency = $payout->currency ?: config('storefront.currency', 'ETB');
-        $available = $availableBalance ?? $this->getWithdrawableBalance(BalanceQuery::for($payout->creator_id, $currency, $payout->workspace_id));
+        // An older earnings-table balance is only a ceiling, never authority
+        // to debit the Chapa journal. A deficit or unreleased hold must block
+        // a withdrawal even when the legacy summary says funds are available.
+        $journalAvailable = $this->getWithdrawableBalance(
+            BalanceQuery::for($payout->creator_id, $currency, $payout->workspace_id)
+        );
+        $available = $availableBalance === null
+            ? $journalAvailable
+            : min($journalAvailable, max(0, $availableBalance));
 
         if ($payout->amount_cents > $available) {
             throw new InsufficientBalanceException(
