@@ -203,6 +203,12 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $order = $this->seedPlatformOrder($creator, 150000, Carbon::now()->subDays(10));
         $ledger->recordPlatformSale($order);
         $ledger->releaseHeldToAvailable($order);
+        // This isolated fixture has no products/workspaces table. Attribute
+        // the synthetic settled sale to the payout's workspace, as a real
+        // product-owned platform sale would be.
+        StorefrontJournalLine::query()
+            ->where('creator_id', $creator->id)
+            ->update(['workspace_id' => 1]);
 
         $payout = PayoutRequest::create([
             'workspace_id' => 1,
