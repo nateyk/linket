@@ -60,6 +60,8 @@ return [
         'webhook_secret' => env('CHAPA_WEBHOOK_SECRET'),
         'transfer_approval_secret' => env('CHAPA_TRANSFER_APPROVAL_SECRET'),
         'payouts_enabled' => (bool) env('CHAPA_V1_PAYOUTS_ENABLED', false),
+        // Test-only dispatch uses CHASECK_TEST credentials and is never a live switch.
+        'test_payouts_enabled' => (bool) env('CHAPA_V1_TEST_PAYOUTS_ENABLED', true),
     ],
 
     'verify_et' => [
