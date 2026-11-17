@@ -43,7 +43,11 @@ type Pagination = {
 type Summary = {
   verified_sales_count: number;
   verified_revenue_cents: number;
+  net_sales_cents: number;
   paid_orders_count?: number;
+  gross_profit_cents: number;
+  gross_profit_margin_percent: number;
+  average_order_cents: number;
   free_orders_count?: number;
   creator_earnings_cents?: number;
   platform_fee_cents?: number;
@@ -368,30 +372,37 @@ function SummaryCards({
         <Card.Content className="grid grid-cols-2 p-0 sm:grid-cols-4">
           <SummaryMetric
             className="border-e border-b sm:border-b-0"
-            label={<Trans message="Gross sales" />}
+            label={<Trans message="Net sales" />}
             value={summary ? (
-              <FormattedCurrency valueInCents={summary.verified_revenue_cents} currency={summary.currency} />
+              <FormattedCurrency valueInCents={summary.net_sales_cents} currency={summary.currency} />
             ) : '—'}
-            detail={<Trans message="Paid revenue, before fees" />}
+            detail={<Trans message="Paid revenue minus completed refunds" />}
           />
           <SummaryMetric
             className="border-b sm:border-e sm:border-b-0"
-            label={<Trans message="Creator earnings" />}
-            value={summary?.creator_earnings_cents !== undefined ? (
-              <FormattedCurrency valueInCents={summary.creator_earnings_cents} currency={summary.currency} />
-            ) : '—'}
-            detail={<Trans message="After fees · not withdrawable balance" />}
+            label={<Trans message="Orders" />}
+            value={summary?.paid_orders_count ?? '—'}
+            detail={<Trans message="Paid orders · excludes free" />}
           />
           <SummaryMetric
             className="border-e"
-            label={<Trans message="Paid orders" />}
-            value={summary?.paid_orders_count ?? '—'}
-            detail={<Trans message="Excludes free orders" />}
+            label={
+              <>
+                <Trans message="Gross profit" />
+                {summary ? ' · ' + summary.gross_profit_margin_percent.toFixed(1) + '%' : null}
+              </>
+            }
+            value={summary ? (
+              <FormattedCurrency valueInCents={summary.gross_profit_cents} currency={summary.currency} />
+            ) : '—'}
+            detail={<Trans message="After platform fees · before product costs" />}
           />
           <SummaryMetric
-            label={<Trans message="Pending payments" />}
-            value={summary?.pending_count ?? '—'}
-            detail={<Trans message="Awaiting payment confirmation" />}
+            label={<Trans message="Average order" />}
+            value={summary ? (
+              <FormattedCurrency valueInCents={summary.average_order_cents} currency={summary.currency} />
+            ) : '—'}
+            detail={<Trans message="Net sales per paid order" />}
           />
         </Card.Content>
       </Card.Root>
