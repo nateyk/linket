@@ -21,7 +21,7 @@ import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
 import {cva, type VariantProps} from 'class-variance-authority';
 import * as React from 'react';
 import {ComponentProps, createContext, ReactElement, use} from 'react';
-import {Link, NavLink, useLocation} from 'react-router';
+import {Link, NavLink, useInRouterContext, useLocation} from 'react-router';
 
 type Collapsible = 'offcanvas' | 'icon' | 'none';
 
@@ -54,25 +54,12 @@ function SidebarRoot({
 }) {
   const ctx = use(DashboardLayoutContext);
   const {trans} = useTrans();
-  const location = useLocation();
-  const previousLocationKey = React.useRef(location.key);
   const landmarkLabel = trans(message('Main navigation'));
   let variant = propsVariant ?? ctx.defaultSectionVariant;
   const status =
     side === 'left' ? ctx.leftSidebar.status : ctx.rightSidebar.status;
   const setStatus =
     side === 'left' ? ctx.leftSidebar.setStatus : ctx.rightSidebar.setStatus;
-
-  // Close the mobile drawer after navigation, not during a link's click.
-  // Closing synchronously in the parent nav can unmount a React Router
-  // link before its navigation commits.
-  React.useEffect(() => {
-    if (previousLocationKey.current === location.key) return;
-    previousLocationKey.current = location.key;
-    if (ctx.isMobileMode && status === 'expanded') {
-      setStatus('collapsed');
-    }
-  }, [ctx.isMobileMode, location.key, setStatus, status]);
 
   if (ctx.isMobileMode || forceOverlayMode) {
     return (
@@ -83,6 +70,9 @@ function SidebarRoot({
         }
         position="left"
       >
+        <MobileSidebarNavigationObserver
+          onNavigation={() => setStatus('collapsed')}
+        />
         <Drawer.Portal>
           <Drawer.Backdrop />
           <Drawer.Content popupClassName="p-0">
@@ -148,6 +138,40 @@ function SidebarRoot({
       </nav>
     </SidebarContext.Provider>
   );
+}
+
+/**
+ * A shared sidebar can also render outside React Router (Storybook/tests).
+ * Keep its mobile navigation listener separate so non-router consumers do
+ * not call useLocation. The drawer stays open until routing has committed.
+ */
+function MobileSidebarNavigationObserver({
+  onNavigation,
+}: {
+  onNavigation: () => void;
+}) {
+  const inRouter = useInRouterContext();
+  return inRouter ? (
+    <CloseSidebarAfterNavigation onNavigation={onNavigation} />
+  ) : null;
+}
+
+function CloseSidebarAfterNavigation({
+  onNavigation,
+}: {
+  onNavigation: () => void;
+}) {
+  const location = useLocation();
+  const previousKey = React.useRef(location.key);
+
+  React.useEffect(() => {
+    if (previousKey.current !== location.key) {
+      previousKey.current = location.key;
+      onNavigation();
+    }
+  }, [location.key, onNavigation]);
+
+  return null;
 }
 
 /**
