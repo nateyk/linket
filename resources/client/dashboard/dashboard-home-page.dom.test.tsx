@@ -90,6 +90,15 @@ it('shows refund-adjusted sales, order counts, units, and average order from Cha
   expect(screen.queryByText('Available for payout')).toBeNull();
 });
 
+it('shows placeholders instead of invented zero values when the KPI summary is missing', async () => {
+  fixture.sales.summary = undefined;
+  showDashboard();
+  expect(await screen.findByText('No orders yet')).toBeTruthy();
+  expect(screen.getByText('Sales')).toBeTruthy();
+  expect(screen.getByText('Items sold')).toBeTruthy();
+  expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+});
+
 it('renders order loading errors instead of invented sales', async () => {
   fixture.fail = true;
   showDashboard();
