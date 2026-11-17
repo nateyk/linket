@@ -306,7 +306,9 @@ class PayoutSystemTest extends TestCase
 
         DigitalProductWithdrawalMethod::query()->findOrFail($account->withdrawal_method_id)
             ->update(['maximum_amount_cents' => 5000]);
-        config()->set('services.chapa.payouts_enabled', true);
+        config()->set('services.chapa.secret', 'CHASECK_TEST-fixture-limit');
+        config()->set('services.chapa.test_payouts_enabled', true);
+        config()->set('services.chapa.payouts_enabled', false);
         Http::fake();
 
         try {
