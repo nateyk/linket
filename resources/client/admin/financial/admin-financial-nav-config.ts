@@ -25,12 +25,6 @@ export const financialNavItems: FinancialNavItem[] = [
     icon: SlidersHorizontalIcon,
   },
   {
-    label: message('Payment gateways'),
-    description: message('Verify.et connection & direct buyer methods'),
-    to: '/admin/financial/payment-gateways',
-    icon: LandmarkIcon,
-  },
-  {
     label: message('Receiving accounts'),
     description: message('Creator bank & mobile wallet reviews'),
     to: '/admin/financial/withdrawal-methods',
