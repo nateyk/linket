@@ -231,6 +231,24 @@ class DigitalProductPayoutMethodController extends Controller
         ]);
 
         $code = strtolower(trim((string) $data['bank_code']));
+        $data['bank_code'] = match ($code) {
+            'm-pesa' => 'mpesa',
+            'cbe_birr' => 'cbebirr',
+            'yaya_wallet' => 'yaya',
+            default => $code,
+        };
+        $data['account_holder'] = trim((string) $data['account_holder']);
+        $data['destination'] = trim((string) $data['destination']);
+        if (mb_strlen($data['account_holder']) < 3) {
+            throw ValidationException::withMessages([
+                'account_holder' => __('Enter the full payout account holder name.'),
+            ]);
+        }
+        if (isset($data['bank_name'])) {
+            $data['bank_name'] = trim((string) $data['bank_name']);
+        }
+
+        $code = $data['bank_code'];
         $number = preg_replace('/[\s-]/', '', (string) $data['destination']);
         $valid = match ($code) {
             'telebirr', 'cbebirr', 'mpesa' => (bool) preg_match('/^(?:0[79]\d{8}|(?:\+?251)[79]\d{8})$/', $number),
