@@ -181,9 +181,9 @@ export function Component() {
           </Tooltip.Provider>
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
-          <Button variant="outline" nativeButton={false} render={<Link to="/admin/items/payment-methods" />}>
+          <Button variant="outline" nativeButton={false} render={<Link to="/admin/financial/general" />}>
             <LandmarkIcon />
-            <Trans message="Receiving accounts" />
+            <Trans message="Chapa settings" />
           </Button>
           <Button
             variant="outline"
