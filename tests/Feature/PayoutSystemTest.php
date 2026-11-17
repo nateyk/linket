@@ -10,6 +10,10 @@ use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\WorkspacePayoutConfig;
 use App\Storefront\DigitalProductFinance;
+use App\Storefront\Ledger\AccountCodes;
+use App\Storefront\Ledger\JournalEntryData;
+use App\Storefront\Ledger\JournalLineData;
+use App\Storefront\Ledger\JournalPostingService;
 use App\Storefront\PayoutRequestService;
 use Common\Permissions\Models\Permission;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -843,15 +847,25 @@ class PayoutSystemTest extends TestCase
 
     private function creditSale(User $creator, int $cents): void
     {
-        // A verified sale ledger entry, immediately available for payout.
+        $workspaceId = $creator->workspaces()->first()->id;
+        // Synthetic, balanced test funding: neither an unbacked earnings row
+        // nor a pending provider payment may authorize a withdrawal.
         app(DigitalProductFinance::class)->record(
-            $creator->workspaces()->first()->id,
+            $workspaceId,
             $creator->id,
             'sale:' . $creator->id . ':' . $cents,
             'sale',
             $cents,
-            config('storefront.currency'),
-            ['available_at' => now(), 'description' => 'Verified sale'],
+            'ETB',
+            ['available_at' => now(), 'description' => 'Synthetic verified sale'],
+        );
+        $context = ['creator_id' => $creator->id, 'workspace_id' => $workspaceId];
+        app(JournalPostingService::class)->post(
+            new JournalEntryData('test_funding', $creator->id, 'sale_' . $cents, 'ETB', $context),
+            [
+                new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, $cents, 0, 'ETB', $context),
+                new JournalLineData(AccountCodes::CREATOR_AVAILABLE, 0, $cents, 'ETB', $context),
+            ],
         );
     }
 
