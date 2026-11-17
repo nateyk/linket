@@ -7,6 +7,7 @@ namespace App\Storefront\Commands;
 use App\Storefront\Services\MarketplaceIndependentAudit;
 use App\Storefront\Services\MarketplaceProviderEvidence;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 final class AuditIndependentMarketplaceFinancesCommand extends Command
@@ -24,7 +25,8 @@ final class AuditIndependentMarketplaceFinancesCommand extends Command
             $evidence = is_string($path) && $path !== ''
                 ? MarketplaceProviderEvidence::fromPath($path)
                 : null;
-            $report = $audit->audit($evidence);
+            // All SELECTs share one database transaction snapshot; no writes occur.
+            $report = DB::transaction(static fn () => $audit->audit($evidence), 1);
         } catch (Throwable) {
             // Do not echo SQL, imported provider references, payment details or credentials.
             $report = [
