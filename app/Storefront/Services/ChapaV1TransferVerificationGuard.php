@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Storefront\Services;
 
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Support\EtbMajorAmount;
 use RuntimeException;
 
 /**
@@ -43,20 +44,9 @@ final class ChapaV1TransferVerificationGuard
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
 
-        if (preg_match('/^\d+(?:\.\d{1,2})?$/', $amount) !== 1
-            || $this->amountCents($amount) !== (int) $intent->amount_cents) {
+        if (EtbMajorAmount::cents($amount) !== (int) $intent->amount_cents) {
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
-    }
-
-    private function amountCents(string $amount): int
-    {
-        [$major, $minor] = array_pad(explode('.', $amount, 2), 2, '0');
-        if (strlen(ltrim($major, '0')) > 16) {
-            throw new RuntimeException('Chapa returned an out-of-range transfer amount.');
-        }
-
-        return ((int) $major * 100) + (int) str_pad($minor, 2, '0');
     }
 
     /** @param array<string, mixed> $data */
