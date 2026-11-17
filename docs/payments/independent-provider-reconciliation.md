@@ -52,7 +52,7 @@ The command compares provider reference, amount, currency and settlement status,
 - **Completed refunds:** refund evidence must match gross refund and reversal entries; commission and creator liability debits must match the recorded amounts.
 - **Withdrawals:** reserved and disbursed/released entries must match the payout; uncertain, prepared or open transfers remain blocked. Paid transfers must have provider success. Manual payouts without provider intents require separate independent settlement review.
 - **Historical Verify.et:** outstanding verifications, webhooks, subscriptions, deliveries and disputes remain blockers under the separate retirement audit. Seller-collected historical orders must **never** be recorded as platform Chapa liabilities.
-- **Ledger:** existing double-entry anomalies remain blocking. The signed per-workspace/currency audit in PR #309 provides additional deficit detection once current branch protection allows its merge.
+- **Ledger:** existing double-entry anomalies and signed negative creator-held, available, or reserved balances are blocking per creator, workspace, currency and account. This command independently checks signed liabilities while the broader integrity fix in PR #309 awaits its own merge.
 
 An exit code of **0 means only “candidate for manual evidence review.”** It is **not** permission to retire Verify.et, remove retention records, alter payouts, or enable Chapa v1 live transfers. A responsible administrator must independently authenticate the provider export, inspect the exception list, verify callback/retry windows, agree data retention, back up the old evidence, and explicitly sign off.
 
