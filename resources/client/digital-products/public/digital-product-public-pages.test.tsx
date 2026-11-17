@@ -107,7 +107,7 @@ describe('painted-panel colors and locale safety', () => {
     expect(page).toContain('text-[var(--biolink-accent,var(--color-primary))]');
     expect(page).toContain('message="Your course is ready. Access it in My Portal."');
     expect(page).toContain('message="Your payment is confirmed. Your downloads are ready below."');
-    expect(page).toContain('message="Open My Portal"');
+    expect(page).toContain("message={isCourse ? 'Open My Portal' : 'View my purchases'}");
     expect(page).not.toContain('shadow-xs');
     expect(page).not.toContain('bg-primary/10');
     // Soft-pop for every surface card is one CSS var from Appearance Shadow.
