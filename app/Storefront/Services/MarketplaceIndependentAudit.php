@@ -52,7 +52,7 @@ final class MarketplaceIndependentAudit
         $missing = array_values(array_filter(self::REQUIRED_TABLES,
             static fn (string $table): bool => !Schema::hasTable($table)));
         if ($missing !== []) {
-            $this->issue('required_tables_missing', 'schema', 0, count($missing));
+            $this->issue('required_tables_missing', ['record_type' => 'schema', 'record_id' => 0, 'count' => count($missing)]);
             $this->report['missing_tables'] = $missing;
             return $this->report;
         }
@@ -60,7 +60,7 @@ final class MarketplaceIndependentAudit
         $audit = $this->reconciliation->auditLedgerIntegrity();
         $this->report['journal_balanced'] = $audit->isBalanced;
         if ($audit->hasAnomalies()) {
-            $this->issue('journal_integrity_anomaly', 'journal', 0, max(1, count($audit->issues)));
+            $this->issue('journal_integrity_anomaly', ['record_type' => 'journal', 'record_id' => 0, 'count' => max(1, count($audit->issues))]);
         }
 
         $this->orders($evidence);
@@ -70,11 +70,11 @@ final class MarketplaceIndependentAudit
         $this->orphanSaleJournals();
 
         if ($evidence === null) {
-            $this->issue('independent_provider_export_missing', 'provider', 0);
+            $this->issue('independent_provider_export_missing', ['record_type' => 'provider', 'record_id' => 0]);
         } else {
             foreach ($evidence->unmatchedCounts() as $group => $count) {
                 if ($count > 0) {
-                    $this->issue('provider_records_without_local_match', $group, 0, $count);
+                    $this->issue('provider_records_without_local_match', ['record_type' => $group, 'record_id' => 0, 'count' => $count]);
                 }
             }
         }
@@ -92,20 +92,25 @@ final class MarketplaceIndependentAudit
             ->chunkById(200, function ($orders) use ($evidence): void {
                 foreach ($orders as $order) {
                     $this->count('payments');
-                    $this->recordJournalError($this->journal->sale($order), 'order', $order->id);
+                    $this->recordJournalError($this->journal->sale($order), ['record_type' => 'order', 'record_id' => $order->id]);
                     $attempt = $order->paymentAttempts()
                         ->where('status', StorefrontPaymentAttempt::STATUS_SUCCESSFUL)
                         ->latest('id')->first();
                     if (!$attempt) {
-                        $this->issue('settled_payment_attempt_missing', 'order', $order->id);
+                        $this->issue('settled_payment_attempt_missing', ['record_type' => 'order', 'record_id' => $order->id]);
                         continue;
                     }
                     if ((int) $attempt->amount_cents !== (int) $order->gross_amount_cents
                         || strtoupper((string) $attempt->currency) !== strtoupper((string) $order->currency)) {
-                        $this->issue('payment_amount_or_currency_mismatch', 'order', $order->id);
+                        $this->issue('payment_amount_or_currency_mismatch', ['record_type' => 'order', 'record_id' => $order->id]);
                     }
-                    $this->compare($evidence, 'chapa_payments', $attempt->merchant_reference,
-                        $order->gross_amount_cents, $order->currency, ['success', 'successful', 'paid'], 'order', $order->id);
+                    $this->compare($evidence, [
+                        'group' => 'chapa_payments',
+                        'reference' => $attempt->merchant_reference,
+                        'amount_cents' => (int) $order->gross_amount_cents,
+                        'currency' => (string) $order->currency,
+                        'statuses' => ['success', 'successful', 'paid'],
+                    ], ['record_type' => 'order', 'record_id' => $order->id]);
                 }
             });
     }
@@ -120,16 +125,20 @@ final class MarketplaceIndependentAudit
                     if (!$order || !$order->isPlatformCollected()) {
                         if (StorefrontJournalEntry::query()->where('source_type', 'refund')
                             ->where('source_id', $refund->id)->exists()) {
-                            $this->issue('historical_refund_has_platform_journal', 'refund', $refund->id);
+                            $this->issue('historical_refund_has_platform_journal', ['record_type' => 'refund', 'record_id' => $refund->id]);
                         }
                         continue;
                     }
                     $this->count('refunds');
-                    $this->recordJournalError($this->journal->refund($refund), 'refund', $refund->id);
+                    $this->recordJournalError($this->journal->refund($refund), ['record_type' => 'refund', 'record_id' => $refund->id]);
                     $reference = $refund->external_reference ?: $refund->chapa_refund_reference;
-                    $this->compare($evidence, 'chapa_refunds', $reference,
-                        $refund->amount_cents, $refund->currency,
-                        ['success', 'successful', 'completed', 'refunded'], 'refund', $refund->id);
+                    $this->compare($evidence, [
+                        'group' => 'chapa_refunds',
+                        'reference' => $reference,
+                        'amount_cents' => (int) $refund->amount_cents,
+                        'currency' => (string) $refund->currency,
+                        'statuses' => ['success', 'successful', 'completed', 'refunded'],
+                    ], ['record_type' => 'refund', 'record_id' => $refund->id]);
                 }
             });
     }
@@ -140,7 +149,7 @@ final class MarketplaceIndependentAudit
             function ($payouts) use ($evidence): void {
                 foreach ($payouts as $payout) {
                     $this->count('payouts');
-                    $this->recordJournalError($this->journal->payout($payout, 'withdrawal_reserved'), 'payout', $payout->id);
+                    $this->recordJournalError($this->journal->payout($payout, 'withdrawal_reserved'), ['record_type' => 'payout', 'record_id' => $payout->id]);
                     $this->payoutLifecycle($payout);
                     foreach ($payout->payoutIntents as $intent) {
                         $this->payoutIntent($payout, $intent, $evidence);
@@ -152,16 +161,16 @@ final class MarketplaceIndependentAudit
     private function payoutLifecycle(PayoutRequest $payout): void
     {
         if ($payout->status === 'paid') {
-            $this->recordJournalError($this->journal->payout($payout, 'withdrawal_disbursed'), 'payout', $payout->id);
+            $this->recordJournalError($this->journal->payout($payout, 'withdrawal_disbursed'), ['record_type' => 'payout', 'record_id' => $payout->id]);
             if ($payout->payoutIntents->isEmpty()) {
-                $this->issue('manual_payout_needs_independent_settlement_review', 'payout', $payout->id);
+                $this->issue('manual_payout_needs_independent_settlement_review', ['record_type' => 'payout', 'record_id' => $payout->id]);
             }
         } elseif (in_array($payout->status, ['rejected', 'cancelled'], true)) {
-            $this->recordJournalError($this->journal->payout($payout, 'withdrawal_released'), 'payout', $payout->id);
+            $this->recordJournalError($this->journal->payout($payout, 'withdrawal_released'), ['record_type' => 'payout', 'record_id' => $payout->id]);
         } elseif (in_array($payout->status, ['requested', 'pending', 'processing'], true)) {
-            $this->issue('unsettled_withdrawal', 'payout', $payout->id);
+            $this->issue('unsettled_withdrawal', ['record_type' => 'payout', 'record_id' => $payout->id]);
         } else {
-            $this->issue('unknown_withdrawal_status', 'payout', $payout->id);
+            $this->issue('unknown_withdrawal_status', ['record_type' => 'payout', 'record_id' => $payout->id]);
         }
     }
 
@@ -170,10 +179,10 @@ final class MarketplaceIndependentAudit
     {
         if ($intent->amount_cents !== $payout->amount_cents
             || strtoupper((string) $intent->currency) !== strtoupper((string) $payout->currency)) {
-            $this->issue('payout_intent_amount_or_currency_mismatch', 'payout', $payout->id);
+            $this->issue('payout_intent_amount_or_currency_mismatch', ['record_type' => 'payout', 'record_id' => $payout->id]);
         }
         if ($intent->status === StorefrontPayoutIntent::STATUS_PREPARED) {
-            $this->issue('transfer_prepared_not_settled', 'payout', $payout->id);
+            $this->issue('transfer_prepared_not_settled', ['record_type' => 'payout', 'record_id' => $payout->id]);
             return;
         }
         $statuses = match ($intent->status) {
@@ -182,10 +191,15 @@ final class MarketplaceIndependentAudit
             default => ['pending', 'queued', 'processing'],
         };
         if ($payout->status === 'paid' && $intent->status !== StorefrontPayoutIntent::STATUS_SUCCESSFUL) {
-            $this->issue('paid_payout_without_verified_success', 'payout', $payout->id);
+            $this->issue('paid_payout_without_verified_success', ['record_type' => 'payout', 'record_id' => $payout->id]);
         }
-        $this->compare($evidence, 'chapa_payouts', $intent->merchant_reference,
-            $intent->amount_cents, $intent->currency, $statuses, 'payout', $payout->id);
+        $this->compare($evidence, [
+            'group' => 'chapa_payouts',
+            'reference' => $intent->merchant_reference,
+            'amount_cents' => (int) $intent->amount_cents,
+            'currency' => (string) $intent->currency,
+            'statuses' => $statuses,
+        ], ['record_type' => 'payout', 'record_id' => $payout->id]);
     }
 
     private function historical(?MarketplaceProviderEvidence $evidence): void
@@ -193,7 +207,7 @@ final class MarketplaceIndependentAudit
         $snapshot = $this->legacy->snapshot();
         $this->report['verify_et_retirement'] = $snapshot;
         if (!($snapshot['candidate_for_manual_signoff'] ?? false)) {
-            $this->issue('verify_et_retirement_blocked', 'legacy', 0);
+            $this->issue('verify_et_retirement_blocked', ['record_type' => 'legacy', 'record_id' => 0]);
         }
 
         StorefrontOrder::query()->where(function ($query): void {
@@ -203,7 +217,7 @@ final class MarketplaceIndependentAudit
             foreach ($orders as $order) {
                 $this->count('legacy_orders');
                 if ($this->journal->hasOrderSale((int) $order->id)) {
-                    $this->issue('seller_collected_order_created_platform_liability', 'order', $order->id);
+                    $this->issue('seller_collected_order_created_platform_liability', ['record_type' => 'order', 'record_id' => $order->id]);
                 }
             }
         });
@@ -215,9 +229,13 @@ final class MarketplaceIndependentAudit
             function ($verifications) use ($evidence): void {
                 foreach ($verifications as $verification) {
                     $this->count('legacy_verifications');
-                    $this->compare($evidence, 'verify_et_verifications', $verification->reference,
-                        (int) $verification->amount_cents, (string) $verification->currency,
-                        [strtolower((string) $verification->status)], 'verification', $verification->id);
+                    $this->compare($evidence, [
+                        'group' => 'verify_et_verifications',
+                        'reference' => $verification->reference,
+                        'amount_cents' => (int) $verification->amount_cents,
+                        'currency' => (string) $verification->currency,
+                        'statuses' => [strtolower((string) $verification->status)],
+                    ], ['record_type' => 'verification', 'record_id' => $verification->id]);
                 }
             });
     }
@@ -228,23 +246,32 @@ final class MarketplaceIndependentAudit
             ->where('event_type', 'sale_settled')->chunkById(200, function ($entries): void {
                 foreach ($entries as $entry) {
                     $order = StorefrontOrder::query()->find($entry->source_id);
-                    if (!$order || !$order->isPlatformCollected()
-                        || !in_array($order->status, ['paid', 'completed', 'fulfilled', 'refunded'], true)) {
-                        $this->issue('orphan_or_nonplatform_sale_journal', 'journal', $entry->id);
+                    if (!$this->validSettledOrder($order)) {
+                        $this->issue('orphan_or_nonplatform_sale_journal', ['record_type' => 'journal', 'record_id' => $entry->id]);
                     }
                 }
             });
     }
 
-    private function compare(?MarketplaceProviderEvidence $evidence, string $group, ?string $reference,
-        int $amountCents, string $currency, array $statuses, string $entity, int $id): void
+    private function validSettledOrder(?StorefrontOrder $order): bool
+    {
+        if ($order === null) {
+            return false;
+        }
+        if (!$order->isPlatformCollected()) {
+            return false;
+        }
+        return in_array($order->status, ['paid', 'completed', 'fulfilled', 'refunded'], true);
+    }
+
+    private function compare(?MarketplaceProviderEvidence $evidence, array $subject, array $record): void
     {
         if ($evidence === null) {
             return;
         }
-        $result = $evidence->compare($group, $reference, $amountCents, $currency, $statuses);
+        $result = $evidence->compare($subject['group'], $subject);
         if ($result !== 'matched') {
-            $this->issue('provider_'.$result, $entity, $id);
+            $this->issue('provider_'.$result, $record);
         }
     }
 
@@ -253,18 +280,19 @@ final class MarketplaceIndependentAudit
         $this->report['counts'][$key]++;
     }
 
-    private function recordJournalError(?string $error, string $entity, int $id): void
+    private function recordJournalError(?string $error, array $record): void
     {
         if ($error !== null) {
-            $this->issue($error, $entity, $id);
+            $this->issue($error, $record);
         }
     }
 
-    private function issue(string $code, string $entity, int $id, int $occurrences = 1): void
+    private function issue(string $code, array $record): void
     {
+        $occurrences = $record['count'] ?? 1;
         $this->report['issue_count'] += $occurrences;
         if (count($this->report['issues']) < 100) {
-            $this->report['issues'][] = ['code' => $code, 'record_type' => $entity, 'record_id' => $id, 'count' => $occurrences];
+            $this->report['issues'][] = ['code' => $code, ...$record, 'count' => $occurrences];
         }
     }
 }
