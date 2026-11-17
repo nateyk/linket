@@ -294,6 +294,7 @@ class AppServiceProvider extends ServiceProvider
             ArchiveExpiredLinkeables::class,
             DisableExpiredLeapLinks::class,
             \App\Payments\Commands\ReconcilePendingVerifications::class,
+            \App\Payments\Commands\AuditVerifyEtRetirement::class,
             \App\Payments\Commands\ProcessDirectSubscriptionRenewals::class,
             \App\Storefront\Commands\GenerateCommissionInvoices::class,
             \App\Storefront\Commands\EnforceCommissionRestrictions::class,
