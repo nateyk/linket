@@ -23,6 +23,16 @@ class AdminPayoutRequestsController extends Controller
     public function index()
     {
         Gate::authorize('admin.access');
+        request()->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'date_from' => ['nullable', 'date_format:Y-m-d'],
+            'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+            'creator' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', 'in:requested,processing,paid,rejected,cancelled'],
+            'withdrawal_method' => ['nullable', 'string', 'max:190'],
+            'transfer_status' => ['nullable', 'in:not_started,submitted,provider_pending,requires_action,successful,failed'],
+            'perPage' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
 
         $withdrawalMethods = DigitalProductWithdrawalMethod::all();
 
@@ -31,13 +41,15 @@ class AdminPayoutRequestsController extends Controller
             ->latest('id');
 
         if (request()->filled('search')) {
-            $searchTerm = '%' . request('search') . '%';
-            $payouts->where(function ($query) use ($searchTerm) {
+            $searchTerm = '%'.addcslashes((string) request('search'), '%_\\').'%';
+            $payouts->where(function (Builder $query) use ($searchTerm): void {
                 $query->where('id', 'like', $searchTerm)
                     ->orWhere('creator_id', 'like', $searchTerm)
                     ->orWhere('payout_method_label', 'like', $searchTerm)
                     ->orWhere('withdrawal_method_name', 'like', $searchTerm)
-                    ->orWhere('payout_destination', 'like', $searchTerm);
+                    ->orWhereHas('creator', fn (Builder $creator) => $creator
+                        ->where('name', 'like', $searchTerm)
+                        ->orWhere('email', 'like', $searchTerm));
             });
         }
 
