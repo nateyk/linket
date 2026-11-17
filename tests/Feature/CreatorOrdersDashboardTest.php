@@ -167,6 +167,79 @@ test('creator orders dashboard lists only owned orders with real summary totals'
         ->assertJsonPath('data.total', 4);
 });
 
+test('gateway-scoped orders and financial metrics exclude historical Verify.et from Chapa totals', function () {
+    [$creator, , $product] = creatorOrdersDashboardFixture();
+    [$otherCreator, , $otherProduct] = creatorOrdersDashboardFixture();
+
+    $chapaPaid = creatorOrdersDashboardOrder($creator, $product, [
+        'payment_gateway' => 'chapa',
+        'status' => 'paid',
+        'gross_amount_cents' => 10000,
+        'creator_earnings_cents' => 8500,
+        'platform_fee_cents' => 1500,
+        'paid_at' => now(),
+    ]);
+    $chapaPending = creatorOrdersDashboardOrder($creator, $product, [
+        'payment_gateway' => 'chapa',
+        'status' => 'pending_payment',
+        'gross_amount_cents' => 4000,
+    ]);
+    $legacyPaid = creatorOrdersDashboardOrder($creator, $product, [
+        'payment_gateway' => 'verify_et',
+        'status' => 'paid',
+        'gross_amount_cents' => 25000,
+        'paid_at' => now(),
+    ]);
+    $legacyReview = creatorOrdersDashboardOrder($creator, $product, [
+        'payment_gateway' => 'verify_et',
+        'status' => 'manual_review',
+        'gross_amount_cents' => 5000,
+    ]);
+    $unowned = creatorOrdersDashboardOrder($otherCreator, $otherProduct, [
+        'payment_gateway' => 'chapa',
+        'status' => 'paid',
+        'gross_amount_cents' => 99000,
+    ]);
+
+    creatorOrdersDashboardActAs($this, $creator);
+
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa')
+        ->assertOk()
+        ->assertJsonPath('data.total', 2)
+        ->assertJsonPath('summary.verified_sales_count', 1)
+        ->assertJsonPath('summary.verified_revenue_cents', 10000)
+        ->assertJsonPath('summary.creator_earnings_cents', 8500)
+        ->assertJsonPath('summary.platform_fee_cents', 1500)
+        ->assertJsonPath('summary.paid_orders_count', 1)
+        ->assertJsonPath('summary.pending_count', 1)
+        ->assertJsonPath('summary.manual_review_count', 0)
+        ->assertJsonFragment(['uuid' => $chapaPaid->uuid])
+        ->assertJsonFragment(['uuid' => $chapaPending->uuid])
+        ->assertJsonMissing(['uuid' => $legacyPaid->uuid])
+        ->assertJsonMissing(['uuid' => $legacyReview->uuid])
+        ->assertJsonMissing(['uuid' => $unowned->uuid]);
+
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=verify_et')
+        ->assertOk()
+        ->assertJsonPath('data.total', 2)
+        ->assertJsonPath('summary.verified_revenue_cents', 25000)
+        ->assertJsonPath('summary.manual_review_count', 1)
+        ->assertJsonFragment(['uuid' => $legacyPaid->uuid])
+        ->assertJsonFragment(['uuid' => $legacyReview->uuid])
+        ->assertJsonMissing(['uuid' => $chapaPaid->uuid]);
+
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=all')
+        ->assertOk()
+        ->assertJsonPath('data.total', 4)
+        ->assertJsonPath('summary.verified_revenue_cents', 35000)
+        ->assertJsonPath('summary.manual_review_count', 1);
+
+    // An archived order can still be inspected securely without re-enabling checkout.
+    $this->getJson('/api/v1/storefront/direct-orders/'.$legacyReview->uuid)
+        ->assertOk()->assertJsonPath('data.payment_gateway', 'verify_et');
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=invalid')->assertUnprocessable();
+});
+
 test('creator can inspect an owned order with masked account evidence and delivery state', function () {
     [$creator, , $product] = creatorOrdersDashboardFixture();
     [$otherCreator] = creatorOrdersDashboardFixture('Other product');
