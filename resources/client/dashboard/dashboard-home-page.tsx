@@ -138,6 +138,12 @@ function StatCards() {
 
   const summary = salesData?.summary;
   const currency = summary?.currency ?? getSiteCurrency();
+  // Missing API totals are unknown, not zero. Preserve loading and error states.
+  const metricValue = (value: number | undefined): number | null | undefined => {
+    if (salesLoading) return null;
+    if (salesError) return undefined;
+    return value;
+  };
 
   const cards: Array<{
     key: string;
@@ -152,7 +158,7 @@ function StatCards() {
       key: 'sales',
       label: <Trans message="Sales" />,
       scope: <Trans message="Net of completed refunds" />,
-      value: salesLoading ? null : salesError ? undefined : (summary?.net_sales_cents ?? 0),
+      value: metricValue(summary?.net_sales_cents),
       icon: CircleDollarSignIcon,
       format: 'currency',
       tone: 'text-primary bg-primary/10',
@@ -161,7 +167,7 @@ function StatCards() {
       key: 'orders',
       label: <Trans message="Orders" />,
       scope: <Trans message="Paid Chapa orders" />,
-      value: salesLoading ? null : salesError ? undefined : (summary?.paid_orders_count ?? 0),
+      value: metricValue(summary?.paid_orders_count),
       icon: ReceiptTextIcon,
       format: 'number',
       tone: 'text-positive bg-positive/10',
@@ -170,7 +176,7 @@ function StatCards() {
       key: 'items-sold',
       label: <Trans message="Items sold" />,
       scope: <Trans message="Units in paid orders" />,
-      value: salesLoading ? null : salesError ? undefined : (summary?.items_sold_count ?? 0),
+      value: metricValue(summary?.items_sold_count),
       icon: PackageCheckIcon,
       format: 'number',
       tone: 'text-muted-foreground bg-muted',
@@ -179,7 +185,7 @@ function StatCards() {
       key: 'average-order',
       label: <Trans message="Average order" />,
       scope: <Trans message="Net sales per paid order" />,
-      value: salesLoading ? null : salesError ? undefined : (summary?.average_order_cents ?? 0),
+      value: metricValue(summary?.average_order_cents),
       icon: ChartNoAxesCombinedIcon,
       format: 'currency',
       tone: 'text-muted-foreground bg-muted',
