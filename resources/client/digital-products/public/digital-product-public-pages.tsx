@@ -539,28 +539,25 @@ export function PublicDigitalProductOrderSuccessPage({
           className={cn(
             'border-b border-[var(--biolink-border)] px-5 py-5 sm:px-6',
             paid
-              ? 'bg-positive/10'
+              ? 'bg-[var(--biolink-surface-strong)] px-6 py-8 sm:py-9'
               : 'bg-[color-mix(in_srgb,var(--biolink-accent,var(--color-primary))_12%,transparent)]',
           )}
         >
           {paid ? (
-            <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-button bg-positive/10 text-positive">
-                <CheckCircle2Icon className="size-5" />
+            <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 text-center">
+              <span className="grid size-14 place-items-center rounded-full bg-positive/10 text-positive">
+                <CheckCircle2Icon className="size-7" aria-hidden="true" />
               </span>
-              <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="text-xl font-semibold tracking-tight">
-                  {isCourse ? (
-                    <Trans message="Your course is ready" />
-                  ) : (
-                    <Trans message="Your download is ready" />
-                  )}
+              <div className="flex flex-col gap-1.5">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  <Trans message="Payment successful!" />
                 </h1>
-                <p className="text-sm text-[var(--biolink-muted-text)]">
-                  <Trans
-                    message="Thanks for your purchase of :product."
-                    values={{product: data.product.title}}
-                  />
+                <p className="text-sm leading-6 text-[var(--biolink-muted-text)]">
+                  {isCourse ? (
+                    <Trans message="Your course is ready. Access it in My Portal." />
+                  ) : (
+                    <Trans message="Your payment is confirmed. Your downloads are ready below." />
+                  )}
                 </p>
               </div>
             </div>
@@ -585,7 +582,7 @@ export function PublicDigitalProductOrderSuccessPage({
           {order.buyer_email && (
             <p className="text-sm text-[var(--biolink-muted-text)]">
               <Trans
-                message="Your receipt is being sent to :email."
+                message={paid ? 'A receipt will be sent to :email.' : 'Your receipt is being sent to :email.'}
                 values={{email: order.buyer_email}}
               />
             </p>
@@ -606,32 +603,26 @@ export function PublicDigitalProductOrderSuccessPage({
                   downloads={order.downloads ?? []}
                 />
               )}
-              {isCourse ? (
+              <div className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-5">
                 <Button
-                  variant="ghost"
-                  className={cn('w-fit', buttonAppearance.className)}
+                  className={cn('min-h-11 w-full', buttonAppearance.className)}
                   style={buttonAppearance.style}
                   render={<a href="/my-portal" />}
                 >
-                  <Trans message="Open My Portal" />
+                  {isCourse ? <BookOpenIcon aria-hidden="true" /> : <ShoppingBagIcon aria-hidden="true" />}
+                  <Trans message={isCourse ? 'Open My Portal' : 'View my purchases'} />
                 </Button>
-              ) : (
-                <p className="text-sm text-[var(--biolink-muted-text)]">
-                  <Trans
-                    message="Find this purchase later in :link."
-                    values={{
-                      link: (
-                        <a
-                          href="/my-portal"
-                          className="font-medium text-[var(--biolink-text)] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
-                        >
-                          <Trans message="My Portal" />
-                        </a>
-                      ),
-                    }}
-                  />
-                </p>
-              )}
+                {data.back_url && (
+                  <Button
+                    variant="outline"
+                    className="min-h-11 w-full border-[var(--biolink-border)] bg-transparent text-[var(--biolink-text)]"
+                    render={<a href={data.back_url} />}
+                  >
+                    <ArrowLeftIcon aria-hidden="true" />
+                    <Trans message="Return to store" />
+                  </Button>
+                )}
+              </div>
             </>
           ) : (
             <PendingOrderState
