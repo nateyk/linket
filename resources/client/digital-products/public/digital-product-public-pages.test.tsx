@@ -105,8 +105,8 @@ describe('painted-panel colors and locale safety', () => {
       'text-[var(--biolink-muted-text,var(--color-muted-foreground))]!',
     );
     expect(page).toContain('text-[var(--biolink-accent,var(--color-primary))]');
-    expect(page).toContain('message="Your course is ready"');
-    expect(page).toContain('message="Your download is ready"');
+    expect(page).toContain('message="Your course is ready. Access it in My Portal."');
+    expect(page).toContain('message="Your payment is confirmed. Your downloads are ready below."');
     expect(page).toContain('message="Open My Portal"');
     expect(page).not.toContain('shadow-xs');
     expect(page).not.toContain('bg-primary/10');
