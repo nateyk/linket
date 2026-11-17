@@ -117,9 +117,7 @@ class ChapaPayoutService
     /** @return array<string, mixed> */
     public function createTransfer(StorefrontPayoutIntent $intent): array
     {
-        if (!config('services.chapa.payouts_enabled', false)) {
-            throw new RuntimeException('Chapa v1 transfer dispatch is disabled.');
-        }
+        app(\App\Storefront\Services\ChapaV1PayoutMode::class)->assertDispatchReady();
         $payout = $intent->payoutRequest()->with(['withdrawalMethod', 'payoutMethod'])->firstOrFail();
         $method = $payout->withdrawalMethod;
         if (!$method || !$method->is_active || !in_array($method->code, [
