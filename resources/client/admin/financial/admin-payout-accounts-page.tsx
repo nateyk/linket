@@ -30,19 +30,22 @@ export function Component() {
   const [error, setError] = useState<string>();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<StatusFilter>('all');
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/api/v1/admin/financial/payout-accounts');
+      const response = await apiClient.get('/api/v1/admin/financial/payout-accounts', {params: {page}});
       setAccounts(response.data.data ?? []);
+      setLastPage(response.data.meta?.last_page ?? 1);
       setError(undefined);
     } catch (reason) {
       setError(getApiErrorMessage(reason));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -95,7 +98,7 @@ export function Component() {
                   aria-label="Search payout accounts"
                   placeholder="Search creator or account"
                   value={query}
-                  onChange={event => setQuery(event.target.value)}
+                  onChange={event => { setQuery(event.target.value); setPage(1); }}
                 />
                 <div className="flex flex-wrap gap-1" role="group" aria-label="Filter account status">
                   {(['all', 'pending', 'active', 'rejected'] as const).map(status => (
@@ -103,7 +106,7 @@ export function Component() {
                       key={status}
                       size="sm"
                       variant={filter === status ? 'default' : 'outline'}
-                      onClick={() => setFilter(status)}
+                      onClick={() => { setFilter(status); setPage(1); }}
                     >
                       {status === 'all' ? <Trans message="All" /> :
                         status === 'pending' ? <Trans message="Pending" /> :
@@ -173,6 +176,13 @@ export function Component() {
                       )}
                     </Table.Body>
                   </Table.Root>
+                  <div className="flex items-center justify-between gap-3 border-t pt-4 text-sm text-muted-foreground">
+                    <span><Trans message="Page" /> {page} / {lastPage}</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" disabled={page <= 1 || loading} onClick={() => setPage(current => current - 1)}><Trans message="Previous" /></Button>
+                      <Button size="sm" variant="outline" disabled={page >= lastPage || loading} onClick={() => setPage(current => current + 1)}><Trans message="Next" /></Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </Card.Content>
