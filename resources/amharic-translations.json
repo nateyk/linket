@@ -412,5 +412,14 @@
   "Create reusable responses for support conversations.": "ለድጋፍ ውይይቶች ደጋግመው የሚጠቀሙባቸውን ምላሾች ይፍጠሩ።",
   "Review ticket volume and agent performance.": "የድጋፍ ጥያቄዎችን ብዛት እና የሰራተኞችን አፈጻጸም ይመልከቱ።",
   "Configure the customer-facing support widget.": "ደንበኞች የሚጠቀሙበትን የድጋፍ መገናኛ ያዋቅሩ።",
-  "Your account does not have access to support management tools.": "መለያዎ የድጋፍ አስተዳደር መሣሪያዎችን የመጠቀም ፈቃድ የለውም።"
+  "Your account does not have access to support management tools.": "መለያዎ የድጋፍ አስተዳደር መሣሪያዎችን የመጠቀም ፈቃድ የለውም።",
+  "Gross sales": "ጠቅላላ ሽያጭ",
+  "Paid orders": "የተከፈሉ ትዕዛዞች",
+  "Creator earnings": "የፈጣሪ ገቢ",
+  "Lifetime · after fees": "ከመጀመሪያው ጀምሮ · ከክፍያዎች በኋላ",
+  "Pending orders": "ክፍያ ያልተጠናቀቁ ትዕዛዞች",
+  "Sales trend": "የሽያጭ አዝማሚያ",
+  "Gross revenue from completed orders in the selected period": "በተመረጠው ጊዜ ውስጥ ከተጠናቀቁ ትዕዛዞች የተገኘ ጠቅላላ ገቢ",
+  "No completed sales in this period": "በዚህ ጊዜ ውስጥ የተጠናቀቀ ሽያጭ የለም",
+  "Completed sales will appear here.": "የተጠናቀቁ ሽያጮች እዚህ ይታያሉ።"
 }

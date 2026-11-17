@@ -35,7 +35,7 @@ beforeEach(() => {
   fixture.loading = false;
   fixture.reportParams = [];
   fixture.workspaceId = 1;
-  fixture.sales = {summary: {verified_sales_count: 0, verified_revenue_cents: 0, pending_count: 0, manual_review_count: 0, currency: 'ETB'}, data: {data: []}, sales_trend: [], verification_allowance: {consumed: 0, remaining: 10, reserved: 0, limit: 10, is_pro: false}};
+  fixture.sales = {summary: {verified_sales_count: 0, verified_revenue_cents: 0, paid_orders_count: 0, creator_earnings_cents: 0, pending_count: 0, manual_review_count: 0, currency: 'ETB'}, data: {data: []}, sales_trend: [], verification_allowance: {consumed: 0, remaining: 10, reserved: 0, limit: 10, is_pro: false}};
   fixture.report = {data: {events: {total: 0, data: []}, countries: {data: []}, referrers: {data: []}}};
   globalThis.IntersectionObserver = class {
     constructor(private callback: IntersectionObserverCallback) {}
@@ -51,26 +51,41 @@ function showDashboard() {
   render(<QueryClientProvider client={client}><MemoryRouter><Component /></MemoryRouter></QueryClientProvider>);
 }
 
-it('renders empty sales and the real free allowance without payout metrics', async () => {
+it('shows sales and engagement widgets without legacy Verify.et allowance or review cards', async () => {
   showDashboard();
   expect(await screen.findByText('No orders yet')).toBeTruthy();
-  expect(screen.getByText('No verified sales in this period')).toBeTruthy();
-  expect(screen.getByText('0 of 10 used')).toBeTruthy();
+  expect(screen.getByText('No completed sales in this period')).toBeTruthy();
+  for (const heading of ['Gross sales', 'Paid orders', 'Creator earnings', 'Pending orders']) {
+    expect(screen.getByText(heading)).toBeTruthy();
+  }
+  for (const obsolete of ['Verification allowance', 'Payments needing manual review', 'Current subscription', 'Awaiting payment or verification']) {
+    expect(screen.queryByText(obsolete)).toBeNull();
+  }
   expect(await screen.findByText('No engagement activity yet')).toBeTruthy();
   expect(await screen.findByText('No location data yet')).toBeTruthy();
   expect(fixture.reportParams).toEqual(expect.arrayContaining([expect.objectContaining({metric: 'events', dashboard: '1', workspace_id: '1'}), expect.objectContaining({metric: 'countries', dashboard: '1', workspace_id: '1'})]));
   expect(screen.queryByText('Available for payout')).toBeNull();
 });
 
-it('renders Pro and free quota exhaustion from the backend response', async () => {
-  fixture.sales.verification_allowance = {consumed: 9, remaining: 1, reserved: 0, limit: 10, is_pro: false};
+it('shows paid orders and earnings from the API without mistaking earnings for a withdrawable balance', async () => {
+  fixture.sales.summary = {
+    verified_sales_count: 6,
+    verified_revenue_cents: 184000,
+    paid_orders_count: 4,
+    creator_earnings_cents: 147200,
+    pending_count: 2,
+    manual_review_count: 3,
+    currency: 'ETB',
+  };
+  fixture.sales.verification_allowance = {consumed: 10, remaining: 0, reserved: 0, limit: 10, is_pro: false};
   showDashboard();
-  expect(await screen.findByText('9 of 10 used')).toBeTruthy();
-  expect(screen.getByRole('link', {name: 'Explore Pro'})).toBeTruthy();
-  cleanup();
-  fixture.sales.verification_allowance.is_pro = true;
-  showDashboard();
-  expect(await screen.findByText('Unlimited eligible verified sales')).toBeTruthy();
+  expect(await screen.findByText('184000 ETB cents')).toBeTruthy();
+  expect(screen.getByText('147200 ETB cents')).toBeTruthy();
+  expect(screen.getByText('Lifetime · after fees')).toBeTruthy();
+  expect(screen.getByText('Paid orders')).toBeTruthy();
+  expect(screen.getByText('Pending orders')).toBeTruthy();
+  expect(screen.queryByText('Verification allowance')).toBeNull();
+  expect(screen.queryByText('Available for payout')).toBeNull();
 });
 
 it('renders order loading errors instead of invented sales', async () => {
@@ -87,14 +102,14 @@ it('shows loading placeholders while the sales request is pending', () => {
 });
 
 it('renders API-provided verified revenue and recent verification statuses', async () => {
-  fixture.sales.summary = {verified_sales_count: 1, verified_revenue_cents: 4200, pending_count: 1, manual_review_count: 1, currency: 'ETB'};
+  fixture.sales.summary = {verified_sales_count: 1, verified_revenue_cents: 4200, paid_orders_count: 1, creator_earnings_cents: 3900, pending_count: 1, manual_review_count: 1, currency: 'ETB'};
   fixture.sales.data.data = [
     {uuid: 'paid', status: 'paid', gross_amount_cents: 4200, currency: 'ETB', buyer_name: 'Sample buyer', created_at: '2026-10-10T10:00:00Z', product: {title: 'Paid workbook'}},
     {uuid: 'review', status: 'manual_review', gross_amount_cents: 3300, currency: 'ETB', buyer_name: null, created_at: '2026-10-11T10:00:00Z', product: {title: 'Review workbook'}},
   ];
   fixture.sales.sales_trend = [{date: '2026-10-10', amount_cents: 4200}];
   showDashboard();
-  expect(await screen.findByText('4200 ETB cents')).toBeTruthy();
+  expect((await screen.findAllByText('4200 ETB cents')).length).toBeGreaterThan(0);
   expect(screen.getAllByText('Paid workbook').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Sample buyer').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Guest buyer').length).toBeGreaterThan(0);
@@ -102,7 +117,7 @@ it('renders API-provided verified revenue and recent verification statuses', asy
   expect(screen.getAllByText('Manual review needed').length).toBeGreaterThan(0);
   expect(screen.getByRole('link', {name: 'See all orders'})).toBeTruthy();
   expect(screen.getAllByText('#paid').length).toBeGreaterThan(0);
-  expect(screen.queryByText('No verified sales in this period')).toBeNull();
+  expect(screen.queryByText('No completed sales in this period')).toBeNull();
 });
 
 it('presents compact, accessible recent-order table and mobile rows', async () => {
