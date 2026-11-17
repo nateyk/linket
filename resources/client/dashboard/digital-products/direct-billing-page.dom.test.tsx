@@ -159,7 +159,7 @@ vi.mock('@shadcn/forms/select/select', () => ({
       <select
         value={value}
         name={name}
-        aria-label={name?.includes('per-page') ? 'Rows per page' : 'Status'}
+        aria-label={name === 'orders-gateway' ? 'Payment source' : name?.includes('per-page') ? 'Rows per page' : 'Status'}
         onChange={event => onValueChange(event.target.value)}
       >
         {children}
@@ -201,6 +201,9 @@ it('applies redirected order filters to the controls and request', async () => {
 const summary = {
   verified_sales_count: 2,
   verified_revenue_cents: 25000,
+  paid_orders_count: 2,
+  creator_earnings_cents: 20000,
+  platform_fee_cents: 5000,
   pending_count: 1,
   manual_review_count: 1,
   rejected_count: 1,
@@ -290,8 +293,9 @@ const baseOrder = {
   transaction_reference: 'REF-ONE',
   gross_amount_cents: 10000,
   currency: 'ETB',
-  payment_method: 'cbe',
-  account_ending: '6789',
+  payment_gateway: 'chapa',
+  payment_method: 'chapa',
+  account_ending: null,
   created_at: '2026-10-29T10:00:00Z',
   product: {id: 1, title: 'Workbook', status: 'approved'},
 };
@@ -302,11 +306,20 @@ it('shows summary and orders, and sends status, search and page filters to the s
 
   expect((await screen.findAllByText('Workbook')).length).toBeGreaterThan(0);
   expect(screen.getAllByText('25000 ETB').length).toBeGreaterThan(0);
-  expect(screen.getByText('Verified sales')).toBeTruthy();
+  expect(screen.getByText('Gross sales')).toBeTruthy();
+  expect(screen.getByText('Paid orders')).toBeTruthy();
+  expect(screen.getByText('Pending payments')).toBeTruthy();
+  expect(screen.getByText('Chapa payments only · lifetime')).toBeTruthy();
+  expect(screen.queryByText('Pending & Review')).toBeNull();
+  expect(screen.queryByRole('tab', {name: 'Transactions'})).toBeNull();
+  expect(screen.queryByRole('tab', {name: /Manual review/})).toBeNull();
   expect(screen.getByText('Creator earnings')).toBeTruthy();
   expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
   expect(screen.getByText('Track buyer payments and delivery. Only verified payments count as sales.')).toBeTruthy();
 
+  fireEvent.change(screen.getByLabelText('Payment source'), {
+    target: {value: 'all'},
+  });
   fireEvent.change(screen.getByLabelText('Status'), {
     target: {value: 'manual_review'},
   });
@@ -398,9 +411,12 @@ it('offers direct page navigation while keeping previous and next controls', asy
 
 it('opens the read-only order detail with masked account and delivery state', async () => {
   mockApi({
-    orders: [{...baseOrder, status: 'manual_review'}],
+    orders: [{...baseOrder, payment_gateway: 'verify_et', payment_method: 'cbe', account_ending: '6789', status: 'manual_review'}],
     detail: {
       ...baseOrder,
+      payment_gateway: 'verify_et',
+      payment_method: 'cbe',
+      account_ending: '6789',
       status: 'manual_review',
       buyer_email: 'buyer@example.test',
       platform_fee_cents: 500,
@@ -446,6 +462,8 @@ it('opens the read-only order detail with masked account and delivery state', as
 
   expect(await screen.findByText('Order details')).toBeTruthy();
   expect(screen.getByText('Payment information')).toBeTruthy();
+  expect(screen.getByText('Historical verification evidence')).toBeTruthy();
+  expect(screen.getByText('Historical receiving account')).toBeTruthy();
   expect(screen.getAllByText('REF-ONE').length).toBeGreaterThan(0);
   expect(screen.getAllByText('•••• 6789')).toHaveLength(2);
   expect(screen.getByText('buyer@example.test', {exact: false})).toBeTruthy();
@@ -463,9 +481,10 @@ it('opens the read-only order detail with masked account and delivery state', as
 
 it('explains missing recipient evidence without suggesting payment is verified', async () => {
   mockApi({
-    orders: [{...baseOrder, status: 'manual_review'}],
+    orders: [{...baseOrder, payment_gateway: 'verify_et', status: 'manual_review'}],
     detail: {
       ...baseOrder,
+      payment_gateway: 'verify_et',
       status: 'manual_review',
       verification: {
         status: 'manual_review', provider: 'dashen', attempts: 1,
@@ -521,54 +540,59 @@ for (const [status, label] of [
   });
 }
 
-it('loads transactions and manual review in separate tabs', async () => {
-  mockApi({
-    orders: [baseOrder],
-    transactions: [
-      {
-        id: 9,
-        reference: 'TX-REF',
-        status: 'success',
-        provider: 'cbe',
-        amount_cents: 10000,
-        currency: 'ETB',
-        attempt: 1,
-        created_at: '2026-10-29T10:00:00Z',
-        order_uuid: 'order-1',
-        order_status: 'paid',
-        product_title: 'Workbook',
-        buyer_name: 'Buyer One',
-      },
-    ],
-    manualOrders: [{...baseOrder, uuid: 'order-2', status: 'manual_review'}],
-  });
+it('switches to the historical source without recreating Verify.et transaction or manual-review tabs', async () => {
+  mockApi({orders: [{...baseOrder, uuid: 'legacy-review', payment_gateway: 'verify_et', status: 'manual_review'}]});
   render(<Component />);
   await screen.findAllByText('Workbook');
-
-  fireEvent.click(screen.getByRole('tab', {name: 'Transactions'}));
-  expect((await screen.findAllByText('TX-REF')).length).toBeGreaterThan(0);
-  expect(screen.getByRole('list', {name: 'Transactions'})).toBeTruthy();
   expect(api.get).toHaveBeenCalledWith(
-    '/api/v1/storefront/direct-orders/transactions',
-    expect.any(Object),
+    '/api/v1/storefront/direct-orders',
+    expect.objectContaining({params: expect.objectContaining({gateway: 'chapa'})}),
   );
 
-  fireEvent.click(screen.getByRole('tab', {name: /Manual review/}));
+  fireEvent.change(screen.getByLabelText('Payment source'), {
+    target: {value: 'verify_et'},
+  });
   await waitFor(() =>
     expect(api.get).toHaveBeenCalledWith(
       '/api/v1/storefront/direct-orders',
-      expect.objectContaining({
-        params: expect.objectContaining({status: 'manual_review'}),
-      }),
+      expect.objectContaining({params: expect.objectContaining({gateway: 'verify_et'})}),
     ),
   );
-  expect(
-    await screen.findByText(
-      'These payments could not be verified automatically. Review is read-only and Linket support resolves them. You cannot mark an order as paid.',
+  expect(screen.getByText('Historical Verify.et orders · lifetime')).toBeTruthy();
+  expect(screen.queryByRole('tab', {name: 'Transactions'})).toBeNull();
+  expect(screen.queryByRole('tab', {name: /Manual review/})).toBeNull();
+  expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/direct-orders/transactions', expect.anything());
+  fireEvent.change(screen.getByLabelText('Status'), {
+    target: {value: 'manual_review'},
+  });
+  await waitFor(() =>
+    expect(api.get).toHaveBeenCalledWith(
+      '/api/v1/storefront/direct-orders',
+      expect.objectContaining({params: expect.objectContaining({gateway: 'verify_et', status: 'manual_review'})}),
     ),
-  ).toBeTruthy();
+  );
+});
 
-  expect(screen.queryByRole('tab', {name: 'Billing'})).toBeNull();
+it('keeps Chapa details provider-specific without inventing Verify.et evidence', async () => {
+  mockApi({
+    orders: [baseOrder],
+    detail: {
+      ...baseOrder,
+      paid_at: '2026-11-17T08:00:00Z',
+      creator_earnings_cents: 9000,
+      platform_fee_cents: 1000,
+      verification: null,
+      delivery: {status: 'paid', entitlements_count: 0, downloaded_count: 0, download_limit: 0, files: []},
+    },
+  });
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
+  expect(await screen.findByText('Chapa payment status')).toBeTruthy();
+  expect(screen.getByText('Paid at')).toBeTruthy();
+  expect(screen.queryByText('Historical verification evidence')).toBeNull();
+  expect(screen.queryByText('Historical receiving account')).toBeNull();
+  expect(screen.queryByText('No provider verification has been recorded for this order.')).toBeNull();
+  expect(screen.getByText(/Payment status reflects Linket/)).toBeTruthy();
 });
 
 it('surfaces order loading errors', async () => {
@@ -607,8 +631,9 @@ it('clearly breaks down free downloads from paid orders in summary', async () =>
 
   render(<Component />);
 
-  expect(await screen.findByText('Verified sales')).toBeTruthy();
-  expect(screen.getByText('3 free orders (0 paid)')).toBeTruthy();
+  expect(await screen.findByText('Gross sales')).toBeTruthy();
+  expect(screen.getByText('Paid orders')).toBeTruthy();
   expect(screen.getByText('Creator earnings')).toBeTruthy();
-  expect(screen.getByText('Net platform earnings')).toBeTruthy();
+  expect(screen.getByText('After fees · not withdrawable balance')).toBeTruthy();
+  expect(screen.queryByText('Net platform earnings')).toBeNull();
 });
