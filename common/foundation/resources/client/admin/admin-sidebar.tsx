@@ -16,18 +16,12 @@ import {Sidebar} from '@common/ui/dashboard/sidebar';
 import {Logo} from '@common/ui/navigation/navbar/logo';
 import {NavbarAuthMenu} from '@common/ui/navigation/navbar/navbar-auth-menu';
 import {Avatar} from '@shadcn/avatar/avatar';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@shadcn/collapsible/collapsible';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
-import {cn} from '@ui/utils/cn';
-import {BanknoteArrowUpIcon, BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, LandmarkIcon, WalletCardsIcon} from 'lucide-react';
-import {JSXElementConstructor, use, useState} from 'react';
-import {Link, NavLink, useLocation, useSearchParams} from 'react-router';
+import {BanknoteArrowUpIcon, BellIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, LandmarkIcon, WalletCardsIcon} from 'lucide-react';
+import {JSXElementConstructor, use} from 'react';
+import {NavLink, useLocation} from 'react-router';
 
 const DIGITAL_PRODUCTS_PATH = '/admin/items';
 
@@ -36,12 +30,6 @@ export function AdminSidebar() {
   const isCompactMode = !isMobileMode && leftSidebar.status === 'collapsed';
   const adminMenu = useCustomMenu('admin-sidebar');
   const {pathname} = useLocation();
-  const [searchParams] = useSearchParams();
-  const onDigitalProducts = pathname === DIGITAL_PRODUCTS_PATH;
-  const updatedActive =
-    onDigitalProducts && searchParams.get('scope') === 'updated';
-  const allProductsActive = onDigitalProducts && !updatedActive;
-  const [productsOpen, setProductsOpen] = useState(onDigitalProducts);
   const hasFinancial = adminMenu?.items.some(
     item =>
       item.action === '/admin/financial' ||
@@ -88,79 +76,16 @@ export function AdminSidebar() {
                 !isObsoleteAdminSidebarItem(item.action)
               }
             />
-            {isCompactMode ? (
-              <Sidebar.Menu>
-                <Sidebar.MenuItem>
-                  <Sidebar.MenuButton
-                    render={<Link to={DIGITAL_PRODUCTS_PATH} />}
-                    icon={<StoreIcon />}
-                  >
-                    <Trans message="Products" />
-                  </Sidebar.MenuButton>
-                </Sidebar.MenuItem>
-              </Sidebar.Menu>
-            ) : (
-              <Sidebar.Menu>
-                <Sidebar.MenuItem>
-                  <Collapsible
-                    open={productsOpen}
-                    onOpenChange={setProductsOpen}
-                  >
-                    <CollapsibleTrigger
-                      render={
-                        <Sidebar.MenuButton
-                          icon={<StoreIcon />}
-                          rightIcon={
-                            <ChevronRightIcon
-                              className={cn(
-                                'transition-transform duration-150',
-                                productsOpen && 'rotate-90',
-                              )}
-                            />
-                          }
-                        />
-                      }
-                    >
-                      <Trans message="Products" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <Sidebar.Menu className="ps-5">
-                        <Sidebar.MenuItem>
-                          <Sidebar.MenuButton
-                            size="sm"
-                            render={
-                              <Link
-                                to={DIGITAL_PRODUCTS_PATH}
-                                aria-current={
-                                  allProductsActive ? 'page' : undefined
-                                }
-                              />
-                            }
-                          >
-                            <Trans message="All products" />
-                          </Sidebar.MenuButton>
-                        </Sidebar.MenuItem>
-                        <Sidebar.MenuItem>
-                          <Sidebar.MenuButton
-                            size="sm"
-                            render={
-                              <Link
-                                to={`${DIGITAL_PRODUCTS_PATH}?scope=updated`}
-                                aria-current={
-                                  updatedActive ? 'page' : undefined
-                                }
-                              />
-                            }
-                          >
-                            <Trans message="Updated" />
-                          </Sidebar.MenuButton>
-                        </Sidebar.MenuItem>
-                      </Sidebar.Menu>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </Sidebar.MenuItem>
-              </Sidebar.Menu>
-            )}
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to={DIGITAL_PRODUCTS_PATH} />}
+                  icon={<StoreIcon />}
+                >
+                  <Trans message="Items" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
             <Sidebar.Menu>
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
