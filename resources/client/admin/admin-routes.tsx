@@ -254,6 +254,14 @@ export const adminRoutes: RouteObject[] = [
           import('@app/admin/kyc/admin-kyc-verifications-page'),
       },
       {
+        path: 'payout-accounts',
+        lazy: () => import('@app/admin/financial/admin-payout-accounts-page'),
+      },
+      {
+        path: 'withdrawal-methods',
+        loader: () => redirect('/admin/payout-accounts'),
+      },
+      {
         path: 'withdrawals',
         loader: () => redirect('/admin/financial/withdrawals'),
       },
@@ -281,7 +289,7 @@ export const adminRoutes: RouteObject[] = [
           },
           {
             path: 'withdrawal-methods',
-            lazy: () => import('@app/admin/financial/admin-receiving-accounts-page'),
+            loader: () => redirect('/admin/payout-accounts'),
           },
           {
             path: 'withdrawal-methods/legacy',
