@@ -258,6 +258,10 @@ export const adminRoutes: RouteObject[] = [
         lazy: () => import('@app/admin/financial/admin-payout-accounts-page'),
       },
       {
+        path: 'payout-acc',
+        loader: () => redirect('/admin/payout-accounts'),
+      },
+      {
         path: 'withdrawal-methods',
         loader: () => redirect('/admin/payout-accounts'),
       },
