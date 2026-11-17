@@ -22,7 +22,7 @@ final class EtbMajorAmount
         }
 
         $value = trim((string) $amount);
-        if (preg_match('/^([0-9]{1,15})(?:\.([0-9]{1,2}))?$/D', $value, $matches) !== 1) {
+        if (preg_match('/^([0-9]{1,15})(?:\.([0-9]{1,2})(?:0+)?)?$/D', $value, $matches) !== 1) {
             return null;
         }
 
