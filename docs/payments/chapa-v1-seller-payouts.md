@@ -1,6 +1,6 @@
 # Linket seller withdrawals — Chapa v1
 
-**Status:** Implementation is merged into `main`; live Chapa v1 seller payouts remain disabled with `CHAPA_V1_PAYOUTS_ENABLED=false`. Test-mode acceptance and exact provider callback verification must pass before any live payout activation.
+**Status:** Sandbox-only test payout dispatch can be enabled with a `CHASECK_TEST-` platform key and `CHAPA_V1_TEST_PAYOUTS_ENABLED=true`. Live Chapa v1 payouts remain separately disabled with `CHAPA_V1_PAYOUTS_ENABLED=false`. Provider callback signatures and real test verification still require genuine Chapa delivery acceptance before live activation.
 
 ## Architecture and screens
 
@@ -27,6 +27,48 @@ Newly seeded wallets are disabled by default. Existing enable/disable preference
 3. Run the new migration through the normal deployment process. This does **not** authorize deploying the draft implementation to production.
 4. Open Admin Finance settings; enable individual wallet providers **only after test-mode acceptance**, then approve seller account details. Existing accounts require renewed approval.
 5. Ensure the Chapa merchant's **available ETB balance** covers intended transfers. Chapa explicitly warns repeated insufficient-balance submissions can block access.
+
+## Activate sandbox transfers on the deployed test installation
+
+This is a **sandbox-only** activation. Test database records do not change the
+semantics of a LIVE Chapa credential; a LIVE key can move real money.
+
+1. In the platform Chapa settings, configure the **TEST** secret key
+   (prefix \`CHASECK_TEST-\`). Do not paste this key into tickets or commits.
+2. Configure the Chapa transfer approval secret on the server and register
+   \`https://linket.agrigebeya.com/api/v1/chapa/transfer-approval\` in the
+   matching Chapa **TEST** merchant dashboard.
+3. Set \`CHAPA_V1_TEST_PAYOUTS_ENABLED=true\` (enabled by default in this
+   rollout) and keep \`CHAPA_V1_PAYOUTS_ENABLED=false\`. Refresh Laravel
+   configuration cache using the normal deployment process.
+4. In **Admin → Payout accounts**, approve a *synthetic test creator's*
+   receiving account; in Finance settings, enable that test withdrawal
+   method. Use a provider-supported test destination.
+5. Record a **genuine test-mode sale** through the normal checkout and
+   confirm that the Chapa sale journal clears and the configured hold
+   period expires. Unbacked legacy or invented sales **do not** make funds
+   withdrawable.
+6. Create a small ETB test withdrawal, open **Admin → Withdrawals**,
+   approve, then manually select **Submit transfer to Chapa**. The button
+   shows test mode; it remains disabled if the approval secret is absent.
+7. Record the response and immutable merchant reference. A queued response
+   remains **Processing**, never Paid. Use **Verify settlement** with the
+   same reference; validate success, failure, or pending. Never re-submit
+   after a timeout or ambiguous provider response.
+8. Repeat with failed/pending test statuses, disabled providers, revoked
+   approval, and duplicate request attempts. The ledger must release
+   reservations only on verified failure and record disbursement once
+   on verified success.
+
+The review API only exposes mode name, enabled state, and whether the approval
+secret is configured; it never returns any secrets. The sandbox toggle does
+**not** enable a LIVE key. Live payout dispatch requires the existing,
+separate \`CHAPA_V1_PAYOUTS_ENABLED\` production switch.
+
+**Acceptance:** Chapa's real server-approval signature derivation and transfer
+verification payload still need observation using real Chapa test deliveries.
+Synthetic \`Http::fake()\` tests prove our application guards, not provider
+acceptance. Do not enable real transfers on the strength of fixture data.
 
 ## Read-only test-mode audit (no payout side effects)
 
