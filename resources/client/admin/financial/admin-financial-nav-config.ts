@@ -26,7 +26,7 @@ export const financialNavItems: FinancialNavItem[] = [
   {
     label: message('Withdrawals'),
     description: message('Creator payout requests & settlements'),
-    to: '/admin/financial/withdrawals',
+    to: '/admin/withdrawals',
     icon: CreditCardIcon,
   },
   {

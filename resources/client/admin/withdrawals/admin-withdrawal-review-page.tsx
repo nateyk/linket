@@ -103,6 +103,7 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
     try {
       const res = await apiClient.get(`/api/v1/admin/withdrawals/${withdrawalId}/review`);
       setPayout(res.data.data);
+      setError(undefined);
     } catch {
       setError('Unable to load withdrawal request.');
     } finally {
@@ -170,6 +171,7 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
 
   return {
     payout,
+    reload: load,
     loading,
     saving,
     error,
@@ -198,7 +200,33 @@ export function Component() {
     );
   }
 
-  if (!state.payout) return null;
+  if (!state.payout) {
+    return (
+      <DashboardLayout.MainSection>
+        <DashboardLayout.SectionHeader>
+          <DashboardLayout.SidebarToggle />
+          <DashboardLayout.SectionTitle>
+            <Trans message="Withdrawal review" />
+          </DashboardLayout.SectionTitle>
+          <Button variant="outline" nativeButton={false} render={<Link to="/admin/withdrawals" />}>
+            <ArrowLeftIcon aria-hidden="true" />
+            <Trans message="Withdrawals" />
+          </Button>
+        </DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionContent className="p-4">
+          <div className="mx-auto flex max-w-3xl flex-col items-start gap-4 py-8">
+            <p role="alert" className="flex items-center gap-2 text-sm text-destructive">
+              <CircleAlertIcon className="size-4 shrink-0" aria-hidden="true" />
+              {state.error ?? <Trans message="Withdrawal request was not found." />}
+            </p>
+            <Button variant="outline" onClick={() => void state.reload()}>
+              <Trans message="Try again" />
+            </Button>
+          </div>
+        </DashboardLayout.SectionContent>
+      </DashboardLayout.MainSection>
+    );
+  }
 
   return (
     <DashboardLayout.MainSection>

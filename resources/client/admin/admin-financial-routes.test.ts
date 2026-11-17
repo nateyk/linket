@@ -58,28 +58,32 @@ describe('admin financial routes and redirects', () => {
     }
   });
 
-  it('redirects /admin/withdrawals to /admin/financial/withdrawals', async () => {
-    const route = adminChildren.find(r => r.path === 'withdrawals');
-    expect(route).toBeDefined();
-    expect(route?.loader).toBeTypeOf('function');
-    const response = await (route!.loader as any)({
-      params: {},
-      request: new Request('http://localhost/admin/withdrawals'),
-    });
-    expect(response.status).toBe(302);
-    expect(response.headers.get('Location')).toBe('/admin/financial/withdrawals');
+  it('registers canonical top-level Withdrawals and Review pages', () => {
+    const queue = adminChildren.find(r => r.path === 'withdrawals');
+    const review = adminChildren.find(r => r.path === 'withdrawals/:withdrawalId/review');
+    expect(queue?.lazy).toBeTypeOf('function');
+    expect(queue?.loader).toBeUndefined();
+    expect(review?.lazy).toBeTypeOf('function');
+    expect(review?.loader).toBeUndefined();
   });
 
-  it('redirects /admin/withdrawals/:id/review to nested financial route', async () => {
-    const route = adminChildren.find(r => r.path === 'withdrawals/:withdrawalId/review');
-    expect(route).toBeDefined();
-    expect(route?.loader).toBeTypeOf('function');
-    const response = await (route!.loader as any)({
-      params: {withdrawalId: '42'},
-      request: new Request('http://localhost/admin/withdrawals/42/review'),
-    });
-    expect(response.status).toBe(302);
-    expect(response.headers.get('Location')).toBe('/admin/financial/withdrawals/42/review');
+  it('redirects historical nested Financial withdrawal links to the main admin pages', async () => {
+    const financialRoute = adminChildren.find(r => r.path === 'financial');
+    const children = financialRoute?.children as RouteObject[];
+    const cases = [
+      {path: 'withdrawals', target: '/admin/withdrawals', id: undefined},
+      {path: 'withdrawals/:withdrawalId/review', target: '/admin/withdrawals/42/review', id: '42'},
+    ];
+    for (const item of cases) {
+      const alias = children.find(r => r.path === item.path);
+      expect(alias?.loader).toBeTypeOf('function');
+      const response = await (alias!.loader as any)({
+        params: {withdrawalId: item.id},
+        request: new Request('http://localhost/admin/financial/withdrawals'),
+      });
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toBe(item.target);
+    }
   });
 
   it('registers withdrawals, review, and payment-activity as children under financial', () => {
