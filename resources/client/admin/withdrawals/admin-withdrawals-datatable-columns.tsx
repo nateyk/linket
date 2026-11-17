@@ -24,6 +24,7 @@ export type Payout = {
   withdrawal_method_name?: string | null;
   created_at: string;
   creator?: {id: number; name: string; email: string};
+  latest_payout_intent?: {status: string} | null;
 };
 
 const statusLabels: Record<PayoutStatus, string> = {
@@ -99,6 +100,14 @@ export const adminWithdrawalsColumns: ColumnDef<Payout>[] = [
     cell: ({row}) => <WithdrawalStatusBadge status={row.original.status} />,
   },
   {
+    id: 'transfer_status',
+    size: 145,
+    header: () => <Trans message="Transfer" />,
+    cell: ({row}) => (
+      <TransferStatusBadge status={row.original.latest_payout_intent?.status} />
+    ),
+  },
+  {
     id: 'created_at',
     accessorKey: 'created_at',
     enableSorting: true,
@@ -139,6 +148,32 @@ export function WithdrawalActionsButton({payout}: {payout: Payout}) {
         <Trans message="Review" />
       </Button>
     </div>
+  );
+}
+
+const transferLabels: Record<string, string> = {
+  prepared: 'Prepared',
+  submitted: 'Unconfirmed',
+  provider_pending: 'Queued',
+  requires_action: 'Needs action',
+  successful: 'Settled',
+  failed: 'Failed',
+};
+
+function TransferStatusBadge({status}: {status?: string}) {
+  if (!status) {
+    return <span className="text-xs text-muted-foreground"><Trans message="Not submitted" /></span>;
+  }
+
+  const variant = status === 'successful'
+    ? 'positive'
+    : status === 'failed'
+      ? 'destructive'
+      : 'outline';
+  return (
+    <Badge variant={variant}>
+      <Trans message={transferLabels[status] ?? status.replaceAll('_', ' ')} />
+    </Badge>
   );
 }
 
