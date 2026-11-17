@@ -122,6 +122,11 @@ class PayoutRequestService
                     'payout_method' => __('Approve the receiving account and enable its provider before approving withdrawal.'),
                 ]);
             }
+            if ($target === 'processing' && !$this->isWithinCurrentMethodLimits($payout)) {
+                throw ValidationException::withMessages([
+                    'amount_cents' => __('The provider withdrawal limits changed. Review the request before approving it.'),
+                ]);
+            }
 
             // Automated transfers must only be marked paid by verified Chapa settlement.
             if ($target === 'paid' && ($payout->withdrawalMethod?->code !== 'other'
@@ -203,6 +208,12 @@ class PayoutRequestService
             || blank($payout->bank_code_snapshot)) {
             throw ValidationException::withMessages(['payout_method' => __('The approved receiving account is unavailable or was modified.')]);
         }
+        if (!$this->isWithinCurrentMethodLimits($payout)) {
+            throw ValidationException::withMessages([
+                'amount_cents' => __('The provider withdrawal limits changed. Review the request before transfer.'),
+            ]);
+        }
+
         if (!in_array($payout->withdrawalMethod->code, [
             'bank_transfer', ...ChapaPayoutService::WALLET_CODES,
         ], true)) {
@@ -227,6 +238,16 @@ class PayoutRequestService
         $this->activity($payout, $actorId, 'chapa_transfer_submitted', "Chapa v1 reference: {$intent->merchant_reference}; status: {$intent->status}");
 
         return $intent;
+    }
+
+    private function isWithinCurrentMethodLimits(PayoutRequest $payout): bool
+    {
+        $method = $payout->withdrawalMethod;
+        $minimum = max(100, (int) ($method?->minimum_amount_cents ?? 0));
+        $maximum = (int) ($method?->maximum_amount_cents ?? 0);
+        $amount = (int) $payout->amount_cents;
+
+        return $amount >= $minimum && ($maximum === 0 || $amount <= $maximum);
     }
 
     public static function canTransition(string $from, string $to): bool
