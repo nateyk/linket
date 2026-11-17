@@ -117,9 +117,7 @@ class ChapaPayoutService
     /** @return array<string, mixed> */
     public function createTransfer(StorefrontPayoutIntent $intent): array
     {
-        if (!config('services.chapa.payouts_enabled', false)) {
-            throw new RuntimeException('Chapa v1 transfer dispatch is disabled.');
-        }
+        app(\App\Storefront\Services\ChapaV1PayoutMode::class)->assertDispatchReady();
         $payout = $intent->payoutRequest()->with(['withdrawalMethod', 'payoutMethod'])->firstOrFail();
         $method = $payout->withdrawalMethod;
         if (!$method || !$method->is_active || !in_array($method->code, [
@@ -153,14 +151,14 @@ class ChapaPayoutService
 
         return app(ChapaV1TransferClient::class)->create(
             app(LinketChapaManager::class)->platformSecret(),
-            [
+            app(\App\Storefront\Services\ChapaV1PayoutMode::class)->withTestStatus([
                 'account_name' => (string) $payout->account_holder_snapshot,
                 'account_number' => $accountNumber,
                 'amount' => number_format(((int) $intent->amount_cents) / 100, 2, '.', ''),
                 'currency' => 'ETB',
                 'reference' => (string) $intent->merchant_reference,
                 'bank_code' => (int) $bank['id'],
-            ],
+            ]),
         );
     }
 

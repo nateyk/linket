@@ -306,7 +306,9 @@ class PayoutSystemTest extends TestCase
 
         DigitalProductWithdrawalMethod::query()->findOrFail($account->withdrawal_method_id)
             ->update(['maximum_amount_cents' => 5000]);
-        config()->set('services.chapa.payouts_enabled', true);
+        config()->set('services.chapa.secret', 'CHASECK_TEST-fixture-limit');
+        config()->set('services.chapa.test_payouts_enabled', true);
+        config()->set('services.chapa.payouts_enabled', false);
         Http::fake();
 
         try {
@@ -716,7 +718,11 @@ class PayoutSystemTest extends TestCase
             'destination' => $destination,
         ]);
 
-        config(['services.chapa.secret' => 'platform-secret', 'services.chapa.payouts_enabled' => true]);
+        config(['services.chapa.secret' => 'CHASECK_TEST-log-fixture',
+            'services.chapa.test_payouts_enabled' => true,
+            'services.chapa.test_transfer_status' => 'failed',
+            'services.chapa.transfer_approval_secret' => 'synthetic-approval-fixture',
+            'services.chapa.payouts_enabled' => false]);
         Cache::flush();
         Http::fake([
             'https://api.chapa.co/v1/banks' => Http::response([
@@ -746,6 +752,9 @@ class PayoutSystemTest extends TestCase
             Log::swap($original);
         }
 
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/v1/transfers')
+            && $request->data()['status'] === 'failed'
+            && $request->data()['currency'] === 'ETB');
         $logged = json_encode($logger->records);
         $this->assertStringNotContainsString($destination, $logged);
         $this->assertStringNotContainsString('251911223344', $logged);

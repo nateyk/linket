@@ -28,7 +28,9 @@ class ChapaV1TransferApprovalContractTest extends TestCase
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', ':memory:');
         config()->set('services.chapa.transfer_approval_secret', self::SECRET);
-        config()->set('services.chapa.payouts_enabled', true);
+        config()->set('services.chapa.secret', 'CHASECK_TEST-fixture-approval');
+        config()->set('services.chapa.test_payouts_enabled', true);
+        config()->set('services.chapa.payouts_enabled', false);
         Http::fake();
         $this->createSchema();
         $this->seedApprovedTransfer();
@@ -195,9 +197,10 @@ class ChapaV1TransferApprovalContractTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function testDisabledGlobalPayoutSwitchRejectsApproval(): void
+    public function testDisabledTestPayoutSwitchRejectsApprovalEvenWhenLiveFlagIsSet(): void
     {
-        config()->set('services.chapa.payouts_enabled', false);
+        config()->set('services.chapa.test_payouts_enabled', false);
+        config()->set('services.chapa.payouts_enabled', true);
         $this->assertSame(400, $this->requestApproval()->status());
     }
 

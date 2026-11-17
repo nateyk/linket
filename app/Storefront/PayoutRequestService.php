@@ -195,8 +195,8 @@ class PayoutRequestService
 
     public function submitChapaPayout(PayoutRequest $payout, int $actorId): StorefrontPayoutIntent
     {
-        if (!config('services.chapa.payouts_enabled', false)) {
-            throw ValidationException::withMessages(['status' => __('Chapa v1 payout dispatch is disabled until test-mode acceptance.')]);
+        if (!app(\App\Storefront\Services\ChapaV1PayoutMode::class)->enabled()) {
+            throw ValidationException::withMessages(['status' => __('Chapa payouts are disabled for the configured merchant mode.')]);
         }
         if ($payout->status !== 'processing') {
             throw ValidationException::withMessages(['status' => __('An administrator must approve the withdrawal before Chapa submission.')]);
@@ -227,6 +227,11 @@ class PayoutRequestService
         if ($existingIntent && $existingIntent->status !== StorefrontPayoutIntent::STATUS_PREPARED) {
             throw ValidationException::withMessages(['status' => __('Transfer already initiated. Verify its existing reference; never resubmit it.')]);
         }
+
+        // Reject missing approval configuration before provider preflight or
+        // any payout intent mutation. A test-mode POST still needs a valid
+        // server approval callback to complete the queued transfer.
+        app(\App\Storefront\Services\ChapaV1PayoutMode::class)->assertDispatchReady();
 
         // Ensure the current Chapa v1 directory accepts this bank/wallet BEFORE
         // allocating a durable payout reference and making an uncertain POST.
