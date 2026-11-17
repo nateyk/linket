@@ -27,7 +27,7 @@ class AdminPayoutRequestsController extends Controller
         $withdrawalMethods = DigitalProductWithdrawalMethod::all();
 
         $payouts = PayoutRequest::query()
-            ->with(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])
+            ->with(['creator', 'withdrawalMethod', 'latestPayoutIntent'])
             ->latest('id');
 
         if (request()->filled('search')) {
