@@ -352,6 +352,12 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         ]);
         $ledgerService->recordPlatformSale($order);
         $ledgerService->releaseHeldToAvailable($order);
+        // The standalone fixture does not have a products/workspaces table.
+        // Attribute its funded journal lines to the same workspace used by
+        // the synthetic payout request, rather than weakening payout guards.
+        StorefrontJournalLine::query()
+            ->where('creator_id', $creatorId)
+            ->update(['workspace_id' => 1]);
     }
 
     private function createMockChapaClient(?MockChapaConfig $config = null): ChapaClient
