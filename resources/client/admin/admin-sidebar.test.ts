@@ -24,6 +24,13 @@ describe('admin products navigation', () => {
   });
 });
 
+describe('admin payout accounts', () => {
+  test('shows a dedicated sidebar entry instead of the legacy review panel', () => {
+    expect(source).toContain('to="/admin/payout-accounts"');
+    expect(source).toContain('<Trans message="Payout accounts" />');
+  });
+});
+
 describe('admin financial navigation consolidation', () => {
   test('filters obsolete separate financial items from main sidebar menu', () => {
     expect(source).toContain('isObsoleteAdminSidebarItem');
