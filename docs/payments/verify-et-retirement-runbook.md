@@ -17,6 +17,7 @@ Reported blockers:
 - Verify.et storefront orders not in a final paid or expired/cancelled status, and paid orders with unfinished delivery
 - Direct verification rows not in a terminal status (including pending, verifying, manual review, and unknown statuses)
 - Webhook deliveries that are not processed, ignored or explicit tests
+- Pending/unresolved legacy Pro subscription payment attempts, including any awaiting references
 - Verify.et subscriptions still lacking an end date
 - Open/investigating disputes for Verify.et storefront orders
 
