@@ -56,7 +56,8 @@ class DigitalProductFinance
 
         $entries = DigitalProductEarningsLedger::query()
             ->where('workspace_id', $workspaceId)
-            ->where('creator_id', $creatorId);
+            ->where('creator_id', $creatorId)
+            ->where('currency', $currency);
 
         if ($lock) {
             $entries->lockForUpdate();
@@ -80,12 +81,14 @@ class DigitalProductFinance
         $orders = StorefrontOrder::query()
             ->where('creator_id', $creatorId)
             ->where('status', 'paid')
+            ->where('currency', $currency)
             ->where('collection_owner', StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA)
             ->whereHas('product', fn($query) => $query->where('workspace_id', $workspaceId));
 
         $payouts = \App\Storefront\Models\PayoutRequest::query()
             ->where('workspace_id', $workspaceId)
-            ->where('creator_id', $creatorId);
+            ->where('creator_id', $creatorId)
+            ->where('currency', $currency);
         $reserved = (int) (clone $payouts)->whereIn('status', ['requested', 'processing'])->sum('amount_cents');
         $paidOut = (int) $payouts->where('status', 'paid')->sum('amount_cents');
 
