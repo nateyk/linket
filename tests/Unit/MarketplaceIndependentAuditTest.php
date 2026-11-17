@@ -6,7 +6,10 @@ namespace Tests\Unit;
 
 use App\Models\User;
 use App\Payments\VerifyEt\VerifyEtRetirementAudit;
+use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Ledger\CreatorLedgerService;
+use App\Storefront\Ledger\JournalEntryData;
+use App\Storefront\Ledger\JournalLineData;
 use App\Storefront\Ledger\JournalPostingService;
 use App\Storefront\Ledger\RefundBreakdown;
 use App\Storefront\Models\DigitalProductPaymentRefund;
@@ -257,6 +260,33 @@ class MarketplaceIndependentAuditTest extends TestCase
 
         $this->assertSame($before, DB::table('storefront_journal_entries')->count());
         $this->assertSame('paid', $order->fresh()->status);
+    }
+
+    public function testBalancedJournalWithNegativeCreatorHoldStillBlocksManualSignoff(): void
+    {
+        $order = $this->sale();
+        $context = ['creator_id' => (int) $order->creator_id, 'workspace_id' => 1];
+        (new JournalPostingService())->post(
+            new JournalEntryData(
+                sourceType: 'audit_fixture',
+                sourceId: (int) $order->id,
+                eventType: 'invalid_creator_overdraft',
+                currency: 'ETB',
+                attributes: $context,
+            ),
+            [
+                new JournalLineData(AccountCodes::CREATOR_HELD, 96000, 0, 'ETB', $context),
+                new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, 0, 96000, 'ETB', $context),
+            ],
+        );
+
+        $report = $this->audit()->audit($this->evidence([
+            'chapa_payments' => [$this->paymentEvidence($order)],
+        ]));
+
+        $this->assertTrue($report['journal_balanced']);
+        $this->assertFalse($report['candidate_for_manual_review']);
+        $this->assertContains('negative_creator_liability', array_column($report['issues'], 'code'));
     }
 
     private function sale(): StorefrontOrder
