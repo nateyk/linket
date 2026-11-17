@@ -15,7 +15,6 @@ use Common\Workspaces\Actions\CreateWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -35,14 +34,14 @@ class ReactEmailStorefrontReceiptTest extends TestCase
     {
         Mail::fake();
 
-        $this->mock(ReactEmailRenderer::class, function ($mock) {
-            $mock->shouldReceive('render')
-                ->once()
-                ->with('order-confirmation', Mockery::type('array'))
-                ->andReturn([
-                    'html' => '<p>Receipt</p>',
-                    'text' => 'Receipt',
-                ]);
+        $this->app->instance(ReactEmailRenderer::class, new class
+        {
+            public function render(string $template, array $props): array
+            {
+                \PHPUnit\Framework\Assert::assertSame('order-confirmation', $template);
+
+                return ['html' => '<p>Receipt</p>', 'text' => 'Receipt'];
+            }
         });
 
         $order = $this->seedPaidOrderWithEntitlement();
