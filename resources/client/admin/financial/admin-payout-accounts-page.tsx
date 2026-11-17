@@ -28,7 +28,7 @@ export function Component() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string>();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('search') ?? '');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
