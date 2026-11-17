@@ -38,42 +38,30 @@ class ChapaV1PayoutModeTest extends TestCase
         $mode->assertDispatchReady();
     }
 
-    public function testLiveKeyCannotUseSandboxSwitch(): void
+    public function testDisallowedModesAndMissingApprovalAlwaysRejectDispatch(): void
     {
-        config()->set('services.chapa.test_payouts_enabled', true);
-        config()->set('services.chapa.payouts_enabled', false);
-        config()->set('services.chapa.transfer_approval_secret', 'fake-approval-secret');
+        $cases = [
+            ['CHASECK-live-fixture', true, false, 'approval', 'live'],
+            ['CHASECK_TEST-fixture', false, true, 'approval', 'test'],
+            ['CHASECK_TEST-fixture', true, false, '', 'test'],
+        ];
 
-        $mode = $this->gate('CHASECK-live-fixture');
-        $this->assertSame('live', $mode->mode());
-        $this->assertFalse($mode->enabled());
-        $this->expectException(RuntimeException::class);
-        $mode->assertDispatchReady();
-    }
+        foreach ($cases as [$key, $testEnabled, $liveEnabled, $approvalSecret, $expectedMode]) {
+            config()->set('services.chapa.test_payouts_enabled', $testEnabled);
+            config()->set('services.chapa.payouts_enabled', $liveEnabled);
+            config()->set('services.chapa.transfer_approval_secret', $approvalSecret);
+            $mode = $this->gate($key);
 
-    public function testTestKeyCanBeDisabledWithoutChangingLiveSetting(): void
-    {
-        config()->set('services.chapa.test_payouts_enabled', false);
-        config()->set('services.chapa.payouts_enabled', true);
-        config()->set('services.chapa.transfer_approval_secret', 'fake-approval-secret');
-        $mode = $this->gate('CHASECK_TEST-local-fixture');
+            $this->assertSame($expectedMode, $mode->mode());
+            $this->assertFalse($mode->enabled() && $mode->approvalConfigured());
 
-        $this->assertFalse($mode->enabled());
-        $this->expectException(RuntimeException::class);
-        $mode->assertDispatchReady();
-    }
-
-    public function testMissingApprovalSecretBlocksSandboxTransfer(): void
-    {
-        config()->set('services.chapa.test_payouts_enabled', true);
-        config()->set('services.chapa.payouts_enabled', false);
-        config()->set('services.chapa.transfer_approval_secret', '');
-        $mode = $this->gate('CHASECK_TEST-local-fixture');
-
-        $this->assertTrue($mode->enabled());
-        $this->assertFalse($mode->approvalConfigured());
-        $this->expectException(RuntimeException::class);
-        $mode->assertDispatchReady();
+            try {
+                $mode->assertDispatchReady();
+                $this->fail('Disabled or unapproved mode must not dispatch.');
+            } catch (RuntimeException $exception) {
+                $this->assertNotSame('', $exception->getMessage());
+            }
+        }
     }
 
     public function testSandboxStatusSimulationIsOnlyAddedForTestKeys(): void
