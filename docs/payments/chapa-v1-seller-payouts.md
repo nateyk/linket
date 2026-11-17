@@ -5,7 +5,7 @@
 ## Architecture and screens
 
 - Sellers add mobile-money or bank receiving accounts at `/account-settings/receiving-accounts`. New accounts and edited accounts require admin approval again.
-- Admins switch payout providers on/off and review receiving accounts in **Admin → Finance → Financial settings → Payout methods**.
+- Admins switch payout providers on/off in **Admin → Finance → Financial settings → Payout methods**; review and approve/reject seller payout destinations in **Admin → Payout accounts** at `/admin/payout-accounts`.
 - Admin withdrawal queue `/admin/withdrawals` follows **Requested → Processing (approved) → Chapa transfer queued → Verified settlement → Paid**, or **Verified failure → Rejected**, releasing the ledger reserve.
 - The payout account approval and withdrawal approval are separate permissions/steps. Only admin-approved account snapshots can be sent to Chapa. No seller API keys are used.
 - No manual paid transition is permitted for Chapa bank/mobile-money payouts. The provider queue response is pending, not settlement.
