@@ -195,8 +195,8 @@ class PayoutRequestService
 
     public function submitChapaPayout(PayoutRequest $payout, int $actorId): StorefrontPayoutIntent
     {
-        if (!config('services.chapa.payouts_enabled', false)) {
-            throw ValidationException::withMessages(['status' => __('Chapa v1 payout dispatch is disabled until test-mode acceptance.')]);
+        if (!app(\App\Storefront\Services\ChapaV1PayoutMode::class)->enabled()) {
+            throw ValidationException::withMessages(['status' => __('Chapa payouts are disabled for the configured merchant mode.')]);
         }
         if ($payout->status !== 'processing') {
             throw ValidationException::withMessages(['status' => __('An administrator must approve the withdrawal before Chapa submission.')]);
