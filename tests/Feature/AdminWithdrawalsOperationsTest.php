@@ -20,10 +20,10 @@ class AdminWithdrawalsOperationsTest extends TestCase
     {
         [$creator, $workspaceId] = $this->creatorWorkspace();
         [$otherCreator, $otherWorkspaceId] = $this->creatorWorkspace();
-        $this->request($creator, $workspaceId, 'requested', 10000, 'ETB', 'Telebirr');
-        $this->request($creator, $workspaceId, 'requested', 2000, 'USD', 'Telebirr');
-        $this->request($creator, $workspaceId, 'processing', 6000, 'ETB', 'CBE Birr');
-        $this->request($otherCreator, $otherWorkspaceId, 'paid', 2500, 'ETB', 'M-Pesa');
+        $this->request($creator, $workspaceId, ['status' => 'requested', 'amount_cents' => 10000, 'currency' => 'ETB', 'withdrawal_method_name' => 'Telebirr']);
+        $this->request($creator, $workspaceId, ['status' => 'requested', 'amount_cents' => 2000, 'currency' => 'USD', 'withdrawal_method_name' => 'Telebirr']);
+        $this->request($creator, $workspaceId, ['status' => 'processing', 'amount_cents' => 6000, 'currency' => 'ETB', 'withdrawal_method_name' => 'CBE Birr']);
+        $this->request($otherCreator, $otherWorkspaceId, ['status' => 'paid', 'amount_cents' => 2500, 'currency' => 'ETB', 'withdrawal_method_name' => 'M-Pesa']);
 
         Http::fake();
         $response = $this->actingAs($this->admin(), 'sanctum')
@@ -49,10 +49,10 @@ class AdminWithdrawalsOperationsTest extends TestCase
     public function test_admin_filters_search_date_method_and_status_without_mixing_totals(): void
     {
         [$creator, $workspaceId] = $this->creatorWorkspace();
-        $requested = $this->request($creator, $workspaceId, 'requested', 7000, 'ETB', 'Telebirr');
+        $requested = $this->request($creator, $workspaceId, ['status' => 'requested', 'amount_cents' => 7000, 'currency' => 'ETB', 'withdrawal_method_name' => 'Telebirr']);
         $requested->forceFill(['created_at' => now()->subDays(2)])->save();
-        $this->request($creator, $workspaceId, 'requested', 9900, 'ETB', 'CBE Birr');
-        $this->request($creator, $workspaceId, 'paid', 4000, 'ETB', 'Telebirr');
+        $this->request($creator, $workspaceId, ['status' => 'requested', 'amount_cents' => 9900, 'currency' => 'ETB', 'withdrawal_method_name' => 'CBE Birr']);
+        $this->request($creator, $workspaceId, ['status' => 'paid', 'amount_cents' => 4000, 'currency' => 'ETB', 'withdrawal_method_name' => 'Telebirr']);
 
         $this->actingAs($this->admin(), 'sanctum')
             ->getJson('/api/v1/admin/withdrawals?status=requested&withdrawal_method=Telebirr&date_from='
@@ -90,22 +90,14 @@ class AdminWithdrawalsOperationsTest extends TestCase
         return $user;
     }
 
-    private function request(
-        User $creator,
-        int $workspaceId,
-        string $status,
-        int $amount,
-        string $currency,
-        string $method,
-    ): PayoutRequest {
+    /** @param array{status: string, amount_cents: int, currency: string, withdrawal_method_name: string} $attributes */
+    private function request(User $creator, int $workspaceId, array $attributes): PayoutRequest
+    {
         return PayoutRequest::query()->create([
             'workspace_id' => $workspaceId,
             'creator_id' => $creator->id,
-            'status' => $status,
-            'amount_cents' => $amount,
-            'currency' => $currency,
-            'withdrawal_method_name' => $method,
-            'payout_method_label' => $method,
+            'payout_method_label' => $attributes['withdrawal_method_name'],
+            ...$attributes,
         ]);
     }
 }
