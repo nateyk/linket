@@ -17,7 +17,7 @@ import {
   EllipsisVerticalIcon,
   InboxIcon,
   PlusIcon,
-  TrashIcon,
+  BanIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
@@ -38,8 +38,8 @@ export function Component() {
   const [methods, setMethods] = useState<WithdrawalMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
-  const [deleteTarget, setDeleteTarget] = useState<WithdrawalMethod>();
-  const [deleting, setDeleting] = useState(false);
+  const [disableTarget, setDisableTarget] = useState<WithdrawalMethod>();
+  const [disabling, setDisabling] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,19 +59,19 @@ export function Component() {
     void load();
   }, [load]);
 
-  const destroy = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
+  const disableMethod = async () => {
+    if (!disableTarget) return;
+    setDisabling(true);
     try {
       await apiClient.delete(
-        `/api/v1/admin/financial/withdrawal-methods/${deleteTarget.id}`,
+        `/api/v1/admin/financial/withdrawal-methods/${disableTarget.id}`,
       );
-      setDeleteTarget(undefined);
+      setDisableTarget(undefined);
       await load();
     } catch {
-      setError('Unable to delete this withdrawal method.');
+      setError('Unable to disable this withdrawal method.');
     } finally {
-      setDeleting(false);
+      setDisabling(false);
     }
   };
 
@@ -209,7 +209,7 @@ export function Component() {
                               <div className="flex justify-end">
                                 <MethodActions
                                   method={method}
-                                  onDelete={() => setDeleteTarget(method)}
+                                  onDisable={() => setDisableTarget(method)}
                                 />
                               </div>
                             </Table.Cell>
@@ -233,7 +233,7 @@ export function Component() {
                           </div>
                           <MethodActions
                             method={method}
-                            onDelete={() => setDeleteTarget(method)}
+                            onDisable={() => setDisableTarget(method)}
                           />
                         </Card.Header>
                         <Card.Content className="flex flex-col gap-2 text-sm">
@@ -276,11 +276,11 @@ export function Component() {
       </DashboardLayout.SectionContent>
 
       <Dialog.Root
-        open={!!deleteTarget}
-        disablePointerDismissal={deleting}
+        open={!!disableTarget}
+        disablePointerDismissal={disabling}
         onOpenChange={open => {
-          if (!open && !deleting) {
-            setDeleteTarget(undefined);
+          if (!open && !disabling) {
+            setDisableTarget(undefined);
           }
         }}
       >
@@ -289,30 +289,30 @@ export function Component() {
           <Dialog.Content className="sm:max-w-md">
             <Dialog.Header>
               <Dialog.Title>
-                <Trans message="Delete withdrawal method" />
+                <Trans message="Disable withdrawal method" />
               </Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
               <Trans
-                message="Are you sure you want to delete the “:name” withdrawal method? Creators with pending requests using it will be affected."
-                values={{name: deleteTarget?.name ?? ''}}
+                message="Disable “:name” for new withdrawals? Existing payout history will be preserved. Pending withdrawal requests may require administrator review."
+                values={{name: disableTarget?.name ?? ''}}
               />
             </Dialog.Body>
             <Dialog.Footer>
               <Button
                 variant="outline"
-                onClick={() => setDeleteTarget(undefined)}
-                disabled={deleting}
+                onClick={() => setDisableTarget(undefined)}
+                disabled={disabling}
               >
                 <Trans message="Cancel" />
               </Button>
               <Button
                 color="danger"
-                onClick={() => void destroy()}
-                disabled={deleting}
+                onClick={() => void disableMethod()}
+                disabled={disabling}
               >
-                <TrashIcon />
-                <Trans message="Delete" />
+                <BanIcon />
+                <Trans message="Disable" />
               </Button>
             </Dialog.Footer>
           </Dialog.Content>
@@ -350,10 +350,10 @@ function StatusBadge({active}: {active: boolean}) {
 
 function MethodActions({
   method,
-  onDelete,
+  onDisable,
 }: {
   method: WithdrawalMethod;
-  onDelete: () => void;
+  onDisable: () => void;
 }) {
   return (
     <Dropdown>
@@ -372,14 +372,18 @@ function MethodActions({
           <EditIcon className="size-4" />
           <Trans message="Edit" />
         </Dropdown.Item>
-        <Dropdown.Separator />
-        <Dropdown.Item
-          className="text-destructive focus:text-destructive"
-          onClick={onDelete}
-        >
-          <TrashIcon className="size-4" />
-          <Trans message="Delete" />
-        </Dropdown.Item>
+        {method.is_active && (
+          <>
+            <Dropdown.Separator />
+            <Dropdown.Item
+              className="text-destructive focus:text-destructive"
+              onClick={onDisable}
+            >
+              <BanIcon className="size-4" />
+              <Trans message="Disable" />
+            </Dropdown.Item>
+          </>
+        )}
       </Dropdown.Content>
     </Dropdown>
   );
