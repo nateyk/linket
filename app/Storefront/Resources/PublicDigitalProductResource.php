@@ -21,7 +21,8 @@ class PublicDigitalProductResource extends JsonResource
 
         $chapaEnabled = app(\App\Payments\Chapa\LinketChapaManager::class)->isEnabled();
         $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
-        $accounts = VerifyEtSettings::get('enabled')
+        // Do not offer obsolete creator receiving accounts during platform Chapa checkout.
+        $accounts = ! $chapaEnabled && VerifyEtSettings::get('enabled')
             ? $availability->eligibleAccounts($this->user_id, $this->workspace_id)
             : collect();
 
