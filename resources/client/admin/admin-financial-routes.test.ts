@@ -17,6 +17,29 @@ describe('admin financial routes and redirects', () => {
     expect(response.headers.get('Location')).toBe('/admin/financial/payment-activity');
   });
 
+  it('has a dedicated Chapa payout-account route and preserves legacy links', async () => {
+    const payoutRoute = adminChildren.find(r => r.path === 'payout-accounts');
+    expect(payoutRoute?.lazy).toBeTypeOf('function');
+
+    for (const path of ['payout-acc', 'withdrawal-methods']) {
+      const alias = adminChildren.find(r => r.path === path);
+      expect(alias?.loader).toBeTypeOf('function');
+      const response = await (alias!.loader as any)({
+        params: {},
+        request: new Request('http://localhost/admin/' + path),
+      });
+      expect(response.headers.get('Location')).toBe('/admin/payout-accounts');
+    }
+
+    const financial = adminChildren.find(r => r.path === 'financial');
+    const oldRoute = (financial?.children as RouteObject[]).find(r => r.path === 'withdrawal-methods');
+    const response = await (oldRoute!.loader as any)({
+      params: {},
+      request: new Request('http://localhost/admin/financial/withdrawal-methods'),
+    });
+    expect(response.headers.get('Location')).toBe('/admin/payout-accounts');
+  });
+
   it('redirects /admin/withdrawals to /admin/financial/withdrawals', async () => {
     const route = adminChildren.find(r => r.path === 'withdrawals');
     expect(route).toBeDefined();

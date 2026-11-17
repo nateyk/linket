@@ -241,7 +241,7 @@ describe('AdminFinancialSettingsPage', () => {
     expect(screen.getByText('Commercial Bank of Ethiopia (CBE)')).toBeTruthy();
     expect(screen.getByText('Telebirr')).toBeTruthy();
     expect(screen.getByRole('switch', {name: 'Telebirr payouts'})).toBeTruthy();
-    expect(screen.getByText('Seller receiving account approvals')).toBeTruthy();
+    expect(screen.queryByText('Seller receiving account approvals')).toBeNull();
   });
 
   it('switches to commissions & policy tab and renders marketplace rules', async () => {
