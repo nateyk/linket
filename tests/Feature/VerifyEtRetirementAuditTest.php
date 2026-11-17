@@ -39,6 +39,23 @@ it('reports only aggregate counts and blocks retirement for an unprocessed histo
         ->and($json)->not->toContain('synthetic-legacy-request');
 });
 
+it('treats successfully verified callbacks as historical, not outstanding', function () {
+    $before = app(\App\Payments\VerifyEt\VerifyEtRetirementAudit::class)->snapshot();
+    VerifyEtWebhookDelivery::query()->create([
+        'event_id' => (string) Str::uuid(),
+        'provider_request_id' => 'synthetic-successful-callback',
+        'event_type' => 'verification.completed',
+        'status' => 'success',
+        'received_at' => now(),
+    ]);
+
+    $after = app(\App\Payments\VerifyEt\VerifyEtRetirementAudit::class)->snapshot();
+
+    expect($after['blockers']['unprocessed_webhooks'])->toBe($before['blockers']['unprocessed_webhooks'])
+        ->and($after['historical_records']['verify_et_webhook_deliveries'])
+        ->toBe($before['historical_records']['verify_et_webhook_deliveries'] + 1);
+});
+
 it('counts legacy unverified orders without changing their payment or delivery state', function () {
     $creator = User::factory()->create();
     $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
