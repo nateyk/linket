@@ -201,7 +201,11 @@ it('applies redirected order filters to the controls and request', async () => {
 const summary = {
   verified_sales_count: 2,
   verified_revenue_cents: 25000,
+  net_sales_cents: 25000,
   paid_orders_count: 2,
+  gross_profit_cents: 20000,
+  gross_profit_margin_percent: 80,
+  average_order_cents: 12500,
   creator_earnings_cents: 20000,
   platform_fee_cents: 5000,
   pending_count: 1,
@@ -306,14 +310,16 @@ it('shows summary and orders, and sends status, search and page filters to the s
 
   expect((await screen.findAllByText('Workbook')).length).toBeGreaterThan(0);
   expect(screen.getAllByText('25000 ETB').length).toBeGreaterThan(0);
-  expect(screen.getByText('Gross sales')).toBeTruthy();
-  expect(screen.getByText('Paid orders')).toBeTruthy();
-  expect(screen.getByText('Pending payments')).toBeTruthy();
+  expect(screen.getByText('Net sales')).toBeTruthy();
+  expect(screen.getAllByText('Orders').length).toBeGreaterThan(0);
+  expect(screen.getByText('Gross profit · 80.0%')).toBeTruthy();
+  expect(screen.getByText('Average order')).toBeTruthy();
+  expect(screen.getByText('12500 ETB')).toBeTruthy();
   expect(screen.getByText('Chapa payments only · lifetime')).toBeTruthy();
   expect(screen.queryByText('Pending & Review')).toBeNull();
   expect(screen.queryByRole('tab', {name: 'Transactions'})).toBeNull();
   expect(screen.queryByRole('tab', {name: /Manual review/})).toBeNull();
-  expect(screen.getByText('Creator earnings')).toBeTruthy();
+  expect(screen.getByText('After platform fees · before product costs')).toBeTruthy();
   expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
   expect(screen.getByText('Chapa orders and payment status. Only paid orders count as sales.')).toBeTruthy();
 
@@ -612,7 +618,11 @@ it('clearly breaks down free downloads from paid orders in summary', async () =>
           summary: {
             verified_sales_count: 3,
             verified_revenue_cents: 0,
+            net_sales_cents: 0,
             paid_orders_count: 0,
+            gross_profit_cents: 0,
+            gross_profit_margin_percent: 0,
+            average_order_cents: 0,
             free_orders_count: 3,
             creator_earnings_cents: 0,
             platform_fee_cents: 0,
@@ -631,9 +641,10 @@ it('clearly breaks down free downloads from paid orders in summary', async () =>
 
   render(<Component />);
 
-  expect(await screen.findByText('Gross sales')).toBeTruthy();
-  expect(screen.getByText('Paid orders')).toBeTruthy();
-  expect(screen.getByText('Creator earnings')).toBeTruthy();
-  expect(screen.getByText('After fees · not withdrawable balance')).toBeTruthy();
+  expect(await screen.findByText('Net sales')).toBeTruthy();
+  expect(screen.getAllByText('Orders').length).toBeGreaterThan(0);
+  expect(screen.getByText('Gross profit · 0.0%')).toBeTruthy();
+  expect(screen.getByText('Average order')).toBeTruthy();
+  expect(screen.getAllByText('0 ETB').length).toBeGreaterThanOrEqual(2);
   expect(screen.queryByText('Net platform earnings')).toBeNull();
 });

@@ -35,7 +35,7 @@ beforeEach(() => {
   fixture.loading = false;
   fixture.reportParams = [];
   fixture.workspaceId = 1;
-  fixture.sales = {summary: {verified_sales_count: 0, verified_revenue_cents: 0, paid_orders_count: 0, creator_earnings_cents: 0, pending_count: 0, manual_review_count: 0, currency: 'ETB'}, data: {data: []}, sales_trend: [], verification_allowance: {consumed: 0, remaining: 10, reserved: 0, limit: 10, is_pro: false}};
+  fixture.sales = {summary: {verified_sales_count: 0, verified_revenue_cents: 0, net_sales_cents: 0, paid_orders_count: 0, items_sold_count: 0, average_order_cents: 0, pending_count: 0, manual_review_count: 0, currency: 'ETB'}, data: {data: []}, sales_trend: [], verification_allowance: {consumed: 0, remaining: 10, reserved: 0, limit: 10, is_pro: false}};
   fixture.report = {data: {events: {total: 0, data: []}, countries: {data: []}, referrers: {data: []}}};
   globalThis.IntersectionObserver = class {
     constructor(private callback: IntersectionObserverCallback) {}
@@ -55,7 +55,7 @@ it('shows sales and engagement widgets without legacy Verify.et allowance or rev
   showDashboard();
   expect(await screen.findByText('No orders yet')).toBeTruthy();
   expect(screen.getByText('No completed sales in this period')).toBeTruthy();
-  for (const heading of ['Gross sales', 'Paid orders', 'Creator earnings', 'Pending orders']) {
+  for (const heading of ['Sales', 'Orders', 'Items sold', 'Average order']) {
     expect(screen.getByText(heading)).toBeTruthy();
   }
   for (const obsolete of ['Verification allowance', 'Payments needing manual review', 'Current subscription', 'Awaiting payment or verification']) {
@@ -67,25 +67,36 @@ it('shows sales and engagement widgets without legacy Verify.et allowance or rev
   expect(screen.queryByText('Available for payout')).toBeNull();
 });
 
-it('shows paid orders and earnings from the API without mistaking earnings for a withdrawable balance', async () => {
+it('shows refund-adjusted sales, order counts, units, and average order from Chapa totals', async () => {
   fixture.sales.summary = {
     verified_sales_count: 6,
     verified_revenue_cents: 184000,
+    net_sales_cents: 164000,
     paid_orders_count: 4,
-    creator_earnings_cents: 147200,
+    items_sold_count: 7,
+    average_order_cents: 41000,
     pending_count: 2,
     manual_review_count: 3,
     currency: 'ETB',
   };
   fixture.sales.verification_allowance = {consumed: 10, remaining: 0, reserved: 0, limit: 10, is_pro: false};
   showDashboard();
-  expect(await screen.findByText('184000 ETB cents')).toBeTruthy();
-  expect(screen.getByText('147200 ETB cents')).toBeTruthy();
-  expect(screen.getByText('Lifetime · after fees')).toBeTruthy();
-  expect(screen.getByText('Paid orders')).toBeTruthy();
-  expect(screen.getByText('Pending orders')).toBeTruthy();
+  expect(await screen.findByText('164000 ETB cents')).toBeTruthy();
+  expect(screen.getByText('41000 ETB cents')).toBeTruthy();
+  expect(screen.getByText('Items sold')).toBeTruthy();
+  expect(screen.getByText('Net of completed refunds')).toBeTruthy();
+  expect(screen.getByText('Paid Chapa orders')).toBeTruthy();
   expect(screen.queryByText('Verification allowance')).toBeNull();
   expect(screen.queryByText('Available for payout')).toBeNull();
+});
+
+it('shows placeholders instead of invented zero values when the KPI summary is missing', async () => {
+  fixture.sales.summary = undefined;
+  showDashboard();
+  expect(await screen.findByText('No orders yet')).toBeTruthy();
+  expect(screen.getByText('Sales')).toBeTruthy();
+  expect(screen.getByText('Items sold')).toBeTruthy();
+  expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
 });
 
 it('renders order loading errors instead of invented sales', async () => {
@@ -102,7 +113,7 @@ it('shows loading placeholders while the sales request is pending', () => {
 });
 
 it('renders API-provided verified revenue and recent verification statuses', async () => {
-  fixture.sales.summary = {verified_sales_count: 1, verified_revenue_cents: 4200, paid_orders_count: 1, creator_earnings_cents: 3900, pending_count: 1, manual_review_count: 1, currency: 'ETB'};
+  fixture.sales.summary = {verified_sales_count: 1, verified_revenue_cents: 4200, net_sales_cents: 4200, paid_orders_count: 1, items_sold_count: 1, average_order_cents: 4200, pending_count: 1, manual_review_count: 1, currency: 'ETB'};
   fixture.sales.data.data = [
     {uuid: 'paid', status: 'paid', gross_amount_cents: 4200, currency: 'ETB', buyer_name: 'Sample buyer', created_at: '2026-10-10T10:00:00Z', product: {title: 'Paid workbook'}},
     {uuid: 'review', status: 'manual_review', gross_amount_cents: 3300, currency: 'ETB', buyer_name: null, created_at: '2026-10-11T10:00:00Z', product: {title: 'Review workbook'}},

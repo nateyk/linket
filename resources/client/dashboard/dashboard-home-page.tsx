@@ -51,10 +51,10 @@ import {
   Link2Icon,
   MapPinIcon,
   ReceiptTextIcon,
+  PackageCheckIcon,
   ArrowUpDownIcon,
   Columns3Icon,
   SearchIcon,
-  WalletCardsIcon,
   type LucideIcon,
 } from 'lucide-react';
 import {ReactNode, useCallback, useMemo, useRef, useState} from 'react';
@@ -62,10 +62,10 @@ import {Area, AreaChart, CartesianGrid, XAxis, YAxis} from 'recharts';
 import {Link} from 'react-router';
 
 type SalesSummary = {
-  verified_revenue_cents: number;
+  net_sales_cents: number;
   paid_orders_count: number;
-  creator_earnings_cents: number;
-  pending_count: number;
+  items_sold_count: number;
+  average_order_cents: number;
   currency: string;
 };
 
@@ -138,6 +138,12 @@ function StatCards() {
 
   const summary = salesData?.summary;
   const currency = summary?.currency ?? getSiteCurrency();
+  // Missing API totals are unknown, not zero. Preserve loading and error states.
+  const metricValue = (value: number | undefined): number | null | undefined => {
+    if (salesLoading) return null;
+    if (salesError) return undefined;
+    return value;
+  };
 
   const cards: Array<{
     key: string;
@@ -149,56 +155,40 @@ function StatCards() {
     tone: string;
   }> = [
     {
-      key: 'gross-sales',
-      label: <Trans message="Gross sales" />,
-      scope: <Trans message="Lifetime" />,
-      value: salesLoading
-        ? null
-        : salesError
-          ? undefined
-          : (summary?.verified_revenue_cents ?? 0),
+      key: 'sales',
+      label: <Trans message="Sales" />,
+      scope: <Trans message="Net of completed refunds" />,
+      value: metricValue(summary?.net_sales_cents),
       icon: CircleDollarSignIcon,
       format: 'currency',
       tone: 'text-primary bg-primary/10',
     },
     {
-      key: 'paid-orders',
-      label: <Trans message="Paid orders" />,
-      scope: <Trans message="Lifetime" />,
-      value: salesLoading
-        ? null
-        : salesError
-          ? undefined
-          : (summary?.paid_orders_count ?? 0),
+      key: 'orders',
+      label: <Trans message="Orders" />,
+      scope: <Trans message="Paid Chapa orders" />,
+      value: metricValue(summary?.paid_orders_count),
       icon: ReceiptTextIcon,
       format: 'number',
       tone: 'text-positive bg-positive/10',
     },
     {
-      key: 'creator-earnings',
-      label: <Trans message="Creator earnings" />,
-      scope: <Trans message="Lifetime · after fees" />,
-      value: salesLoading
-        ? null
-        : salesError
-          ? undefined
-          : (summary?.creator_earnings_cents ?? 0),
-      icon: WalletCardsIcon,
-      format: 'currency',
+      key: 'items-sold',
+      label: <Trans message="Items sold" />,
+      scope: <Trans message="Units in paid orders" />,
+      value: metricValue(summary?.items_sold_count),
+      icon: PackageCheckIcon,
+      format: 'number',
       tone: 'text-muted-foreground bg-muted',
     },
     {
-      key: 'pending-orders',
-      label: <Trans message="Pending orders" />,
-      scope: <Trans message="Lifetime" />,
-      value: salesLoading
-        ? null
-        : salesError
-          ? undefined
-          : (summary?.pending_count ?? 0),
-      icon: Clock3Icon,
-      format: 'number',
-      tone: 'text-warning bg-warning/10',
+      key: 'average-order',
+      label: <Trans message="Average order" />,
+      scope: <Trans message="Net sales per paid order" />,
+      value: metricValue(summary?.average_order_cents),
+      icon: ChartNoAxesCombinedIcon,
+      format: 'currency',
+      tone: 'text-muted-foreground bg-muted',
     },
   ];
 
@@ -1004,7 +994,7 @@ function useDashboardSales(dateRange?: DateRangeValue) {
     queryKey: ['dashboard-sales-summary', workspaceId, from, to],
     queryFn: async () => {
       const response = await apiClient.get<SalesResponse>(
-        '/api/v1/storefront/direct-orders', {params: {from, to, per_page: 5}},
+        '/api/v1/storefront/direct-orders', {params: {gateway: 'chapa', from, to, per_page: 5}},
       );
       return response.data;
     },

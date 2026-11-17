@@ -6,6 +6,7 @@ use App\Payments\Models\DirectPaymentVerification;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Models\StorefrontOrderItem;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -282,16 +283,6 @@ final class CreatorOrdersController extends Controller
     /** @return array<string, mixed> */
     private function orderSummary(Builder $base): array
     {
-        $paidOrders = (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)
-            ->where('currency', 'ETB');
-        $refundReversals = (int) DigitalProductPaymentRefund::query()
-            ->whereIn('storefront_order_id', (clone $paidOrders)->select('id'))
-            ->where('status', DigitalProductPaymentRefund::STATUS_COMPLETED)
-            ->sum('creator_earnings_reversal_cents');
-        $netCreatorEarnings = max(0,
-            (int) (clone $paidOrders)->sum('creator_earnings_cents') - $refundReversals
-        );
-
         $counts = (clone $base)
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
@@ -300,18 +291,71 @@ final class CreatorOrdersController extends Controller
             ->all();
 
         return [
+            ...$this->commerceMetrics($base),
             'verified_sales_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->count(),
-            'verified_revenue_cents' => (int) (clone $base)->where('currency', 'ETB')->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('gross_amount_cents'),
-            'paid_orders_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->where('gross_amount_cents', '>', 0)->count(),
-            'free_orders_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->where('gross_amount_cents', '<=', 0)->count(),
-            'creator_earnings_cents' => $netCreatorEarnings,
-            'platform_fee_cents' => (int) (clone $base)->where('currency', 'ETB')->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('platform_fee_cents'),
+            'free_orders_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)
+                ->where('gross_amount_cents', '<=', 0)->count(),
             'pending_count' => (clone $base)->whereIn('status', ['pending_payment', 'verifying'])->count(),
             'manual_review_count' => (clone $base)->where('status', 'manual_review')->count(),
             'rejected_count' => (clone $base)->where('status', 'failed_verification')->count(),
             'status_counts' => $counts,
             'currency' => 'ETB',
         ];
+    }
+
+    /**
+     * Lifetime commerce KPIs use settled ETB sales, never pending payments or
+     * another creator's orders. A full refund leaves the paid-order cohort;
+     * completed partial refunds reduce revenue and the snapshotted fees.
+     *
+     * @return array<string, int|float>
+     */
+    private function commerceMetrics(Builder $base): array
+    {
+        $paid = (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)
+            ->where('currency', 'ETB');
+        $paidOrders = (clone $paid)->where('gross_amount_cents', '>', 0);
+        $ordersCount = (clone $paidOrders)->count();
+        $gross = (int) (clone $paid)->sum('gross_amount_cents');
+        $fees = (int) (clone $paid)->sum('platform_fee_cents');
+        $earnings = (int) (clone $paid)->sum('creator_earnings_cents');
+        $refunds = DigitalProductPaymentRefund::query()
+            ->whereIn('storefront_order_id', (clone $paid)->select('id'))
+            ->where('status', DigitalProductPaymentRefund::STATUS_COMPLETED)
+            ->where('currency', 'ETB')
+            ->selectRaw('COALESCE(SUM(amount_cents), 0) AS gross_reversed')
+            ->selectRaw('COALESCE(SUM(creator_earnings_reversal_cents), 0) AS earnings_reversed')
+            ->selectRaw('COALESCE(SUM(platform_fee_reversal_cents), 0) AS fees_reversed')
+            ->first();
+
+        $netSales = max(0, $gross - (int) $refunds->gross_reversed);
+        $netFees = max(0, $fees - (int) $refunds->fees_reversed);
+        $afterFees = max(0, $netSales - $netFees);
+
+        return [
+            'verified_revenue_cents' => $gross,
+            'paid_orders_count' => $ordersCount,
+            'creator_earnings_cents' => max(0, $earnings - (int) $refunds->earnings_reversed),
+            'platform_fee_cents' => $fees,
+            'net_sales_cents' => $netSales,
+            // This is an after-platform-fee estimate, not true profit after product costs.
+            'gross_profit_cents' => $afterFees,
+            'gross_profit_margin_percent' => $netSales > 0 ? round($afterFees / $netSales * 100, 1) : 0.0,
+            'items_sold_count' => $this->itemsSold($paidOrders),
+            'average_order_cents' => $ordersCount > 0 ? intdiv($netSales + intdiv($ordersCount, 2), $ordersCount) : 0,
+        ];
+    }
+
+    private function itemsSold(Builder $paidOrders): int
+    {
+        // Current checkout stores quantities on order items. A historical paid
+        // order without items still represents one purchased digital product.
+        $units = (int) StorefrontOrderItem::query()
+            ->whereIn('storefront_order_id', (clone $paidOrders)->select('id'))
+            ->sum('quantity');
+        $missingItems = (clone $paidOrders)->whereDoesntHave('items')->count();
+
+        return $units + $missingItems;
     }
 
     /** @return array<string, mixed> */
