@@ -718,7 +718,10 @@ class PayoutSystemTest extends TestCase
             'destination' => $destination,
         ]);
 
-        config(['services.chapa.secret' => 'platform-secret', 'services.chapa.payouts_enabled' => true]);
+        config(['services.chapa.secret' => 'CHASECK_TEST-log-fixture',
+            'services.chapa.test_payouts_enabled' => true,
+            'services.chapa.transfer_approval_secret' => 'synthetic-approval-fixture',
+            'services.chapa.payouts_enabled' => false]);
         Cache::flush();
         Http::fake([
             'https://api.chapa.co/v1/banks' => Http::response([
