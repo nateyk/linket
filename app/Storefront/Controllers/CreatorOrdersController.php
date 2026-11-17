@@ -38,6 +38,7 @@ final class CreatorOrdersController extends Controller
     {
         $filters = $request->validate([
             'status' => ['nullable', 'in:'.implode(',', self::ORDER_STATUSES)],
+            'gateway' => ['nullable', 'in:chapa,verify_et,all'],
             'search' => ['nullable', 'string', 'max:100'],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
@@ -46,6 +47,11 @@ final class CreatorOrdersController extends Controller
         ]);
 
         $base = $this->creatorOrdersQuery($request);
+        // Filter the dashboard and its totals together so legacy Verify.et
+        // cases never inflate the Chapa revenue or pending-payment widgets.
+        if (! empty($filters['gateway']) && $filters['gateway'] !== 'all') {
+            $base->where('payment_gateway', $filters['gateway']);
+        }
         $summary = $this->orderSummary($base);
         $trendQuery = (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->where('currency', 'ETB')->whereNotNull('paid_at');
         if (!empty($filters['from'])) {
