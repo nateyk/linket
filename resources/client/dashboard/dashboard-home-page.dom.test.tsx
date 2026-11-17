@@ -109,7 +109,7 @@ it('renders API-provided verified revenue and recent verification statuses', asy
   ];
   fixture.sales.sales_trend = [{date: '2026-10-10', amount_cents: 4200}];
   showDashboard();
-  expect(await screen.findByText('4200 ETB cents')).toBeTruthy();
+  expect((await screen.findAllByText('4200 ETB cents')).length).toBeGreaterThan(0);
   expect(screen.getAllByText('Paid workbook').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Sample buyer').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Guest buyer').length).toBeGreaterThan(0);
