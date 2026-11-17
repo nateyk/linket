@@ -165,7 +165,7 @@ export function Component() {
     }
     return 'chapa';
   });
-  const [orderStatus, setOrderStatus] = useState(() => orderStatusOptions.some(option => option.value === searchParams.get('status')) ? searchParams.get('status')! : 'all');
+  const [orderStatus, setOrderStatus] = useState(() => legacyOrderStatusOptions.some(option => option.value === searchParams.get('status')) ? searchParams.get('status')! : 'all');
   const [orderSearch, setOrderSearch] = useState(() => (searchParams.get('search') ?? '').slice(0, 100));
   const [orderFrom, setOrderFrom] = useState(() => searchParams.get('from') ?? '');
   const [orderTo, setOrderTo] = useState(() => searchParams.get('to') ?? '');
@@ -404,23 +404,15 @@ function SummaryMetric({
   label,
   value,
   detail,
-  tone,
 }: {
   className?: string;
   label: ReactNode;
   value: ReactNode;
   detail: ReactNode;
-  tone?: 'warning';
 }) {
   return (
     <div className={`min-w-0 p-4 ${className ?? ''}`}>
-      <p
-        className={
-          tone === 'warning'
-            ? 'text-sm text-warning'
-            : 'text-sm text-muted-foreground'
-        }
-      >
+      <p className="text-sm text-muted-foreground">
         {label}
       </p>
       <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
