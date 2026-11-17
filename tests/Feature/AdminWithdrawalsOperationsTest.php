@@ -44,6 +44,12 @@ class AdminWithdrawalsOperationsTest extends TestCase
         Http::assertNothingSent();
         $this->assertSame(4, PayoutRequest::query()->count());
         $response->assertDontSee('payout_destination');
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/v1/admin/withdrawals?search='.rawurlencode($creator->email))
+            ->assertOk()
+            ->assertJsonPath('meta.counters.requested.total', 2)
+            ->assertJsonCount(3, 'data');
     }
 
     public function test_admin_filters_search_date_method_and_status_without_mixing_totals(): void
@@ -63,6 +69,12 @@ class AdminWithdrawalsOperationsTest extends TestCase
             ->assertJsonPath('meta.counters.paid.total', 0)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $requested->id);
+    }
+
+    public function test_invalid_date_filter_fails_validation_without_querying_payouts(): void
+    {
+        $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/v1/admin/withdrawals?date_from=not-a-date')->assertUnprocessable();
     }
 
     public function test_creator_cannot_read_admin_withdrawals_or_account_details(): void
