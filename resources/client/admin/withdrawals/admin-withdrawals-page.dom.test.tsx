@@ -129,7 +129,7 @@ it('shows per-currency withdrawal counters rather than adding ETB and USD', () =
   expect(screen.getByText('Cancelled')).toBeTruthy();
   expect(screen.getByText('10000 ETB')).toBeTruthy();
   expect(screen.getByText('2000 USD')).toBeTruthy();
-  expect(screen.getByText('Settled withdrawals')).toBeTruthy();
+  expect(screen.getByText('Recorded as paid')).toBeTruthy();
 });
 
 it('filters by date and method through the existing server query-state contract', () => {
