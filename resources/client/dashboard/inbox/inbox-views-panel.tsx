@@ -58,7 +58,7 @@ export function InboxViewsPanel() {
             <DefaultInboxViews />
           ) : null}
         </Section>
-{groupViews.length > 0 && (
+        {groupViews.length > 0 && (
           <Section name="groups">
             <Trans message="Groups" />
             <ViewList views={groupViews} className="pl-2" />
@@ -79,6 +79,7 @@ function Toolbar() {
       <span className="min-w-0 flex-1 truncate text-base font-semibold"><Trans message="Inbox" /></span>
       <Tooltip label={<Trans message="Search conversations" />}>
         <IconButton
+          aria-label="Search conversations"
           elementType={Link}
           to="/agent/conversations/search"
           size="sm"
@@ -90,11 +91,12 @@ function Toolbar() {
       </Tooltip>
       <Tooltip label={<Trans message="New conversation" />}>
         <IconButton
+          aria-label="New conversation"
           elementType={Link}
           to="/agent/conversations/new"
           size="sm"
           radius="rounded-full"
-          className="text-muted"
+          className="text-muted-foreground"
         >
           <PlusIcon className="size-4" aria-hidden="true" />
         </IconButton>
@@ -161,7 +163,11 @@ function Section({name, children, actions}: SectionProps) {
     <Fragment>
       <div className="group mb-2 flex items-center gap-2 pl-2.5 pr-3.5 pt-5">
         <div className="mr-auto text-sm font-semibold">{children[0]}</div>
-        <div className="hidden group-hover:block">{actions}</div>
+        {actions && (
+          <div className="opacity-75 hover:opacity-100 focus-within:opacity-100">
+            {actions}
+          </div>
+        )}
         <IconButton
           size="xs"
           iconSize="sm"
