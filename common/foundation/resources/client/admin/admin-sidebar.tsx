@@ -25,7 +25,7 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
-import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, LandmarkIcon} from 'lucide-react';
+import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, LandmarkIcon, WalletCardsIcon} from 'lucide-react';
 import {JSXElementConstructor, use, useState} from 'react';
 import {Link, NavLink, useLocation, useSearchParams} from 'react-router';
 
@@ -161,6 +161,16 @@ export function AdminSidebar() {
                 </Sidebar.MenuItem>
               </Sidebar.Menu>
             )}
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to="/admin/payout-accounts" />}
+                  icon={<WalletCardsIcon />}
+                >
+                  <Trans message="Payout accounts" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
             {(!hasFinancial || !hasKyc) && (
               <Sidebar.Menu>
                 {!hasFinancial && (

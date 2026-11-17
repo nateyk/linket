@@ -56,7 +56,7 @@ describe('AdminFinancialLayout', () => {
     // Secondary navigation items
     expect(screen.getByText('General defaults')).toBeTruthy();
     expect(screen.getByText('Payment gateways')).toBeTruthy();
-    expect(screen.getByText('Receiving accounts')).toBeTruthy();
+    expect(screen.queryByText('Receiving accounts')).toBeNull();
     expect(screen.getByText('Withdrawals')).toBeTruthy();
     expect(screen.getByText('Payment activity')).toBeTruthy();
     expect(screen.getByText('Withdrawal methods')).toBeTruthy();

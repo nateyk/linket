@@ -36,16 +36,6 @@ type GatewayConfig = {
   webhook_url: string;
 };
 
-type PayoutAccountReview = {
-  id: number;
-  account_holder: string;
-  display_label?: string;
-  masked_account_number?: string;
-  bank_code?: string;
-  status: string;
-  creator?: {id: number; name: string; email: string};
-};
-
 type WithdrawalMethod = {
   id: number;
   name: string;
@@ -317,7 +307,6 @@ function ChapaPlatformGatewayTab() {
 
 function PayoutMethodsTab() {
   const [methods, setMethods] = useState<WithdrawalMethod[]>([]);
-  const [accounts, setAccounts] = useState<PayoutAccountReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string>();
@@ -325,12 +314,8 @@ function PayoutMethodsTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [methodRes, accountRes] = await Promise.all([
-        apiClient.get('/api/v1/admin/financial/withdrawal-methods'),
-        apiClient.get('/api/v1/admin/financial/payout-accounts'),
-      ]);
+      const methodRes = await apiClient.get('/api/v1/admin/financial/withdrawal-methods');
       setMethods(methodRes.data.data ?? []);
-      setAccounts(accountRes.data.data ?? []);
       setError(undefined);
     } catch (e: unknown) {
       setError(getApiErrorMessage(e));
@@ -345,18 +330,6 @@ function PayoutMethodsTab() {
     setBusyId('method-' + method.id);
     try {
       await apiClient.put('/api/v1/admin/financial/withdrawal-methods/' + method.id, {is_active: enabled});
-      await load();
-    } catch (e: unknown) {
-      setError(getApiErrorMessage(e));
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const reviewAccount = async (account: PayoutAccountReview, decision: 'approve' | 'reject') => {
-    setBusyId('account-' + account.id);
-    try {
-      await apiClient.post('/api/v1/admin/financial/payout-accounts/' + account.id + '/review', {decision});
       await load();
     } catch (e: unknown) {
       setError(getApiErrorMessage(e));
@@ -380,7 +353,7 @@ function PayoutMethodsTab() {
             <p className="text-xs text-muted-foreground">
               <Trans message="Configure Chapa Transfer Approval URL in your merchant dashboard:" /> <code>/api/v1/chapa/transfer-approval</code>
             </p>
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods" />}>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods/legacy" />}>
               <Trans message="Manage provider limits" />
             </Button>
           </div>
@@ -418,58 +391,7 @@ function PayoutMethodsTab() {
           </Table.Root>
         </Card.Content>
       </Card.Root>
-      <Card.Root>
-        <Card.Header>
-          <Card.Title><Trans message="Seller receiving account approvals" /></Card.Title>
-          <Card.Description><Trans message="Review the recipient name and masked destination before enabling withdrawals. Editing account details resets approval." /></Card.Description>
-        </Card.Header>
-        <Card.Content>
-          <Table.Root>
-            <Table.Header>
-              <Table.Row>
-                <Table.Head><Trans message="Seller" /></Table.Head>
-                <Table.Head><Trans message="Destination" /></Table.Head>
-                <Table.Head><Trans message="Status" /></Table.Head>
-                <Table.Head><Trans message="Review" /></Table.Head>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {accounts.map(a => (
-                <Table.Row key={a.id}>
-                  <Table.Cell>
-                    <p className="font-medium">{a.creator?.name ?? a.account_holder}</p>
-                    <p className="text-xs text-muted-foreground">{a.creator?.email ?? a.account_holder}</p>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <p>{a.display_label ?? a.bank_code ?? 'Account'}</p>
-                    <p className="font-mono text-xs text-muted-foreground">{a.masked_account_number ?? '••••'}</p>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Badge variant={a.status === 'active' ? 'positive' : 'outline'}>{a.status.replaceAll('_', ' ')}</Badge>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <div className="flex flex-wrap gap-2">
-                      {a.status !== 'active' && (
-                        <Button size="sm" disabled={busyId !== null} onClick={() => void reviewAccount(a, 'approve')}>
-                          <Trans message="Approve" />
-                        </Button>
-                      )}
-                      {a.status !== 'rejected' && (
-                        <Button size="sm" variant="outline" disabled={busyId !== null} onClick={() => void reviewAccount(a, 'reject')}>
-                          <Trans message="Reject" />
-                        </Button>
-                      )}
-                    </div>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-              {accounts.length === 0 && (
-                <Table.Row><Table.Cell colSpan={4}><Trans message="No seller payout accounts to review." /></Table.Cell></Table.Row>
-              )}
-            </Table.Body>
-          </Table.Root>
-        </Card.Content>
-      </Card.Root>
+
     </div>
   );
 }
