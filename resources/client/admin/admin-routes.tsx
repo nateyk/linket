@@ -145,7 +145,7 @@ export const adminRoutes: RouteObject[] = [
 
       commonAdminSettingsRoutes(
         [
-          {path: 'payment-gateways', loader: () => redirect('/admin/financial/payment-gateways')},
+          {path: 'payment-gateways', loader: () => redirect('/admin/financial/general')},
           {path: 'financial', loader: () => redirect('/admin/financial/general')},
           {
             path: 'search',
@@ -232,7 +232,7 @@ export const adminRoutes: RouteObject[] = [
       },
       {
         path: 'items/payment-methods',
-        lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+        loader: () => redirect('/admin/financial/general'),
       },
       {
         path: 'items/:productId/reviews',
@@ -277,7 +277,7 @@ export const adminRoutes: RouteObject[] = [
           },
           {
             path: 'payment-gateways',
-            lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawal-methods',
