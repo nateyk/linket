@@ -66,15 +66,15 @@ describe('AdminFinancialLayout', () => {
     expect(screen.getByTestId('financial-outlet')).toBeTruthy();
   });
 
-  it('highlights the active navigation link based on current path', () => {
-    currentPath = '/admin/financial/withdrawals';
+  it('links to the canonical withdrawal page while highlighting the active financial section', () => {
+    currentPath = '/admin/financial/general';
     renderLayout();
 
     const withdrawalsLink = screen.getByText('Withdrawals').closest('a');
-    expect(withdrawalsLink).toBeTruthy();
-    expect(withdrawalsLink?.getAttribute('data-active')).toBe('true');
+    expect(withdrawalsLink?.getAttribute('href')).toBe('/admin/withdrawals');
+    expect(withdrawalsLink?.getAttribute('data-active')).toBe('false');
 
     const generalLink = screen.getByText('General defaults').closest('a');
-    expect(generalLink?.getAttribute('data-active')).toBe('false');
+    expect(generalLink?.getAttribute('data-active')).toBe('true');
   });
 });
