@@ -104,20 +104,28 @@ final class MarketplaceProviderEvidence
             throw new InvalidArgumentException('Invalid provider record.');
         }
         return [
-            'reference' => self::reference($row['reference'] ?? null),
+            'reference' => self::checkedString($row, [
+                'field' => 'reference',
+                'pattern' => '/^(?=.{1,190}\z)(?=.*\S).+$/s',
+            ]),
             'amount_cents' => self::amount($row['amount_cents'] ?? null),
-            'currency' => self::currency($row['currency'] ?? null),
-            'status' => self::status($row['status'] ?? null),
+            'currency' => self::checkedString($row, [
+                'field' => 'currency', 'pattern' => '/^[A-Z]{3}$/',
+            ]),
+            'status' => self::checkedString($row, [
+                'field' => 'status', 'pattern' => '/^[a-z_]+$/',
+            ]),
         ];
     }
 
-    private static function reference(mixed $value): string
+    private static function checkedString(array $row, array $rule): string
     {
+        $value = $row[$rule['field']] ?? null;
         if (!is_string($value)) {
-            throw new InvalidArgumentException('Invalid provider reference.');
+            throw new InvalidArgumentException('Provider evidence has an invalid text field.');
         }
-        if (trim($value) === '' || strlen($value) > 190) {
-            throw new InvalidArgumentException('Invalid provider reference length.');
+        if (!preg_match($rule['pattern'], $value)) {
+            throw new InvalidArgumentException('Provider evidence has an invalid text format.');
         }
         return $value;
     }
@@ -130,41 +138,28 @@ final class MarketplaceProviderEvidence
         return $value;
     }
 
-    private static function currency(mixed $value): string
-    {
-        if (!is_string($value)) {
-            throw new InvalidArgumentException('Invalid provider currency.');
-        }
-        if (!preg_match('/^[A-Z]{3}$/', $value)) {
-            throw new InvalidArgumentException('Invalid provider currency code.');
-        }
-        return $value;
-    }
-
-    private static function status(mixed $value): string
-    {
-        if (!is_string($value)) {
-            throw new InvalidArgumentException('Invalid provider status.');
-        }
-        if (!preg_match('/^[a-z_]+$/', $value)) {
-            throw new InvalidArgumentException('Invalid provider status value.');
-        }
-        return $value;
-    }
-
     /** @param array{reference: ?string, amount_cents: int, currency: string, statuses: string[]} $subject */
     public function compare(string $group, array $subject): string
     {
         $reference = $subject['reference'];
-        if ($reference === null || $reference === '') {
-            return 'missing';
-        }
-        $record = $this->records[$group][$reference] ?? null;
+        $record = $this->find($group, $reference);
         if ($record === null) {
             return 'missing';
         }
         $this->matched[$group][$reference] = true;
+        return self::matchValues($record, $subject);
+    }
 
+    private function find(string $group, ?string $reference): ?array
+    {
+        if ($reference === null || $reference === '') {
+            return null;
+        }
+        return $this->records[$group][$reference] ?? null;
+    }
+
+    private static function matchValues(array $record, array $subject): string
+    {
         if ($record['amount_cents'] !== $subject['amount_cents']) {
             return 'amount_mismatch';
         }
