@@ -545,7 +545,7 @@ export function PublicDigitalProductOrderSuccessPage({
         >
           {paid ? (
             <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 text-center">
-              <span className="grid size-14 place-items-center rounded-full bg-positive/10 text-positive">
+              <span className="grid size-14 place-items-center rounded-button bg-positive/10 text-positive">
                 <CheckCircle2Icon className="size-7" aria-hidden="true" />
               </span>
               <div className="flex flex-col gap-1.5">
