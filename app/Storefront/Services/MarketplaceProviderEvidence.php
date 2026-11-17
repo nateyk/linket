@@ -10,10 +10,7 @@ use JsonException;
 final class MarketplaceProviderEvidence
 {
     private const GROUPS = [
-        'chapa_payments',
-        'chapa_refunds',
-        'chapa_payouts',
-        'verify_et_verifications',
+        'chapa_payments', 'chapa_refunds', 'chapa_payouts', 'verify_et_verifications',
     ];
 
     /** @var array<string, array<string, array{amount_cents: int, currency: string, status: string}>> */
@@ -22,90 +19,161 @@ final class MarketplaceProviderEvidence
     /** @var array<string, array<string, true>> */
     private array $matched = [];
 
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     public static function fromPath(string $path): self
     {
-        if (!is_file($path) || !is_readable($path) || filesize($path) > 16777216) {
-            throw new InvalidArgumentException('Provider evidence file is missing, unreadable, or larger than 16 MiB.');
-        }
-
-        try {
-            $input = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            throw new InvalidArgumentException('Provider evidence must be valid JSON.');
-        }
-
-        if (!is_array($input) || ($input['schema_version'] ?? null) !== 1
-            || ($input['scope'] ?? null) !== 'complete_marketplace_history') {
-            throw new InvalidArgumentException('Provider evidence must declare schema_version 1 and complete marketplace scope.');
-        }
+        $input = self::read($path);
+        self::validateHeader($input);
 
         $evidence = new self();
         foreach (self::GROUPS as $group) {
-            if (!isset($input[$group]) || !is_array($input[$group]) || !array_is_list($input[$group])) {
-                throw new InvalidArgumentException("Provider evidence is missing the {$group} list.");
-            }
-            $evidence->records[$group] = self::validateRows($input[$group], $group);
+            $evidence->records[$group] = self::indexRows(self::groupRows($input, $group));
             $evidence->matched[$group] = [];
         }
-
         return $evidence;
     }
 
-    /** @param array<int, mixed> $rows */
-    private static function validateRows(array $rows, string $group): array
+    private static function read(string $path): array
+    {
+        self::assertReadable($path);
+        try {
+            $decoded = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            throw new InvalidArgumentException('Provider evidence must be valid JSON.');
+        }
+        if (!is_array($decoded)) {
+            throw new InvalidArgumentException('Provider evidence must be a JSON object.');
+        }
+        return $decoded;
+    }
+
+    private static function assertReadable(string $path): void
+    {
+        if (!is_file($path)) {
+            throw new InvalidArgumentException('Provider evidence file is missing.');
+        }
+        if (!is_readable($path)) {
+            throw new InvalidArgumentException('Provider evidence file is unreadable.');
+        }
+        if (filesize($path) > 16777216) {
+            throw new InvalidArgumentException('Provider evidence exceeds 16 MiB.');
+        }
+    }
+
+    private static function validateHeader(array $input): void
+    {
+        if (($input['schema_version'] ?? null) !== 1) {
+            throw new InvalidArgumentException('Unsupported provider evidence schema version.');
+        }
+        if (($input['scope'] ?? null) !== 'complete_marketplace_history') {
+            throw new InvalidArgumentException('Provider evidence must cover the complete marketplace history.');
+        }
+    }
+
+    private static function groupRows(array $input, string $group): array
+    {
+        $rows = $input[$group] ?? null;
+        if (!is_array($rows)) {
+            throw new InvalidArgumentException("Missing {$group} evidence.");
+        }
+        if (!array_is_list($rows)) {
+            throw new InvalidArgumentException("Invalid {$group} evidence list.");
+        }
+        return $rows;
+    }
+
+    private static function indexRows(array $rows): array
     {
         $indexed = [];
         foreach ($rows as $row) {
-            if (!is_array($row)) {
-                throw new InvalidArgumentException("Invalid {$group} record.");
+            $normalized = self::normalizeRow($row);
+            $reference = $normalized['reference'];
+            if (isset($indexed[$reference])) {
+                throw new InvalidArgumentException('Duplicate provider reference.');
             }
-            $reference = $row['reference'] ?? null;
-            $amount = $row['amount_cents'] ?? null;
-            $currency = $row['currency'] ?? null;
-            $status = $row['status'] ?? null;
-
-            if (!is_string($reference) || trim($reference) === '' || strlen($reference) > 190
-                || !is_int($amount) || $amount < 0
-                || !is_string($currency) || !preg_match('/^[A-Z]{3}$/', $currency)
-                || !is_string($status) || !preg_match('/^[a-z_]+$/', $status)
-                || isset($indexed[$reference])) {
-                throw new InvalidArgumentException("Invalid or duplicate {$group} evidence record.");
-            }
-
-            $indexed[$reference] = [
-                'amount_cents' => $amount,
-                'currency' => $currency,
-                'status' => $status,
-            ];
+            unset($normalized['reference']);
+            $indexed[$reference] = $normalized;
         }
-
         return $indexed;
     }
 
-    /** @param string[] $acceptedStatuses */
-    public function compare(string $group, ?string $reference, int $amountCents, string $currency, array $acceptedStatuses): string
+    private static function normalizeRow(mixed $row): array
     {
-        if ($reference === null || $reference === '' || !isset($this->records[$group][$reference])) {
+        if (!is_array($row)) {
+            throw new InvalidArgumentException('Invalid provider record.');
+        }
+        return [
+            'reference' => self::reference($row['reference'] ?? null),
+            'amount_cents' => self::amount($row['amount_cents'] ?? null),
+            'currency' => self::currency($row['currency'] ?? null),
+            'status' => self::status($row['status'] ?? null),
+        ];
+    }
+
+    private static function reference(mixed $value): string
+    {
+        if (!is_string($value)) {
+            throw new InvalidArgumentException('Invalid provider reference.');
+        }
+        if (trim($value) === '' || strlen($value) > 190) {
+            throw new InvalidArgumentException('Invalid provider reference length.');
+        }
+        return $value;
+    }
+
+    private static function amount(mixed $value): int
+    {
+        if (!is_int($value) || $value < 0) {
+            throw new InvalidArgumentException('Invalid provider amount.');
+        }
+        return $value;
+    }
+
+    private static function currency(mixed $value): string
+    {
+        if (!is_string($value)) {
+            throw new InvalidArgumentException('Invalid provider currency.');
+        }
+        if (!preg_match('/^[A-Z]{3}$/', $value)) {
+            throw new InvalidArgumentException('Invalid provider currency code.');
+        }
+        return $value;
+    }
+
+    private static function status(mixed $value): string
+    {
+        if (!is_string($value)) {
+            throw new InvalidArgumentException('Invalid provider status.');
+        }
+        if (!preg_match('/^[a-z_]+$/', $value)) {
+            throw new InvalidArgumentException('Invalid provider status value.');
+        }
+        return $value;
+    }
+
+    /** @param array{reference: ?string, amount_cents: int, currency: string, statuses: string[]} $subject */
+    public function compare(string $group, array $subject): string
+    {
+        $reference = $subject['reference'];
+        if ($reference === null || $reference === '') {
             return 'missing';
         }
-
-        $record = $this->records[$group][$reference];
+        $record = $this->records[$group][$reference] ?? null;
+        if ($record === null) {
+            return 'missing';
+        }
         $this->matched[$group][$reference] = true;
 
-        if ($record['amount_cents'] !== $amountCents) {
+        if ($record['amount_cents'] !== $subject['amount_cents']) {
             return 'amount_mismatch';
         }
-        if ($record['currency'] !== strtoupper($currency)) {
+        if ($record['currency'] !== strtoupper($subject['currency'])) {
             return 'currency_mismatch';
         }
-        if (!in_array($record['status'], $acceptedStatuses, true)) {
+        if (!in_array($record['status'], $subject['statuses'], true)) {
             return 'status_mismatch';
         }
-
         return 'matched';
     }
 
