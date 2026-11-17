@@ -138,11 +138,37 @@ describe('CreatorWithdrawalsPage', () => {
     expect(await screen.findByText('Available Balance')).toBeTruthy();
     expect(screen.getByText('500.00 ETB')).toBeTruthy();
 
-    expect(screen.getByText('Pending Withdrawn')).toBeTruthy();
+    expect(screen.getByText('Held earnings')).toBeTruthy();
+    expect(screen.getByText('200.00 ETB')).toBeTruthy();
+
+    expect(screen.getByText('Pending withdrawals')).toBeTruthy();
     expect(screen.getByText('100.00 ETB')).toBeTruthy();
 
-    expect(screen.getByText('Total Withdraw')).toBeTruthy();
+    expect(screen.getByText('Paid out')).toBeTruthy();
     expect(screen.getByText('150.00 ETB')).toBeTruthy();
+  });
+
+  it('explains a reconciliation mismatch without enabling a zero-balance withdrawal', async () => {
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') {
+        return Promise.resolve({data: {summary: {
+          ...mockSummary,
+          available_for_payout_cents: 0,
+          balance_reconciliation_required: true,
+        }}});
+      }
+      if (url.includes('/api/v1/items/payout-requests')) {
+        return Promise.resolve({data: {data: mockPayouts}});
+      }
+      if (url === '/api/v1/items/payout-methods') {
+        return Promise.resolve({data: {data: mockDestinations}});
+      }
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+    renderPage();
+    expect(await screen.findByText(/Some historical earnings or pending withdrawals still need ledger reconciliation/)).toBeTruthy();
+    expect(screen.getByText('0.00 ETB')).toBeTruthy();
+    expect(screen.getByRole('button', {name: /Request withdrawal/i})).toHaveProperty('disabled', true);
   });
 
   it('renders withdrawal history with status badges and destination labels', async () => {
