@@ -14,7 +14,10 @@ final class EtbMajorAmount
 {
     public static function cents(mixed $amount): ?int
     {
-        if (!is_string($amount) && !is_int($amount) && !is_float($amount)) {
+        if (!is_scalar($amount)) {
+            return null;
+        }
+        if (is_bool($amount)) {
             return null;
         }
 
