@@ -14,6 +14,7 @@ final class VerifyEtRetirementAudit
         'direct_payment_verifications',
         'verify_et_webhook_deliveries',
         'subscriptions',
+        'pro_subscription_payments',
         'storefront_payment_disputes',
     ];
 
@@ -71,6 +72,11 @@ final class VerifyEtRetirementAudit
                     $query->whereNotIn('status', ['processed', 'ignored', 'test'])
                         ->orWhereNull('status');
                 })->count(),
+            'unresolved_pro_subscription_payments' => DB::table('pro_subscription_payments')
+                ->where(function ($query): void {
+                    $query->whereNotIn('status', ['paid', 'completed', 'expired', 'cancelled', 'rejected', 'failed'])
+                        ->orWhereNull('status');
+                })->count(),
             'open_legacy_subscriptions' => DB::table('subscriptions')
                 ->where('gateway_name', 'verify_et')->whereNull('ends_at')->count(),
             'active_legacy_disputes' => DB::table('storefront_payment_disputes as disputes')
@@ -90,6 +96,7 @@ final class VerifyEtRetirementAudit
             'verify_et_webhook_deliveries' => DB::table('verify_et_webhook_deliveries')->count(),
             'verify_et_subscriptions' => DB::table('subscriptions')
                 ->where('gateway_name', 'verify_et')->count(),
+            'pro_subscription_payments' => DB::table('pro_subscription_payments')->count(),
         ];
     }
 }
