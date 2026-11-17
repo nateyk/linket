@@ -645,6 +645,6 @@ it('clearly breaks down free downloads from paid orders in summary', async () =>
   expect(screen.getAllByText('Orders').length).toBeGreaterThan(0);
   expect(screen.getByText('Gross profit · 0.0%')).toBeTruthy();
   expect(screen.getByText('Average order')).toBeTruthy();
-  expect(screen.getByText('0 ETB')).toBeTruthy();
+  expect(screen.getAllByText('0 ETB').length).toBeGreaterThanOrEqual(2);
   expect(screen.queryByText('Net platform earnings')).toBeNull();
 });
