@@ -233,9 +233,13 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         $this->assertSame($amountCents, $balancesAfterReserve['reserved']);
 
         $provider = $this->createMock(ChapaPayoutService::class);
-        $provider->method('createTransfer')->willReturn([
-            'status' => 'success', 'message' => 'Transfer Queued Successfully', 'data' => 'queued',
-        ]);
+        $provider->method('createTransfer')->willReturnCallback(
+            fn (StorefrontPayoutIntent $intent): array => [
+                'status' => 'success',
+                'message' => 'Transfer Queued Successfully',
+                'data' => ['reference' => $intent->merchant_reference, 'status' => 'pending'],
+            ],
+        );
         $provider->method('verifyTransfer')->willReturnCallback(fn (string $ref): array => [
             'status' => 'success',
             'data' => ['status' => 'success', 'reference' => $ref, 'amount' => '1350.00', 'currency' => 'ETB'],
@@ -283,9 +287,13 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         $ledgerService->reserveForPayout($payout, $amountCents);
 
         $provider = $this->createMock(ChapaPayoutService::class);
-        $provider->method('createTransfer')->willReturn([
-            'status' => 'success', 'message' => 'Transfer Queued Successfully', 'data' => 'queued',
-        ]);
+        $provider->method('createTransfer')->willReturnCallback(
+            fn (StorefrontPayoutIntent $intent): array => [
+                'status' => 'success',
+                'message' => 'Transfer Queued Successfully',
+                'data' => ['reference' => $intent->merchant_reference, 'status' => 'pending'],
+            ],
+        );
         $provider->method('verifyTransfer')->willReturnCallback(fn (string $ref): array => [
             'status' => 'success',
             'data' => ['status' => 'failed', 'reference' => $ref, 'amount' => '750.00', 'currency' => 'ETB'],
