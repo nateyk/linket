@@ -39,6 +39,7 @@ export type Summary = {
   reserved_payout_cents: number;
   paid_out_cents: number;
   lifetime_earnings_cents: number;
+  balance_reconciliation_required?: boolean;
   currency: string;
 };
 
@@ -171,6 +172,11 @@ export function Component() {
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
           {error && <WithdrawalsAlert message={error} onRetry={() => void loadData()} />}
+          {summary?.balance_reconciliation_required && (
+            <p role="status" className="rounded-card-sm border border-border px-4 py-3 text-sm text-muted-foreground">
+              <Trans message="Some historical earnings or pending withdrawals still need ledger reconciliation. Only cleared Chapa funds are eligible for withdrawal." />
+            </p>
+          )}
           <WithdrawalStatCards summary={summary} available={available} currency={currency} loading={loading} />
           <WithdrawalHistoryTable
             payouts={payouts}
@@ -254,7 +260,7 @@ function WithdrawalStatCards({
   loading: boolean;
 }) {
   return (
-    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
+    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <WithdrawalMetricCard
         icon={LandmarkIcon}
         label="Available Balance"
@@ -264,14 +270,21 @@ function WithdrawalStatCards({
       />
       <WithdrawalMetricCard
         icon={Clock3Icon}
-        label="Pending Withdrawn"
+        label="Held earnings"
+        valueInCents={summary?.held_earnings_cents ?? 0}
+        currency={currency}
+        loading={loading}
+      />
+      <WithdrawalMetricCard
+        icon={Clock3Icon}
+        label="Pending withdrawals"
         valueInCents={summary?.reserved_payout_cents ?? 0}
         currency={currency}
         loading={loading}
       />
       <WithdrawalMetricCard
         icon={CheckCircleIcon}
-        label="Total Withdraw"
+        label="Paid out"
         valueInCents={summary?.paid_out_cents ?? 0}
         currency={currency}
         loading={loading}
