@@ -482,7 +482,7 @@ export function Component() {
                     nativeButton={false}
                     render={
                       <Link
-                        to="/admin/payout-accounts"
+                        to={`/admin/payout-accounts?search=${encodeURIComponent(profile.email ?? '')}`}
                       />
                     }
                   >
