@@ -69,7 +69,7 @@ final class VerifyEtRetirementAudit
                 })->count(),
             'unprocessed_webhooks' => DB::table('verify_et_webhook_deliveries')
                 ->where(function ($query): void {
-                    $query->whereNotIn('status', ['processed', 'ignored', 'test'])
+                    $query->whereNotIn('status', ['success', 'manual_approved', 'processed', 'ignored', 'test'])
                         ->orWhereNull('status');
                 })->count(),
             'unresolved_pro_subscription_payments' => DB::table('pro_subscription_payments')
