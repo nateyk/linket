@@ -73,7 +73,7 @@ class WithdrawalMethodConfigurationIntegrityTest extends TestCase
 
         $response = (new DigitalProductWithdrawalMethodsController())->destroy($method);
 
-        $this->assertSame(200, $response->status());
+        $this->assertSame(200, $response->getStatusCode());
         $this->assertFalse($method->fresh()->is_active);
         $this->assertSame($method->id, DB::table('payout_requests')->where('id', $payoutId)->value('withdrawal_method_id'));
     }
