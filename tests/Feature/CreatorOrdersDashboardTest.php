@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Payments\Models\DirectPaymentVerification;
 use App\Storefront\Models\DigitalProduct;
+use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\StorefrontOrder;
 use Common\Files\FileEntry;
@@ -238,6 +239,38 @@ test('gateway-scoped orders and financial metrics exclude historical Verify.et f
     $this->getJson('/api/v1/storefront/direct-orders/'.$legacyReview->uuid)
         ->assertOk()->assertJsonPath('data.payment_gateway', 'verify_et');
     $this->getJson('/api/v1/storefront/direct-orders?gateway=invalid')->assertUnprocessable();
+});
+
+test('creator Chapa net earnings account for completed partial refunds without changing gross sales', function () {
+    [$creator, , $product] = creatorOrdersDashboardFixture();
+    $paid = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid',
+        'payment_gateway' => 'chapa',
+        'collection_owner' => StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA,
+        'gross_amount_cents' => 10000,
+        'creator_earnings_cents' => 9000,
+        'platform_fee_cents' => 1000,
+        'paid_at' => now(),
+    ]);
+    DigitalProductPaymentRefund::query()->create([
+        'storefront_order_id' => $paid->id,
+        'recorded_by' => $creator->id,
+        'amount_cents' => 4000,
+        'creator_earnings_reversal_cents' => 3600,
+        'platform_fee_reversal_cents' => 400,
+        'currency' => 'ETB',
+        'external_reference' => 'synthetic-partial-refund',
+        'reason' => 'Synthetic partial return',
+        'status' => DigitalProductPaymentRefund::STATUS_COMPLETED,
+        'refunded_at' => now(),
+    ]);
+
+    creatorOrdersDashboardActAs($this, $creator);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa')
+        ->assertOk()
+        ->assertJsonPath('summary.verified_revenue_cents', 10000)
+        ->assertJsonPath('summary.creator_earnings_cents', 5400)
+        ->assertJsonPath('summary.paid_orders_count', 1);
 });
 
 test('creator can inspect an owned order with masked account evidence and delivery state', function () {

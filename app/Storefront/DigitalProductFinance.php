@@ -2,6 +2,7 @@
 
 namespace App\Storefront;
 
+use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Models\DigitalProductEarningsLedger;
 use App\Storefront\Models\StorefrontOrder;
@@ -51,11 +52,12 @@ class DigitalProductFinance
 
     public function summary(int $creatorId, int $workspaceId, bool $lock = false): array
     {
-        $currency = config('storefront.currency', 'ETB');
+        $currency = strtoupper((string) config('storefront.currency', 'ETB'));
 
         $entries = DigitalProductEarningsLedger::query()
             ->where('workspace_id', $workspaceId)
-            ->where('creator_id', $creatorId);
+            ->where('creator_id', $creatorId)
+            ->where('currency', $currency);
 
         if ($lock) {
             $entries->lockForUpdate();
@@ -63,8 +65,15 @@ class DigitalProductFinance
 
         $entries = $entries->get(['entry_type', 'amount_cents', 'available_at']);
         $now = now();
-        $held = (int) $entries->filter(fn(DigitalProductEarningsLedger $entry) => $entry->available_at?->isFuture())->sum('amount_cents');
-        $available = (int) $entries->filter(fn(DigitalProductEarningsLedger $entry) => !$entry->available_at || !$entry->available_at->isFuture())->sum('amount_cents');
+        $legacyAvailable = (int) $entries->filter(fn(DigitalProductEarningsLedger $entry) => !$entry->available_at || !$entry->available_at->isFuture())->sum('amount_cents');
+        $ledgerBalances = $this->creatorLedger()->getBalances(
+            BalanceQuery::for($creatorId, $currency, $workspaceId, $lock)
+        );
+        $journalWithdrawable = max(0, $ledgerBalances['available'] - $ledgerBalances['deficit']);
+        // Never advertise funds that either ledger cannot support.
+        // In particular, a matured legacy entry is not proof that the
+        // double-entry escrow has been released or a deficit settled.
+        $available = min(max(0, $legacyAvailable), $journalWithdrawable);
         $lifetime = (int) $entries->whereIn('entry_type', ['sale', 'admin_adjustment'])->sum('amount_cents');
         $netEarnings = (int) $entries->whereIn('entry_type', ['sale', 'refund', 'admin_adjustment'])->sum('amount_cents');
 
@@ -72,24 +81,28 @@ class DigitalProductFinance
         $orders = StorefrontOrder::query()
             ->where('creator_id', $creatorId)
             ->where('status', 'paid')
+            ->where('currency', $currency)
             ->where('collection_owner', StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA)
             ->whereHas('product', fn($query) => $query->where('workspace_id', $workspaceId));
 
         $payouts = \App\Storefront\Models\PayoutRequest::query()
             ->where('workspace_id', $workspaceId)
-            ->where('creator_id', $creatorId);
+            ->where('creator_id', $creatorId)
+            ->where('currency', $currency);
         $reserved = (int) (clone $payouts)->whereIn('status', ['requested', 'processing'])->sum('amount_cents');
         $paidOut = (int) $payouts->where('status', 'paid')->sum('amount_cents');
 
         return [
-            'held_earnings_cents' => max(0, $held),
+            'held_earnings_cents' => $ledgerBalances['held'],
             'available_for_payout_cents' => $available,
-            'reserved_payout_cents' => max(0, $reserved),
+            'reserved_payout_cents' => $ledgerBalances['reserved'],
+            'balance_reconciliation_required' => $legacyAvailable !== $journalWithdrawable
+                || $reserved !== $ledgerBalances['reserved'],
             'lifetime_earnings_cents' => $lifetime,
             'gross_sales_cents' => (int) (clone $orders)->sum('gross_amount_cents'),
             'platform_commission_cents' => (int) (clone $orders)->sum('platform_fee_cents'),
             'creator_earnings_cents' => $netEarnings,
-            'pending_payout_cents' => max(0, $reserved),
+            'pending_payout_cents' => $ledgerBalances['reserved'],
             'paid_out_cents' => $paidOut,
             'currency' => $currency,
         ];

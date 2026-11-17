@@ -10,6 +10,10 @@ use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\WorkspacePayoutConfig;
 use App\Storefront\DigitalProductFinance;
+use App\Storefront\Ledger\AccountCodes;
+use App\Storefront\Ledger\JournalEntryData;
+use App\Storefront\Ledger\JournalLineData;
+use App\Storefront\Ledger\JournalPostingService;
 use App\Storefront\PayoutRequestService;
 use Common\Permissions\Models\Permission;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -66,6 +70,61 @@ class PayoutSystemTest extends TestCase
             'entry_type' => 'payout_reserved',
             'amount_cents' => -4000,
         ]);
+    }
+
+    public function testUnbackedLegacyEarningsCannotBeWithdrawnWithoutChapaJournalFunds(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->createPayoutMethod($creator, $workspaceId);
+
+        // Simulate an older earnings record without a Chapa settlement journal.
+        app(DigitalProductFinance::class)->record(
+            $workspaceId,
+            $creator->id,
+            'legacy-unreconciled:' . $creator->id,
+            'sale',
+            25000,
+            'ETB',
+            ['available_at' => now()],
+        );
+
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
+        $this->assertSame(0, $summary['available_for_payout_cents']);
+        $this->assertTrue($summary['balance_reconciliation_required']);
+
+        try {
+            app(PayoutRequestService::class)->create($creator->id, $workspaceId, 1000);
+            $this->fail('Unbacked earnings must not authorize a withdrawal.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+        $this->assertDatabaseMissing('payout_requests', ['creator_id' => $creator->id]);
+    }
+
+    public function testAvailableBalanceUsesCanonicalUppercaseCurrencyAndJournal(): void
+    {
+        config()->set('storefront.currency', 'etb');
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->createPayoutMethod($creator, $workspaceId);
+        $this->creditSale($creator, 10000);
+        // A separate currency must not inflate the ETB earnings or produce
+        // a false mismatch on the Chapa balance summary.
+        app(DigitalProductFinance::class)->record(
+            $workspaceId, $creator->id, 'foreign-currency:' . $creator->id,
+            'sale', 50000, 'USD', ['available_at' => now()]
+        );
+
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
+        $this->assertSame('ETB', $summary['currency']);
+        $this->assertSame(10000, $summary['available_for_payout_cents']);
+        $this->assertFalse($summary['balance_reconciliation_required']);
+
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 3000);
+        $this->assertSame('ETB', $payout->currency);
+        $this->assertSame(7000, app(DigitalProductFinance::class)
+            ->summary($creator->id, $workspaceId)['available_for_payout_cents']);
     }
 
     /**
@@ -843,15 +902,25 @@ class PayoutSystemTest extends TestCase
 
     private function creditSale(User $creator, int $cents): void
     {
-        // A verified sale ledger entry, immediately available for payout.
+        $workspaceId = $creator->workspaces()->first()->id;
+        // Synthetic, balanced test funding: neither an unbacked earnings row
+        // nor a pending provider payment may authorize a withdrawal.
         app(DigitalProductFinance::class)->record(
-            $creator->workspaces()->first()->id,
+            $workspaceId,
             $creator->id,
             'sale:' . $creator->id . ':' . $cents,
             'sale',
             $cents,
-            config('storefront.currency'),
-            ['available_at' => now(), 'description' => 'Verified sale'],
+            'ETB',
+            ['available_at' => now(), 'description' => 'Synthetic verified sale'],
+        );
+        $context = ['creator_id' => $creator->id, 'workspace_id' => $workspaceId];
+        app(JournalPostingService::class)->post(
+            new JournalEntryData('test_funding', $creator->id, 'sale_' . $cents, 'ETB', $context),
+            [
+                new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, $cents, 0, 'ETB', $context),
+                new JournalLineData(AccountCodes::CREATOR_AVAILABLE, 0, $cents, 'ETB', $context),
+            ],
         );
     }
 

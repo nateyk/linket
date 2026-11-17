@@ -23,10 +23,9 @@ class StorefrontSalesController extends Controller
             ->paginate();
 
         return [
-            'summary' => [
-                ...app(StorefrontEarnings::class)->forCreator($creatorId, $workspaceId),
-                'currency' => config('storefront.currency'),
-            ],
+            // The finance service already normalizes currency and caps
+            // withdrawable balance against the Chapa journal.
+            'summary' => app(StorefrontEarnings::class)->forCreator($creatorId, $workspaceId),
             'orders' => StorefrontOrderResource::collection($orders),
         ];
     }

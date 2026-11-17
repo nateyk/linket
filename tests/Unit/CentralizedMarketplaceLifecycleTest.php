@@ -92,6 +92,15 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             $table->timestamps();
         });
 
+        // Ledger hold release includes completed refund reversals.
+        Schema::create('digital_product_payment_refunds', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('storefront_order_id');
+            $table->string('status', 32)->default('completed');
+            $table->unsignedBigInteger('creator_earnings_reversal_cents')->default(0);
+            $table->timestamps();
+        });
+
         Schema::create('payout_requests', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('workspace_id')->default(1);
@@ -119,6 +128,7 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         Schema::dropIfExists('storefront_journal_lines');
         Schema::dropIfExists('storefront_journal_entries');
         Schema::dropIfExists('payout_requests');
+        Schema::dropIfExists('digital_product_payment_refunds');
         Schema::dropIfExists('storefront_order_items');
         Schema::dropIfExists('storefront_orders');
         Schema::dropIfExists('user_sessions');
@@ -342,6 +352,12 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         ]);
         $ledgerService->recordPlatformSale($order);
         $ledgerService->releaseHeldToAvailable($order);
+        // The standalone fixture does not have a products/workspaces table.
+        // Attribute its funded journal lines to the same workspace used by
+        // the synthetic payout request, rather than weakening payout guards.
+        StorefrontJournalLine::query()
+            ->where('creator_id', $creatorId)
+            ->update(['workspace_id' => 1]);
     }
 
     private function createMockChapaClient(?MockChapaConfig $config = null): ChapaClient
