@@ -155,7 +155,7 @@ export function Component() {
                     onChange={event => setQueryState({withdrawal_method: event.target.value || null, page: 1})}
                     className="h-9 w-full min-w-0 rounded-input border border-input bg-background px-3 text-sm text-foreground hover:border-foreground/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
                   >
-                    <option value="">All methods</option>
+                    <option value=""><Trans message="All methods" /></option>
                     {methods.map(method => (
                       <option key={method.id} value={method.name}>{method.name}</option>
                     ))}
