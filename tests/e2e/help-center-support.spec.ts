@@ -220,12 +220,15 @@ test.describe('isolated Help Center + support', () => {
     await expect(page.locator('[data-menu-id="agent-dashboard-sidebar"]'))
       .toHaveCount(0);
 
-    // The standard admin navigation must remain reachable on mobile, too.
+    // The All conversations route may asynchronously select its first chat.
+    // Test mobile pointer navigation from the stable search route so a late
+    // chat redirect does not close the drawer during Playwright's click.
+    await page.goto('/agent/conversations/search');
+    await expect(page).toHaveURL('/agent/conversations/search');
     await page.setViewportSize({width: 390, height: 844});
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveCount(0);
     const mobileSidebar = page.getByRole('navigation', {name: 'Main navigation'});
-    if (!(await mobileSidebar.isVisible())) {
-      await page.locator('[data-slot="sidebar-toggle-button"]').first().click();
-    }
+    await page.locator('[data-slot="sidebar-toggle-button"]').first().click();
     await expect(mobileSidebar.getByRole('link', {name: 'Support', exact: true}))
       .toBeVisible();
     await mobileSidebar.getByRole('link', {name: 'Support', exact: true}).click();
