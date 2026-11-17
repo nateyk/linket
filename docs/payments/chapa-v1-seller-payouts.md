@@ -55,8 +55,12 @@ semantics of a LIVE Chapa credential; a LIVE key can move real money.
    remains **Processing**, never Paid. Use **Verify settlement** with the
    same reference; validate success, failure, or pending. Never re-submit
    after a timeout or ambiguous provider response.
-8. Repeat with failed/pending test statuses, disabled providers, revoked
-   approval, and duplicate request attempts. The ledger must release
+8. To request a specific simulated Chapa TEST transfer outcome, set
+   `CHAPA_V1_TEST_TRANSFER_STATUS=pending`, `success`, or `failed` and
+   reload Laravel config before submitting a *new* test withdrawal. The
+   field is only sent with `CHASECK_TEST-` credentials, never live keys.
+   Repeat with disabled providers, revoked approval, and duplicate
+   request attempts. The ledger must release
    reservations only on verified failure and record disbursement once
    on verified success.
 
