@@ -72,6 +72,55 @@ class PayoutSystemTest extends TestCase
         ]);
     }
 
+    public function testUnbackedLegacyEarningsCannotBeWithdrawnWithoutChapaJournalFunds(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->createPayoutMethod($creator, $workspaceId);
+
+        // Simulate an older earnings record without a Chapa settlement journal.
+        app(DigitalProductFinance::class)->record(
+            $workspaceId,
+            $creator->id,
+            'legacy-unreconciled:' . $creator->id,
+            'sale',
+            25000,
+            'ETB',
+            ['available_at' => now()],
+        );
+
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
+        $this->assertSame(0, $summary['available_for_payout_cents']);
+        $this->assertTrue($summary['balance_reconciliation_required']);
+
+        try {
+            app(PayoutRequestService::class)->create($creator->id, $workspaceId, 1000);
+            $this->fail('Unbacked earnings must not authorize a withdrawal.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+        $this->assertDatabaseMissing('payout_requests', ['creator_id' => $creator->id]);
+    }
+
+    public function testAvailableBalanceUsesCanonicalUppercaseCurrencyAndJournal(): void
+    {
+        config()->set('storefront.currency', 'etb');
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->createPayoutMethod($creator, $workspaceId);
+        $this->creditSale($creator, 10000);
+
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
+        $this->assertSame('ETB', $summary['currency']);
+        $this->assertSame(10000, $summary['available_for_payout_cents']);
+        $this->assertFalse($summary['balance_reconciliation_required']);
+
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 3000);
+        $this->assertSame('ETB', $payout->currency);
+        $this->assertSame(7000, app(DigitalProductFinance::class)
+            ->summary($creator->id, $workspaceId)['available_for_payout_cents']);
+    }
+
     /**
      * A creator that has not completed KYC cannot request a payout while
      * the kyc.enabled setting is true.
