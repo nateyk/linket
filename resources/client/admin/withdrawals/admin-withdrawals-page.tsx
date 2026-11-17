@@ -40,7 +40,7 @@ type WithdrawalMethod = {id: number | string; name: string};
 const statuses = [
   {key: 'requested', label: 'Requested', detail: 'Awaiting admin review', icon: Clock3Icon},
   {key: 'processing', label: 'Processing', detail: 'Approved or awaiting settlement', icon: ArrowRightLeftIcon},
-  {key: 'paid', label: 'Paid', detail: 'Settled withdrawals', icon: CheckCircle2Icon},
+  {key: 'paid', label: 'Paid', detail: 'Recorded as paid', icon: CheckCircle2Icon},
   {key: 'rejected', label: 'Rejected', detail: 'Declined after review', icon: XCircleIcon},
   {key: 'cancelled', label: 'Cancelled', detail: 'Cancelled requests', icon: WalletCardsIcon},
 ] as const;
