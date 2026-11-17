@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Storefront\Services;
 
 use App\Payments\VerifyEt\VerifyEtRetirementAudit;
+use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontJournalEntry;
@@ -63,6 +64,7 @@ final class MarketplaceIndependentAudit
             $this->issue('journal_integrity_anomaly', ['record_type' => 'journal', 'record_id' => 0, 'count' => max(1, count($audit->issues))]);
         }
 
+        $this->signedLiabilities();
         $this->orders($evidence);
         $this->refunds($evidence);
         $this->payouts($evidence);
@@ -82,6 +84,34 @@ final class MarketplaceIndependentAudit
         $this->report['candidate_for_manual_review'] = $evidence !== null
             && $this->report['issue_count'] === 0;
         return $this->report;
+    }
+
+    private function signedLiabilities(): void
+    {
+        $accounts = [
+            AccountCodes::CREATOR_HELD,
+            AccountCodes::CREATOR_AVAILABLE,
+            AccountCodes::CREATOR_RESERVED,
+        ];
+        $balances = DB::table('storefront_journal_lines')
+            ->whereNotNull('creator_id')
+            ->whereIn('account_code', $accounts)
+            // MySQL stores debit/credit as UNSIGNED; cast before subtraction.
+            ->selectRaw('creator_id, workspace_id, currency, account_code, CAST(SUM(credit_cents) AS SIGNED) - CAST(SUM(debit_cents) AS SIGNED) AS signed_balance')
+            ->groupBy('creator_id', 'workspace_id', 'currency', 'account_code')
+            ->cursor();
+
+        foreach ($balances as $balance) {
+            if ((int) $balance->signed_balance < 0) {
+                $this->issue('negative_creator_liability', [
+                    'record_type' => 'creator_liability',
+                    'record_id' => (int) $balance->creator_id,
+                    'workspace_id' => $balance->workspace_id,
+                    'currency' => $balance->currency,
+                    'account_code' => $balance->account_code,
+                ]);
+            }
+        }
     }
 
     private function orders(?MarketplaceProviderEvidence $evidence): void
