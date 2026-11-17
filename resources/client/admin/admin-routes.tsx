@@ -267,12 +267,11 @@ export const adminRoutes: RouteObject[] = [
       },
       {
         path: 'withdrawals',
-        loader: () => redirect('/admin/financial/withdrawals'),
+        lazy: () => import('@app/admin/withdrawals/admin-withdrawals-page'),
       },
       {
         path: 'withdrawals/:withdrawalId/review',
-        loader: ({params}) =>
-          redirect(`/admin/financial/withdrawals/${params.withdrawalId}/review`),
+        lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
       },
       {
         path: 'financial',
@@ -309,11 +308,12 @@ export const adminRoutes: RouteObject[] = [
           },
           {
             path: 'withdrawals',
-            lazy: () => import('@app/admin/withdrawals/admin-withdrawals-page'),
+            loader: () => redirect('/admin/withdrawals'),
           },
           {
             path: 'withdrawals/:withdrawalId/review',
-            lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
+            loader: ({params}) =>
+              redirect(`/admin/withdrawals/${params.withdrawalId}/review`),
           },
           {
             path: 'payment-activity',
