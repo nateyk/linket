@@ -94,7 +94,7 @@ final class CreatorOrdersController extends Controller
 
         $orders = $query
             ->with([
-                'product' => fn ($product) => $product->withTrashed(),
+                'product' => fn ($product) => $product->withTrashed()->with('cover'),
                 'latestDirectPaymentVerification',
                 'entitlements',
             ])
@@ -117,7 +117,7 @@ final class CreatorOrdersController extends Controller
         $order = $this->creatorOrdersQuery($request)
             ->where('uuid', $order)
             ->with([
-                'product' => fn ($product) => $product->withTrashed(),
+                'product' => fn ($product) => $product->withTrashed()->with('cover'),
                 'items',
                 'entitlements.file',
                 'directPaymentVerifications' => fn ($verification) => $verification->latest('id'),
@@ -367,6 +367,7 @@ final class CreatorOrdersController extends Controller
             'uuid' => $order->uuid,
             'status' => $order->status,
             'buyer_name' => $order->buyer_name,
+            'buyer_email' => $order->buyer_email,
             'transaction_reference' => $order->payment_reference ?: $order->chapa_tx_ref,
             'payment_reference' => $order->payment_reference,
             'chapa_tx_ref' => $order->chapa_tx_ref,
@@ -385,6 +386,7 @@ final class CreatorOrdersController extends Controller
                 'id' => $order->product->id,
                 'title' => $order->product->title,
                 'status' => $order->product->status,
+                'cover_url' => $order->product->cover?->url,
             ] : null,
         ];
     }

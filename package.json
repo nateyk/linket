@@ -3,7 +3,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "storybook": "storybook dev -p 6006 -c common/foundation/resources/client/.storybook",
+    "storybook": "storybook dev -p 6006 --host 0.0.0.0 -c common/foundation/resources/client/.storybook",
     "extract": "node ./resources/scripts/extract-translations.js --write",
     "lint": "oxlint",
     "test": "vitest run",

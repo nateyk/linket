@@ -104,14 +104,14 @@ async function createBuyerTicket(buyer: Page): Promise<LifecycleTicket> {
 
 async function assignTicket(admin: Page, ticketId: number): Promise<void> {
   await admin.goto('/agent/conversations/' + ticketId);
-  const detail = admin.locator('div.flex.overflow-hidden').filter({
-    has: admin.getByText('Assignee', {exact: true}),
-  }).first();
-  if (!(await detail.isVisible())) {
+  // Target the labelled assignee action, not a layout class that might
+  // also match the dashboard shell and capture unrelated toolbar buttons.
+  const assigneeButton = admin.getByRole('button', {name: 'Change assignee'});
+  if (!(await assigneeButton.isVisible())) {
     await admin.getByRole('button', {name: 'Show conversation details'}).click();
   }
-  await expect(detail).toBeVisible();
-  await detail.getByRole('button').click();
+  await expect(assigneeButton).toBeVisible();
+  await assigneeButton.click();
   const transfer = admin.getByRole('dialog', {name: /transfer conversation/i});
   await expect(transfer).toBeVisible();
   try {

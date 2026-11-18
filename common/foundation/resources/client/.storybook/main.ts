@@ -20,6 +20,10 @@ export default defineMain({
     name: '@storybook/react-vite',
     options: {},
   },
+  // Allow DDEV HTTPS host when Storybook is bound to 0.0.0.0 in the container.
+  core: {
+    allowedHosts: ['linket.ddev.site'],
+  },
   typescript: {
     // `react-docgen` avoids the vite-plugin-react-docgen-typescript
     // "not included in the active TypeScript project" warning on preview.tsx.

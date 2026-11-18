@@ -39,7 +39,7 @@ export function Component() {
   const [openSection, setOpenSection] = useState<string | null>(null);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <SectionHeading
         title={<Trans message="Appearance" />}
         description={
