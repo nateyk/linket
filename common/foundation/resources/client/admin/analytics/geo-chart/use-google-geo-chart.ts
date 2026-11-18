@@ -36,6 +36,7 @@ export function useGoogleGeoChart({
   const {analytics} = useSettings();
   const apiKey = analytics?.gchart_api_key;
   const chartRef = useRef<google.visualization.GeoChart | null>(null);
+  const chartElementRef = useRef<HTMLDivElement | null>(null);
   const [ready, setReady] = useState(false);
   const canSelectRegion = !!onCountrySelected && !country;
   const hasData = data.length > 0;
@@ -115,8 +116,9 @@ export function useGoogleGeoChart({
       height: element.clientHeight,
     };
 
-    if (!chartRef.current) {
+    if (!chartRef.current || chartElementRef.current !== element) {
       chartRef.current = new google.visualization.GeoChart(element);
+      chartElementRef.current = element;
     }
 
     chartRef.current.draw(
@@ -151,7 +153,7 @@ export function useGoogleGeoChart({
 
   useEffect(() => {
     const chart = chartRef.current;
-    if (!ready || !chart || !onCountrySelected || typeof google === 'undefined') {
+    if (!ready || !enabled || !chart || !onCountrySelected || typeof google === 'undefined') {
       return;
     }
 
@@ -162,7 +164,7 @@ export function useGoogleGeoChart({
     );
 
     return () => google.visualization.events.removeListener(listener);
-  }, [ready, onCountrySelected, canSelectRegion]);
+  }, [ready, enabled, onCountrySelected, canSelectRegion]);
 
   return {drawGoogleChart};
 }
