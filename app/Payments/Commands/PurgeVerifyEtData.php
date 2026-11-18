@@ -17,6 +17,10 @@ use Throwable;
  */
 final class PurgeVerifyEtData extends Command
 {
+    private const LEGACY_PROVIDER = 'verify_et';
+    private const CHAPA_PROVIDER = 'chapa';
+    private const ORDER_JOURNAL_SOURCE = 'order';
+
     protected $signature = 'billing:purge-verify-et
                             {--execute : Apply the purge instead of previewing counts}
                             {--confirm= : Exact confirmation phrase PURGE-VERIFY-ET}';
@@ -58,8 +62,9 @@ final class PurgeVerifyEtData extends Command
     private function previewCounts(): array
     {
         return [
-            'verify_et_storefront_orders' => $this->countWhere('storefront_orders', 'payment_gateway', 'verify_et'),
-            'verify_et_subscriptions' => $this->countWhere('subscriptions', 'gateway_name', 'verify_et'),
+            'verify_et_storefront_orders' => $this->legacyOrderQuery()->count(),
+            'verify_et_subscriptions' => Schema::hasTable('subscriptions')
+                ? (int) DB::table('subscriptions')->where('gateway_name', self::LEGACY_PROVIDER)->count() : 0,
             'direct_payment_verifications' => $this->tableCount('direct_payment_verifications'),
             'verify_et_webhook_deliveries' => $this->tableCount('verify_et_webhook_deliveries'),
             'pro_subscription_payments' => $this->tableCount('pro_subscription_payments'),
@@ -68,10 +73,7 @@ final class PurgeVerifyEtData extends Command
 
     private function purgeAll(): void
     {
-        $ids = DB::table('storefront_orders')
-            ->where('payment_gateway', 'verify_et')
-            ->orderBy('id')
-            ->pluck('id');
+        $ids = $this->legacyOrderQuery()->orderBy('id')->pluck('id');
 
         foreach ($ids->chunk(250) as $batch) {
             $this->purgeOrders($batch->all());
@@ -88,10 +90,7 @@ final class PurgeVerifyEtData extends Command
         $this->assertNoLinkedPayout($orderIds);
         $this->deleteOrderDependents($orderIds);
 
-        DB::table('storefront_orders')
-            ->where('payment_gateway', 'verify_et')
-            ->whereIn('id', $orderIds)
-            ->delete();
+        $this->legacyOrderQuery()->whereIn('id', $orderIds)->delete();
     }
 
     /** @param list<int> $orderIds */
@@ -104,7 +103,7 @@ final class PurgeVerifyEtData extends Command
         $found = DB::table('payment_transactions')
             ->where('payable_type', StorefrontOrder::class)
             ->whereIn('payable_id', $orderIds)
-            ->where('gateway', 'chapa')
+            ->where('gateway', self::CHAPA_PROVIDER)
             ->exists();
 
         if ($found) {
@@ -120,10 +119,12 @@ final class PurgeVerifyEtData extends Command
             return;
         }
 
-        $found = DB::table('digital_product_payment_refunds as refunds')
-            ->join('payment_transactions as payments', 'payments.id', '=', 'refunds.payment_transaction_id')
-            ->whereIn('refunds.storefront_order_id', $orderIds)
-            ->where('payments.gateway', 'chapa')
+        $chapaPayments = DB::table('payment_transactions')
+            ->select('id')
+            ->where('gateway', self::CHAPA_PROVIDER);
+        $found = DB::table('digital_product_payment_refunds')
+            ->whereIn('storefront_order_id', $orderIds)
+            ->whereIn('payment_transaction_id', $chapaPayments)
             ->exists();
 
         if ($found) {
@@ -176,11 +177,13 @@ final class PurgeVerifyEtData extends Command
         }
 
         $entries = DB::table('storefront_journal_entries')
-            ->where('source_type', 'order')
+            ->where('source_type', self::ORDER_JOURNAL_SOURCE)
             ->whereIn('source_id', $orderIds)
             ->pluck('id');
 
-        $this->deleteWhereIn('storefront_journal_lines', 'journal_entry_id', $entries->all());
+        if (Schema::hasTable('storefront_journal_lines')) {
+            DB::table('storefront_journal_lines')->whereIn('journal_entry_id', $entries)->delete();
+        }
         DB::table('storefront_journal_entries')->whereIn('id', $entries)->delete();
     }
 
@@ -197,7 +200,7 @@ final class PurgeVerifyEtData extends Command
         }
 
         if (Schema::hasTable('subscriptions')) {
-            DB::table('subscriptions')->where('gateway_name', 'verify_et')->delete();
+            DB::table('subscriptions')->where('gateway_name', self::LEGACY_PROVIDER)->delete();
         }
     }
 
@@ -206,11 +209,9 @@ final class PurgeVerifyEtData extends Command
         return Schema::hasTable($table) ? (int) DB::table($table)->count() : 0;
     }
 
-    private function countWhere(string $table, string $column, string $value): int
+    private function legacyOrderQuery(): \Illuminate\Database\Query\Builder
     {
-        return Schema::hasTable($table)
-            ? (int) DB::table($table)->where($column, $value)->count()
-            : 0;
+        return DB::table('storefront_orders')->where('payment_gateway', self::LEGACY_PROVIDER);
     }
 
     /** @param list<int> $ids */
