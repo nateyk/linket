@@ -25,6 +25,7 @@ import {
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
 import {CurrencySettingsCard} from './currency-settings-card';
+import {ChapaPayoutReadinessCard} from './chapa-payout-readiness-card';
 
 type Tab = 'chapa' | 'currency' | 'payout-methods' | 'commission' | 'reconciliation';
 
@@ -300,6 +301,7 @@ function ChapaPlatformGatewayTab() {
             {saving ? <Trans message="Saving & validating..." /> : <Trans message="Save Chapa credentials" />}
           </Button>
         </form>
+        <ChapaPayoutReadinessCard />
       </Card.Content>
     </Card.Root>
   );

@@ -53,6 +53,7 @@ use App\Webhooks\Controllers\WebhooksController;
 use App\Tags\Controllers\TagsController;
 use Common\Domains\CustomDomainsController;
 use App\Storefront\Controllers\AdminPayoutRequestsController;
+use App\Storefront\Controllers\ChapaPayoutReadinessController;
 use App\Storefront\Controllers\ChapaV1TransferApprovalController;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
 use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
@@ -315,6 +316,7 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('admin/financial/payout-accounts/{payoutMethod}/review', [DigitalProductPayoutMethodController::class, 'review']);
 
         // ADMIN WITHDRAWAL METHODS
+        Route::get('admin/financial/chapa-payout-readiness', ChapaPayoutReadinessController::class);
         Route::get('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'adminIndex'])->name('admin.withdrawal-methods.index');
         Route::post('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'store'])->name('admin.withdrawal-methods.store');
         Route::put('admin/financial/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update'])->name('admin.withdrawal-methods.update');
