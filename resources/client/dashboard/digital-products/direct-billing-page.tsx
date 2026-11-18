@@ -1,6 +1,7 @@
 import {apiClient} from '@common/http/query-client';
 import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
@@ -12,16 +13,23 @@ import {Popover} from '@shadcn/popover/popover';
 import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
+import {FormattedRelativeTime} from '@ui/i18n/formatted-relative-time';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {
-  EyeIcon,
-  PackageCheckIcon,
   CalendarDaysIcon,
-  SearchIcon,
+  ChartNoAxesCombinedIcon,
+  ChevronRightIcon,
+  CircleDollarSignIcon,
+  LandmarkIcon,
+  PackageCheckIcon,
   ReceiptTextIcon,
   RefreshCwIcon,
+  SearchIcon,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   ReactNode,
@@ -62,6 +70,7 @@ type Order = {
   uuid: string;
   status: string;
   buyer_name?: string | null;
+  buyer_email?: string | null;
   transaction_reference?: string | null;
   payment_reference?: string | null;
   chapa_tx_ref?: string | null;
@@ -76,7 +85,12 @@ type Order = {
   delivery_status?: string;
   created_at?: string;
   paid_at?: string;
-  product?: {id: number; title: string; status: string} | null;
+  product?: {
+    id: number;
+    title: string;
+    status: string;
+    cover_url?: string | null;
+  } | null;
 };
 
 type VerificationSummary = {
@@ -220,7 +234,7 @@ export function Component() {
   const refresh = () => setRefreshKey(key => key + 1);
 
   return (
-    <DashboardLayout.MainSection>
+    <DashboardLayout.MainSection className="min-h-0 overflow-hidden">
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
@@ -243,23 +257,18 @@ export function Component() {
           <Trans message="Refresh" />
         </Button>
       </DashboardLayout.SectionHeader>
-      <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5 px-3 py-4 sm:px-5">
+      <DashboardLayout.SectionContent className="min-h-0 overflow-y-auto overscroll-y-contain">
+        <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5">
           <SummaryCards summary={summary} />
 
-          <div className="flex flex-col gap-4">
-              <div className="space-y-3">
-                <div className="space-y-1">
+          <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
                   <h2 className="text-base font-medium">
                     <Trans message="Orders" />
-                    {ordersPagination.total > 0 ? (
-                      <span className="ms-1 text-muted-foreground tabular-nums">
-                        ({ordersPagination.total})
-                      </span>
-                    ) : null}
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    <Trans message="Chapa orders and payment status. Only paid orders count as sales." />
+                    <Trans message="Orders and payment status. Only paid orders count as sales." />
                   </p>
                 </div>
                 <OrderFilters
@@ -326,76 +335,74 @@ export function Component() {
 }
 
 function SummaryCards({summary}: {summary?: Summary}) {
-  return (
-    <section aria-label="Sales summary" className="flex flex-col gap-2">
-      <p className="text-xs text-muted-foreground">
-        <Trans message="Chapa payments only · lifetime" />
-      </p>
-      <Card.Root size="sm" className="gap-0 rounded-card-sm py-0">
-        <Card.Content className="grid grid-cols-2 p-0 sm:grid-cols-4">
-          <SummaryMetric
-            className="border-e border-b sm:border-b-0"
-            label={<Trans message="Net sales" />}
-            value={summary ? (
-              <FormattedCurrency valueInCents={summary.net_sales_cents} currency={summary.currency} />
-            ) : '—'}
-            detail={<Trans message="Paid revenue minus completed refunds" />}
-          />
-          <SummaryMetric
-            className="border-b sm:border-e sm:border-b-0"
-            label={<Trans message="Orders" />}
-            value={summary?.paid_orders_count ?? '—'}
-            detail={<Trans message="Paid orders · excludes free" />}
-          />
-          <SummaryMetric
-            className="border-e"
-            label={
-              <>
-                <Trans message="Gross profit" />
-                {summary ? ' · ' + summary.gross_profit_margin_percent.toFixed(1) + '%' : null}
-              </>
-            }
-            value={summary ? (
-              <FormattedCurrency valueInCents={summary.gross_profit_cents} currency={summary.currency} />
-            ) : '—'}
-            detail={<Trans message="After platform fees · before product costs" />}
-          />
-          <SummaryMetric
-            label={<Trans message="Average order" />}
-            value={summary ? (
-              <FormattedCurrency valueInCents={summary.average_order_cents} currency={summary.currency} />
-            ) : '—'}
-            detail={<Trans message="Net sales per paid order" />}
-          />
-        </Card.Content>
-      </Card.Root>
-    </section>
-  );
-}
+  const metrics: Array<{
+    key: string;
+    icon: LucideIcon;
+    label: ReactNode;
+    value: ReactNode;
+  }> = [
+    {
+      key: 'net-sales',
+      icon: LandmarkIcon,
+      label: <Trans message="Net sales" />,
+      value: summary ? (
+        <FormattedCurrency valueInCents={summary.net_sales_cents} currency={summary.currency} />
+      ) : '—',
+    },
+    {
+      key: 'orders',
+      icon: ReceiptTextIcon,
+      label: <Trans message="Orders" />,
+      value: summary?.paid_orders_count ?? '—',
+    },
+    {
+      key: 'profit',
+      icon: ChartNoAxesCombinedIcon,
+      label: (
+        <>
+          <Trans message="Gross profit" />
+          {summary ? ` · ${summary.gross_profit_margin_percent.toFixed(1)}%` : null}
+        </>
+      ),
+      value: summary ? (
+        <FormattedCurrency valueInCents={summary.gross_profit_cents} currency={summary.currency} />
+      ) : '—',
+    },
+    {
+      key: 'average',
+      icon: CircleDollarSignIcon,
+      label: <Trans message="Average order" />,
+      value: summary ? (
+        <FormattedCurrency valueInCents={summary.average_order_cents} currency={summary.currency} />
+      ) : '—',
+    },
+  ];
 
-function SummaryMetric({
-  className,
-  label,
-  value,
-  detail,
-}: {
-  className?: string;
-  label: ReactNode;
-  value: ReactNode;
-  detail: ReactNode;
-}) {
   return (
-    <div className={`min-w-0 p-4 ${className ?? ''}`}>
-      <p className="text-sm text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
-        {value}
-      </p>
-      <p className="mt-1 text-xs leading-snug text-muted-foreground">
-        {detail}
-      </p>
-    </div>
+    <section aria-label="Sales summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {metrics.map(metric => {
+        const Icon = metric.icon;
+        return (
+          <Card.Root key={metric.key} size="sm" className="min-h-32 min-w-0 gap-3">
+            <Card.Header>
+              <Card.Title className="truncate text-sm font-normal text-muted-foreground">
+                {metric.label}
+              </Card.Title>
+              <Card.Action>
+                <span className="flex size-9 items-center justify-center rounded-card-sm bg-muted text-muted-foreground [&>svg]:size-4">
+                  <Icon aria-hidden="true" />
+                </span>
+              </Card.Action>
+            </Card.Header>
+            <Card.Content>
+              <p className="truncate text-2xl font-bold tracking-tight tabular-nums">
+                {metric.value}
+              </p>
+            </Card.Content>
+          </Card.Root>
+        );
+      })}
+    </section>
   );
 }
 
@@ -510,6 +517,7 @@ function OrdersTable({
   onRetry?: () => void;
   emptyMessage?: ReactNode;
 }) {
+  const {trans} = useTrans();
   if (loading) return <TableLoading />;
   if (error) {
     return (
@@ -548,78 +556,29 @@ function OrdersTable({
   }
 
   return (
-    <>
-      <ul className="divide-y lg:hidden" aria-label="Orders">
-        {orders.map(order => (
-          <li key={order.uuid}>
-            <Item.Root
-              size="sm"
-              render={<button type="button" />}
-              className="min-h-14 w-full min-w-0 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              onClick={() => onView(order.uuid)}
-              aria-label={`View details for ${
-                order.product?.title ?? 'Deleted product'
-              }`}
-            >
-            <Item.Media
-              align="center"
-              variant="icon"
-              className="size-10 rounded-card-xs bg-muted text-muted-foreground"
-            >
-              <ReceiptTextIcon />
-            </Item.Media>
-            <Item.Content className="gap-1.5">
-              <Item.Row className="items-start justify-between gap-3">
-                <Item.Title className="min-w-0 flex-1 break-words">
-                  {order.product?.title ?? <Trans message="Deleted product" />}
-                </Item.Title>
-                <span className="shrink-0 font-medium tabular-nums">
-                  <FormattedCurrency
-                    valueInCents={order.gross_amount_cents}
-                    currency={order.currency ?? 'ETB'}
-                  />
-                </span>
-              </Item.Row>
-              <Item.Row className="justify-between text-xs text-muted-foreground">
-                <span className="min-w-0 truncate">
-                  {order.buyer_name || <Trans message="Guest buyer" />}
-                </span>
-                <span className="shrink-0">
-                  <FormattedDate preset="short" date={order.created_at} />
-                </span>
-              </Item.Row>
-              <Item.Row>
-                <OrderStatusBadge status={order.status} />
-              </Item.Row>
-              </Item.Content>
-            </Item.Root>
-          </li>
-        ))}
-      </ul>
-
-      <div className="hidden min-w-0 overflow-x-auto lg:block">
-        <Table.Root>
+    <div className="min-w-0 overflow-x-auto">
+        <Table.Root
+          aria-label={trans({message: 'Orders'})}
+          className="w-max min-w-full"
+        >
           <Table.Header>
-            <Table.Row>
-              <Table.Head className="ps-6">
+            <Table.Row className="hover:bg-transparent">
+              <Table.Head className="h-12 min-w-56 px-4">
                 <Trans message="Product" />
               </Table.Head>
-              <Table.Head>
+              <Table.Head className="h-12 min-w-44 px-4">
                 <Trans message="Buyer" />
               </Table.Head>
-              <Table.Head className="text-end">
+              <Table.Head className="h-12 min-w-28 px-4 text-end">
                 <Trans message="Amount" />
               </Table.Head>
-              <Table.Head>
+              <Table.Head className="h-12 min-w-36 px-4">
                 <Trans message="Date" />
               </Table.Head>
-              <Table.Head className="hidden xl:table-cell">
-                <Trans message="Payment method" />
-              </Table.Head>
-              <Table.Head>
+              <Table.Head className="h-12 min-w-28 px-4">
                 <Trans message="Status" />
               </Table.Head>
-              <Table.Head className="pe-6">
+              <Table.Head className="h-12 w-12 px-4">
                 <span className="sr-only">
                   <Trans message="Actions" />
                 </span>
@@ -629,59 +588,82 @@ function OrdersTable({
           <Table.Body>
             {orders.map(order => (
               <Table.Row key={order.uuid}>
-                <Table.Cell className="max-w-52 ps-6">
-                  <span
-                    className="block truncate font-medium"
-                    title={order.product?.title ?? undefined}
-                  >
-                    {order.product?.title ?? (
-                      <Trans message="Deleted product" />
-                    )}
-                  </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {order.transaction_reference ?? order.uuid}
+                <Table.Cell className="min-w-56 px-4 py-3 align-middle whitespace-normal">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <OrderMark order={order} />
+                    <span className="min-w-0">
+                      <span
+                        className="block truncate font-medium"
+                        title={order.product?.title ?? undefined}
+                      >
+                        {order.product?.title ?? (
+                          <Trans message="Deleted product" />
+                        )}
+                      </span>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                        #{order.uuid.slice(0, 8)}
+                        {order.transaction_reference
+                          ? ` · ${order.transaction_reference}`
+                          : ''}
+                      </span>
+                    </span>
                   </span>
                 </Table.Cell>
-                <Table.Cell className="max-w-44">
-                  <span className="block truncate">
+                <Table.Cell className="min-w-44 px-4 py-3 align-middle whitespace-normal">
+                  <span className="block truncate leading-5">
                     {order.buyer_name || (
                       <span className="text-muted-foreground">
                         <Trans message="Guest buyer" />
                       </span>
                     )}
                   </span>
+                  <span className="block h-4 truncate text-xs text-muted-foreground">
+                    {order.buyer_email}
+                  </span>
                 </Table.Cell>
-                <Table.Cell className="text-end font-medium tabular-nums">
+                <Table.Cell className="min-w-28 px-4 py-3 text-end align-middle font-medium tabular-nums">
                   <FormattedCurrency
                     valueInCents={order.gross_amount_cents}
                     currency={order.currency ?? 'ETB'}
                   />
                 </Table.Cell>
-                <Table.Cell className="text-muted-foreground">
-                  <FormattedDate preset="short" date={order.created_at} />
+                <Table.Cell className="min-w-36 px-4 py-3 align-middle whitespace-normal text-muted-foreground">
+                  <span className="block truncate">
+                    <FormattedDate preset="short" date={order.created_at} />
+                  </span>
+                  <span className="block h-4 truncate text-xs">
+                    <FormattedRelativeTime date={order.paid_at ?? order.created_at} />
+                  </span>
                 </Table.Cell>
-                <Table.Cell className="hidden xl:table-cell">
-                  <PaymentMethod order={order} />
+                <Table.Cell className="min-w-28 px-4 py-3 align-middle">
+                  <OrderStatusBadge status={order.status} compact />
                 </Table.Cell>
-                <Table.Cell>
-                  <OrderStatusBadge status={order.status} />
-                </Table.Cell>
-                <Table.Cell className="whitespace-nowrap pe-6 text-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onView(order.uuid)}
-                  >
-                    <EyeIcon />
-                    <Trans message="View details" />
-                  </Button>
+                <Table.Cell className="w-12 px-4 py-3 text-end align-middle">
+                  <Tooltip.Provider>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label={trans({message: 'View details'})}
+                            onClick={() => onView(order.uuid)}
+                          >
+                            <ChevronRightIcon />
+                          </Button>
+                        }
+                      />
+                      <Tooltip.Content>
+                        <Trans message="View details" />
+                      </Tooltip.Content>
+                    </Tooltip.Root>
+                  </Tooltip.Provider>
                 </Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>
         </Table.Root>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -1216,7 +1198,30 @@ function DetailRow({
   );
 }
 
-function OrderStatusBadge({status}: {status: string}) {
+function OrderMark({order}: {order: Order}) {
+  const title = order.product?.title;
+  const coverUrl = order.product?.cover_url;
+
+  return (
+    <span className="flex size-9 shrink-0 overflow-hidden rounded-card-sm bg-muted">
+      {coverUrl ? (
+        <img src={coverUrl} alt="" className="size-full object-cover" />
+      ) : (
+        <span className="flex size-full items-center justify-center text-xs font-medium text-muted-foreground">
+          {Avatar.initials(title) || 'P'}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function OrderStatusBadge({
+  status,
+  compact = false,
+}: {
+  status: string;
+  compact?: boolean;
+}) {
   return (
     <Badge
       variant={statusBadgeVariant(status)}
@@ -1224,9 +1229,35 @@ function OrderStatusBadge({status}: {status: string}) {
         status === 'manual_review' ? 'bg-warning/10 text-warning' : undefined
       }
     >
-      <PaymentStatusLabel status={status} />
+      {compact ? (
+        <OrderStatusShortLabel status={status} />
+      ) : (
+        <PaymentStatusLabel status={status} />
+      )}
     </Badge>
   );
+}
+
+function OrderStatusShortLabel({status}: {status: string}) {
+  switch (status) {
+    case 'pending':
+    case 'pending_payment':
+      return <Trans message="Pending" />;
+    case 'verifying':
+      return <Trans message="Verifying" />;
+    case 'paid':
+    case 'completed':
+    case 'fulfilled':
+      return <Trans message="Paid" />;
+    case 'failed_verification':
+      return <Trans message="Rejected" />;
+    case 'manual_review':
+      return <Trans message="Review" />;
+    case 'expired':
+      return <Trans message="Expired" />;
+    default:
+      return null;
+  }
 }
 
 function TransactionStatusBadge({status}: {status: string}) {
@@ -1241,20 +1272,6 @@ function TransactionStatusBadge({status}: {status: string}) {
     >
       {label}
     </Badge>
-  );
-}
-
-function PaymentMethod({order}: {order: Order}) {
-  const label = paymentMethodLabel(order);
-  return (
-    <div className="flex flex-col">
-      <span>{label}</span>
-      {order.payment_gateway === 'verify_et' && order.account_ending && (
-        <span className="font-mono text-xs text-muted-foreground">
-          •••• {order.account_ending}
-        </span>
-      )}
-    </div>
   );
 }
 

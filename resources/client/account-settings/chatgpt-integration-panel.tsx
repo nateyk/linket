@@ -6,8 +6,12 @@ import {Button} from '@shadcn/button/button';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
-import {BotIcon, RefreshCwIcon, UnplugIcon} from 'lucide-react';
+import {RefreshCwIcon, UnplugIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
+import {
+  ChatGptIcon,
+  IntegrationHeading,
+} from '@app/account-settings/integration-marks';
 
 type McpConnection = {
   id: string;
@@ -99,14 +103,15 @@ export function ChatGptIntegrationPanel() {
     <AccountSettingsPanel
       id="chatgpt"
       title={
-        <span className="flex items-center gap-2">
-          <BotIcon className="size-4" />
-          <Trans message="ChatGPT" />
-        </span>
+        <IntegrationHeading
+          icon={ChatGptIcon}
+          title="ChatGPT"
+          description="Read-only reports for one workspace."
+        />
       }
       titleSuffix={
         data ? (
-          <Badge variant={activeCount > 0 ? 'positive' : 'secondary'}>
+          <Badge variant={activeCount > 0 ? 'positive' : 'outline'}>
             {activeCount > 0 ? (
               <Trans message="Authorized" />
             ) : data.oauth_connection_available ? (
@@ -123,7 +128,7 @@ export function ChatGptIntegrationPanel() {
           <Spinner />
         </div>
       ) : error && !data ? (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <p role="alert" className="text-sm text-destructive">
             <Trans message="Unable to load ChatGPT connections." />
           </p>
@@ -133,38 +138,32 @@ export function ChatGptIntegrationPanel() {
           </Button>
         </div>
       ) : data ? (
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                <Trans message="Workspace reporting access" />
-              </p>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                <Trans message="Review and disconnect ChatGPT access to read-only Linket reports. Access is checked against your current workspace permissions and verified Pro status on every request." />
-              </p>
-            </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="min-w-0 text-sm text-muted-foreground">
+              {data.connection_setup?.status === 'verified_pro_required' ? (
+                <Trans message="Verified Linket Pro is required to connect ChatGPT." />
+              ) : data.connection_setup?.status === 'workspace_required' ? (
+                <Trans message="Create or join a Linket workspace before connecting ChatGPT." />
+              ) : data.connection_setup?.status === 'admin_setup_required' ? (
+                <Trans message="A Linket administrator must approve the ChatGPT OAuth client before connections are available." />
+              ) : data.oauth_connection_available &&
+                data.connection_setup?.status === 'ready' ? (
+                <Trans message="Add Linket from ChatGPT, then review the connection here." />
+              ) : (
+                <Trans message="New ChatGPT connections are not available yet." />
+              )}
+            </p>
             <Button variant="outline" disabled={busy || loading} onClick={() => void load()}>
               <RefreshCwIcon />
               <Trans message="Refresh ChatGPT connections" />
             </Button>
           </div>
 
-          {data.connection_setup?.status === 'verified_pro_required' ? (
-            <p className="text-sm text-muted-foreground">
-              <Trans message="Verified Linket Pro is required to connect ChatGPT." />
-            </p>
-          ) : data.connection_setup?.status === 'workspace_required' ? (
-            <p className="text-sm text-muted-foreground">
-              <Trans message="Create or join a Linket workspace before connecting ChatGPT." />
-            </p>
-          ) : data.connection_setup?.status === 'admin_setup_required' ? (
-            <p className="text-sm text-muted-foreground">
-              <Trans message="A Linket administrator must approve the ChatGPT OAuth client before connections are available." />
-            </p>
-          ) : data.oauth_connection_available &&
-              data.connection_setup?.status === 'ready' &&
-              data.connection_setup.resource_url?.startsWith('https://') ? (
-            <div className="space-y-3 rounded-card-sm border bg-secondary/30 p-4">
+          {data.oauth_connection_available &&
+          data.connection_setup?.status === 'ready' &&
+          data.connection_setup.resource_url?.startsWith('https://') ? (
+            <div className="flex flex-col gap-3 rounded-card-sm border p-4">
               <p className="text-sm font-semibold">
                 <Trans message="Connect from ChatGPT" />
               </p>
@@ -174,10 +173,10 @@ export function ChatGptIntegrationPanel() {
               <p className="text-xs font-medium text-muted-foreground">
                 <Trans message="Approved Linket HTTPS MCP endpoint" />
               </p>
-              <code className="block break-all rounded-card-sm bg-background px-3 py-2 text-sm">
+              <code className="block break-all rounded-card-sm bg-muted px-3 py-2 text-sm">
                 {data.connection_setup.resource_url}
               </code>
-              <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+              <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-muted-foreground">
                 <li>
                   <Trans message="In ChatGPT Plugins, choose Add custom MCP server if your workspace permits it." />
                 </li>
@@ -200,21 +199,17 @@ export function ChatGptIntegrationPanel() {
                 <Trans message="ChatGPT custom MCP setup guidance" />
               </a>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              <Trans message="New ChatGPT connections are not available yet." />
-            </p>
-          )}
+          ) : null}
 
           {data.connections.length === 0 ? (
-            <div className="rounded-card-sm border bg-secondary/30 p-4 text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               <Trans message="No ChatGPT connections yet." />
-            </div>
+            </p>
           ) : (
             <ul className="divide-y rounded-card-sm border">
               {data.connections.map(connection => (
-                <li key={connection.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 space-y-1">
+                <li key={connection.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="break-all text-sm font-semibold">{connection.client_id}</p>
                       <Badge variant={connection.status === 'active' ? 'positive' : 'secondary'}>

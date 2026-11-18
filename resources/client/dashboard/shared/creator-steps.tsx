@@ -73,7 +73,7 @@ export function CreatorSteps<Id extends string>({
           const previous = index < activeIndex;
 
           return (
-            <li key={step.id} className="relative min-w-0">
+            <li key={step.id} className="relative min-w-0 xl:pb-6 xl:last:pb-0">
               {index < steps.length - 1 && (
                 <>
                   <span
@@ -88,7 +88,7 @@ export function CreatorSteps<Id extends string>({
                     orientation="vertical"
                     aria-hidden="true"
                     className={cn(
-                      'pointer-events-none absolute start-6 top-7 -bottom-7 hidden xl:block',
+                      'pointer-events-none absolute start-[15px] top-8 bottom-0 z-0 hidden xl:block',
                       done ? 'bg-positive/60' : 'bg-border',
                     )}
                   />
@@ -111,23 +111,29 @@ export function CreatorSteps<Id extends string>({
                 })}
                 onClick={() => onSelect(step.id)}
                 className={cn(
-                  'relative flex h-auto min-h-16 w-full min-w-0 flex-col items-center justify-start gap-1 rounded-card-xs px-0.5 py-2 text-center text-foreground whitespace-normal transition-colors motion-reduce:transition-none sm:px-2 xl:flex-row xl:items-start xl:justify-start xl:gap-3 xl:rounded-card-sm xl:py-3 xl:text-start',
-                  current ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/40',
+                  'relative z-10 flex h-auto min-h-16 w-full min-w-0 flex-col items-center justify-start gap-1 rounded-card-xs px-0.5 py-2 text-center text-foreground whitespace-normal transition-colors motion-reduce:transition-none sm:px-2 xl:min-h-0 xl:flex-row xl:items-start xl:justify-start xl:gap-3 xl:rounded-card-sm xl:bg-transparent xl:px-0 xl:py-0 xl:ps-11 xl:text-start',
+                  current
+                    ? 'bg-primary/5 hover:bg-primary/10 xl:bg-transparent xl:hover:bg-transparent'
+                    : 'hover:bg-muted/40',
                 )}
               >
                 <span
                   aria-hidden="true"
                   data-slot="creator-step-indicator"
                   className={cn(
-                    'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums',
+                    'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border bg-card text-xs font-semibold tabular-nums xl:absolute xl:start-0 xl:top-0',
                     current
                       ? 'border-primary bg-primary text-primary-foreground'
                       : done
                         ? 'border-positive bg-positive text-primary-foreground'
-                        : 'border-border bg-card text-muted-foreground',
+                        : 'border-border text-muted-foreground',
                   )}
                 >
-                  {done ? <CheckIcon className="size-4" aria-hidden="true" /> : index + 1}
+                  {done && !current ? (
+                    <CheckIcon className="size-3.5" aria-hidden="true" />
+                  ) : (
+                    index + 1
+                  )}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span
@@ -145,7 +151,7 @@ export function CreatorSteps<Id extends string>({
                   </span>
                   <span
                     data-slot="creator-step-description"
-                    className="mt-0.5 hidden text-xs leading-4 text-muted-foreground xl:block"
+                    className="mt-1 hidden text-xs leading-4 text-muted-foreground xl:block"
                   >
                     {step.description}
                   </span>

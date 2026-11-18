@@ -8,6 +8,11 @@ vi.mock('@common/http/query-client', () => ({apiClient: api}));
 vi.mock('@common/http/errors/parsed-api-error', () => ({
   getApiErrorMessage: () => 'Unable to load orders',
 }));
+vi.mock('@ui/i18n/use-trans', () => ({
+  useTrans: () => ({
+    trans: ({message}: {message: string}) => message,
+  }),
+}));
 vi.mock('@ui/i18n/trans', () => ({
   Trans: ({message, values}: {message: string; values?: Record<string, string | number>}) =>
     Object.entries(values ?? {}).reduce((text, [key, value]) => text.replace(`:${key}`, String(value)), message),
@@ -29,6 +34,20 @@ vi.mock('@ui/i18n/formatted-date', () => ({
     <span>{date ?? ''}</span>
   ),
 }));
+vi.mock('@ui/i18n/formatted-relative-time', () => ({
+  FormattedRelativeTime: ({date}: {date?: string | null}) => (
+    <span>{date ?? ''}</span>
+  ),
+}));
+vi.mock('@shadcn/avatar/avatar', () => ({
+  Avatar: Object.assign(
+    ({children}: {children?: React.ReactNode}) => <span>{children}</span>,
+    {
+      Fallback: ({children}: {children?: React.ReactNode}) => <span>{children}</span>,
+      initials: (value?: string | null) => value?.slice(0, 1) ?? '',
+    },
+  ),
+}));
 vi.mock('react-router', () => ({Link: 'a', useSearchParams: () => [new URLSearchParams(window.location.search)]}));
 vi.mock('@common/ui/dashboard/dashboard-layout', () => ({
   DashboardLayout: {
@@ -47,6 +66,7 @@ vi.mock('@shadcn/card/card', () => ({
     Content: 'div',
     Description: 'p',
     Footer: 'footer',
+    Action: 'div',
   },
 }));
 vi.mock('@shadcn/item/item', () => ({
@@ -89,6 +109,17 @@ vi.mock('@shadcn/button/button', () => ({
 }));
 vi.mock('@shadcn/skeleton/skeleton', () => ({
   Skeleton: () => <span data-testid="skeleton" />,
+}));
+vi.mock('@shadcn/tooltip/tooltip', () => ({
+  Tooltip: Object.assign(
+    ({children}: {children?: React.ReactNode}) => <>{children}</>,
+    {
+      Provider: ({children}: {children?: React.ReactNode}) => <>{children}</>,
+      Root: ({children}: {children?: React.ReactNode}) => <>{children}</>,
+      Trigger: ({render}: {render?: React.ReactNode}) => <>{render}</>,
+      Content: () => null,
+    },
+  ),
 }));
 vi.mock('@shadcn/table/table', () => ({
   Table: {
@@ -315,13 +346,14 @@ it('shows summary and orders, and sends status, search and page filters to the s
   expect(screen.getByText('Gross profit · 80.0%')).toBeTruthy();
   expect(screen.getByText('Average order')).toBeTruthy();
   expect(screen.getByText('12500 ETB')).toBeTruthy();
-  expect(screen.getByText('Chapa payments only · lifetime')).toBeTruthy();
+  expect(screen.queryByText('Chapa payments only · lifetime')).toBeNull();
   expect(screen.queryByText('Pending & Review')).toBeNull();
   expect(screen.queryByRole('tab', {name: 'Transactions'})).toBeNull();
   expect(screen.queryByRole('tab', {name: /Manual review/})).toBeNull();
-  expect(screen.getByText('After platform fees · before product costs')).toBeTruthy();
-  expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
-  expect(screen.getByText('Chapa orders and payment status. Only paid orders count as sales.')).toBeTruthy();
+  expect(screen.queryByText('After platform fees · before product costs')).toBeNull();
+  expect(screen.queryByRole('columnheader', {name: 'Payment method'})).toBeNull();
+  expect(screen.getByRole('table', {name: 'Orders'})).toBeTruthy();
+  expect(screen.getByText('Orders and payment status. Only paid orders count as sales.')).toBeTruthy();
 
   expect(screen.queryByLabelText('Payment source')).toBeNull();
   fireEvent.change(screen.getByLabelText('Status'), {
@@ -469,7 +501,7 @@ it('opens the read-only order detail with masked account and delivery state', as
   expect(screen.getByText('Historical verification evidence')).toBeTruthy();
   expect(screen.getByText('Historical receiving account')).toBeTruthy();
   expect(screen.getAllByText('REF-ONE').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('•••• 6789')).toHaveLength(2);
+  expect(screen.getAllByText('•••• 6789')).toHaveLength(1);
   expect(screen.getByText('buyer@example.test', {exact: false})).toBeTruthy();
   expect(screen.getByText('Payment needs support review')).toBeTruthy();
   expect(screen.getByText('On hold — payment review')).toBeTruthy();
@@ -554,7 +586,7 @@ it('keeps Orders Chapa-only even for bookmarked legacy gateway filters', async (
     expect.objectContaining({params: expect.objectContaining({gateway: 'chapa'})}),
   );
   expect(screen.queryByLabelText('Payment source')).toBeNull();
-  expect(screen.getByText('Chapa payments only · lifetime')).toBeTruthy();
+  expect(screen.queryByText('Chapa payments only · lifetime')).toBeNull();
   expect((screen.getByLabelText('Status') as HTMLSelectElement).value).toBe('all');
   expect(screen.queryByRole('tab', {name: 'Transactions'})).toBeNull();
   expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/direct-orders/transactions', expect.anything());

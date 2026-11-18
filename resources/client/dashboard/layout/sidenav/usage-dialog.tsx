@@ -3,25 +3,13 @@ import {useUsage} from '@app/dashboard/use-usage';
 import {GetUsage200Data} from '@app/gen/schemas/get-usage200-data';
 import {useAuth} from '@common/auth/use-auth';
 import {useShouldShowUpgradeMessage} from '@common/billing/upgrade/no-permission-button';
-import {
-  Meter,
-  MeterIndicator,
-  MeterLabel,
-  MeterTrack,
-} from '@shadcn/meter/meter';
+import {Badge} from '@shadcn/badge/badge';
+import {Meter, MeterLabel} from '@shadcn/meter/meter';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {Trans} from '@ui/i18n/trans';
 import {Skeleton} from '@ui/skeleton/skeleton';
 import {prettyBytes} from '@ui/utils/files/pretty-bytes';
-import {
-  CircleDollarSignIcon,
-  GiftIcon,
-  HardDriveIcon,
-  MousePointerClickIcon,
-  StoreIcon,
-  UsersIcon,
-} from 'lucide-react';
 import {ReactElement, ReactNode} from 'react';
 
 const usageLabels: Partial<
@@ -29,35 +17,35 @@ const usageLabels: Partial<
     keyof GetUsage200Data,
     {
       label: ReactNode;
-      icon: ReactNode;
+      tone: string;
       formatValue?: (value: number) => string | number | ReactElement;
     }
   >
 > = {
   free_products: {
     label: <Trans message="Free products" />,
-    icon: <GiftIcon className="size-4" />,
+    tone: 'var(--color-primary)',
   },
   paid_products: {
     label: <Trans message="Paid products" />,
-    icon: <CircleDollarSignIcon className="size-4" />,
+    tone: 'var(--color-positive)',
   },
   storage: {
     label: <Trans message="Storage" />,
-    icon: <HardDriveIcon className="size-4" />,
+    tone: 'var(--color-warning)',
     formatValue: value => prettyBytes(value),
   },
   storefronts: {
     label: <Trans message="Storefronts" />,
-    icon: <StoreIcon className="size-4" />,
+    tone: 'color-mix(in oklch, var(--color-primary) 55%, var(--color-destructive))',
   },
   tracked_events: {
     label: <Trans message="Tracked events" />,
-    icon: <MousePointerClickIcon className="size-4" />,
+    tone: 'var(--color-muted-foreground)',
   },
   workspaces: {
     label: <Trans message="Workspaces" />,
-    icon: <UsersIcon className="size-4" />,
+    tone: 'var(--color-destructive)',
   },
 } as const;
 
@@ -73,10 +61,10 @@ export function UsageDialogContent() {
   }
 
   return (
-    <div>
+    <div className="flex flex-col gap-4">
       <UsageGrid />
       {renewalDate && (
-        <p className="mt-2.5 text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           <Trans
             message="Usage will reset :date"
             values={{date: <FormattedDate date={renewalDate} />}}
@@ -87,7 +75,7 @@ export function UsageDialogContent() {
         <UpgradeButton
           variant="default"
           color="primary"
-          className="mt-6 w-full"
+          className="w-full"
           size="sm"
         >
           <Trans message="Upgrade now" />
@@ -99,17 +87,69 @@ export function UsageDialogContent() {
 
 export function UsageGrid() {
   const {data} = useUsage();
+  const rows = Object.entries(usageLabels).map(([key, label]) => {
+    const usage = data?.data[key as keyof typeof usageLabels];
+    const unlimited = !usage || usage.total === null;
+    const percentage = usage ? getUsagePercentage(usage.used, usage.total) : 0;
+    const atLimit = !!usage && usage.total !== null && usage.used >= usage.total;
+
+    return {key, label, usage, unlimited, percentage, atLimit};
+  });
+  const limited = rows.filter(row => row.usage && !row.unlimited);
+  const atLimitCount = limited.filter(row => row.atLimit).length;
+  const weightSum = limited.reduce(
+    (sum, row) => sum + Math.max(row.percentage, 4),
+    0,
+  );
+
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      {Object.entries(usageLabels).map(([key, label]) => {
-        const usage = data?.data[key as keyof typeof usageLabels];
-
-        if (!usage) {
-          return <SkeletonGridItem key={key} label={label} />;
-        }
-
-        return <GridItem key={key} label={label} usage={usage} />;
-      })}
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">
+            <Trans message="Limits" />
+          </p>
+          {atLimitCount > 0 ? (
+            <Badge variant="destructive">
+              <Trans
+                message="[one :count limit reached|other :count limits reached]"
+                values={{count: atLimitCount}}
+              />
+            </Badge>
+          ) : null}
+        </div>
+        {limited.length > 0 ? (
+          <div className="flex h-1.5 gap-0.5" aria-hidden="true">
+            {limited.map(row => (
+              <div
+                key={row.key}
+                className="h-1.5 min-w-1 rounded-full"
+                style={{
+                  width: `${(Math.max(row.percentage, 4) / weightSum) * 100}%`,
+                  backgroundColor: row.label.tone,
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <ul className="flex flex-col gap-2" role="list">
+        {rows.map(row =>
+          row.usage && row.label ? (
+            <li key={row.key}>
+              <GridItem
+                label={row.label}
+                usage={row.usage}
+                percentage={row.percentage}
+              />
+            </li>
+          ) : (
+            <li key={row.key}>
+              <SkeletonGridItem label={row.label!} />
+            </li>
+          ),
+        )}
+      </ul>
     </div>
   );
 }
@@ -117,13 +157,11 @@ export function UsageGrid() {
 type GridItemProps = {
   label: NonNullable<(typeof usageLabels)[keyof typeof usageLabels]>;
   usage: {used: number; total: number | null};
+  percentage: number;
 };
 
-function GridItem({label, usage}: GridItemProps) {
+function GridItem({label, usage, percentage}: GridItemProps) {
   const unlimited = usage.total === null;
-  const isAtOrOverLimit = usage.total !== null && usage.used >= usage.total;
-  const percentage = getUsagePercentage(usage.used, usage.total);
-
   const formattedUsed = label.formatValue ? (
     label.formatValue(usage.used)
   ) : (
@@ -137,28 +175,27 @@ function GridItem({label, usage}: GridItemProps) {
       message=":used of :total"
       values={{
         used: formattedUsed,
-        total: label.formatValue
-          ? label.formatValue(usage.total as number)
-          : usage.total !== null ? (
-              <FormattedNumber value={usage.total} notation="compact" />
-            ) : null,
+        total: label.formatValue ? (
+          label.formatValue(usage.total as number)
+        ) : usage.total !== null ? (
+          <FormattedNumber value={usage.total} notation="compact" />
+        ) : null,
       }}
     />
   );
 
   return (
-    <Meter value={percentage}>
-      <MeterLabel>
-        {label.icon} {label.label}
-      </MeterLabel>
-      {meterValue}
-      {!unlimited && (
-        <MeterTrack>
-          <MeterIndicator
-            className={isAtOrOverLimit ? 'bg-destructive' : 'bg-primary'}
-          />
-        </MeterTrack>
-      )}
+    <Meter
+      value={percentage}
+      className="grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-xs font-normal"
+    >
+      <span
+        aria-hidden="true"
+        className="size-2.5 rounded-full"
+        style={{backgroundColor: label.tone}}
+      />
+      <MeterLabel className="font-normal">{label.label}</MeterLabel>
+      <span className="text-muted-foreground">{meterValue}</span>
     </Meter>
   );
 }
@@ -173,14 +210,10 @@ function getUsagePercentage(used: number, total: number | null): number {
 
 function SkeletonGridItem({label}: {label: GridItemProps['label']}) {
   return (
-    <Meter value={0}>
-      <MeterLabel>
-        {label.icon} {label.label}
-      </MeterLabel>
-      <Skeleton className="min-w-15" />
-      <MeterTrack>
-        <MeterIndicator />
-      </MeterTrack>
-    </Meter>
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-xs">
+      <span aria-hidden="true" className="size-2.5 rounded-full bg-muted" />
+      <span>{label.label}</span>
+      <Skeleton className="h-3 w-16" />
+    </div>
   );
 }

@@ -217,7 +217,7 @@ describe('the service form shell', () => {
     expect(steps.querySelector('li > span[aria-hidden="true"]')?.className)
       .toContain('start-1/2 -end-1/2 top-6');
     expect(steps.querySelector('li > [data-slot="separator"]')?.className)
-      .toContain('top-7 -bottom-7');
+      .toContain('top-8 bottom-0');
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');

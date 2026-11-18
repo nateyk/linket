@@ -349,7 +349,7 @@ export function CreatorProfileEditor({
   return (
     <FileUploadProvider>
       <HookForm.Root form={form} onSubmit={() => {}}>
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+        <div className="flex w-full flex-col gap-4">
           {tab === 'content' && (
             <SectionHeading
               title={<Trans message="Content" />}

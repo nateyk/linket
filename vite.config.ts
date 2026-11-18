@@ -91,13 +91,29 @@ function isIconsChunk(id: string): boolean {
   return isLucideIcon || (isUiIcon && !isSocialIcon);
 }
 
+const ddevHostname = process.env.DDEV_HOSTNAME;
+const ddevPrimaryUrl = process.env.DDEV_PRIMARY_URL;
+const isDdev = Boolean(ddevHostname && ddevPrimaryUrl);
+
 export default defineConfig({
   base: '',
   server: {
-    host: '127.0.0.1',
+    // Inside DDEV, bind all interfaces and advertise the HTTPS-exposed Vite origin
+    // so Windows browsers loading https://linket.ddev.site can reach HMR assets.
+    host: isDdev ? '0.0.0.0' : '127.0.0.1',
     port: 5173,
-    strictPort: false,
+    strictPort: isDdev,
     cors: true,
+    ...(isDdev
+      ? {
+          origin: `https://${ddevHostname}:5174`,
+          hmr: {
+            protocol: 'wss',
+            host: ddevHostname,
+            clientPort: 5174,
+          },
+        }
+      : {}),
   },
   resolve: {
     preserveSymlinks: true,

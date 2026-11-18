@@ -156,7 +156,7 @@ test('creator orders dashboard lists only owned orders with real summary totals'
         ->assertDontSee('1000123456789');
 
     expect($response->json('data.data'))->toHaveCount(4);
-    expect($response->json('data.data.0.buyer_email'))->toBeNull();
+    expect($response->json('data.data.0.buyer_email'))->toBe('buyer@example.test');
 
     $this->getJson('/api/v1/storefront/direct-orders?status=manual_review')
         ->assertOk()
