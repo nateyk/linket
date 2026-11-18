@@ -66,18 +66,29 @@ test.describe('Help Center accessibility acceptance (isolated browser)', () => {
     test.setTimeout(90_000);
     await loginToHc(page, fixture().a11y_accounts.navigation);
     await page.goto('/admin/help/arrange');
-    const articles = page.getByRole('tab', {name: 'All articles'});
-    await articles.focus();
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/admin\/help\/articles/);
     const structure = page.getByRole('tab', {name: 'Structure'});
-    await structure.focus();
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/admin\/help\/arrange/);
+    const articles = page.getByRole('tab', {name: 'All articles'});
+
+    await expect(structure).toHaveAttribute('aria-selected', 'true');
+    await structure.press('ArrowRight');
+    await expect(articles).toBeFocused();
+    await articles.press('Enter');
+    await expect(page).toHaveURL(/\/admin\/help\/articles(?:\?|$)/);
+
+    // Each destination renders a new tab list. Wait for the destination's
+    // controls and selected tab, not just the address bar, before sending
+    // keyboard input to the newly mounted page.
+    await expect(page.getByRole('link', {name: 'Add article'})).toBeVisible();
+    await expect(articles).toHaveAttribute('aria-selected', 'true');
+    await articles.press('ArrowLeft');
+    await expect(structure).toBeFocused();
+    await structure.press('Enter');
+    await expect(page).toHaveURL(/\/admin\/help\/arrange(?:\?|$)/);
+    await expect(structure).toHaveAttribute('aria-selected', 'true');
 
     const category = page.getByRole('button', {name: fixture().category.name, exact: true});
-    await category.focus();
-    await page.keyboard.press('Enter');
+    await expect(category).toBeVisible();
+    await category.press('Enter');
     await expect(page).toHaveURL(/\/admin\/help\/arrange\/categories\/\d+/);
   });
 
