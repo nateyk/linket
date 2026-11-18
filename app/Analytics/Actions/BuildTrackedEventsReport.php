@@ -110,7 +110,10 @@ class BuildTrackedEventsReport
 
     protected function getCountriesMetric(): array
     {
-        $metric = $this->getPartitionMetric('location');
+        // Resolve the full set of ISO countries before calculating shares.
+        // The default top-10 partition makes smaller countries disappear and
+        // misleadingly inflates percentages for the remaining categories.
+        $metric = $this->getPartitionMetric('location', 256);
 
         $countries = app(ValueLists::class)->countries();
         $metric['data'] = array_map(function ($location) use ($countries) {
@@ -126,6 +129,8 @@ class BuildTrackedEventsReport
 
             return $location;
         }, $metric['data']);
+
+        $metric['data'] = array_slice($metric['data'], 0, 10);
 
         return $metric;
     }
