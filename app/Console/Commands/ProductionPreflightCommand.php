@@ -2,9 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Payments\VerifyEt\VerifyEtSettings;
-use App\Payments\Models\DirectPaymentVerification;
-use App\Payments\Models\VerifyEtWebhookDelivery;
 use Common\Logging\Schedule\ScheduleHealthCommand;
 use Common\Logging\Schedule\ScheduleLogItem;
 use Illuminate\Console\Command;
@@ -48,7 +45,6 @@ class ProductionPreflightCommand extends Command
         $this->checkRedisAndQueue($add, $strict);
         $this->checkHorizon($add, $strict);
         $this->checkScheduler($add, $strict);
-        $this->checkVerifyEt($add, $strict);
         $this->checkStorage($add);
         $this->checkOperationalDiagnostics($add);
 
@@ -105,11 +101,6 @@ class ProductionPreflightCommand extends Command
                 'app_url_https',
                 str_starts_with((string) config('app.url'), 'https://'),
                 (string) config('app.url'),
-            );
-            $add(
-                'verify_et_mock_disabled',
-                ! (bool) config('services.verify_et.mock'),
-                config('services.verify_et.mock') ? 'VERIFY_ET_MOCK is enabled' : 'disabled',
             );
         } else {
             $add(
@@ -234,9 +225,9 @@ class ProductionPreflightCommand extends Command
                 ->implode("\n");
 
             $add(
-                'scheduler_reconcile_registered',
-                str_contains($events, 'billing:reconcile-pending-verifications'),
-                'billing:reconcile-pending-verifications',
+                'scheduler_marketplace_reconcile_registered',
+                str_contains($events, 'marketplace:reconcile'),
+                'marketplace:reconcile',
             );
 
             $heartbeatOk = ScheduleLogItem::scheduleRanInLast30Minutes();
@@ -258,43 +249,7 @@ class ProductionPreflightCommand extends Command
                 false,
             );
         } catch (Throwable $e) {
-            $add('scheduler_reconcile_registered', false, $this->sanitize($e->getMessage()));
-        }
-    }
-
-    /**
-     * @param  callable(string, bool, string=, bool=): void  $add
-     */
-    private function checkVerifyEt(callable $add, bool $strict): void
-    {
-        $enabled = (bool) VerifyEtSettings::get('enabled');
-        $add('verify_et_enabled_flag', true, $enabled ? 'enabled' : 'disabled', false);
-
-        $apiKeyPresent = filled(VerifyEtSettings::get('api_key'));
-        $webhookPresent = filled(VerifyEtSettings::get('webhook_secret'));
-
-        $add(
-            'verify_et_api_key_configured',
-            ! $enabled || $apiKeyPresent,
-            $apiKeyPresent ? 'present' : 'missing',
-            $strict && $enabled,
-        );
-        $add(
-            'verify_et_webhook_signing_configured',
-            ! $enabled || $webhookPresent,
-            $webhookPresent ? 'present' : 'missing',
-            $strict && $enabled,
-        );
-
-        // Never print secret values — only length buckets.
-        if ($webhookPresent) {
-            $len = strlen((string) VerifyEtSettings::get('webhook_secret'));
-            $add(
-                'verify_et_webhook_secret_shape',
-                $len >= 16,
-                "length_bucket=".($len >= 64 ? '64+' : ($len >= 32 ? '32-63' : '16-31')),
-                false,
-            );
+            $add('scheduler_marketplace_reconcile_registered', false, $this->sanitize($e->getMessage()));
         }
     }
 
@@ -344,33 +299,6 @@ class ProductionPreflightCommand extends Command
             false,
         );
 
-        $stalePending = 0;
-        if (Schema::hasTable('direct_payment_verifications')) {
-            $stalePending = DirectPaymentVerification::query()
-                ->whereIn('status', ['pending', 'verifying'])
-                ->where('created_at', '<', now()->subMinutes(30))
-                ->count();
-        }
-        $add(
-            'stale_pending_verifications',
-            true,
-            (string) $stalePending,
-            false,
-        );
-
-        $webhookFailures = 0;
-        if (Schema::hasTable('verify_et_webhook_deliveries')) {
-            $webhookFailures = VerifyEtWebhookDelivery::query()
-                ->where('received_at', '>=', now()->subDay())
-                ->whereIn('status', ['failed', 'rejected', 'unmatched'])
-                ->count();
-        }
-        $add(
-            'verify_et_webhook_failures_24h',
-            true,
-            (string) $webhookFailures,
-            false,
-        );
     }
 
     private function sanitize(string $msg): string

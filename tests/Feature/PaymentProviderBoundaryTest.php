@@ -61,7 +61,7 @@ class PaymentProviderBoundaryTest extends TestCase
         $payload = (new PublicDigitalProductResource($product->fresh()->load('creator')))->resolve(request());
 
         $this->assertFalse($payload['can_buy']);
-        $this->assertEmpty($payload['receiving_accounts']);
+        $this->assertArrayNotHasKey('receiving_accounts', $payload);
         try {
             app(StorefrontCheckout::class)->create($product->fresh()->load('creator'), null, ['email' => 'buyer@example.test']);
             $this->fail('Checkout accepted a product without an eligible account.');
@@ -92,7 +92,7 @@ class PaymentProviderBoundaryTest extends TestCase
         $payload = (new PublicDigitalProductResource($product->fresh()->load('creator')))->resolve(request());
         $this->assertFalse($payload['can_buy']);
         $this->assertSame('verification_unavailable', $payload['checkout_blocker']);
-        $this->assertEmpty($payload['receiving_accounts']);
+        $this->assertArrayNotHasKey('receiving_accounts', $payload);
     }
 
     public function testFreeProductDoesNotRequireAReceivingAccount(): void
@@ -104,7 +104,7 @@ class PaymentProviderBoundaryTest extends TestCase
         $product->refresh()->load('creator');
         $payload = (new PublicDigitalProductResource($product))->resolve(request());
         $this->assertTrue($payload['can_buy']);
-        $this->assertEmpty($payload['receiving_accounts']);
+        $this->assertArrayNotHasKey('receiving_accounts', $payload);
         $order = app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test']);
         $this->assertSame('paid', $order->fresh()->status);
         $this->assertNull($order->creator_payment_method_id);

@@ -313,7 +313,7 @@ test('creator uploads a product for approval and a buyer receives the approved d
             ]),
         ]);
         $this->getJson($base)->assertOk()->assertJsonPath('data.can_buy', true)
-            ->assertJsonPath('data.receiving_accounts', []);
+            ->assertJsonMissingPath('data.receiving_accounts');
         $checkout = $this->postJson("{$base}/checkout", [
             'buyer_name' => 'Direct buyer', 'buyer_email' => 'direct-journey@example.test',
             'creator_payment_method_id' => $methodId,

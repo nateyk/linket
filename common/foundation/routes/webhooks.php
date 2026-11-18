@@ -4,7 +4,6 @@ use Common\Billing\Gateways\Paypal\PaypalWebhookController;
 use Common\Billing\Gateways\Stripe\StripeWebhookController;
 use App\Payments\Controllers\ChapaWebhookController;
 use App\Payments\Controllers\ChapaCallbackController;
-use App\Payments\Controllers\VerifyEtWebhookController;
 use Illuminate\Support\Facades\Route;
 use App\Storefront\Controllers\ChapaStorefrontReturnController;
 use App\Storefront\Controllers\DownloadController;
@@ -27,7 +26,9 @@ Route::post('billing/chapa/webhook', [
     ChapaWebhookController::class,
     'handle',
 ]);
-Route::post('billing/verify-et/webhook', [VerifyEtWebhookController::class, 'handle']);
+// The retired provider has no active webhook receiver. Keep a hard 404 rather than
+// allowing any legacy request to reach payment or fulfillment code.
+Route::post('billing/verify-et/webhook', static fn () => abort(404));
 Route::post('billing/verify-et/experiment-webhook', static fn () => abort(404));
 
 Route::post('integrations/telegram/webhook', [TelegramWebhookController::class, 'handle']);
