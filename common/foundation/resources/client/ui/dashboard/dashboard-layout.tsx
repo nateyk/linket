@@ -43,10 +43,9 @@ function Root({
         <div
           {...domProps}
           className={cn(
-            // No overflow-hidden: the shell must not clip positioned children
-          // inside it (sr-only anchors, meter helpers). The scroll regions
-          // below own their own overflow.
-          'group/dashboard-layout relative isolate flex h-screen supports-[height:100dvh]:h-dvh flex-col bg-background',
+            // Clip the shell so a positioned control inside a scrolling
+            // section cannot stretch the document and scroll the window.
+            'group/dashboard-layout relative isolate flex h-screen supports-[height:100dvh]:h-dvh flex-col overflow-hidden bg-background',
             !isMobileMode &&
               'has-data-[variant=floating]:gap-2 has-data-[variant=floating]:p-2 light:has-data-[variant=floating]:bg-muted light:has-data-[variant=inset]:bg-muted',
             className,
@@ -64,7 +63,7 @@ function Content({className, ...props}: ComponentProps<'div'>) {
     <div
       data-slot="dashboard-content"
       className={cn(
-        'flex min-h-0 flex-1 has-data-[variant=floating]:gap-2',
+        'flex min-h-0 flex-1 overflow-hidden has-data-[variant=floating]:gap-2',
         className,
       )}
       {...props}

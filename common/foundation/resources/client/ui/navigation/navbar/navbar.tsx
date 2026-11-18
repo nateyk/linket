@@ -8,6 +8,7 @@ import {
   NavbarAuthUser,
   NavbarAuthUserProps,
 } from '@common/ui/navigation/navbar/navbar-auth-user';
+import {NavbarColorSchemeToggle} from '@common/ui/navigation/navbar/navbar-color-scheme-toggle';
 import {Button, ButtonColor} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Trans} from '@ui/i18n/trans';
@@ -91,6 +92,7 @@ function NavbarAuthContent({
   const showNotifButton = isLoggedIn && notifications?.integrated;
   return (
     <NavbarContent className={cn(className, 'gap-3')}>
+      <NavbarColorSchemeToggle />
       {showNotifButton && <NotificationsDialog />}
       {isLoggedIn ? (
         <NavbarAuthUser

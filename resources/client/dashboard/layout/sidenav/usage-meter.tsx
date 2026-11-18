@@ -47,7 +47,7 @@ export function UsageMeter() {
           <Popover.Content
             align="start"
             side="right"
-            className="w-[min(36rem,calc(100vw-2rem))]"
+            className="w-80 max-w-[calc(100vw-2rem)]"
           >
             <UsageDialogContent />
           </Popover.Content>

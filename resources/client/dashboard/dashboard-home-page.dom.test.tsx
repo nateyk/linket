@@ -1,6 +1,5 @@
 /** @vitest-environment jsdom */
-import {cleanup, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import {cleanup, render, screen} from '@testing-library/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
@@ -22,6 +21,7 @@ vi.mock('@ui/i18n/trans', () => ({Trans: ({message, values}: any) => <>{Object.e
 vi.mock('@ui/i18n/formatted-number', () => ({FormattedNumber: ({value}: any) => <>{value}</>}));
 vi.mock('@ui/i18n/formatted-currency', () => ({FormattedCurrency: ({valueInCents}: any) => <>{valueInCents} ETB cents</>}));
 vi.mock('@ui/i18n/formatted-date', () => ({FormattedDate: ({date}: any) => <>{date}</>}));
+vi.mock('@ui/i18n/formatted-relative-time', () => ({FormattedRelativeTime: ({date}: any) => <>{date}</>}));
 vi.mock('@ui/i18n/format-money', () => ({getSiteCurrency: () => 'ETB', formatMoney: (value: number) => String(value)}));
 vi.mock('@ui/i18n/selected-locale', () => ({useSelectedLocale: () => ({localeCode: 'en'})}));
 vi.mock('@ui/forms/input-field/date/date-range-picker/dialog/date-range-presets', () => ({DateRangePresets: [null, null, {getRangeValue: () => ({start: {toString: () => '2026-10-01', toAbsoluteString: () => '2026-10-01T00:00:00Z', timeZone: 'UTC'}, end: {toString: () => '2026-10-31', toAbsoluteString: () => '2026-10-31T23:59:59Z'}})}]}));
@@ -115,8 +115,8 @@ it('shows loading placeholders while the sales request is pending', () => {
 it('renders API-provided verified revenue and recent verification statuses', async () => {
   fixture.sales.summary = {verified_sales_count: 1, verified_revenue_cents: 4200, net_sales_cents: 4200, paid_orders_count: 1, items_sold_count: 1, average_order_cents: 4200, pending_count: 1, manual_review_count: 1, currency: 'ETB'};
   fixture.sales.data.data = [
-    {uuid: 'paid', status: 'paid', gross_amount_cents: 4200, currency: 'ETB', buyer_name: 'Sample buyer', created_at: '2026-10-10T10:00:00Z', product: {title: 'Paid workbook'}},
-    {uuid: 'review', status: 'manual_review', gross_amount_cents: 3300, currency: 'ETB', buyer_name: null, created_at: '2026-10-11T10:00:00Z', product: {title: 'Review workbook'}},
+    {uuid: 'paid', status: 'paid', gross_amount_cents: 4200, currency: 'ETB', buyer_name: 'Sample buyer', buyer_email: 'sample@example.test', created_at: '2026-10-10T10:00:00Z', product: {title: 'Paid workbook'}},
+    {uuid: 'review', status: 'manual_review', gross_amount_cents: 3300, currency: 'ETB', buyer_name: null, buyer_email: 'guest@example.test', created_at: '2026-10-11T10:00:00Z', product: {title: 'Review workbook'}},
   ];
   fixture.sales.sales_trend = [{date: '2026-10-10', amount_cents: 4200}];
   showDashboard();
@@ -124,143 +124,69 @@ it('renders API-provided verified revenue and recent verification statuses', asy
   expect(screen.getAllByText('Paid workbook').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Sample buyer').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Guest buyer').length).toBeGreaterThan(0);
-  expect(screen.getByRole('button', {name: 'Choose visible columns'})).toBeTruthy();
-  expect(screen.getAllByText('Manual review needed').length).toBeGreaterThan(0);
-  expect(screen.getByRole('link', {name: 'See all orders'})).toBeTruthy();
+  expect(screen.getAllByText('sample@example.test').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('guest@example.test').length).toBeGreaterThan(0);
+  expect(screen.queryByRole('toolbar', {name: 'Filter recent orders'})).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Choose visible columns'})).toBeNull();
+  expect(screen.queryByRole('searchbox', {name: 'Search recent orders'})).toBeNull();
+  expect(screen.getAllByText('Review').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Paid').length).toBeGreaterThan(0);
+  expect(screen.getByRole('link', {name: 'View all'})).toBeTruthy();
   expect(screen.getAllByText('#paid').length).toBeGreaterThan(0);
   expect(screen.queryByText('No completed sales in this period')).toBeNull();
 });
 
-it('presents compact, accessible recent-order table and mobile rows', async () => {
+it('presents a minimal responsive recent-orders list', async () => {
   fixture.sales.data.data = [
     {
       uuid: 'order-1234567890', status: 'paid', gross_amount_cents: 2600,
-      currency: 'ETB', buyer_name: 'First buyer',
+      currency: 'ETB', buyer_name: 'First buyer', buyer_email: 'first@example.test',
       created_at: '2026-11-12T09:00:00Z', product: {title: 'Creator guide'},
     },
     {
       uuid: 'review-0987654321', status: 'manual_review', gross_amount_cents: 1500,
-      currency: 'ETB', buyer_name: null,
+      currency: 'ETB', buyer_name: null, buyer_email: null,
       created_at: '2026-11-11T09:00:00Z', product: {title: 'Digital workbook'},
     },
   ];
   showDashboard();
 
-  const table = await screen.findByRole('table', {name: 'Recent orders'});
-  expect(table.querySelectorAll('thead th')).toHaveLength(3);
-  expect(table.querySelectorAll('tbody tr')).toHaveLength(2);
-  expect(table.querySelectorAll('thead th[scope="col"]')).toHaveLength(3);
-  expect(table.textContent).toContain('Creator guide');
-  expect(table.textContent).toContain('First buyer');
-  expect(table.textContent).toContain('Manual review needed');
+  const list = await screen.findByRole('list', {name: 'Recent orders'});
+  expect(list.querySelectorAll('[data-slot="recent-order-row"]')).toHaveLength(2);
+  expect(list.textContent).toContain('Order');
+  expect(list.textContent).toContain('Customer');
+  expect(list.textContent).toContain('Status');
+  expect(list.textContent).toContain('Total');
+  expect(list.textContent).toContain('Creator guide');
+  expect(list.textContent).toContain('First buyer');
+  expect(list.textContent).toContain('first@example.test');
+  expect(list.textContent).toContain('Guest buyer');
+  expect(list.textContent).toContain('#order-12');
+  expect(list.textContent).toContain('Review');
+  expect(list.textContent).toContain('Paid');
+  expect(list.textContent).toContain('2600 ETB cents');
+  expect(screen.queryByRole('toolbar', {name: 'Filter recent orders'})).toBeNull();
 
-  const mobile = document.querySelector('ol[aria-labelledby="recent-orders-title"]');
-  expect(mobile).not.toBeNull();
-  expect(mobile?.querySelectorAll('li')).toHaveLength(2);
-  expect(mobile?.textContent).toContain('#order-12');
-  expect(mobile?.textContent).toContain('Guest buyer');
-  expect(mobile?.textContent).toContain('2600 ETB cents');
-
-  const action = screen.getByRole('link', {name: 'See all orders'});
+  const action = screen.getByRole('link', {name: 'View all'});
   expect(action.getAttribute('href')).toBe('/dashboard/orders');
   expect(document.querySelector('[data-slot="card-footer"] a[href="/dashboard/orders"]')).toBeNull();
 });
 
-
-it('searches recent orders and sorts amounts within the five loaded records', async () => {
-  fixture.sales.data.data = [
-    {uuid: 'guide-123', status: 'paid', gross_amount_cents: 2600, currency: 'ETB', buyer_name: 'First buyer', created_at: '2026-11-12T09:00:00Z', product: {title: 'Creator guide'}},
-    {uuid: 'workbook-456', status: 'manual_review', gross_amount_cents: 1500, currency: 'ETB', buyer_name: 'Second buyer', created_at: '2026-11-11T09:00:00Z', product: {title: 'Digital workbook'}},
-  ];
-  showDashboard();
-
-  let table = await screen.findByRole('table', {name: 'Recent orders'});
-  expect(table.querySelectorAll('tbody tr')).toHaveLength(2);
-  expect(table.querySelector('tbody tr')?.textContent).toContain('Creator guide');
-
-  fireEvent.click(within(table).getByRole('button', {name: 'Amount'}));
-  expect(table.querySelector('tbody tr')?.textContent).toContain('Digital workbook');
-
-  const search = screen.getByRole('searchbox', {name: 'Search recent orders'});
-  fireEvent.change(search, {target: {value: 'Creator guide'}});
-  table = screen.getByRole('table', {name: 'Recent orders'});
-  expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
-  expect(table.textContent).toContain('Creator guide');
-  expect(document.querySelectorAll('ol[aria-labelledby="recent-orders-title"] li')).toHaveLength(1);
-
-  fireEvent.change(search, {target: {value: 'no such product'}});
-  expect(screen.getByText('No matching orders')).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', {name: 'Clear filters'}));
-  expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr')).toHaveLength(2);
-});
-
-it('filters real payment statuses and lets desktop reveal optional columns', async () => {
-  fixture.sales.data.data = [
-    {uuid: 'paid-1', status: 'paid', gross_amount_cents: 2600, currency: 'ETB', buyer_name: 'Verified buyer', created_at: '2026-11-12T09:00:00Z', product: {title: 'Paid guide'}},
-    {uuid: 'review-2', status: 'manual_review', gross_amount_cents: 1500, currency: 'ETB', buyer_name: 'Review buyer', created_at: '2026-11-11T09:00:00Z', product: {title: 'Review guide'}},
-    {uuid: 'expired-3', status: 'expired', gross_amount_cents: 1200, currency: 'ETB', buyer_name: 'Expired buyer', created_at: '2026-11-10T09:00:00Z', product: {title: 'Expired guide'}},
-  ];
-  showDashboard();
-  const user = userEvent.setup();
-  const table = await screen.findByRole('table', {name: 'Recent orders'});
-  expect(table.querySelectorAll('thead th')).toHaveLength(3);
-
-  await user.click(screen.getByRole('combobox', {name: 'Filter by payment status'}));
-  await user.click(await screen.findByRole('option', {name: 'Needs review'}));
-  expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr')).toHaveLength(1);
-  expect(screen.getByRole('table', {name: 'Recent orders'}).textContent).toContain('Review guide');
-
-  await user.click(screen.getByRole('button', {name: 'Choose visible columns'}));
-  await user.click(await screen.findByRole('menuitemcheckbox', {name: 'Buyer'}));
-  expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('thead th')).toHaveLength(4);
-  expect(screen.getByRole('table', {name: 'Recent orders'}).textContent).toContain('Review buyer');
-});
-
-it('keeps the overview responsive when filters, sorting and columns change repeatedly', async () => {
+it('keeps recent-order rows linked to the orders page', async () => {
   fixture.sales.data.data = [
     {uuid: 'paid-a', status: 'paid', gross_amount_cents: 2700, currency: 'ETB', buyer_name: 'First', created_at: '2026-11-12T09:00:00Z', product: {title: 'First guide'}},
     {uuid: 'review-b', status: 'manual_review', gross_amount_cents: 1500, currency: 'ETB', buyer_name: 'Second', created_at: '2026-11-11T09:00:00Z', product: {title: 'Second guide'}},
-    {uuid: 'expired-c', status: 'expired', gross_amount_cents: 900, currency: 'ETB', buyer_name: 'Third', created_at: '2026-11-10T09:00:00Z', product: {title: 'Third guide'}},
   ];
   showDashboard();
-  const user = userEvent.setup();
 
-  for (const status of ['Needs review', 'All statuses', 'Failed or expired', 'All statuses']) {
-    // Base UI briefly hides background controls while a popover closes.
-    const select = await waitFor(() =>
-      screen.getByRole('combobox', {name: 'Filter by payment status'}),
-    );
-    await user.click(select);
-    await user.click(await screen.findByRole('option', {name: status}));
-    await waitFor(() => {
-      expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr').length)
-        .toBe(status === 'All statuses' ? 3 : 1);
-      expect(screen.getByRole('combobox', {name: 'Filter by payment status'})).toBeTruthy();
-    });
-  }
-
-  for (const column of ['Buyer', 'Date', 'Buyer', 'Date']) {
-    await user.click(await waitFor(() =>
-      screen.getByRole('button', {name: 'Choose visible columns'}),
-    ));
-    await user.click(await screen.findByRole('menuitemcheckbox', {name: column}));
-    // Checkbox menus stay open so users can select more than one column.
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(
-      screen.getByRole('button', {name: 'Choose visible columns'}),
-    ).toBeTruthy());
-  }
-  const table = screen.getByRole('table', {name: 'Recent orders'});
-  expect(table.querySelectorAll('thead th')).toHaveLength(3);
-  fireEvent.click(within(table).getByRole('button', {name: 'Amount'}));
-  fireEvent.change(screen.getByRole('searchbox', {name: 'Search recent orders'}), {
-    target: {value: 'Third guide'},
-  });
-  expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr')).toHaveLength(1);
-  expect(screen.getByRole('link', {name: 'See all orders'})).toBeTruthy();
-// The repeated interactive dropdown changes can exceed the default 5s
-// under shared CI runner load. Keep the assertions and give this one test room.
-}, 15_000);
+  const list = await screen.findByRole('list', {name: 'Recent orders'});
+  const rows = list.querySelectorAll('a[data-slot="recent-order-row"]');
+  expect(rows).toHaveLength(2);
+  expect(rows[0]?.getAttribute('href')).toBe('/dashboard/orders');
+  expect(list.textContent).toContain('First guide');
+  expect(list.textContent).toContain('Second guide');
+  expect(screen.getByRole('link', {name: 'View all'})).toBeTruthy();
+});
 
 it('uses a distinct analytics query key when switching workspaces', async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});

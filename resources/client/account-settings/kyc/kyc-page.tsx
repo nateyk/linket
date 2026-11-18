@@ -13,12 +13,13 @@ import {cn} from '@ui/utils/cn';
 import {
   BadgeCheckIcon,
   BookUserIcon,
-  CheckIcon,
   FileClockIcon,
   FileX2Icon,
   IdCardIcon,
   UploadIcon,
+  UserRoundIcon,
   XIcon,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   FormEvent,
@@ -262,22 +263,30 @@ function RejectedCard({verification}: {verification?: KycVerification}) {
   );
 }
 
+function documentTypeLabel(type: KycDocumentType) {
+  return type === 'passport' ? (
+    <Trans message="Passport" />
+  ) : (
+    <Trans message="National ID" />
+  );
+}
+
 function VerificationDetails({verification}: {verification: KycVerification}) {
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-sm text-muted-foreground">
-      <span>
-        <Trans
-          message="Document type: :type"
-          values={{type: verification.document_type}}
-        />
-      </span>
-      <span>
-        <Trans
-          message="Document number: :number"
-          values={{number: verification.document_number}}
-        />
-      </span>
-    </div>
+    <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-1">
+        <dt className="text-muted-foreground">
+          <Trans message="Document type" />
+        </dt>
+        <dd className="font-medium">{documentTypeLabel(verification.document_type)}</dd>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <dt className="text-muted-foreground">
+          <Trans message="Document number" />
+        </dt>
+        <dd className="truncate font-medium">{verification.document_number}</dd>
+      </div>
+    </dl>
   );
 }
 
@@ -326,7 +335,7 @@ function SubmissionForm({
   return (
     <AccountSettingsPanel
       id="kyc-submit"
-      title={<Trans message="Submit for KYC Review" />}
+      title={<Trans message="Verify your identity" />}
       actions={
         <Button
           type="submit"
@@ -347,15 +356,15 @@ function SubmissionForm({
         </Button>
       }
     >
-      <form id={formId} onSubmit={onSubmit} className="flex flex-col gap-5">
+      <form id={formId} onSubmit={onSubmit} className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Upload a government ID so we can confirm your identity before payouts." />
+        </p>
         <Field.Root name="document_type">
           <Field.Label>
             <Trans message="ID type" />
           </Field.Label>
           <DocumentTypeTiles value={documentType} onChange={setDocumentType} />
-          <Field.Description>
-            <Trans message="Passport is a single document, National ID requires front and back." />
-          </Field.Description>
         </Field.Root>
         <Field.Root name="document_number">
           <Field.Label>
@@ -367,40 +376,46 @@ function SubmissionForm({
             placeholder="e.g. 123456789"
           />
         </Field.Root>
-        {documentType === 'passport' ? (
-          <FileDropzone
-            sample="passport"
-            label={<Trans message="Passport" />}
-            file={passportFile}
-            setFile={setPassportFile}
-          />
-        ) : (
-          <>
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-muted-foreground">
+            <Trans message="JPG or PNG, up to 4 MB." />
+          </p>
+          {documentType === 'passport' ? (
             <FileDropzone
-              sample="id-front"
-              label={<Trans message="Front of National ID" />}
-              file={frontOfIdFile}
-              setFile={setFrontOfIdFile}
+              label={<Trans message="Passport" />}
+              uploadLabel="Upload passport"
+              file={passportFile}
+              setFile={setPassportFile}
             />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FileDropzone
+                label={<Trans message="Front of National ID" />}
+                uploadLabel="Upload front of National ID"
+                file={frontOfIdFile}
+                setFile={setFrontOfIdFile}
+              />
+              <FileDropzone
+                label={<Trans message="Back of National ID" />}
+                uploadLabel="Upload back of National ID"
+                file={backOfIdFile}
+                setFile={setBackOfIdFile}
+              />
+            </div>
+          )}
+          {selfieRequired && (
             <FileDropzone
-              sample="id-back"
-              label={<Trans message="Back of National ID" />}
-              file={backOfIdFile}
-              setFile={setBackOfIdFile}
+              label={<Trans message="Selfie" />}
+              description={
+                <Trans message="A clear photo of your face, matching the document above." />
+              }
+              uploadLabel="Upload selfie"
+              icon={UserRoundIcon}
+              file={selfieFile}
+              setFile={setSelfieFile}
             />
-          </>
-        )}
-        {selfieRequired && (
-          <FileDropzone
-            sample="selfie"
-            label={<Trans message="Selfie" />}
-            description={
-              <Trans message="A clear photo of your face, matching the document above." />
-            }
-            file={selfieFile}
-            setFile={setSelfieFile}
-          />
-        )}
+          )}
+        </div>
         <label className="flex cursor-pointer items-start gap-2.5 text-sm text-muted-foreground">
           <Checkbox
             className="mt-0.5"
@@ -409,7 +424,7 @@ function SubmissionForm({
             bindToHookForm={false}
           />
           <span>
-            <Trans message="I confirm the submitted information is accurate and I consent to KYC verification." />
+            <Trans message="I confirm the submitted information is accurate and I consent to identity verification." />
           </span>
         </label>
       </form>
@@ -453,26 +468,21 @@ function DocumentTypeTiles({
             aria-checked={selected}
             onClick={() => onChange(type.value)}
             className={cn(
-              'relative flex items-center gap-3 rounded-card border p-3.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
+              'flex items-center gap-3 rounded-card-sm border px-3 py-2.5 text-start text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
               selected
-                ? 'border-primary bg-primary/5 text-foreground'
-                : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
+                ? 'border-primary/60 bg-primary/5 text-foreground'
+                : 'border-border text-muted-foreground hover:bg-muted/30 hover:text-foreground',
             )}
           >
             <span
               className={cn(
-                'grid size-9 shrink-0 place-items-center rounded-card-sm bg-background ring-1 ring-border [&>svg]:size-5',
+                'grid size-9 shrink-0 place-items-center rounded-card-sm bg-muted text-muted-foreground [&>svg]:size-4',
                 selected && 'text-primary',
               )}
             >
               {type.icon}
             </span>
             {type.label}
-            {selected && (
-              <span className="absolute top-2 right-2 grid size-4.5 place-items-center rounded-full bg-primary text-primary-foreground">
-                <CheckIcon className="size-3" />
-              </span>
-            )}
           </button>
         );
       })}
@@ -480,22 +490,22 @@ function DocumentTypeTiles({
   );
 }
 
-type DropzoneSample = 'passport' | 'id-front' | 'id-back' | 'selfie';
-
 interface FileDropzoneProps {
   label: React.ReactNode;
   description?: React.ReactNode;
+  uploadLabel: string;
+  icon?: LucideIcon;
   file?: File;
   setFile: (value?: File) => void;
-  sample: DropzoneSample;
 }
 
 function FileDropzone({
   label,
   description,
+  uploadLabel,
+  icon: Icon = UploadIcon,
   file,
   setFile,
-  sample,
 }: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -504,6 +514,12 @@ function FileDropzone({
     [file],
   );
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   return (
     <Field.Root>
       <Field.Label>{label}</Field.Label>
@@ -511,7 +527,7 @@ function FileDropzone({
       <div
         role="button"
         tabIndex={0}
-        aria-label="Upload file"
+        aria-label={uploadLabel}
         onClick={() => inputRef.current?.click()}
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -531,10 +547,10 @@ function FileDropzone({
           if (dropped) setFile(dropped);
         }}
         className={cn(
-          'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
+          'flex min-h-24 cursor-pointer items-center justify-center gap-3 rounded-card-sm border border-dashed px-4 py-4 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
           dragOver
             ? 'border-primary bg-primary/5'
-            : 'border-border hover:bg-muted/50',
+            : 'border-border hover:bg-muted/30',
         )}
       >
         {file && previewUrl ? (
@@ -542,39 +558,35 @@ function FileDropzone({
             <img
               src={previewUrl}
               alt=""
-              className="max-h-36 rounded-card-sm object-cover ring-1 ring-border"
+              className="size-12 shrink-0 rounded-card-sm object-cover ring-1 ring-border"
             />
-            <div className="flex items-center gap-2 text-sm">
-              <span className="max-w-56 truncate font-medium">
-                {file.name}
-              </span>
-              <button
-                type="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  setFile(undefined);
-                }}
-                className="grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Remove file"
-              >
-                <XIcon className="size-3.5" />
-              </button>
-            </div>
+            <span className="min-w-0 truncate text-sm font-medium">{file.name}</span>
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
+                setFile(undefined);
+              }}
+              className="grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Remove file"
+            >
+              <XIcon className="size-3.5" />
+            </button>
           </>
         ) : (
           <>
-            <DocumentSample variant={sample} />
-            <UploadIcon className="size-5 text-muted-foreground" />
-            <p className="text-sm font-medium">
-              <Trans message="Click to upload" />
-              <span className="font-normal text-muted-foreground">
+            <span className="grid size-9 shrink-0 place-items-center rounded-card-sm bg-muted text-muted-foreground">
+              <Icon className="size-4" aria-hidden="true" />
+            </span>
+            <span className="text-sm">
+              <span className="font-medium">
+                <Trans message="Click to upload" />
+              </span>
+              <span className="text-muted-foreground">
                 {' '}
                 <Trans message="or drag and drop" />
               </span>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              <Trans message="JPG, JPEG, PNG · Max 4 MB" />
-            </p>
+            </span>
           </>
         )}
         <input
@@ -586,89 +598,5 @@ function FileDropzone({
         />
       </div>
     </Field.Root>
-  );
-}
-
-function DocumentSample({variant}: {variant: DropzoneSample}) {
-  const common = {
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.5,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    className: 'size-20 text-muted-foreground/80',
-    'aria-hidden': true,
-  };
-
-  if (variant === 'id-back') {
-    return (
-      <svg viewBox="0 0 120 75" xmlns="http://www.w3.org/2000/svg" {...common}>
-        <rect
-          x="2"
-          y="2"
-          width="116"
-          height="71"
-          rx="6"
-          fill="currentColor"
-          fillOpacity=".08"
-        />
-        <rect
-          x="10"
-          y="12"
-          width="100"
-          height="14"
-          fill="currentColor"
-          fillOpacity=".2"
-          stroke="none"
-        />
-        <line x1="14" y1="36" x2="106" y2="36" />
-        <line x1="14" y1="42" x2="100" y2="42" />
-        <line x1="14" y1="48" x2="106" y2="48" />
-        <g strokeWidth="2">
-          <line x1="14" y1="58" x2="14" y2="68" />
-          <line x1="18" y1="58" x2="18" y2="68" />
-          <line x1="22" y1="58" x2="22" y2="68" />
-          <line x1="28" y1="58" x2="28" y2="68" />
-          <line x1="32" y1="58" x2="32" y2="68" />
-          <line x1="38" y1="58" x2="38" y2="68" />
-          <line x1="42" y1="58" x2="42" y2="68" />
-          <line x1="48" y1="58" x2="48" y2="68" />
-          <line x1="54" y1="58" x2="54" y2="68" />
-        </g>
-      </svg>
-    );
-  }
-
-  if (variant === 'selfie') {
-    return (
-      <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" {...common}>
-        <rect
-          x="2"
-          y="2"
-          width="116"
-          height="86"
-          rx="10"
-          fill="currentColor"
-          fillOpacity=".08"
-        />
-        <circle cx="60" cy="32" r="13" />
-        <path d="M28 74 a32 26 0 0 1 64 0" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" {...common}>
-      <path
-        d="M30 8 h44 l24 24 v50 q0 4 -4 4 h-64 q-4 0 -4 -4 v-70 q0 -4 4 -4 z"
-        fill="currentColor"
-        fillOpacity=".08"
-      />
-      <path d="M74 8 v24 h24" />
-      <line x1="36" y1="46" x2="92" y2="46" />
-      <line x1="36" y1="54" x2="92" y2="54" />
-      <line x1="36" y1="62" x2="86" y2="62" />
-      <line x1="36" y1="70" x2="92" y2="70" />
-    </svg>
   );
 }
