@@ -69,7 +69,7 @@ export function GeoChart({
   const hasMap = mapData.length > 0;
   const unknownCount = data
     .filter(item => !mapData.includes(item))
-    .reduce((sum, item) => sum + item.value, 0);
+    .reduce((sum, item) => sum + (Number(item.value) || 0), 0);
 
   return (
     <Card size="sm" className={cn('min-w-0', className)}>
@@ -131,7 +131,7 @@ export function GeoChart({
                           {location.label || <Trans message="Unknown location" />}
                         </span>
                         <span className="shrink-0 tabular-nums text-muted-foreground">
-                          {location.value.toLocaleString()} · {location.percentage}%
+                          {(Number(location.value) || 0).toLocaleString()} · {location.percentage}%
                         </span>
                       </div>
                       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
