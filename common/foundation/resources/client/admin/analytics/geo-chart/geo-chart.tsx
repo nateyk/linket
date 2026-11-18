@@ -44,14 +44,15 @@ export function GeoChart({
 
   const mapData = useMemo(
     () =>
-      data.filter(location =>
-        country
-          ? !!location.label &&
-            !['unknown', 'unknown location'].includes(
-              location.label.trim().toLowerCase(),
-            )
-          : !!location.code && /^[a-z]{2}$/i.test(location.code),
-      ),
+      data.filter(location => {
+        const label = location.label?.trim().toLowerCase() ?? '';
+        const isUnmapped = !label ||
+          ['unknown', 'unknown location', 'other', 'others', '(not set)'].includes(label);
+
+        if (country) return !isUnmapped;
+        return !!location.code && /^[a-z]{2}$/i.test(location.code)
+          || (!location.code && !isUnmapped);
+      }),
     [data, country],
   );
 
@@ -161,7 +162,7 @@ export function GeoChart({
               </ol>
               {unknownCount > 0 && hasMap && (
                 <p className="text-xs leading-5 text-muted-foreground">
-                  <Trans message="Visits without a known country are included in the list but not shown on the map." />
+                  <Trans message="Locations without a mappable country are included in the list but not shown on the map." />
                 </p>
               )}
               {country && (
