@@ -37,8 +37,10 @@ function FormHarness() {
   );
 }
 
-test('plan editor renders the Free verified-sales allowance field', () => {
+test('plan editor keeps product limits without the retired verified-sales allowance', () => {
   render(<FormHarness />);
 
-  expect(screen.getByText('Lifetime Free verified sales')).toBeTruthy();
+  expect(screen.queryByText('Lifetime Free verified sales')).toBeNull();
+  expect(screen.getByText('Free products')).toBeTruthy();
+  expect(screen.getByText('Paid products')).toBeTruthy();
 });

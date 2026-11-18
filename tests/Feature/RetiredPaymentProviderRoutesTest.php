@@ -63,4 +63,23 @@ class RetiredPaymentProviderRoutesTest extends TestCase
             ->assertOk()->assertJsonPath('data.gateway', 'chapa');
         Http::assertNothingSent();
     }
+
+    public function testLegacyBuyerPaymentAndProReferenceRoutesAreUnavailable(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $this->getJson('/api/v1/public/direct-orders/legacy-order')->assertNotFound();
+        $this->getJson('/api/v1/public/direct-orders/legacy-order/payment-instructions')->assertNotFound();
+
+        foreach (['recheck', 'cancel', 'reference', 'select-account'] as $action) {
+            $this->postJson('/api/v1/public/direct-orders/legacy-order/'.$action)->assertNotFound();
+        }
+
+        $this->stateful()->actingAs($this->admin(), 'sanctum');
+        $this->postJson('/api/v1/billing/direct/pro')->assertNotFound();
+        $this->postJson('/api/v1/billing/direct/pro/legacy-payment/reference')->assertNotFound();
+        $this->postJson('/api/v1/billing/direct/invoices/legacy-invoice/reference')->assertNotFound();
+
+        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+    }
 }

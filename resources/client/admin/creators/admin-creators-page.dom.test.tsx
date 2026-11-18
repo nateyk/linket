@@ -130,7 +130,6 @@ describe('admin creators page', () => {
               suspended_accounts: 0,
               free_plan_creators: 1,
               pro_plan_creators: 1,
-              verified_sales_consumed: 5,
               expiring_subscriptions: 1,
               expired_subscriptions: 1,
               pending_renewal_subscriptions: 1,
@@ -151,8 +150,6 @@ describe('admin creators page', () => {
                 is_suspended: false,
                 is_pro: true,
                 subscription_lifecycle: 'expiring',
-                verified_sales_consumed: 3,
-                verified_sales_remaining: 7,
                 stores_count: 1,
                 products_count: 2,
                 pending_receiving_accounts_count: 2,
@@ -176,5 +173,7 @@ describe('admin creators page', () => {
     expect(screen.queryByText('Pending reviews')).toBeNull();
     expect(screen.getAllByText('Needs review').length).toBeGreaterThan(0);
     expect(screen.getByText('Creator directory')).toBeTruthy();
+    expect(screen.queryByText('Verified sales')).toBeNull();
+    expect(screen.queryByText('Verified sales used: :count')).toBeNull();
   });
 });

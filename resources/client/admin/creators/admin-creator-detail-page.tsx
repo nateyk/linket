@@ -41,13 +41,6 @@ type CreatorDetail = {
     ends_at?: string;
     price?: {amount: number; currency: string; interval?: string};
   } | null;
-  verified_sales: {
-    consumed: number;
-    remaining: number;
-    limit: number;
-    is_pro: boolean;
-    renews_at?: string | null;
-  };
   paid_orders_count: number;
   pending_orders_count?: number;
   sales_total?: number;
@@ -88,7 +81,6 @@ type SaleRow = {
   currency: string;
   paid_at?: string;
   created_at?: string;
-  counts_toward_verified_allowance?: boolean;
 };
 
 const TAB_VALUES = [
@@ -310,15 +302,6 @@ export function Component() {
               <div className="flex flex-wrap gap-2 text-sm">
                 <Badge variant="outline">
                   <Trans
-                    message=":used/:limit verified sales"
-                    values={{
-                      used: detail.verified_sales.consumed,
-                      limit: detail.verified_sales.limit,
-                    }}
-                  />
-                </Badge>
-                <Badge variant="outline">
-                  <Trans
                     message=":count paid orders"
                     values={{count: detail.paid_orders_count}}
                   />
@@ -424,23 +407,13 @@ export function Component() {
                 <Card.Root>
                   <Card.Header>
                     <Card.Title>
-                      <Trans message="Verified sales allowance" />
+                      <Trans message="Order activity" />
                     </Card.Title>
                     <Card.Description>
-                      <Trans message="Pending payment orders do not consume verified sales allowance." />
+                      <Trans message="Recorded paid and pending orders." />
                     </Card.Description>
                   </Card.Header>
                   <Card.Content className="flex flex-col gap-2 text-sm">
-                    <p>
-                      <Trans
-                        message=":used of :limit used · :remaining remaining"
-                        values={{
-                          used: detail.verified_sales.consumed,
-                          limit: detail.verified_sales.limit,
-                          remaining: detail.verified_sales.remaining,
-                        }}
-                      />
-                    </p>
                     <p>
                       <Trans
                         message="Paid orders: :count"
@@ -826,7 +799,7 @@ function CreatorSalesTable({
           </Card.Title>
           <Card.Description>
             <Trans
-              message=":paid paid · :pending pending · :total total. Only paid orders count toward verified sales."
+              message=":paid paid · :pending pending · :total total recorded orders."
               values={{paid: paidCount, pending: pendingCount, total: totalCount}}
             />
           </Card.Description>
@@ -934,19 +907,6 @@ function CreatorSalesTable({
                         >
                           {friendlyStatus(sale.status)}
                         </Badge>
-                        {sale.counts_toward_verified_allowance ? (
-                          <Badge variant="secondary" title="Counts toward verified sales">
-                            <Trans message="Verified" />
-                          </Badge>
-                        ) : sale.status === 'pending_payment' ||
-                          sale.status === 'verifying' ? (
-                          <Badge
-                            variant="outline"
-                            title="Pending payment does not consume verified sales"
-                          >
-                            <Trans message="Not counted" />
-                          </Badge>
-                        ) : null}
                       </div>
                     </Table.Cell>
                     <Table.Cell>
