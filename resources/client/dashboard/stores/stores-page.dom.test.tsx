@@ -5,6 +5,15 @@ import type {ReactNode} from 'react';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {BiolinkCard} from './stores-page';
 
+// Base UI's dropdown scroll area checks animations after opening or closing.
+// jsdom does not implement the Web Animations API.
+if (!Element.prototype.getAnimations) {
+  Object.defineProperty(Element.prototype, 'getAnimations', {
+    configurable: true,
+    value: () => [],
+  });
+}
+
 const clipboard = vi.hoisted(() => ({copy: vi.fn(() => true)}));
 const notifications = vi.hoisted(() => ({success: vi.fn()}));
 
