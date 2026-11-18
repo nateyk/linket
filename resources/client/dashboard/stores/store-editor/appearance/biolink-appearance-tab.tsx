@@ -51,9 +51,9 @@ export function Component() {
       <StorefrontAiAppearancePreview />
       <div className="flex w-full flex-col gap-3">
         <BuilderCollapsible
-            open={openSection === 'background'}
-            onOpenChange={open => setOpenSection(open ? 'background' : null)}
-          >
+          open={openSection === 'background'}
+          onOpenChange={open => setOpenSection(open ? 'background' : null)}
+        >
           <SectionCollapsibleTrigger>
             <BuilderSectionHeader
               icon={ImageIcon}
@@ -69,9 +69,9 @@ export function Component() {
         </BuilderCollapsible>
 
         <BuilderCollapsible
-            open={openSection === 'buttons'}
-            onOpenChange={open => setOpenSection(open ? 'buttons' : null)}
-          >
+          open={openSection === 'buttons'}
+          onOpenChange={open => setOpenSection(open ? 'buttons' : null)}
+        >
           <SectionCollapsibleTrigger>
             <BuilderSectionHeader
               icon={MousePointerClickIcon}
@@ -87,9 +87,9 @@ export function Component() {
         </BuilderCollapsible>
 
         <BuilderCollapsible
-            open={openSection === 'text'}
-            onOpenChange={open => setOpenSection(open ? 'text' : null)}
-          >
+          open={openSection === 'text'}
+          onOpenChange={open => setOpenSection(open ? 'text' : null)}
+        >
           <SectionCollapsibleTrigger>
             <BuilderSectionHeader
               icon={TypeIcon}
