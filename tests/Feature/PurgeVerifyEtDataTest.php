@@ -74,6 +74,46 @@ class PurgeVerifyEtDataTest extends TestCase
         $this->assertDatabaseMissing('verify_et_webhook_deliveries', ['event_id' => $eventId]);
     }
 
+    public function testLegacyPurgeRollsBackWhenOrderHasChapaCheckoutAttempt(): void
+    {
+        $creator = User::factory()->create();
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+        $product = DigitalProduct::query()->create([
+            'workspace_id' => $workspace->id,
+            'user_id' => $creator->id,
+            'title' => 'Mixed checkout guard fixture',
+            'price_cents' => 3500,
+            'currency' => 'ETB',
+            'status' => 'approved',
+            'approved_at' => now(),
+            'type' => 'digital',
+        ]);
+        $legacy = $this->order($creator->id, $product->id, 'verify_et');
+        $merchantReference = 'safety_'.Str::lower(Str::random(10));
+
+        DB::table('storefront_payment_attempts')->insert([
+            'order_id' => $legacy->id,
+            'merchant_reference' => $merchantReference,
+            'idempotency_key' => (string) Str::uuid(),
+            'amount_cents' => 3500,
+            'currency' => 'ETB',
+            'status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->artisan('billing:purge-verify-et', [
+            '--execute' => true,
+            '--confirm' => 'PURGE-VERIFY-ET',
+        ])->assertExitCode(1);
+
+        $this->assertDatabaseHas('storefront_orders', ['id' => $legacy->id]);
+        $this->assertDatabaseHas('storefront_payment_attempts', [
+            'order_id' => $legacy->id,
+            'merchant_reference' => $merchantReference,
+        ]);
+    }
+
     private function order(int $creatorId, int $productId, ?string $gateway): StorefrontOrder
     {
         return StorefrontOrder::query()->create([
