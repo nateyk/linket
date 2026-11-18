@@ -6,8 +6,9 @@ import {expect, test} from 'vitest';
 import {PackageCheckIcon, UserRoundIcon} from 'lucide-react';
 
 import {Accordion} from '@shadcn/accordion/accordion';
+import {Collapsible, CollapsibleContent} from '@shadcn/collapsible/collapsible';
 import {BuilderSectionHeader} from './builder-section-header';
-import {SectionAccordionTrigger} from './section-accordion-trigger';
+import {SectionAccordionTrigger, SectionCollapsibleTrigger} from './section-accordion-trigger';
 
 /** The text a screen reader reads after the trigger name. */
 function describedTexts(trigger: HTMLElement): string {
@@ -93,6 +94,29 @@ test('wrapper keeps native accordion behaviour (A-09)', () => {
 
   const trigger = screen.getByRole('button', {name: 'Profile'});
   expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  fireEvent.click(trigger);
+  expect(trigger.getAttribute('aria-expanded')).toBe('true');
+});
+
+test('collapsible section names and descriptions remain accessible', () => {
+  render(
+    <Collapsible>
+      <SectionCollapsibleTrigger descriptionPhrase="2 of 6 products featured">
+        <BuilderSectionHeader
+          icon={PackageCheckIcon}
+          title="Products"
+          description="Feature up to six items."
+          trailing={<span>2/6</span>}
+        />
+      </SectionCollapsibleTrigger>
+      <CollapsibleContent>Product settings</CollapsibleContent>
+    </Collapsible>,
+  );
+
+  const trigger = screen.getByRole('button', {name: 'Products'});
+  expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  expect(describedTexts(trigger)).toContain('Feature up to six items.');
+  expect(describedTexts(trigger)).toContain('2 of 6 products featured');
   fireEvent.click(trigger);
   expect(trigger.getAttribute('aria-expanded')).toBe('true');
 });
