@@ -86,6 +86,7 @@ final class PurgeVerifyEtData extends Command
     private function purgeOrders(array $orderIds): void
     {
         $this->assertNoChapaPayment($orderIds);
+        $this->assertNoChapaAttempt($orderIds);
         $this->assertNoChapaRefund($orderIds);
         $this->assertNoLinkedPayout($orderIds);
         $this->deleteOrderDependents($orderIds);
@@ -108,6 +109,16 @@ final class PurgeVerifyEtData extends Command
 
         if ($found) {
             throw new RuntimeException('Chapa transaction references a legacy order.');
+        }
+    }
+
+    /** @param list<int> $orderIds */
+    private function assertNoChapaAttempt(array $orderIds): void
+    {
+        // This table is exclusive to Chapa marketplace checkout.
+        if (Schema::hasTable('storefront_payment_attempts')
+            && DB::table('storefront_payment_attempts')->whereIn('order_id', $orderIds)->exists()) {
+            throw new RuntimeException('Chapa checkout attempt references a legacy order.');
         }
     }
 
