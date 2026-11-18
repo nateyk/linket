@@ -41,10 +41,16 @@ function renderAppearanceTab() {
 
 const trigger = (name: string) => screen.getByRole('button', {name});
 
-test('appearance accordion uses separated rows with clear card boundaries', () => {
+test('appearance sections use compact, theme-aware collapsible cards', () => {
   renderAppearanceTab();
-  const root = document.querySelector('[data-slot="accordion"]');
-  expect(root?.getAttribute('data-variant')).toBe('separated');
+  const sections = document.querySelectorAll('[data-slot="collapsible"]');
+  // Branding is disabled for this test fixture, leaving three editing sections.
+  expect(sections).toHaveLength(3);
+  for (const section of sections) {
+    expect(section.classList.contains('rounded-card-sm')).toBe(true);
+    expect(section.classList.contains('border-border')).toBe(true);
+    expect(section.classList.contains('bg-card')).toBe(true);
+  }
 });
 
 test('appearance sections start collapsed (single-open default is closed)', () => {
