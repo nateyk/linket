@@ -49,7 +49,7 @@ class ChapaPayoutService
      */
     public function availableBankOptions(): array
     {
-        $enabled = \\App\\Storefront\\Models\\DigitalProductWithdrawalMethod::query()
+        $enabled = \App\Storefront\Models\DigitalProductWithdrawalMethod::query()
             ->active()->get()->keyBy('code');
         $verified = [];
 
