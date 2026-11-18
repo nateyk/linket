@@ -90,9 +90,9 @@ if (!(Element.prototype as unknown as {getAnimations?: unknown}).getAnimations) 
 }
 
 api.get.mockImplementation((url: string) => {
-  if (url === '/api/v1/items/withdrawal-methods') {
+  if (url === '/api/v1/items/payout-banks') {
     return Promise.resolve({data: {data: [
-      {code: 'bank_transfer'}, {code: 'telebirr'}, {code: 'mpesa'},
+      {code: 'cbe'}, {code: 'telebirr'}, {code: 'mpesa'},
       {code: 'yaya'}, {code: 'cbebirr'},
     ]}});
   }
@@ -132,8 +132,8 @@ it('lists payout accounts with default badges and masked account numbers', async
     status: 'active',
   };
 
-  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
-    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/payout-banks'
+    ? Promise.resolve({data: {data: [{code: 'cbe'}, {code: 'telebirr'}]}})
     : Promise.resolve({data: {data: [account1, account2]}}));
 
   render(<Component />);
@@ -147,9 +147,9 @@ it('lists payout accounts with default badges and masked account numbers', async
 
 it('shows only admin-enabled Chapa v1 banks and wallets in seller dropdown', async () => {
   api.get.mockImplementation((url: string) => {
-    if (url === '/api/v1/items/withdrawal-methods') {
+    if (url === '/api/v1/items/payout-banks') {
       return Promise.resolve({data: {data: [
-        {code: 'bank_transfer', is_active: true},
+        {code: 'cbe', is_active: true},
         {code: 'telebirr', is_active: true},
         {code: 'mpesa', is_active: false},
         {code: 'yaya', is_active: false},
@@ -174,19 +174,21 @@ it('shows only admin-enabled Chapa v1 banks and wallets in seller dropdown', asy
 
   expect(options).toContain('telebirr');
   expect(options).toContain('cbe');
-  expect(options).toContain('awash');
+  expect(options).not.toContain('awash');
+  expect(options).not.toContain('boa');
+  expect(options).not.toContain('dashen');
   expect(options).not.toContain('mpesa');
   expect(options).not.toContain('yaya');
   expect(options).not.toContain('cbebirr');
   expect(options).not.toContain('paypal');
   expect(options).not.toContain('other');
-  expect(api.get).toHaveBeenCalledWith('/api/v1/items/withdrawal-methods');
+  expect(api.get).toHaveBeenCalledWith('/api/v1/items/payout-banks');
   expect(api.get).toHaveBeenCalledWith('/api/v1/items/payout-methods');
 });
 
 it('keeps account creation disabled if no providers are enabled', async () => {
   api.get.mockImplementation((url: string) =>
-    url === '/api/v1/items/withdrawal-methods'
+    url === '/api/v1/items/payout-banks'
       ? Promise.resolve({data: {data: []}})
       : Promise.resolve({data: {data: []}}),
   );
@@ -194,14 +196,14 @@ it('keeps account creation disabled if no providers are enabled', async () => {
   render(<Component />);
 
   expect(await screen.findByText(
-    'No bank or wallet payout methods are enabled. Contact Linket support.',
+    'No Chapa payout destinations are currently available. Check with Linket support.',
   )).toBeTruthy();
   expect((screen.getByRole('button', {name: 'Add payout account'}) as HTMLButtonElement).disabled).toBe(true);
 });
 
 it('shows retry instead of a blank picker when provider loading fails', async () => {
   api.get.mockImplementation((url: string) =>
-    url === '/api/v1/items/withdrawal-methods'
+    url === '/api/v1/items/payout-banks'
       ? Promise.reject(new Error('Network unavailable'))
       : Promise.resolve({data: {data: []}}),
   );
@@ -209,16 +211,16 @@ it('shows retry instead of a blank picker when provider loading fails', async ()
   render(<Component />);
 
   expect((await screen.findByRole('alert')).textContent).toContain(
-    'Unable to load payout methods or accounts. Retry to continue.',
+    'Unable to load Chapa payout destinations or accounts. Retry to continue.',
   );
-  expect(screen.getByRole('button', {name: 'Retry loading payout methods'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Retry loading payout destinations'})).toBeTruthy();
   expect((screen.getByRole('button', {name: 'Add payout account'}) as HTMLButtonElement).disabled).toBe(true);
   expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/payment-methods');
 });
 
 it('opens modal and creates a new payout destination via POST /api/v1/items/payout-methods', async () => {
-  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
-    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/payout-banks'
+    ? Promise.resolve({data: {data: [{code: 'cbe'}, {code: 'telebirr'}]}})
     : Promise.resolve({data: {data: []}}));
   api.post.mockResolvedValue({data: {data: {id: 10}}});
 
@@ -259,8 +261,8 @@ it('edits an existing payout destination via PUT /api/v1/items/payout-methods/:i
     status: 'active',
   };
 
-  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
-    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/payout-banks'
+    ? Promise.resolve({data: {data: [{code: 'cbe'}, {code: 'telebirr'}]}})
     : Promise.resolve({data: {data: [account]}}));
   api.put.mockResolvedValue({data: {data: {...account, account_holder: 'Updated Holder'}}});
 
@@ -280,7 +282,7 @@ it('edits an existing payout destination via PUT /api/v1/items/payout-methods/:i
     expect(api.put).toHaveBeenCalledWith('/api/v1/items/payout-methods/5', {
       type: 'telebirr',
       bank_code: 'telebirr',
-      bank_name: 'Telebirr (Ethio Telecom)',
+      bank_name: 'telebirr',
       account_holder: 'Updated Holder',
       destination: '0911223344',
       is_default: false,
@@ -292,8 +294,8 @@ it('sets a destination as default via POST /api/v1/items/payout-methods/:id/defa
   const account = {
     id: 8,
     type: 'bank_transfer',
-    bank_code: 'boa',
-    bank_name: 'Bank of Abyssinia (BOA)',
+    bank_code: 'cbe',
+    bank_name: 'Commercial Bank of Ethiopia (CBE)',
     account_holder: 'Abebe Bikila',
     account_number_last_four: '8899',
     masked_account_number: '•••• 8899',
@@ -302,14 +304,14 @@ it('sets a destination as default via POST /api/v1/items/payout-methods/:id/defa
     status: 'active',
   };
 
-  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
-    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/payout-banks'
+    ? Promise.resolve({data: {data: [{code: 'cbe'}, {code: 'telebirr'}]}})
     : Promise.resolve({data: {data: [account]}}));
   api.post.mockResolvedValue({data: {}});
 
   render(<Component />);
 
-  expect(await screen.findByText('Bank of Abyssinia (BOA)')).toBeTruthy();
+  expect(await screen.findByText('Commercial Bank of Ethiopia (CBE)')).toBeTruthy();
 
   fireEvent.click(screen.getByRole('button', {name: 'Account actions'}));
   fireEvent.click(await screen.findByRole('menuitem', {name: 'Set as default'}));
@@ -333,8 +335,8 @@ it('removes a payout destination via DELETE /api/v1/items/payout-methods/:id', a
     status: 'active',
   };
 
-  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
-    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/payout-banks'
+    ? Promise.resolve({data: {data: [{code: 'cbe'}, {code: 'telebirr'}]}})
     : Promise.resolve({data: {data: [account]}}));
   api.delete.mockResolvedValue({data: {}});
 
@@ -351,8 +353,8 @@ it('removes a payout destination via DELETE /api/v1/items/payout-methods/:id', a
 });
 
 it('displays info popover explaining Linket withdrawal payouts', async () => {
-  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
-    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/payout-banks'
+    ? Promise.resolve({data: {data: [{code: 'cbe'}, {code: 'telebirr'}]}})
     : Promise.resolve({data: {data: []}}));
 
   render(<Component />);

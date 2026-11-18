@@ -25,11 +25,8 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
-import awash from './bank-logos/awash.svg';
-import boa from './bank-logos/boa.svg';
 import cbe from './bank-logos/cbe.svg';
 import cbebirr from './bank-logos/cbebirr.svg';
-import dashen from './bank-logos/dashen.svg';
 import telebirr from './bank-logos/telebirr.svg';
 
 export type PayoutAccount = {
@@ -54,21 +51,17 @@ export type BankOption = {
   type: string;
 };
 
+// Names are display fallbacks; seller availability is loaded from authenticated
+// Chapa v1 /banks and filtered by Linket's enabled payout methods server-side.
 export const ETHIOPIAN_BANKS: BankOption[] = [
-  {code: 'telebirr', name: 'Telebirr (Ethio Telecom)', type: 'telebirr'},
-  {code: 'mpesa', name: 'M-Pesa', type: 'mpesa'},
-  {code: 'yaya', name: 'Yaya Wallet', type: 'yaya'},
+  {code: 'cbebirr', name: 'CBEBirr', type: 'cbebirr'},
   {code: 'cbe', name: 'Commercial Bank of Ethiopia (CBE)', type: 'bank_transfer'},
-  {code: 'boa', name: 'Bank of Abyssinia (BOA)', type: 'bank_transfer'},
-  {code: 'dashen', name: 'Dashen Bank', type: 'bank_transfer'},
-  {code: 'awash', name: 'Awash Bank', type: 'bank_transfer'},
-  {code: 'cbebirr', name: 'CBE Birr', type: 'cbebirr'},
-  {code: 'hibret', name: 'Hibret Bank', type: 'bank_transfer'},
-  {code: 'wegagen', name: 'Wegagen Bank', type: 'bank_transfer'},
-  {code: 'zemen', name: 'Zemen Bank', type: 'bank_transfer'},
+  {code: 'mpesa', name: 'M-Pesa', type: 'mpesa'},
+  {code: 'telebirr', name: 'telebirr', type: 'telebirr'},
+  {code: 'yaya', name: 'YaYaWallet', type: 'yaya'},
 ];
 
-const logos: Record<string, string> = {awash, boa, cbe, cbebirr, dashen, telebirr};
+const logos: Record<string, string> = {cbe, cbebirr, telebirr};
 
 function BankLogo({
   code,
@@ -163,6 +156,7 @@ function PayoutAccountCard({
     b => b.code.toLowerCase() === (account.bank_code ?? account.type).toLowerCase()
   );
   const displayName = account.bank_name || bankOption?.name || account.display_label || 'Bank Account';
+  const isSupported = !!bankOption;
   const maskedNumber = account.masked_account_number || (account.account_number_last_four ? `•••• ${account.account_number_last_four}` : '••••');
 
   return (
@@ -176,7 +170,8 @@ function PayoutAccountCard({
                 <h2 className="min-w-0 truncate text-sm font-semibold text-foreground">
                   {displayName}
                 </h2>
-                {account.status !== 'active' && (
+                {!isSupported && <Badge variant="outline" className="text-xs">Unsupported for payouts</Badge>}
+                {isSupported && account.status !== 'active' && (
                   <Badge variant="outline" className="text-xs">
                     {account.status === 'pending_verification' ? 'Awaiting approval' : 'Needs review'}
                   </Badge>
@@ -207,16 +202,16 @@ function PayoutAccountCard({
               <MoreHorizontalIcon className="size-4" />
             </Dropdown.Trigger>
             <Dropdown.Content align="end">
-              {!account.is_default && (
+              {isSupported && !account.is_default && (
                 <Dropdown.Item disabled={busy} onClick={() => onSetDefault(account)}>
                   <StarIcon className="size-4" />
                   <Trans message="Set as default" />
                 </Dropdown.Item>
               )}
-              <Dropdown.Item disabled={busy} onClick={() => onEdit(account)}>
+              {isSupported && <Dropdown.Item disabled={busy} onClick={() => onEdit(account)}>
                 <PencilIcon className="size-4" />
                 <Trans message="Edit account" />
-              </Dropdown.Item>
+              </Dropdown.Item>}
               <Dropdown.Item disabled={busy} onClick={() => onDelete(account)} className="text-destructive">
                 <Trash2Icon className="size-4" />
                 <Trans message="Remove account" />
@@ -231,7 +226,7 @@ function PayoutAccountCard({
 
 export function Component() {
   const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
-  const [enabledCodes, setEnabledCodes] = useState<string[]>([]);
+  const [availableBanks, setAvailableBanks] = useState<BankOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [actionError, setActionError] = useState(false);
@@ -247,10 +242,6 @@ export function Component() {
   const [isDefault, setIsDefault] = useState(false);
 
   const selectedBank = ETHIOPIAN_BANKS.find(b => b.code === bankCode);
-  const walletCodes = ['telebirr', 'mpesa', 'yaya', 'cbebirr'];
-  const availableBanks = ETHIOPIAN_BANKS.filter(b =>
-    enabledCodes.includes(walletCodes.includes(b.code) ? b.code : 'bank_transfer')
-  );
   const validNumber = isValidAccountNumber(accountNumber, bankCode);
   const invalidNumber = accountNumber.trim().length > 0 && !validNumber;
   const invalidName = accountHolder.trim().length > 0 && accountHolder.trim().length < 3;
@@ -260,7 +251,7 @@ export function Component() {
     setLoading(true);
     try {
       const [methodsResponse, accountsResponse] = await Promise.all([
-        apiClient.get('/api/v1/items/withdrawal-methods'),
+        apiClient.get('/api/v1/items/payout-banks'),
         apiClient.get('/api/v1/items/payout-methods'),
       ]);
       const methods = methodsResponse.data?.data;
@@ -269,16 +260,17 @@ export function Component() {
         throw new Error('Invalid payout methods response');
       }
 
-      setEnabledCodes(
-        methods
-          .filter((method: {code: string; is_active?: boolean}) => method.is_active !== false)
-          .map((method: {code: string}) => method.code)
-      );
+      // Fail closed if Chapa is unavailable or returns no verified ETB providers.
+      setAvailableBanks(ETHIOPIAN_BANKS.filter(bank =>
+        methods.some((method: BankOption & {is_active?: boolean}) =>
+          method.code === bank.code && method.is_active !== false
+        )
+      ));
       setAccounts(destinations);
       setLoadError(false);
     } catch {
       // Do not substitute checkout receiving methods or present a blank select as valid.
-      setEnabledCodes([]);
+      setAvailableBanks([]);
       setAccounts([]);
       setLoadError(true);
     } finally {
@@ -323,7 +315,7 @@ export function Component() {
 
     try {
       const payload = {
-        type: selectedBank?.type ?? 'bank_transfer',
+        type: selectedBank.type,
         bank_code: bankCode,
         bank_name: selectedBank?.name,
         account_holder: accountHolder.trim(),
@@ -399,17 +391,17 @@ export function Component() {
         {loading && <Spinner />}
         {loadError && (
           <p role="alert" className="text-sm text-destructive">
-            <Trans message="Unable to load payout methods or accounts. Retry to continue." />
+            <Trans message="Unable to load Chapa payout destinations or accounts. Retry to continue." />
           </p>
         )}
         {loadError && (
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
-            <Trans message="Retry loading payout methods" />
+            <Trans message="Retry loading payout destinations" />
           </Button>
         )}
         {!loading && !loadError && availableBanks.length === 0 && (
           <p role="status" className="text-sm text-muted-foreground">
-            <Trans message="No bank or wallet payout methods are enabled. Contact Linket support." />
+            <Trans message="No Chapa payout destinations are currently available. Check with Linket support." />
           </p>
         )}
         {actionError && (
@@ -523,7 +515,7 @@ export function Component() {
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="payout-account-number" className="text-sm font-medium">
-                    {['telebirr', 'cbebirr', 'mpesa', 'yaya'].includes(bankCode) ? (
+                    {['telebirr', 'cbebirr', 'mpesa'].includes(bankCode) ? (
                       <Trans message="Phone number (e.g. 0911223344)" />
                     ) : (
                       <Trans message="Account number" />

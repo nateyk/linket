@@ -764,11 +764,13 @@ class PayoutSystemTest extends TestCase
     /**
      * Auto-transfer falls back to manual reference for unsupported methods (paypal, other).
      */
-    public function testAutoTransferFallsBackToManualForPaypal(): void
+    public function testLegacyPaypalCannotEnterChapaPayoutProcessing(): void
     {
         settings()->save(['kyc.enabled' => true]);
         [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
 
+        // Retained for historical records, but not eligible for any new
+        // Chapa payout approval or transfer (including the old manual path).
         $paypalMethod = \App\Storefront\Models\DigitalProductWithdrawalMethod::query()->where('code', 'paypal')->firstOrFail();
 
         $payout->update([
@@ -780,19 +782,21 @@ class PayoutSystemTest extends TestCase
             'withdrawal_method_id' => $paypalMethod->id,
             'type' => 'paypal',
             'destination' => 'test@example.com',
-            'withdrawal_method_id' => $paypalMethod->id,
         ]);
 
         $this->stateful()->actingAs($admin);
         $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/processing", [
             'note' => 'Processing',
-        ])->assertOk();
+        ])->assertStatus(422)->assertJsonValidationErrors(['payout_method']);
 
-        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
+        $this->assertSame('requested', $payout->fresh()->status);
+
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
         ])->assertStatus(422);
 
-        $this->assertSame('processing', $payout->fresh()->status);
+        // The rejected legacy path must not mark any funds as disbursed.
+        $this->assertSame('requested', $payout->fresh()->status);
     }
 
     /**

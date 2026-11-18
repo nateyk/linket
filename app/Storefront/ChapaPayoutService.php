@@ -16,6 +16,73 @@ class ChapaPayoutService
 {
     public const WALLET_CODES = ['telebirr', 'mpesa', 'yaya', 'cbebirr'];
 
+    // The five destinations in Linket's Chapa v1 payout offering. Chapa's
+    // authenticated /v1/banks directory remains the authority on availability
+    // and the numeric bank_code sent to /v1/transfers.
+    public const PAYOUT_BANK_OPTIONS = [
+        'cbebirr' => ['name' => 'CBEBirr', 'type' => 'cbebirr', 'method' => 'cbebirr'],
+        'cbe' => ['name' => 'Commercial Bank of Ethiopia (CBE)', 'type' => 'bank_transfer', 'method' => 'bank_transfer'],
+        'mpesa' => ['name' => 'M-Pesa', 'type' => 'mpesa', 'method' => 'mpesa'],
+        'telebirr' => ['name' => 'telebirr', 'type' => 'telebirr', 'method' => 'telebirr'],
+        'yaya' => ['name' => 'YaYaWallet', 'type' => 'yaya', 'method' => 'yaya'],
+    ];
+
+    public static function canonicalBankCode(string $value): ?string
+    {
+        $key = strtolower((string) preg_replace('/[^a-zA-Z0-9]/', '', $value));
+
+        return match ($key) {
+            'cbebirr', 'cbebirrwallet' => 'cbebirr',
+            'cbe', 'cbebank', 'commercialbankofethiopia', 'commercialbankofethiopiacbe' => 'cbe',
+            'mpesa', 'mpesaethiopia' => 'mpesa',
+            'telebirr', 'telebirrethio', 'telebirrethiotelecom' => 'telebirr',
+            'yaya', 'yayawallet' => 'yaya',
+            default => null,
+        };
+    }
+
+    /**
+     * Show only destinations enabled by Linket AND currently active in
+     * the authenticated Chapa v1 ETB bank list. Never offer speculative banks.
+     *
+     * @return array<int, array{code: string, name: string, type: string, withdrawal_method_id: int}>
+     */
+    public function availableBankOptions(): array
+    {
+        $enabled = \App\Storefront\Models\DigitalProductWithdrawalMethod::query()
+            ->active()->get()->keyBy('code');
+        $verified = [];
+
+        foreach ($this->getBanks() as $bank) {
+            if (!is_array($bank) || empty($bank['is_active']) || empty($bank['active'])
+                || strtoupper((string) ($bank['currency'] ?? '')) !== 'ETB'
+                || !filter_var($bank['id'] ?? null, FILTER_VALIDATE_INT)) {
+                continue;
+            }
+
+            $code = self::canonicalBankCode((string) ($bank['slug'] ?? ''))
+                ?? self::canonicalBankCode((string) ($bank['name'] ?? ''));
+            if ($code !== null && !isset($verified[$code])) {
+                $verified[$code] = $bank;
+            }
+        }
+
+        $options = [];
+        foreach (self::PAYOUT_BANK_OPTIONS as $code => $option) {
+            $method = $enabled->get($option['method']);
+            if ($method && isset($verified[$code])) {
+                $options[] = [
+                    'code' => $code,
+                    'name' => $option['name'],
+                    'type' => $option['type'],
+                    'withdrawal_method_id' => (int) $method->id,
+                ];
+            }
+        }
+
+        return $options;
+    }
+
     /** @return array<int, array<string, mixed>> */
     public function getBanks(): array
     {
@@ -34,30 +101,29 @@ class ChapaPayoutService
 
     public function resolveBank(string $code): array
     {
-        $aliases = [
-            'cbe' => 'cbe_bank',
-            'boa' => 'boa_bank',
-            'dashen' => 'dashen_bank',
-            'awash' => 'awash_bank',
-            'hibret' => 'hibret_bank',
-            'wegagen' => 'wegagen_bank',
-            'zemen' => 'zemen_bank',
-            'yaya_wallet' => 'yaya',
-            'm-pesa' => 'mpesa',
-            'cbe_birr' => 'cbebirr',
-        ];
-        $code = strtolower(trim($code));
-        $slug = $aliases[$code] ?? $code;
-        foreach ($this->getBanks() as $bank) {
-            if ((string) ($bank['slug'] ?? '') === $slug
-                || (string) ($bank['id'] ?? '') === $code) {
-                if (empty($bank['is_active']) || empty($bank['active'])
-                    || strtoupper((string) ($bank['currency'] ?? '')) !== 'ETB') {
-                    throw new RuntimeException('This Chapa payout destination is not available for ETB.');
-                }
+        $canonical = self::canonicalBankCode($code);
+        if ($canonical === null) {
+            throw new RuntimeException('This destination is not part of the supported Chapa payout methods.');
+        }
 
-                return $bank;
+        foreach ($this->getBanks() as $bank) {
+            if (!is_array($bank)) {
+                continue;
             }
+
+            $providerCode = self::canonicalBankCode((string) ($bank['slug'] ?? ''))
+                ?? self::canonicalBankCode((string) ($bank['name'] ?? ''));
+            if ($providerCode !== $canonical) {
+                continue;
+            }
+
+            if (empty($bank['is_active']) || empty($bank['active'])
+                || strtoupper((string) ($bank['currency'] ?? '')) !== 'ETB'
+                || !filter_var($bank['id'] ?? null, FILTER_VALIDATE_INT)) {
+                throw new RuntimeException('This Chapa payout destination is not available for ETB.');
+            }
+
+            return $bank;
         }
 
         throw new RuntimeException('The selected destination is not supported by the current Chapa bank list.');
@@ -186,18 +252,7 @@ class ChapaPayoutService
     {
         $payout = $intent->payoutRequest;
         $code = strtolower((string) $payout?->bank_code_snapshot);
-        $aliases = [
-            'cbe' => 'cbe_bank',
-            'boa' => 'boa_bank',
-            'dashen' => 'dashen_bank',
-            'awash' => 'awash_bank',
-            'hibret' => 'hibret_bank',
-            'wegagen' => 'wegagen_bank',
-            'zemen' => 'zemen_bank',
-            'm-pesa' => 'mpesa',
-            'cbe_birr' => 'cbebirr',
-        ];
-        $expectedBank = $aliases[$code] ?? $code;
+        $expectedBank = self::canonicalBankCode($code);
         $actualBank = strtolower(trim((string) ($payload['bank'] ?? '')));
         $actualNumber = preg_replace('/[\s+\-]/', '', (string) ($payload['account_number'] ?? ''));
         $expectedNumber = preg_replace('/[\s+\-]/', '', (string) $intent->destination_snapshot);
@@ -218,8 +273,8 @@ class ChapaPayoutService
                 StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
             ], true)
             && (string) ($payload['reference'] ?? '') === (string) $intent->merchant_reference
-            && $expectedBank !== ''
-            && hash_equals($expectedBank, $actualBank)
+            && $expectedBank !== null
+            && self::canonicalBankCode($actualBank) === $expectedBank
             && hash_equals((string) $expectedNumber, (string) $actualNumber)
             && hash_equals((string) $payout->account_holder_snapshot, (string) ($payload['account_name'] ?? ''))
             && $amountCents !== null

@@ -336,6 +336,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('items/payout-requests', [PayoutRequestsController::class, 'store']);
         Route::post('items/payout-requests/{payoutRequest}/cancel', [PayoutRequestsController::class, 'cancel']);
         Route::get('items/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'index']);
+        Route::get('items/payout-banks', [DigitalProductWithdrawalMethodsController::class, 'banks']);
         Route::get('items/payout-methods', [DigitalProductPayoutMethodController::class, 'index']);
         Route::post('items/payout-methods', [DigitalProductPayoutMethodController::class, 'store']);
         Route::get('items/payout-methods/{payoutMethod}', [DigitalProductPayoutMethodController::class, 'showMethod'])->whereNumber('payoutMethod');
