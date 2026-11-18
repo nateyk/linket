@@ -115,8 +115,11 @@ test.describe('isolated buyer journey', () => {
     await expect(page.locator('#purchase-recovery-email')).toBeVisible({timeout: 15000});
     await page.locator('#purchase-recovery-email').fill(buyerEmail);
     await page.getByRole('button', {name: /Email me a sign-in code/i}).click();
-    await expect(page.getByRole('alert')).toContainText(/Check your inbox/i, {timeout: 30000});
+    await expect(page.getByRole('heading', {name: /Check your inbox/i})).toBeVisible({timeout: 30000});
     await expect(page.locator('#purchase-code')).toBeVisible();
+    await expect(page.getByTestId('purchase-otp-slot')).toHaveCount(6);
+    await expect(page.getByRole('button', {name: /Verify code/i})).toBeDisabled();
+    await expect(page.getByText(/Resend code in/i)).toBeVisible();
 
     const code = await test.step('read mocked recovery code', async () => {
       for (let attempt = 0; attempt < 20; attempt++) {
@@ -129,7 +132,9 @@ test.describe('isolated buyer journey', () => {
       return readRecoveryCode(buyerEmail.toLowerCase());
     });
 
-    await page.locator('#purchase-code, input[inputmode="numeric"]').fill(code);
+    await page.locator('#purchase-code').fill(code);
+    await expect(page.getByRole('button', {name: /Verify code/i})).toBeEnabled();
+    await expect(page.getByTestId('purchase-otp-slot').first()).toHaveText(code[0]);
     await page.getByRole('button', {name: /Verify code/i}).click();
     await expect(page).toHaveURL(/\/my-portal/, {timeout: 15000});
     await expect(
