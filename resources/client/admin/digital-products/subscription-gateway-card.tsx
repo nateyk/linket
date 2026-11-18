@@ -5,12 +5,8 @@ import {Card} from '@shadcn/card/card';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Spinner} from '@shadcn/spinner/spinner';
-import {Toggle} from '@shadcn/toggle';
-import {ToggleGroup} from '@shadcn/toggle-group/toggle-group';
 import {Trans} from '@ui/i18n/trans';
 import {useCallback, useEffect, useState} from 'react';
-
-type Gateway = 'verify_et' | 'chapa';
 
 function canSaveChapaSettings(publicKey: string, secretKey: string, webhookSecret: string): boolean {
   const hasPublic = publicKey.trim() !== '';
@@ -25,7 +21,6 @@ function canSaveChapaSettings(publicKey: string, secretKey: string, webhookSecre
 
 function readSettings(data: Partial<GatewaySettings> | undefined): GatewaySettings {
   return {
-    gateway: data?.gateway === 'chapa' ? 'chapa' : 'verify_et',
     secret_configured: data?.secret_configured === true,
     public_key_masked: typeof data?.public_key_masked === 'string' ? data.public_key_masked : null,
     webhook_secret_configured: data?.webhook_secret_configured === true,
@@ -34,7 +29,6 @@ function readSettings(data: Partial<GatewaySettings> | undefined): GatewaySettin
 }
 
 type GatewaySettings = {
-  gateway: Gateway;
   secret_configured: boolean;
   public_key_masked: string | null;
   webhook_secret_configured: boolean;
@@ -42,7 +36,6 @@ type GatewaySettings = {
 };
 
 export function SubscriptionGatewayCard() {
-  const [gateway, setGateway] = useState<Gateway>('verify_et');
   const [settings, setSettings] = useState<GatewaySettings>();
   const [publicKey, setPublicKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
@@ -59,7 +52,6 @@ export function SubscriptionGatewayCard() {
       const response = await apiClient.get('/api/v1/admin/billing/subscription-gateway');
       const next = readSettings(response.data.data);
       setSettings(next);
-      setGateway(next.gateway);
       setError(undefined);
     } catch (reason) {
       setError(getApiErrorMessage(reason) || 'Unable to load the subscription payment setting.');
@@ -72,25 +64,6 @@ export function SubscriptionGatewayCard() {
     void load();
   }, [load]);
 
-  const save = async (next: Gateway) => {
-    setGateway(next);
-    setBusy(true);
-    setSaved(false);
-    setError(undefined);
-    try {
-      const response = await apiClient.put('/api/v1/admin/billing/subscription-gateway', {gateway: next});
-      const savedSettings = readSettings(response.data.data);
-      setSettings(savedSettings);
-      setGateway(savedSettings.gateway);
-      setSaved(true);
-    } catch (reason) {
-      setError(getApiErrorMessage(reason) || 'Unable to save the subscription payment setting.');
-      await load();
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const saveKeys = async () => {
     if (!canSaveChapaSettings(publicKey, secretKey, webhookSecret)) {
       return;
@@ -101,7 +74,6 @@ export function SubscriptionGatewayCard() {
     setRejected(false);
     try {
       const response = await apiClient.put('/api/v1/admin/billing/subscription-gateway', {
-        gateway,
         ...(publicKey.trim() !== '' && secretKey !== ''
           ? {public_key: publicKey.trim(), secret_key: secretKey}
           : {}),
@@ -131,7 +103,7 @@ export function SubscriptionGatewayCard() {
           <Trans message="Pro subscription payments" />
         </Card.Title>
         <Card.Description>
-          <Trans message="Choose how sellers upgrade to Pro. This is separate from storefront receiving accounts. Verify.et and Chapa both stay available to switch." />
+          <Trans message="Pro subscriptions are processed by Chapa. Configure your platform merchant keys below." />
         </Card.Description>
       </Card.Header>
       <Card.Content className="flex flex-col gap-4">
@@ -145,16 +117,6 @@ export function SubscriptionGatewayCard() {
           <p role="alert" className="text-sm text-destructive">
             {error}
           </p>
-        )}
-        {!loading && (
-          <ToggleGroup variant="segmented" buttonVariant="ghost" value={[gateway]} disabled={busy}>
-            <Toggle value="verify_et" disabled={busy} onClick={() => void save('verify_et')}>
-              <Trans message="Verify.et" />
-            </Toggle>
-            <Toggle value="chapa" disabled={busy} onClick={() => void save('chapa')}>
-              <Trans message="Chapa" />
-            </Toggle>
-          </ToggleGroup>
         )}
         {!loading && (
           <div className="flex flex-col gap-4">

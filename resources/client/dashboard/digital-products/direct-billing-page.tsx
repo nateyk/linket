@@ -143,11 +143,6 @@ const orderStatusOptions = [
   {value: 'fulfilled', label: <Trans message="Fulfilled" />},
   {value: 'expired', label: <Trans message="Expired" />},
 ];
-const legacyOrderStatusOptions = [
-  ...orderStatusOptions,
-  {value: 'manual_review', label: <Trans message="Historical manual review" />},
-  {value: 'failed_verification', label: <Trans message="Historical verification rejected" />},
-];
 
 export function Component() {
   const [searchParams] = useSearchParams();
@@ -160,16 +155,11 @@ export function Component() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string>();
 
-  const [gateway, setGateway] = useState<'chapa' | 'verify_et' | 'all'>(() => {
-    const value = searchParams.get('gateway');
-    if (value === 'all' || value === 'verify_et') return value;
-    // Existing links to historical review statuses still open their records.
-    if (!value && ['manual_review', 'failed_verification'].includes(searchParams.get('status') ?? '')) {
-      return 'all';
-    }
-    return 'chapa';
-  });
-  const [orderStatus, setOrderStatus] = useState(() => legacyOrderStatusOptions.some(option => option.value === searchParams.get('status')) ? searchParams.get('status')! : 'all');
+  const [orderStatus, setOrderStatus] = useState(() =>
+    orderStatusOptions.some(option => option.value === searchParams.get('status'))
+      ? searchParams.get('status')!
+      : 'all',
+  );
   const [orderSearch, setOrderSearch] = useState(() => (searchParams.get('search') ?? '').slice(0, 100));
   const [orderFrom, setOrderFrom] = useState(() => searchParams.get('from') ?? '');
   const [orderTo, setOrderTo] = useState(() => searchParams.get('to') ?? '');
@@ -193,7 +183,7 @@ export function Component() {
     try {
       const response = await apiClient.get('/api/v1/storefront/direct-orders', {
         params: {
-          gateway,
+          gateway: 'chapa',
           status: orderStatus === 'all' ? undefined : orderStatus,
           search: debouncedOrderSearch || undefined,
           from: orderFrom || undefined,
@@ -215,7 +205,6 @@ export function Component() {
       if (sequence === ordersRequest.current) setOrdersLoading(false);
     }
   }, [
-    gateway,
     orderStatus,
     debouncedOrderSearch,
     orderFrom,
@@ -256,7 +245,7 @@ export function Component() {
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5 px-3 py-4 sm:px-5">
-          <SummaryCards summary={summary} gateway={gateway} />
+          <SummaryCards summary={summary} />
 
           <div className="flex flex-col gap-4">
               <div className="space-y-3">
@@ -270,29 +259,15 @@ export function Component() {
                     ) : null}
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    {gateway === 'chapa' ? (
-                      <Trans message="Chapa orders and payment status. Only paid orders count as sales." />
-                    ) : gateway === 'verify_et' ? (
-                      <Trans message="Historical Verify.et orders are kept for reconciliation and support review." />
-                    ) : (
-                      <Trans message="All Chapa and historical orders. Totals include both payment sources." />
-                    )}
+                    <Trans message="Chapa orders and payment status. Only paid orders count as sales." />
                   </p>
                 </div>
                 <OrderFilters
-                    gateway={gateway}
                     status={orderStatus}
                     search={orderSearch}
                     from={orderFrom}
                     to={orderTo}
-                    statusOptions={gateway === 'chapa' ? orderStatusOptions : legacyOrderStatusOptions}
-                    onGatewayChange={value => {
-                      setGateway(value);
-                      if (value === 'chapa' && ['manual_review', 'failed_verification'].includes(orderStatus)) {
-                        setOrderStatus('all');
-                      }
-                      setOrderPage(1);
-                    }}
+                    statusOptions={orderStatusOptions}
                     onStatusChange={value => {
                       setOrderStatus(value);
                       setOrderPage(1);
@@ -350,23 +325,11 @@ export function Component() {
   );
 }
 
-function SummaryCards({
-  summary,
-  gateway,
-}: {
-  summary?: Summary;
-  gateway: 'chapa' | 'verify_et' | 'all';
-}) {
+function SummaryCards({summary}: {summary?: Summary}) {
   return (
     <section aria-label="Sales summary" className="flex flex-col gap-2">
       <p className="text-xs text-muted-foreground">
-        {gateway === 'chapa' ? (
-          <Trans message="Chapa payments only · lifetime" />
-        ) : gateway === 'verify_et' ? (
-          <Trans message="Historical Verify.et orders · lifetime" />
-        ) : (
-          <Trans message="All payment history · lifetime" />
-        )}
+        <Trans message="Chapa payments only · lifetime" />
       </p>
       <Card.Root size="sm" className="gap-0 rounded-card-sm py-0">
         <Card.Content className="grid grid-cols-2 p-0 sm:grid-cols-4">
@@ -437,31 +400,27 @@ function SummaryMetric({
 }
 
 function OrderFilters({
-  gateway,
   status,
   search,
   from,
   to,
   statusOptions,
-  onGatewayChange,
   onStatusChange,
   onSearchChange,
   onFromChange,
   onToChange,
 }: {
-  gateway: 'chapa' | 'verify_et' | 'all';
   status: string;
   search: string;
   from: string;
   to: string;
   statusOptions: Array<{value: string; label: ReactNode}>;
-  onGatewayChange: (value: 'chapa' | 'verify_et' | 'all') => void;
   onStatusChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onFromChange: (value: string) => void;
   onToChange: (value: string) => void;
 }) {
-  const isFiltered = gateway !== 'chapa' || status !== 'all' || !!search || !!from || !!to;
+  const isFiltered = status !== 'all' || !!search || !!from || !!to;
   return (
     <div className="flex flex-col gap-2 md:flex-row md:items-center">
       <div className="relative min-w-0 flex-1">
@@ -476,23 +435,6 @@ function OrderFilters({
         />
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
-        <Select.Root name="orders-gateway" value={gateway}
-          onValueChange={value => onGatewayChange(value === 'all' || value === 'verify_et' ? value : 'chapa')}>
-          <Select.Trigger aria-label="Payment source" className="col-span-2 w-full md:w-52">
-            <Select.Value>
-              {gateway === 'chapa' ? <Trans message="Chapa payments" /> :
-                gateway === 'verify_et' ? <Trans message="Legacy Verify.et" /> :
-                <Trans message="All payment history" />}
-            </Select.Value>
-          </Select.Trigger>
-          <Select.Content>
-            <Select.Group>
-              <Select.Item value="chapa"><Trans message="Chapa payments" /></Select.Item>
-              <Select.Item value="all"><Trans message="All payment history" /></Select.Item>
-              <Select.Item value="verify_et"><Trans message="Legacy Verify.et" /></Select.Item>
-            </Select.Group>
-          </Select.Content>
-        </Select.Root>
         <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
           <Select.Trigger aria-label="Order status" className="w-full md:w-52">
             <Select.Value placeholder={<Trans message="All statuses" />}>
@@ -541,7 +483,6 @@ function OrderFilters({
       </div>
       {isFiltered && (
         <Button variant="ghost" size="sm" className="self-start md:self-auto" onClick={() => {
-          onGatewayChange('chapa');
           onStatusChange('all');
           onSearchChange('');
           onFromChange('');

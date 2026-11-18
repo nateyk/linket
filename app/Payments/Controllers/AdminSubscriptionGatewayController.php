@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -30,7 +29,7 @@ final class AdminSubscriptionGatewayController extends Controller
         Gate::authorize('admin.access');
         Gate::authorize('update', Setting::class);
         $data = $request->validate([
-            'gateway' => ['sometimes', 'string', Rule::in(['verify_et', 'chapa'])],
+            'gateway' => ['sometimes', 'string', 'in:chapa'],
             'public_key' => ['sometimes', 'nullable', 'string', 'max:255'],
             'secret_key' => ['sometimes', 'nullable', 'string', 'max:255'],
             'webhook_secret' => ['sometimes', 'nullable', 'string', 'max:255'],

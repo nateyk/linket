@@ -49,6 +49,7 @@ jobs:
       VERIFY_ET_ENABLED: 'true'
       VERIFY_ET_MOCK: 'true'
       VERIFY_ET_API_KEY: synthetic-e2e-key
+      CHAPA_SECRET_KEY: CHASECK_TEST-isolated-browser-fixture
       LINKET_ISOLATED_E2E: '1'
       LINKET_E2E_CREATOR_EMAIL: e2e-buyer-creator@example.test
       LINKET_E2E_CREATOR_PASSWORD: 'E2eBuyerCreator!23'
@@ -170,7 +171,7 @@ jobs:
         run: |
           set -euo pipefail
           php artisan config:clear
-          nohup php artisan serve --host=127.0.0.1 --port=8081 > /tmp/linket-qa-serve.log 2>&1 &
+          nohup php -S 127.0.0.1:8081 -t public tests/e2e/chapa-fixture-router.php > /tmp/linket-qa-serve.log 2>&1 &
           for i in {1..45}; do
             if curl -fsS -o /dev/null "http://127.0.0.1:8081/login"; then
               echo "Synthetic Linket server ready"
@@ -267,7 +268,7 @@ jobs:
           set -euo pipefail
           [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
           [[ "$LINKET_ISOLATED_E2E" == "1" && "$VERIFY_ET_ENABLED" == "true" && "$VERIFY_ET_MOCK" == "true" ]]
-          # Existing browser suite uses the real Laravel test DB and a mocked verifier;
+          # Browser suite uses the real Laravel test DB and the isolated Chapa HTTP fixture;
           # it exercises unpaid/rejected locks, verified delivery and My Portal recovery.
           # No live provider credentials, production endpoints or payment operations.
           npx playwright test tests/e2e/buyer-journey.spec.ts \

@@ -37,15 +37,6 @@ import {Area, AreaChart, CartesianGrid, XAxis, YAxis} from 'recharts';
 interface CommerceInsights {
   currency: string;
   period: {start: string; end: string};
-  direct_sales: {
-    paid_orders: number;
-    gross_sales_cents: number;
-    unique_customers: number;
-    pending_verifications: number;
-    payments_needing_review: number;
-    allowances_consumed: number;
-  };
-  direct_sales_trend: Array<{date: string; orders: number; gross_sales_cents: number}>;
   creator_trend: Array<{date: string; new_creators: number}>;
   sales: {
     gross_sales_cents: number;
@@ -56,7 +47,7 @@ interface CommerceInsights {
     paid_orders: number;
     unique_customers: number;
   };
-  subscriptions: {revenue_cents: number; direct_revenue_cents: number; active_paid: number; pro_creators: number; free_creators: number};
+  subscriptions: {revenue_cents: number; active_paid: number; pro_creators: number; free_creators: number};
   payouts: {paid_cents: number; pending_cents: number};
   platform: {
     new_users: number;
@@ -128,7 +119,7 @@ export function Component() {
 }
 
 function InsightsDashboard({data}: {data: CommerceInsights}) {
-  const {sales, direct_sales, subscriptions, payouts, platform, currency} = data;
+  const {sales, subscriptions, payouts, platform, currency} = data;
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -171,7 +162,7 @@ function InsightsDashboard({data}: {data: CommerceInsights}) {
         />
         <MetricCard
           icon={WalletCardsIcon}
-          label={<Trans message="Historical creator earnings snapshots (legacy)" />}
+          label={<Trans message="Creator earnings after refunds" />}
           value={
             <FormattedCurrency
               valueInCents={sales.creator_earnings_cents}
@@ -182,7 +173,7 @@ function InsightsDashboard({data}: {data: CommerceInsights}) {
         />
         <MetricCard
           icon={LandmarkIcon}
-          label={<Trans message="Historical platform fee snapshots (legacy commission)" />}
+          label={<Trans message="Platform fees after refunds" />}
           value={
             <FormattedCurrency
               valueInCents={sales.platform_fees_cents}
@@ -205,17 +196,6 @@ function InsightsDashboard({data}: {data: CommerceInsights}) {
         />
       </div>
 
-      <section className="flex min-w-0 flex-col gap-3">
-        <h3 className="text-sm font-medium"><Trans message="Direct sales performance" /></h3>
-        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard icon={CircleDollarSignIcon} label={<Trans message="Verified direct sales volume" />} value={<FormattedCurrency valueInCents={direct_sales.gross_sales_cents} currency={currency} />} tone="positive" />
-          <MetricCard icon={ReceiptTextIcon} label={<Trans message="Verified direct orders" />} value={<FormattedNumber value={direct_sales.paid_orders} />} detail={<Trans message=":count unique customers" values={{count: <FormattedNumber value={direct_sales.unique_customers} />}} />} tone="neutral" />
-          <MetricCard icon={CircleAlertIcon} label={<Trans message="Pending verifications" />} value={<FormattedNumber value={direct_sales.pending_verifications} />} tone="warning" />
-          <MetricCard icon={CircleAlertIcon} label={<Trans message="Payments needing review" />} value={<FormattedNumber value={direct_sales.payments_needing_review} />} tone="warning" />
-        </div>
-        <p className="text-sm text-muted-foreground"><Trans message="Free verified-sales allowances consumed in this period: :count" values={{count: <FormattedNumber value={direct_sales.allowances_consumed} />}} /></p>
-      </section>
-
       <OperationalMetrics
         currency={currency}
         sales={sales}
@@ -232,7 +212,7 @@ function InsightsDashboard({data}: {data: CommerceInsights}) {
       </section>
 
       <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
-        <DirectSalesTrend data={data} />
+        <SalesTrend data={data} />
         <PlatformSnapshot platform={platform} />
       </div>
       <CreatorGrowth data={data} />
@@ -299,20 +279,10 @@ function OperationalMetrics({
     },
     {
       icon: CreditCardIcon,
-      label: <Trans message="Legacy Chapa subscription revenue" />,
+      label: <Trans message="Chapa subscription revenue" />,
       value: (
         <FormattedCurrency
           valueInCents={subscriptions.revenue_cents}
-          currency={currency}
-        />
-      ),
-    },
-    {
-      icon: CreditCardIcon,
-      label: <Trans message="Confirmed direct Pro subscription revenue" />,
-      value: (
-        <FormattedCurrency
-          valueInCents={subscriptions.direct_revenue_cents}
           currency={currency}
         />
       ),
@@ -324,14 +294,14 @@ function OperationalMetrics({
     },
     {
       icon: HandCoinsIcon,
-      label: <Trans message="Historical payouts completed" />,
+      label: <Trans message="Withdrawals paid" />,
       value: (
         <FormattedCurrency valueInCents={payouts.paid_cents} currency={currency} />
       ),
     },
     {
       icon: BanknoteArrowDownIcon,
-      label: <Trans message="Historical payouts pending" />,
+      label: <Trans message="Withdrawals pending" />,
       value: (
         <FormattedCurrency
           valueInCents={payouts.pending_cents}
@@ -344,7 +314,7 @@ function OperationalMetrics({
   return (
     <section className="flex min-w-0 flex-col gap-3">
       <h3 className="text-sm font-medium">
-          <Trans message="Subscription and historical payout operations" />
+          <Trans message="Subscriptions and withdrawals" />
       </h3>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map(({icon: Icon, label, value}, index) => (
@@ -494,17 +464,6 @@ function PlatformSnapshot({platform}: {platform: CommerceInsights['platform']}) 
       </Card.Content>
     </Card>
   );
-}
-
-function DirectSalesTrend({data}: {data: CommerceInsights}) {
-  const {localeCode} = useSelectedLocale();
-  const chartData = data.direct_sales_trend.map(item => ({...item, gross: item.gross_sales_cents / 100}));
-  return <Card size="sm" className="min-w-0">
-    <Card.Header><Card.Title><Trans message="Verified direct sales trend" /></Card.Title><Card.Description><Trans message="Confirmed order volume and ETB sales for the selected dates" /></Card.Description></Card.Header>
-    <Card.Content className="relative h-64 min-w-0 md:h-72">
-      {chartData.some(item => item.orders > 0) ? <Chart.Container className="size-full"><AreaChart data={chartData}><CartesianGrid vertical={false} /><XAxis dataKey="date" tickFormatter={value => new Intl.DateTimeFormat(localeCode, {month: 'short', day: 'numeric'}).format(new Date(`${value}T00:00:00Z`))} /><YAxis hide /><Chart.Tooltip formatter={(value, name) => name === 'gross' ? [<FormattedCurrency valueInCents={Number(value) * 100} currency={data.currency} />, 'ETB sales'] : [value, 'Orders']} /><Area type="monotone" dataKey="gross" name="Verified sales" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.15} /></AreaChart></Chart.Container> : <CompactEmptyState message={<Trans message="No verified direct sales in this period." />} />}
-    </Card.Content>
-  </Card>;
 }
 
 function CreatorGrowth({data}: {data: CommerceInsights}) {

@@ -20,7 +20,7 @@ class AdminCommerceInsightsTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function testDirectSalesCountOnlyPaidOrdersWithSuccessfulVerificationWithoutDuplicateInflation(): void
+    public function testHistoricalDirectVerificationRecordsNeverInflateChapaCommerce(): void
     {
         $admin = $this->createUser(admin: true);
         $before = $this->commerce($admin);
@@ -37,34 +37,27 @@ class AdminCommerceInsightsTest extends TestCase
         $outsideOrder = StorefrontOrder::query()->create(['uuid' => (string) Str::uuid(), 'digital_product_id' => $product->id, 'creator_id' => $creator->id, 'buyer_email' => 'outside@example.test', 'currency' => 'ETB', 'gross_amount_cents' => 25000, 'commission_bps' => 0, 'platform_fee_percent' => 0, 'platform_fee_cents' => 0, 'creator_earnings_cents' => 25000, 'status' => 'paid', 'payment_gateway' => 'verify_et', 'paid_at' => now()->subDays(2)]);
         DirectPaymentVerification::query()->create(['reference' => (string) Str::uuid(), 'payable_type' => StorefrontOrder::class, 'payable_id' => $outsideOrder->id, 'bank_code' => 'cbe', 'settlement_account' => '123456789', 'amount_cents' => 25000, 'currency' => 'ETB', 'status' => 'success']);
         $after = $this->commerce($admin);
-        $this->assertSame($before['direct_sales']['paid_orders'] + 1, $after['direct_sales']['paid_orders']);
-        $this->assertSame($before['direct_sales']['gross_sales_cents'] + 10000, $after['direct_sales']['gross_sales_cents']);
-        $this->assertSame($before['direct_sales']['unique_customers'] + 1, $after['direct_sales']['unique_customers']);
-        $mine = collect($after['top_products'])->firstWhere('id', $product->id);
-        $this->assertNotNull($mine);
-        $this->assertSame(1, $mine['paid_orders']);
-        $this->assertSame(10000, $mine['gross_sales_cents']);
-        $this->assertSame(collect($before['direct_sales_trend'])->sum('orders') + 1, collect($after['direct_sales_trend'])->sum('orders'));
-        $this->assertSame(collect($before['direct_sales_trend'])->sum('gross_sales_cents') + 10000, collect($after['direct_sales_trend'])->sum('gross_sales_cents'));
+        $this->assertSame($before['sales']['paid_orders'], $after['sales']['paid_orders']);
+        $this->assertSame($before['sales']['gross_sales_cents'], $after['sales']['gross_sales_cents']);
+        $this->assertNull(collect($after['top_products'])->firstWhere('id', $product->id));
     }
 
-    public function testInsightsIncludeOnlyConfirmedDirectSubscriptionPaymentsInPeriod(): void
+    public function testOldDirectProPaymentsDoNotInflateChapaRevenue(): void
     {
         $admin = $this->createUser(admin: true);
+        $before = $this->commerce($admin);
         $creator = $this->createUser();
         $product = \Common\Billing\Models\Product::query()->firstOrFail();
-        foreach ([['paid', now(), 50000], ['pending_payment', null, 30000], ['paid', now()->subDays(20), 20000]] as [$status, $paidAt, $amount]) {
-            ProSubscriptionPayment::query()->create([
-                'uuid' => (string) Str::uuid(), 'creator_id' => $creator->id,
-                'product_id' => $product->id, 'amount_cents' => $amount,
-                'status' => $status, 'paid_at' => $paidAt,
-            ]);
-        }
+        ProSubscriptionPayment::query()->create([
+            'uuid' => (string) Str::uuid(), 'creator_id' => $creator->id,
+            'product_id' => $product->id, 'amount_cents' => 50000,
+            'status' => 'paid', 'paid_at' => now(),
+        ]);
 
-        $response = $this->stateful()->actingAs($admin)->getJson('/api/v1/admin/analytics/commerce?'.http_build_query([
-            'start_date' => now()->subDay()->toIso8601String(), 'end_date' => now()->addDay()->toIso8601String(), 'timezone' => 'UTC',
-        ]));
-        $response->assertOk()->assertJsonPath('data.subscriptions.direct_revenue_cents', 50000);
+        $after = $this->commerce($admin);
+        $this->assertSame($before['subscriptions']['revenue_cents'], $after['subscriptions']['revenue_cents']);
+        $this->assertArrayNotHasKey('direct_revenue_cents', $after['subscriptions']);
+        $this->assertArrayNotHasKey('direct_sales', $after);
     }
 
     public function testAdminInsightsReconcilePersistedSalesRefundAndPayoutSnapshots(): void
@@ -97,7 +90,7 @@ class AdminCommerceInsightsTest extends TestCase
             'platform_fee_cents' => 1000,
             'creator_earnings_cents' => 9000,
             'status' => 'paid',
-            'payment_gateway' => 'verify_et',
+            'payment_gateway' => 'chapa',
             'paid_at' => now()->subHour(),
         ]);
         StorefrontOrder::query()->create([
@@ -113,7 +106,7 @@ class AdminCommerceInsightsTest extends TestCase
             'platform_fee_cents' => 500,
             'creator_earnings_cents' => 4500,
             'status' => 'paid',
-            'payment_gateway' => 'verify_et',
+            'payment_gateway' => 'chapa',
             'paid_at' => now()->subMinutes(45),
         ]);
         foreach ([$order, StorefrontOrder::query()->where('buyer_name', 'Launch Buyer')->whereKeyNot($order->id)->firstOrFail()] as $verifiedOrder) {
@@ -146,6 +139,7 @@ class AdminCommerceInsightsTest extends TestCase
             'currency' => $currency,
             'external_reference' => 'refund-' . Str::uuid(),
             'reason' => 'Partial customer refund',
+            'status' => DigitalProductPaymentRefund::STATUS_COMPLETED,
             'refunded_at' => now()->subMinutes(30),
         ]);
         PayoutRequest::query()->create([

@@ -8,6 +8,7 @@ final class SubscriptionPaymentGateway
 
     public static function current(): string
     {
-        return settings()->get(self::KEY, 'verify_et') === 'chapa' ? 'chapa' : 'verify_et';
+        // A historical setting must never reactivate the retired payment provider.
+        return 'chapa';
     }
 }

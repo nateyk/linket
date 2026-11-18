@@ -70,23 +70,25 @@ it('starts a Chapa checkout when Pro upgrades use Chapa', async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
   render(<QueryClientProvider client={client}><SubscriptionBillingHistory /></QueryClientProvider>);
   expect(await screen.findByText('Upgrade or renew Pro with Chapa.')).toBeTruthy();
-  await userEvent.click(screen.getByRole('button', {name: 'Upgrade to Pro'}));
+  await userEvent.click(await screen.findByRole('button', {name: 'Upgrade to Pro'}));
   expect(api.post).toHaveBeenCalledWith('/api/v1/billing/chapa/checkout', {product_id: 4, price_id: 9});
   expect(assign).toHaveBeenCalledWith('https://checkout.chapa.global/CHPRO1');
   expect(screen.queryByText('Pro payment reference')).toBeNull();
 });
 
-it('initiates renewal through the existing Verify.et billing endpoint', async () => {
+it('never starts an old direct-payment renewal when gateway preference is missing', async () => {
+  const assign = vi.fn();
+  vi.stubGlobal('location', {...window.location, assign});
   api.get.mockResolvedValue({data: {
-    pro_plan: {monthly_price_cents: 50000, currency: 'ETB'},
+    pro_plan: {monthly_price_cents: 50000, currency: 'ETB', product_id: 4, price_id: 9},
     pro_subscription: {status: 'past_due', renews_at: '2026-10-20T00:00:00Z', can_renew: true, payments: []},
-    invoices: {data: []},
   }});
-  api.post.mockResolvedValue({data: {payment_id: 'renew-1', amount_cents: 50000, currency: 'ETB'}});
+  api.post.mockResolvedValue({data: {checkout_url: 'https://checkout.chapa.global/RENEW1'}});
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
   render(<QueryClientProvider client={client}><SubscriptionBillingHistory /></QueryClientProvider>);
   await screen.findByRole('button', {name: 'Renew Pro'});
   await userEvent.click(screen.getByRole('button', {name: 'Renew Pro'}));
-  expect(api.post).toHaveBeenCalledWith('/api/v1/billing/direct/pro');
-  expect(await screen.findByText(/Pro payment created for 50000 ETB/)).toBeTruthy();
+  expect(api.post).toHaveBeenCalledWith('/api/v1/billing/chapa/checkout', {product_id: 4, price_id: 9});
+  expect(assign).toHaveBeenCalledWith('https://checkout.chapa.global/RENEW1');
+  expect(screen.queryByText('Pro payment reference')).toBeNull();
 });

@@ -27,7 +27,7 @@ use Illuminate\Support\Str;
 
 uses(DatabaseTransactions::class);
 
-test('ten free verified sales block the eleventh until a verified Pro payment, and expiry restores that same limit', function () {
+test('historical direct-sale allowances and pending Pro evidence remain isolated from new Chapa checkout', function () {
     expect(strtolower((string) DB::connection()->getDatabaseName()))->toContain('test');
 
     Queue::fake();
@@ -175,15 +175,13 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
     };
     $before = $insights();
 
-    $sell = function (int $number) use ($base, $method, $creator) {
+    $sell = function (int $number) use ($product, $store, $method, $creator) {
         $this->app['auth']->forgetGuards();
         $this->flushSession();
         $this->withHeader('Referer', config('app.url'));
-        $started = $this->postJson("{$base}/checkout", [
-            'buyer_name' => 'Nathnael',
-            'buyer_email' => "nathnael-sale-{$number}@example.test",
-            'creator_payment_method_id' => $method->id,
-        ])->assertOk()->json();
+        $started = \Tests\Support\HistoricalDirectOrderFixture::create(
+            $product, $store, ['name' => 'Nathnael', 'email' => "nathnael-sale-{$number}@example.test"], $method->id,
+        );
         $this->withHeader('X-Order-Access-Token', $started['access_token'])
             ->postJson($started['reference_endpoint'], ['reference' => 'FREE'.str_pad((string) $number, 6, '0', STR_PAD_LEFT)])
             ->assertOk()
@@ -203,17 +201,17 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
     $blocked = StorefrontOrder::query()->where('creator_id', $creator->id)->count();
     $reservationsBeforeRead = DB::table('creator_verification_allowances')->where('creator_id', $creator->id)->count();
     $this->getJson($base)->assertOk()->assertJsonPath('data.can_buy', false)
-        ->assertJsonPath('data.checkout_blocker', 'verification_quota_exhausted');
+        ->assertJsonPath('data.checkout_blocker', 'verification_unavailable');
     expect(StorefrontOrder::query()->where('creator_id', $creator->id)->count())->toBe($blocked)
         ->and(DB::table('creator_verification_allowances')->where('creator_id', $creator->id)->count())->toBe($reservationsBeforeRead);
     $this->postJson("{$base}/checkout", [
         'buyer_name' => 'Nathnael',
         'buyer_email' => 'nathnael-eleventh@example.test',
         'creator_payment_method_id' => $method->id,
-    ])->assertStatus(422)->assertJsonPath(
-        'errors.payment.0',
-        'All free verified-sale allowances are used or reserved. Upgrade to Pro to continue.',
-    );
+    ])->assertStatus(503);
+    expect(fn () => \Tests\Support\HistoricalDirectOrderFixture::create(
+        $product, $store, ['name' => 'Nathnael', 'email' => 'legacy-eleventh@example.test'], $method->id,
+    ))->toThrow(\Illuminate\Validation\ValidationException::class);
     expect(StorefrontOrder::query()->where('creator_id', $creator->id)->count())->toBe($blocked);
 
     $this->flushSession();
@@ -246,10 +244,14 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
         ->assertJsonPath('pro_plan.monthly_price_cents', $proCents)
         ->assertJsonPath('pro_subscription.status', 'inactive');
 
-    $startedPro = $this->postJson('/api/v1/billing/direct/pro')->assertOk()
-        ->assertJsonPath('amount_cents', $proCents)
-        ->assertJsonPath('currency', 'ETB');
-    $this->postJson('/api/v1/billing/direct/pro/'.$startedPro->json('payment_id').'/reference', [
+    $this->postJson('/api/v1/billing/direct/pro')->assertConflict();
+    // Existing pending Pro payment may still settle, but the old start route cannot create one.
+    $startedPro = \App\Payments\Models\ProSubscriptionPayment::query()->create([
+        'uuid' => (string) Str::uuid(), 'creator_id' => $creator->id,
+        'product_id' => $pro->id, 'price_id' => $proPrice->id,
+        'amount_cents' => $proCents, 'status' => 'pending_payment',
+    ]);
+    $this->postJson('/api/v1/billing/direct/pro/'.$startedPro->uuid.'/reference', [
         'reference' => 'WRONGAMTPRO1',
     ])->assertOk()->assertJsonPath('status', 'mismatch');
     expect(Subscription::query()->where('user_id', $creator->id)->where('gateway_name', 'verify_et')->exists())->toBeFalse();
@@ -257,7 +259,7 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
         ->assertJsonPath('verification_allowance.is_pro', false)
         ->assertJsonPath('pro_subscription.payments.0.status', 'rejected');
 
-    $this->postJson('/api/v1/billing/direct/pro/'.$startedPro->json('payment_id').'/reference', [
+    $this->postJson('/api/v1/billing/direct/pro/'.$startedPro->uuid.'/reference', [
         'reference' => 'PROPAY000001',
     ])->assertOk()->assertJsonPath('status', 'success');
     expect(app(CreatorVerificationAllowance::class)->isPro($creator->fresh()))->toBeTrue();
@@ -270,12 +272,10 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
     $this->app['auth']->forgetGuards();
     $this->flushSession();
     $this->withHeader('Referer', config('app.url'));
-    $this->getJson($base)->assertOk()->assertJsonPath('data.can_buy', true);
-    $proSale = $this->postJson("{$base}/checkout", [
-        'buyer_name' => 'Nathnael',
-        'buyer_email' => 'nathnael-pro-sale@example.test',
-        'creator_payment_method_id' => $method->id,
-    ])->assertOk()->json();
+    $this->getJson($base)->assertOk()->assertJsonPath('data.can_buy', false);
+    $proSale = \Tests\Support\HistoricalDirectOrderFixture::create(
+        $product, $store, ['name' => 'Nathnael', 'email' => 'nathnael-pro-sale@example.test'], $method->id,
+    );
     $this->withHeader('X-Order-Access-Token', $proSale['access_token'])
         ->postJson($proSale['reference_endpoint'], ['reference' => 'PROSALE00001'])
         ->assertOk()
@@ -286,8 +286,8 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
         ->and(DB::table('creator_verification_allowances')->where('creator_id', $creator->id)->where('status', 'consumed')->count())->toBe(10);
 
     $active = $insights();
-    expect($active['sales']['paid_orders'] - $before['sales']['paid_orders'])->toBe(11)
-        ->and($active['subscriptions']['direct_revenue_cents'] - $before['subscriptions']['direct_revenue_cents'])->toBe($proCents)
+    expect($active['sales']['paid_orders'] - $before['sales']['paid_orders'])->toBe(0)
+        ->and($active['subscriptions']['revenue_cents'] - $before['subscriptions']['revenue_cents'])->toBe(0)
         ->and($active['subscriptions']['pro_creators'] - $before['subscriptions']['pro_creators'])->toBe(1);
 
     Subscription::query()->where('user_id', $creator->id)->where('gateway_name', 'verify_et')->whereNull('ends_at')
@@ -300,10 +300,7 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
         'buyer_name' => 'Nathnael',
         'buyer_email' => 'nathnael-after-expiry@example.test',
         'creator_payment_method_id' => $method->id,
-    ])->assertStatus(422)->assertJsonPath(
-        'errors.payment.0',
-        'All free verified-sale allowances are used or reserved. Upgrade to Pro to continue.',
-    );
+    ])->assertStatus(503);
 
     $this->flushSession();
     $this->withSession(['_token' => 'free-to-pro']);
@@ -326,8 +323,8 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
 
     $expired = $insights();
     expect($expired['subscriptions']['pro_creators'])->toBe($before['subscriptions']['pro_creators'])
-        ->and($expired['sales']['paid_orders'] - $before['sales']['paid_orders'])->toBe(11)
-        ->and($expired['subscriptions']['direct_revenue_cents'] - $before['subscriptions']['direct_revenue_cents'])->toBe($proCents);
+        ->and($expired['sales']['paid_orders'] - $before['sales']['paid_orders'])->toBe(0)
+        ->and($expired['subscriptions']['revenue_cents'] - $before['subscriptions']['revenue_cents'])->toBe(0);
 
     $file->getDisk()->delete($file->getStoragePath());
 });

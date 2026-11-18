@@ -53,7 +53,7 @@ class AdminReceivingAccountsTest extends TestCase
             ->assertJsonStructure(['data' => ['data', 'current_page', 'last_page']]);
     }
 
-    public function test_approve_provider_registration_and_activate_makes_checkout_eligible(): void
+    public function test_approve_provider_registration_and_activate_preserves_history_without_new_checkout(): void
     {
         config()->set('services.verify_et.enabled', true);
         $creator = $this->createUser();
@@ -80,7 +80,7 @@ class AdminReceivingAccountsTest extends TestCase
 
         $this->stateful()->actingAs($admin, 'sanctum')->getJson('/api/v1/admin/storefront/payment-methods')
             ->assertOk()
-            ->assertJsonPath('data.data.0.checkout_eligible', true)
+            ->assertJsonPath('data.data.0.checkout_eligible', false)
             ->assertJsonPath('data.data.0.verify_et_registered', true)
             ->assertJsonPath('data.data.0.linket_approved', true);
     }
