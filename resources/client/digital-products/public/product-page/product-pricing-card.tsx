@@ -78,8 +78,6 @@ export function ProductPricingCard({
             {isFree ? <ShoppingBagIcon aria-hidden="true" /> : <LockKeyholeIcon aria-hidden="true" />}
             {completed && isFree ? (
               <Trans message="Free order complete" />
-            ) : product.verification_quota_exhausted ? (
-              <Trans message="Creator cannot accept additional verified sales right now" />
             ) : product.can_buy === false ? (
               <Trans message="Temporarily unavailable" />
             ) : isFree ? (
