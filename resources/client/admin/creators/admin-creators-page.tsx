@@ -36,7 +36,6 @@ type Overview = {
   suspended_accounts: number;
   free_plan_creators: number;
   pro_plan_creators: number;
-  verified_sales_consumed: number;
   expiring_subscriptions?: number;
   expired_subscriptions?: number;
   pending_renewal_subscriptions?: number;
@@ -52,8 +51,6 @@ type CreatorRow = {
   plan_name?: string;
   is_pro: boolean;
   subscription_lifecycle?: string | null;
-  verified_sales_consumed: number;
-  verified_sales_remaining: number;
   stores_count: number;
   products_count: number;
   pending_receiving_accounts_count?: number;
@@ -267,7 +264,7 @@ export function Component() {
                 <InfoIcon />
               </Tooltip.Trigger>
               <Tooltip.Content side="bottom" className="max-w-xs">
-                <Trans message="Manage creator accounts, plans, storefronts, and sales. Pending orders do not consume verified sales allowance." />
+                <Trans message="Manage creator accounts, Pro subscriptions, storefronts, and Chapa sales." />
               </Tooltip.Content>
             </Tooltip.Root>
           </Tooltip.Provider>
@@ -354,13 +351,6 @@ export function Component() {
                 <Trans
                   message="Pending renewal: :count"
                   values={{count: overview?.pending_renewal_subscriptions ?? 0}}
-                />
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>
-                <Trans
-                  message="Verified sales used: :count"
-                  values={{count: overview?.verified_sales_consumed ?? 0}}
                 />
               </span>
             </div>
@@ -533,9 +523,6 @@ export function Component() {
                                 <Trans message="Plan" />
                               </Table.Head>
                               <Table.Head>
-                                <Trans message="Verified sales" />
-                              </Table.Head>
-                              <Table.Head>
                                 <Trans message="Storefront" />
                               </Table.Head>
                               <Table.Head>
@@ -592,24 +579,6 @@ export function Component() {
                                       </Badge>
                                     )}
                                   </div>
-                                </Table.Cell>
-                                <Table.Cell>
-                                  <Tooltip.Provider>
-                                    <Tooltip.Root>
-                                      <Tooltip.Trigger className="text-start text-sm">
-                                        <Trans
-                                          message=":used used · :left left"
-                                          values={{
-                                            used: creator.verified_sales_consumed,
-                                            left: creator.verified_sales_remaining,
-                                          }}
-                                        />
-                                      </Tooltip.Trigger>
-                                      <Tooltip.Content className="max-w-xs">
-                                        <Trans message="Only paid verified sales consume allowance. Pending payment orders do not." />
-                                      </Tooltip.Content>
-                                    </Tooltip.Root>
-                                  </Tooltip.Provider>
                                 </Table.Cell>
                                 <Table.Cell>
                                   <Trans
