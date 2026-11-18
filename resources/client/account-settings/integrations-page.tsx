@@ -68,11 +68,6 @@ const preferenceRows: {key: PreferenceKey; label: string; description: string}[]
     description: 'Know when Linket reviews, registers, suspends or restores a receiving account.',
   },
   {
-    key: 'free_sales_quota',
-    label: 'Free sales allowance',
-    description: 'Receive milestone alerts as you approach your free verified-sale limit.',
-  },
-  {
     key: 'payment_review',
     label: 'Payment review',
     description: 'Know when a submitted buyer payment requires review in Linket.',
