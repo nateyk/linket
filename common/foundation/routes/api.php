@@ -62,7 +62,6 @@ use App\Storefront\Controllers\DigitalProductsController;
 use App\Storefront\Controllers\PayoutRequestsController;
 use App\Storefront\Controllers\StorefrontSalesController;
 use App\Storefront\Controllers\StorefrontCheckoutController;
-use App\Storefront\Controllers\OrderPaymentController;
 use App\Storefront\Controllers\CreatorPaymentMethodsController;
 use App\Storefront\Controllers\CreatorOrdersController;
 use App\Storefront\Controllers\AdminDirectOrdersController;
@@ -226,9 +225,6 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/chapa/checkout', [ChapaController::class, 'checkout'])->middleware('throttle:10,1');
         Route::get('billing/direct', [DirectBillingController::class, 'index'])->middleware('auth:sanctum');
         Route::get('billing/direct/pro/{payment}/receipt', [DirectBillingController::class, 'downloadProReceipt'])->middleware('auth:sanctum');
-        Route::post('billing/direct/pro', [DirectBillingController::class, 'startPro'])->middleware(['auth:sanctum', 'throttle:10,1']);
-        Route::post('billing/direct/pro/{payment}/reference', [DirectBillingController::class, 'submitProReference'])->middleware(['auth:sanctum', 'throttle:10,1']);
-        Route::post('billing/direct/invoices/{invoice}/reference', [DirectBillingController::class, 'submitInvoiceReference'])->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
         // CREATOR AI: deny by default, independently authorized per service.
@@ -460,32 +456,8 @@ Route::group(['prefix' => 'v1'], function () {
             VerifyCsrfToken::class,
             VerifyApiAccessMiddleware::class,
         ]);
-    Route::get('public/direct-orders/{order}', [OrderPaymentController::class, 'show'])
-        ->middleware('throttle:60,1')
-        ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class, VerifyApiAccessMiddleware::class]);
-    Route::post('public/direct-orders/{order}/recheck', [OrderPaymentController::class, 'recheck'])
-        ->middleware('throttle:6,1')
-        ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class, VerifyCsrfToken::class, VerifyApiAccessMiddleware::class]);
-    Route::get('public/direct-orders/{order}/payment-instructions', [OrderPaymentController::class, 'instructions'])
-        ->middleware('throttle:10,1')
-        ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class, VerifyApiAccessMiddleware::class]);
-    Route::post('public/direct-orders/{order}/cancel', [OrderPaymentController::class, 'cancel'])
-        ->middleware('throttle:10,1')
-        ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class, VerifyCsrfToken::class, VerifyApiAccessMiddleware::class]);
-    Route::post('public/direct-orders/{order}/reference', [OrderPaymentController::class, 'submit'])
-        ->middleware('throttle:10,1')
-        ->withoutMiddleware([
-            EnsureFrontendRequestsAreStateful::class,
-            VerifyCsrfToken::class,
-            VerifyApiAccessMiddleware::class,
-        ]);
-    Route::post('public/direct-orders/{order}/select-account', [OrderPaymentController::class, 'selectAccount'])
-        ->middleware('throttle:20,1')
-        ->withoutMiddleware([
-            EnsureFrontendRequestsAreStateful::class,
-            VerifyCsrfToken::class,
-            VerifyApiAccessMiddleware::class,
-        ]);
+    // Verify.et buyer reference/instructions routes were retired. New purchases use
+    // the Chapa hosted checkout and the separate customer purchase portal.
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
