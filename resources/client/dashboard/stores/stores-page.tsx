@@ -171,9 +171,9 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
   return (
     <Item.Root
       variant="outline"
-      size="sm"
+      size="xs"
       role="listitem"
-      className="gap-x-3 gap-y-2 border-border bg-card text-card-foreground transition-shadow duration-100 hover:shadow-sm motion-reduce:transition-none min-[480px]:gap-x-3.5"
+      className="flex-nowrap gap-2 border-border bg-card text-card-foreground transition-shadow duration-100 hover:shadow-sm motion-reduce:transition-none sm:gap-3"
       onClick={ignoreEventsFromPortal(e => {
         if (
           !(e.target as HTMLElement).closest(
@@ -214,55 +214,30 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
           </Item.Title>
         </Item.Row>
         <Item.Row>
-          <div
+          <a
             data-slot="profile-url"
-            className="inline-flex w-fit min-w-0 max-w-full items-center gap-1 text-sm text-muted-foreground"
+            href={biolink.short_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block min-w-0 max-w-full truncate rounded-sm text-sm text-muted-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <span className="min-w-0 truncate">
-              {removeProtocol(biolink.short_url)}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="size-10 text-muted-foreground sm:size-8"
-              aria-label={copyLabel}
-              title={copyLabel}
-              onClick={copyProfileLink}
-            >
-              {isCopied ? (
-                <CheckIcon aria-hidden="true" />
-              ) : (
-                <CopyIcon aria-hidden="true" />
-              )}
-            </Button>
-          </div>
+            {removeProtocol(biolink.short_url)}
+          </a>
         </Item.Row>
       </Item.Content>
 
-      <Item.Actions className="w-full basis-full justify-end gap-1.5 min-[480px]:ms-auto min-[480px]:w-auto min-[480px]:basis-auto min-[480px]:gap-2 md:ml-0">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
-            <MousePointerClick className="size-3.5 text-muted-foreground" aria-hidden="true" />
-            <Trans
-              message=":count clicks"
-              values={{count: <FormattedNumber value={biolink.clicks_count ?? 0} />}}
-            />
-          </span>
-          {typeof biolink.unique_visitors_count === 'number' && (
-            <span
-              className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground"
-              title={trans(message('Distinct visitor IP addresses; shared IPs count as one.'))}
-            >
-              <Trans
-                message=":count unique IPs"
-                values={{
-                  count: <FormattedNumber value={biolink.unique_visitors_count} />,
-                }}
-              />
-            </span>
-          )}
-        </div>
+      <Item.Actions className="shrink-0 gap-1 md:ml-0">
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          className="min-h-8 shrink-0 gap-1 rounded-full border-border bg-background px-2 text-xs font-medium text-foreground"
+          aria-label={trans(message(':count clicks', {values: {count: String(biolink.clicks_count ?? 0)}}))}
+          onClick={onInsights}
+        >
+          <MousePointerClick className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <FormattedNumber value={biolink.clicks_count ?? 0} />
+        </Button>
 
         <Dropdown.Root>
           <Dropdown.Trigger
@@ -272,6 +247,10 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
             <EllipsisVerticalIcon />
           </Dropdown.Trigger>
           <Dropdown.Content align="end">
+            <Dropdown.Item onClick={copyProfileLink}>
+              {isCopied ? <CheckIcon /> : <CopyIcon />}
+              {copyLabel}
+            </Dropdown.Item>
             <Dropdown.Item onClick={onClick}>
               <PencilIcon />
               <Trans message="Edit profile" />
