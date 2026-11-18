@@ -37,7 +37,7 @@ export function ConversationGeneralDetails({data}: Props) {
         className="mb-4"
         value={
           <DialogTrigger type="modal">
-            <button className="contents">
+            <button type="button" className="contents" aria-label="Change assignee">
               {agent ? (
                 <DetailValue image={<AgentAvatar user={agent} size="xs" />}>
                   {agent.name}
