@@ -4,7 +4,6 @@ namespace App\Analytics\Actions;
 
 use App\Models\User;
 use App\Payments\Models\PaymentTransaction;
-use App\Payments\Models\ProSubscriptionPayment;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\PayoutRequest;
@@ -59,8 +58,6 @@ class BuildAdminCommerceInsights
                 'paid_orders' => (int) ($orderTotals->paid_orders ?? 0),
                 'unique_customers' => (int) ($orderTotals->unique_customers ?? 0),
             ],
-            'direct_sales' => $this->directSalesMetrics($start, $end, $currency),
-            'direct_sales_trend' => $this->directSalesTrend($start, $end, $currency),
             'creator_trend' => $this->creatorTrend($start, $end),
             'subscriptions' => $this->subscriptionMetrics($start, $end, $currency),
             'payouts' => $this->payoutMetrics($start, $end, $currency),
@@ -84,69 +81,6 @@ class BuildAdminCommerceInsights
             ->values()->all();
     }
 
-    /** @return list<array{date: string, orders: int, gross_sales_cents: int}> */
-    private function directSalesTrend(CarbonImmutable $start, CarbonImmutable $end, string $currency): array
-    {
-        $rows = StorefrontOrder::query()->where('status', 'paid')->where('payment_gateway', 'verify_et')
-            ->whereRaw('UPPER(currency) = ?', [$currency])->whereBetween('paid_at', [$start, $end])
-            ->whereExists(function ($query): void {
-                $query->selectRaw('1')->from('direct_payment_verifications')
-                    ->whereColumn('direct_payment_verifications.payable_id', 'storefront_orders.id')
-                    ->whereColumn('direct_payment_verifications.amount_cents', 'storefront_orders.gross_amount_cents')
-                    ->whereRaw('UPPER(direct_payment_verifications.currency) = UPPER(storefront_orders.currency)')
-                    ->where('direct_payment_verifications.payable_type', StorefrontOrder::class)
-                    ->where('direct_payment_verifications.status', 'success');
-            })
-            ->selectRaw('DATE(paid_at) as report_date, COUNT(*) as orders, SUM(gross_amount_cents) as gross_sales_cents')
-            ->groupByRaw('DATE(paid_at)')->get()->keyBy('report_date');
-
-        return collect(CarbonPeriod::create($start->startOfDay(), $end->startOfDay()))
-            ->map(fn ($date): array => ['date' => $date->format('Y-m-d'), 'orders' => (int) ($rows->get($date->format('Y-m-d'))?->orders ?? 0), 'gross_sales_cents' => (int) ($rows->get($date->format('Y-m-d'))?->gross_sales_cents ?? 0)])
-            ->values()->all();
-    }
-
-    /** @return array<string, int> */
-    private function directSalesMetrics(CarbonImmutable $start, CarbonImmutable $end, string $currency): array
-    {
-        $verifiedOrders = StorefrontOrder::query()
-            ->where('storefront_orders.status', 'paid')
-            ->where('storefront_orders.payment_gateway', 'verify_et')
-            ->whereRaw('UPPER(storefront_orders.currency) = ?', [$currency])
-            ->whereBetween('storefront_orders.paid_at', [$start, $end])
-            ->whereExists(function ($query): void {
-                $query->selectRaw('1')->from('direct_payment_verifications')
-                    ->whereColumn('direct_payment_verifications.payable_id', 'storefront_orders.id')
-                    ->whereColumn('direct_payment_verifications.amount_cents', 'storefront_orders.gross_amount_cents')
-                    ->whereRaw('UPPER(direct_payment_verifications.currency) = UPPER(storefront_orders.currency)')
-                    ->where('direct_payment_verifications.payable_type', StorefrontOrder::class)
-                    ->where('direct_payment_verifications.status', 'success');
-            });
-
-        $totals = (clone $verifiedOrders)->selectRaw('COUNT(*) as orders_count')
-            ->selectRaw('COALESCE(SUM(storefront_orders.gross_amount_cents), 0) as gross_cents')
-            ->selectRaw("COUNT(DISTINCT LOWER(NULLIF(TRIM(storefront_orders.buyer_email), ''))) as customers_count")
-            ->first();
-
-        $proCreators = (int) Subscription::query()->whereHas('product', fn ($query) => $query->where('free', false))
-            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>', now()))
-            ->distinct('user_id')->count('user_id');
-        $creatorCount = (int) DigitalProduct::query()->whereNotNull('user_id')->distinct()->count('user_id');
-
-        return [
-            'paid_orders' => (int) $totals->orders_count,
-            'gross_sales_cents' => (int) $totals->gross_cents,
-            'unique_customers' => (int) $totals->customers_count,
-            'pending_verifications' => \App\Payments\Models\DirectPaymentVerification::query()
-                ->where('payable_type', StorefrontOrder::class)->whereIn('status', ['pending', 'verifying'])
-                ->whereBetween('created_at', [$start, $end])->count(),
-            'payments_needing_review' => \App\Payments\Models\DirectPaymentVerification::query()
-                ->where('payable_type', StorefrontOrder::class)->where('status', 'manual_review')
-                ->whereBetween('created_at', [$start, $end])->count(),
-            'allowances_consumed' => DB::table('creator_verification_allowances')
-                ->where('status', 'consumed')->whereBetween('consumed_at', [$start, $end])->count(),
-        ];
-    }
-
     private function paidOrders(
         CarbonImmutable $start,
         CarbonImmutable $end,
@@ -154,6 +88,7 @@ class BuildAdminCommerceInsights
     ): \Illuminate\Database\Eloquent\Builder {
         return StorefrontOrder::query()
             ->where('status', 'paid')
+            ->where('payment_gateway', 'chapa')
             ->whereRaw('UPPER(currency) = ?', [$currency])
             ->whereBetween('paid_at', [$start, $end]);
     }
@@ -164,6 +99,8 @@ class BuildAdminCommerceInsights
         string $currency,
     ): \Illuminate\Database\Eloquent\Builder {
         return DigitalProductPaymentRefund::query()
+            ->where('status', DigitalProductPaymentRefund::STATUS_COMPLETED)
+            ->whereHas('order', fn ($query) => $query->where('payment_gateway', 'chapa'))
             ->whereRaw('UPPER(currency) = ?', [$currency])
             ->whereBetween('refunded_at', [$start, $end]);
     }
@@ -175,6 +112,7 @@ class BuildAdminCommerceInsights
         string $currency,
     ): array {
         $revenue = PaymentTransaction::query()
+            ->where('gateway', 'chapa')
             ->where('purpose', 'subscription')
             ->where('status', 'paid')
             ->whereRaw('UPPER(currency) = ?', [$currency])
@@ -195,10 +133,6 @@ class BuildAdminCommerceInsights
 
         return [
             'revenue_cents' => (int) round((float) $revenue * 100),
-            'direct_revenue_cents' => $currency === 'ETB' ? (int) ProSubscriptionPayment::query()
-                ->where('status', 'paid')
-                ->whereBetween('paid_at', [$start, $end])
-                ->sum('amount_cents') : 0,
             'active_paid' => $activePaid,
             'pro_creators' => $proCreators,
             'free_creators' => max(0, $creatorCount - $proCreators),
@@ -243,15 +177,15 @@ class BuildAdminCommerceInsights
             'published_products' => DigitalProduct::query()->where('status', 'approved')->count(),
             'selling_creators' => StorefrontOrder::query()
                 ->where('status', 'paid')
+                ->where('payment_gateway', 'chapa')
                 ->distinct()
                 ->count('creator_id'),
-            'active_creators' => StorefrontOrder::query()->where('status', 'paid')->where('payment_gateway', 'verify_et')
-                ->whereBetween('paid_at', [$start, $end])->whereExists(function ($query): void {
-                    $query->selectRaw('1')->from('direct_payment_verifications')->whereColumn('direct_payment_verifications.payable_id', 'storefront_orders.id')
-                        ->whereColumn('direct_payment_verifications.amount_cents', 'storefront_orders.gross_amount_cents')
-                        ->whereRaw('UPPER(direct_payment_verifications.currency) = UPPER(storefront_orders.currency)')
-                        ->where('direct_payment_verifications.payable_type', StorefrontOrder::class)->where('direct_payment_verifications.status', 'success');
-                })->distinct()->count('creator_id'),
+            'active_creators' => StorefrontOrder::query()
+                ->where('status', 'paid')
+                ->where('payment_gateway', 'chapa')
+                ->whereBetween('paid_at', [$start, $end])
+                ->distinct()
+                ->count('creator_id'),
             'creator_count' => $creatorCount,
             'pro_creators' => $proCreators,
             'free_creators' => max(0, $creatorCount - $proCreators),
@@ -310,15 +244,7 @@ class BuildAdminCommerceInsights
             ->where('status', 'paid')
             ->whereRaw('UPPER(currency) = ?', [$currency])
             ->whereBetween('paid_at', [$start, $end])
-            ->where('payment_gateway', 'verify_et')
-            ->whereExists(function ($query): void {
-                $query->selectRaw('1')->from('direct_payment_verifications')
-                    ->whereColumn('direct_payment_verifications.payable_id', 'storefront_orders.id')
-                    ->whereColumn('direct_payment_verifications.amount_cents', 'storefront_orders.gross_amount_cents')
-                    ->whereRaw('UPPER(direct_payment_verifications.currency) = UPPER(storefront_orders.currency)')
-                    ->where('direct_payment_verifications.payable_type', StorefrontOrder::class)
-                    ->where('direct_payment_verifications.status', 'success');
-            })
+            ->where('payment_gateway', 'chapa')
             ->groupBy('digital_product_id');
 
         $refunds = DB::table('digital_product_payment_refunds as refunds')
@@ -327,15 +253,8 @@ class BuildAdminCommerceInsights
             ->selectRaw('SUM(refunds.amount_cents) as refunds_cents')
             ->whereRaw('UPPER(refunds.currency) = ?', [$currency])
             ->whereBetween('refunds.refunded_at', [$start, $end])
-            ->where('orders.payment_gateway', 'verify_et')
-            ->whereExists(function ($query): void {
-                $query->selectRaw('1')->from('direct_payment_verifications')
-                    ->whereColumn('direct_payment_verifications.payable_id', 'orders.id')
-                    ->whereColumn('direct_payment_verifications.amount_cents', 'orders.gross_amount_cents')
-                    ->whereRaw('UPPER(direct_payment_verifications.currency) = UPPER(orders.currency)')
-                    ->where('direct_payment_verifications.payable_type', StorefrontOrder::class)
-                    ->where('direct_payment_verifications.status', 'success');
-            })
+            ->where('orders.payment_gateway', 'chapa')
+            ->where('refunds.status', DigitalProductPaymentRefund::STATUS_COMPLETED)
             ->groupBy('orders.digital_product_id');
 
         $activity = DB::query()
@@ -377,6 +296,7 @@ class BuildAdminCommerceInsights
         string $currency,
     ): array {
         $refunds = DB::table('digital_product_payment_refunds')
+            ->where('status', DigitalProductPaymentRefund::STATUS_COMPLETED)
             ->select('storefront_order_id')
             ->selectRaw('SUM(amount_cents) as refunds_cents')
             ->groupBy('storefront_order_id');
@@ -386,15 +306,7 @@ class BuildAdminCommerceInsights
             ->join('users as creators', 'creators.id', '=', 'orders.creator_id')
             ->leftJoinSub($refunds, 'refunds', 'refunds.storefront_order_id', '=', 'orders.id')
             ->where('orders.status', 'paid')
-            ->where('orders.payment_gateway', 'verify_et')
-            ->whereExists(function ($query): void {
-                $query->selectRaw('1')->from('direct_payment_verifications')
-                    ->whereColumn('direct_payment_verifications.payable_id', 'orders.id')
-                    ->whereColumn('direct_payment_verifications.amount_cents', 'orders.gross_amount_cents')
-                    ->whereRaw('UPPER(direct_payment_verifications.currency) = UPPER(orders.currency)')
-                    ->where('direct_payment_verifications.payable_type', StorefrontOrder::class)
-                    ->where('direct_payment_verifications.status', 'success');
-            })
+            ->where('orders.payment_gateway', 'chapa')
             ->whereRaw('UPPER(orders.currency) = ?', [$currency])
             ->whereBetween('orders.paid_at', [$start, $end])
             ->orderByDesc('orders.paid_at')

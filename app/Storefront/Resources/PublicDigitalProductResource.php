@@ -2,9 +2,9 @@
 
 namespace App\Storefront\Resources;
 
-use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Storefront\Models\DigitalProduct;
-use App\Storefront\Models\CreatorPaymentMethod;
+use App\Storefront\Models\CreatorChapaGateway;
+use Common\Workspaces\Models\Workspace;
 use App\Storefront\ProductSampleUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -21,13 +21,14 @@ class PublicDigitalProductResource extends JsonResource
 
         $chapaEnabled = app(\App\Payments\Chapa\LinketChapaManager::class)->isEnabled();
         $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
-        // Do not offer obsolete creator receiving accounts during platform Chapa checkout.
-        $accounts = ! $chapaEnabled && VerifyEtSettings::get('enabled')
-            ? $availability->eligibleAccounts($this->user_id, $this->workspace_id)
-            : collect();
+        $creatorChapa = ! $chapaEnabled
+            && app(\App\Storefront\Services\CreatorVerificationAllowance::class)->isPro($this->creator)
+            && Workspace::query()->whereKey($this->workspace_id)
+                ->where('active_payment_collector', 'chapa')->exists()
+            && CreatorChapaGateway::query()->where('workspace_id', $this->workspace_id)
+                ->where('user_id', $this->user_id)->exists();
 
-        $blocker = $this->resolveCheckoutBlocker($availability, $chapaEnabled, $accounts);
-        $receivingAccounts = $this->formatReceivingAccounts($accounts);
+        $blocker = $this->resolveCheckoutBlocker($availability, $chapaEnabled || $creatorChapa);
 
         return [
             'id' => $this->id,
@@ -39,8 +40,8 @@ class PublicDigitalProductResource extends JsonResource
             'can_buy' => app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($this->creator) && ! $blocker,
             'checkout_blocker' => $blocker,
             'verification_quota_exhausted' => $blocker === 'verification_quota_exhausted',
-            'payment_mode' => $this->price_cents === 0 ? 'free' : ($chapaEnabled || VerifyEtSettings::get('enabled') ? 'direct' : 'unavailable'),
-            'receiving_accounts' => $receivingAccounts,
+            'payment_mode' => $this->price_cents === 0 ? 'free' : ($chapaEnabled || $creatorChapa ? 'direct' : 'unavailable'),
+            'receiving_accounts' => [],
             'type' => $this->type ?? 'digital',
             'is_course' => $isCourse,
             'course_id' => $courseId,
@@ -77,14 +78,13 @@ class PublicDigitalProductResource extends JsonResource
 
     private function resolveCheckoutBlocker(
         \App\Storefront\Services\CheckoutAvailability $availability,
-        bool $chapaEnabled,
-        \Illuminate\Support\Collection $accounts,
+        bool $chapaAvailable,
     ): ?string {
         if ($this->price_cents <= 0) {
             return null;
         }
 
-        $blocker = $availability->creatorBlocker($this->creator);
+        $blocker = $availability->creatorBlocker($this->creator, $this->workspace_id);
         if ($blocker !== null) {
             return $blocker;
         }
@@ -93,35 +93,7 @@ class PublicDigitalProductResource extends JsonResource
             return 'unsupported_currency';
         }
 
-        if (! $chapaEnabled && $accounts->isEmpty()) {
-            return 'no_eligible_receiving_account';
-        }
-
-        return null;
-    }
-
-    /** @param \Illuminate\Support\Collection<int, CreatorPaymentMethod> $accounts */
-    private function formatReceivingAccounts(\Illuminate\Support\Collection $accounts): \Illuminate\Support\Collection
-    {
-        if ($accounts->isEmpty()) {
-            return collect();
-        }
-
-        $catalog = \App\Storefront\Models\DirectPaymentMethod::query()->get()->keyBy('code');
-
-        return $accounts->map(fn (CreatorPaymentMethod $method) => [
-            'id' => $method->id,
-            'provider' => $method->provider,
-            'bank_name' => $catalog->get($method->provider)?->display_name ?? strtoupper($method->provider),
-            'account_ending' => substr($method->account_number, -4),
-            'account_name' => $method->account_name_raw,
-            'instructions' => match (strtolower($method->provider)) {
-                'cbe' => __('Transfer the exact amount to Commercial Bank of Ethiopia. Submit your CBE Receipt ID (or older FT reference with 8-digit suffix).'),
-                'telebirr' => __('Transfer the exact amount via Telebirr. Submit your 10-character transaction number.'),
-                'boa' => __('Transfer the exact amount to Bank of Abyssinia. Submit your reference and 5-digit transaction account suffix.'),
-                default => __('Transfer the exact amount to the account shown, then submit your transaction reference.'),
-            },
-        ])->values();
+        return $chapaAvailable ? null : 'verification_unavailable';
     }
 
     /**

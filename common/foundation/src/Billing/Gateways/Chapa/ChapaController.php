@@ -36,12 +36,15 @@ class ChapaController extends Controller
             'New Pro payments must use direct Verify.et billing.',
         );
         abort_unless($product->active, 422, __('This plan is not accepting new subscriptions.'));
+        abort_unless(app(ChapaGateway::class)->isEnabled(), 503, __('Chapa payments are not configured.'));
         $price = Price::query()
             ->where('id', $data['price_id'])
             ->where('product_id', $product->id)
             ->firstOrFail();
         abort_if($product->free, 422, 'Free plans do not require checkout.');
         abort_unless(strtolower((string) $price->currency) === 'etb', 422, 'Set an ETB price before accepting Chapa payments.');
+
+        $this->assertCurrentProMonthlyPrice($product, $price);
 
         $subscription = Subscription::query()
             ->where('user_id', $request->user()->id)
@@ -81,6 +84,17 @@ class ChapaController extends Controller
             'checkout_url' => $transaction->checkout_url,
             'tx_ref' => $transaction->tx_ref,
         ]);
+    }
+
+    private function assertCurrentProMonthlyPrice(Product $product, Price $price): void
+    {
+        if ($product->system_key !== 'pro' || $price->interval !== 'month' || $price->interval_count !== 1) {
+            return;
+        }
+
+        $current = $product->prices()->where('currency', 'ETB')->where('interval', 'month')
+            ->where('interval_count', 1)->orderByDesc('default')->orderByDesc('id')->firstOrFail();
+        abort_unless($price->id === $current->id, 409, __('The plan price has changed. Refresh and try again.'));
     }
 
     /**

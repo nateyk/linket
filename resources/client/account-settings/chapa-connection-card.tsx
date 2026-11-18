@@ -1,13 +1,10 @@
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Input} from '@shadcn/forms/input/input';
-import {Toggle} from '@shadcn/toggle';
-import {ToggleGroup} from '@shadcn/toggle-group/toggle-group';
 import {Trans} from '@ui/i18n/trans';
-import {useState} from 'react';
 
 export type ChapaGatewayState = {
-  collector: 'verify_et' | 'chapa';
+  collector: 'unavailable' | 'chapa';
   has_secret: boolean;
   public_key_masked: string | null;
   chapa_checkout_available: boolean;
@@ -17,7 +14,7 @@ export type ChapaGatewayState = {
 export type ChapaConnectionError = 'rejected' | 'pro' | 'save' | 'collector' | 'load';
 
 export const emptyChapaGateway: ChapaGatewayState = {
-  collector: 'verify_et',
+  collector: 'unavailable',
   has_secret: false,
   public_key_masked: null,
   chapa_checkout_available: false,
@@ -30,7 +27,7 @@ export function readChapaGateway(data: unknown): ChapaGatewayState {
   }
   const row = data as Partial<ChapaGatewayState>;
   return {
-    collector: row.collector === 'chapa' ? 'chapa' : 'verify_et',
+    collector: row.collector === 'chapa' ? 'chapa' : 'unavailable',
     has_secret: row.has_secret === true,
     public_key_masked: typeof row.public_key_masked === 'string' ? row.public_key_masked : null,
     chapa_checkout_available: row.chapa_checkout_available === true,
@@ -47,7 +44,6 @@ export function ChapaConnectionCard({
   onPublicKey,
   onSecretKey,
   onSave,
-  onSelect,
 }: {
   gateway: ChapaGatewayState;
   publicKey: string;
@@ -61,17 +57,6 @@ export function ChapaConnectionCard({
 }) {
   const paused = gateway.collector === 'chapa' && !gateway.pro;
   const canSave = gateway.pro && !busy && publicKey.trim().length > 0 && secretKey.trim().length > 0;
-  const [upgradeNotice, setUpgradeNotice] = useState(false);
-
-  const choose = (collector: ChapaGatewayState['collector']) => {
-    if (collector === 'chapa' && !gateway.pro) {
-      setUpgradeNotice(true);
-      return;
-    }
-    setUpgradeNotice(false);
-    onSelect(collector);
-  };
-
   if (!gateway.pro) {
     return (
       <Card.Root size="sm">
@@ -81,24 +66,9 @@ export function ChapaConnectionCard({
           </Card.Title>
         </Card.Header>
         <Card.Content className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">
-              <Trans message="Active collector" />
-            </span>
-            <ToggleGroup variant="segmented" buttonVariant="ghost" value={[gateway.collector]} disabled={busy}>
-              <Toggle value="verify_et" disabled={busy} onClick={() => choose('verify_et')}>
-                <Trans message="Bank accounts" />
-              </Toggle>
-              <Toggle value="chapa" disabled={busy} onClick={() => choose('chapa')}>
-                <Trans message="Chapa" />
-              </Toggle>
-            </ToggleGroup>
-          </div>
-          {upgradeNotice && (
-            <p role="status" className="text-sm text-muted-foreground">
-              <Trans message="You need to upgrade to Pro to use Chapa." />
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            <Trans message="Connect Chapa on Pro to accept paid storefront orders." />
+          </p>
           {paused && (
             <p role="status" className="text-sm text-warning">
               <Trans message="Chapa checkout is paused until Pro is active." />
@@ -116,35 +86,21 @@ export function ChapaConnectionCard({
           <Trans message="Chapa" />
         </Card.Title>
         <Card.Description>
-          <Trans message="Pro sellers collect store payments with their own Chapa account. Bank accounts stay saved when Chapa is selected." />
+          <Trans message="Connect your Chapa merchant account to accept storefront payments." />
         </Card.Description>
       </Card.Header>
       <Card.Content className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">
-            <Trans message="Active collector" />
+            <Trans message="Payment checkout" />
           </span>
-          <ToggleGroup variant="segmented" buttonVariant="ghost" value={[gateway.collector]} disabled={busy}>
-            <Toggle value="verify_et" disabled={busy} onClick={() => choose('verify_et')}>
-              <Trans message="Bank accounts" />
-            </Toggle>
-            <Toggle
-              value="chapa"
-              disabled={busy || !gateway.has_secret}
-              onClick={() => choose('chapa')}
-            >
-              <Trans message="Chapa" />
-            </Toggle>
-          </ToggleGroup>
-          {gateway.chapa_checkout_available ? (
-            <p className="text-sm text-muted-foreground">
-              <Trans message="New checkouts use Chapa." />
-            </p>
-          ) : gateway.collector === 'verify_et' ? (
-            <p className="text-sm text-muted-foreground">
-              <Trans message="New checkouts use bank accounts." />
-            </p>
-          ) : null}
+          <p className="text-sm text-muted-foreground">
+            {gateway.chapa_checkout_available ? (
+              <Trans message="Chapa checkout is active." />
+            ) : (
+              <Trans message="Connect Chapa to activate seller checkout." />
+            )}
+          </p>
         </div>
 
         {gateway.has_secret && (

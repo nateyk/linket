@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Queue;
 
 uses(DatabaseTransactions::class);
 
-test('a synthetic creator can sell a telebirr product to a synthetic buyer without a real verification credit', function () {
+test('a historical Telebirr order remains verifiable and recoverable after new Verify.et checkout is retired', function () {
     expect(strtolower((string) DB::connection()->getDatabaseName()))->toContain('test');
 
     Queue::fake();
@@ -186,7 +186,7 @@ test('a synthetic creator can sell a telebirr product to a synthetic buyer witho
     ])->assertOk();
     $this->getJson("/api/v1/admin/storefront/payment-methods/{$methodId}")->assertOk()
         ->assertJsonPath('data.checkout_eligible', false)
-        ->assertJsonFragment(['checkout_blockers' => ['linket_approval', 'verify_et', 'creator_activation']]);
+        ->assertJsonFragment(['checkout_blockers' => ['linket_approval', 'verify_et', 'creator_activation', 'verification_unavailable']]);
     $this->postJson("/api/v1/admin/storefront/payment-methods/{$methodId}/provider-registration")->assertStatus(409);
     $this->postJson("/api/v1/admin/storefront/payment-methods/{$methodId}/approve")->assertOk()
         ->assertJsonPath('data.checkout_eligible', false);
@@ -205,7 +205,7 @@ test('a synthetic creator can sell a telebirr product to a synthetic buyer witho
     $login($creatorEmail);
     $this->postJson("/api/v1/storefront/payment-methods/{$methodId}/activate")->assertOk();
     $this->getJson('/api/v1/storefront/payment-methods')->assertOk()
-        ->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => true]);
+        ->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => false, 'account_ready' => true]);
     $this->postJson("/api/v1/storefront/payment-methods/{$suspendedId}/activate")->assertOk();
 
     $login($adminEmail);
@@ -222,17 +222,19 @@ test('a synthetic creator can sell a telebirr product to a synthetic buyer witho
     $this->get('/'.$store->back_half)->assertOk()->assertSee('Mintesnot Teshome');
     $this->getJson($publicBase)->assertOk()
         ->assertJsonPath('data.price_cents', 247000)
-        ->assertJsonPath('data.can_buy', true);
+        ->assertJsonPath('data.can_buy', false)
+        ->assertJsonPath('data.checkout_blocker', 'verification_unavailable');
     $this->postJson("{$publicBase}/checkout", [
         'buyer_name' => 'Nathnael',
         'buyer_email' => $buyerEmail,
         'creator_payment_method_id' => $rejectedId,
-    ])->assertStatus(422);
+    ])->assertStatus(503);
     $this->postJson("{$publicBase}/checkout", [
         'buyer_name' => 'Nathnael',
         'buyer_email' => $buyerEmail,
         'creator_payment_method_id' => $suspendedId,
-    ])->assertStatus(422);
+    ])->assertStatus(503);
+    expect(StorefrontOrder::query()->where('digital_product_id', $productId)->count())->toBe(0);
 
     $evidence = function (string $reference, array $overrides = []) use ($wallet): array {
         $item = array_replace([
@@ -318,13 +320,11 @@ test('a synthetic creator can sell a telebirr product to a synthetic buyer witho
             ->postJson($started['reference_endpoint'], ['reference' => $reference]);
     };
 
-    $start = function () use ($publicBase, $buyerEmail, $methodId) {
-        return $this->postJson("{$publicBase}/checkout", [
-            'buyer_name' => 'Nathnael',
-            'buyer_email' => $buyerEmail,
-            'creator_payment_method_id' => $methodId,
-        ])->assertOk()->json();
-    };
+    // Seed only synthetic historical orders; the HTTP checkout route is retired.
+    $start = fn () => \Tests\Support\HistoricalDirectOrderFixture::create(
+        \App\Storefront\Models\DigitalProduct::query()->findOrFail($productId),
+        $store, ['name' => 'Nathnael', 'email' => $buyerEmail], $methodId,
+    );
 
     $wrongRecipient = $start();
     $submit($wrongRecipient, 'WRONGDEST01')->assertUnprocessable()->assertJsonPath('status', 'failed_verification');

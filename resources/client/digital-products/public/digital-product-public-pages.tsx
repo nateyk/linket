@@ -1198,6 +1198,7 @@ function DownloadList({
   downloads: DigitalProductDownload[];
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const {trans} = useTrans();
 
   if (!downloads.length) {
     return (
@@ -1255,7 +1256,7 @@ function DownloadList({
               size="sm"
               style={buttonAppearance.style}
               variant="ghost"
-              render={<a href={download.url} />}
+              render={<a href={download.url} aria-label={trans({message: 'Download :name', values: {name: download.name}})} />}
             >
               <DownloadIcon />
               <Trans message="Download" />

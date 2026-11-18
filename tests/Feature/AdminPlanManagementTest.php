@@ -93,11 +93,21 @@ class AdminPlanManagementTest extends TestCase
         config()->set('services.verify_et.corporate_account', '1000123456789');
         $creator = User::factory()->create();
         $pro = $this->proPlan();
-        $price = Price::query()->where('product_id', $pro->id)->firstOrFail();
+        // The admin versions only the price being edited. Select the canonical
+        // monthly Pro price rather than an arbitrary historical/annual row.
+        $price = $pro->prices()->where('currency', 'ETB')->where('interval', 'month')
+            ->where('interval_count', 1)->orderByDesc('default')->orderByDesc('id')->firstOrFail();
+        $pro->prices()->update(['default' => false]);
+        $price->update(['amount' => 500, 'default' => true]);
         $this->stateful()->actingAs($creator);
 
-        $pending = $this->postJson('/api/v1/billing/direct/pro')->assertOk()->json();
-        $this->assertSame(50000, $pending['amount_cents']);
+        // A persisted outstanding legacy payment must retain its original amount.
+        $pendingPayment = ProSubscriptionPayment::query()->create([
+            'uuid' => (string) Str::uuid(), 'creator_id' => $creator->id,
+            'product_id' => $pro->id, 'price_id' => $price->id,
+            'amount_cents' => 50000, 'status' => 'pending_payment',
+        ]);
+        $this->postJson('/api/v1/billing/direct/pro')->assertConflict();
         $this->stateful()->actingAs($this->createAdmin())->putJson("/api/v1/billing/products/{$pro->id}", [
             'name' => $pro->name,
             'free' => false,
@@ -118,15 +128,33 @@ class AdminPlanManagementTest extends TestCase
             ]],
         ])->assertOk();
 
-        $pendingPayment = ProSubscriptionPayment::query()->where('uuid', $pending['payment_id'])->firstOrFail();
+        $pendingPayment->refresh();
         $this->assertSame(50000, $pendingPayment->amount_cents);
         $this->assertSame($price->id, $pendingPayment->price_id);
-        $this->assertNotNull($price->fresh());
+        $this->assertSame(500.0, $price->fresh()->amount);
+        $this->assertFalse($price->fresh()->default);
         $this->assertDatabaseHas('prices', ['product_id' => $pro->id, 'amount' => 700, 'default' => true]);
         $this->stateful()->actingAs($creator);
-        $this->postJson('/api/v1/billing/direct/pro')->assertOk()->assertJsonPath('payment_id', $pending['payment_id'])->assertJsonPath('amount_cents', 50000);
-        $pendingPayment->update(['status' => 'paid']);
-        $this->postJson('/api/v1/billing/direct/pro')->assertOk()->assertJsonPath('amount_cents', 70000);
+        $this->postJson('/api/v1/billing/direct/pro')->assertConflict();
+        config()->set('services.chapa.secret', 'CHASECK_TEST-plan-price-fixture');
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        \Illuminate\Support\Facades\Http::fake([
+            'https://api.chapa.co/v1/transaction/initialize' => \Illuminate\Support\Facades\Http::response([
+                'status' => 'success', 'data' => ['checkout_url' => 'https://checkout.chapa.global/price-fixture'],
+            ]),
+        ]);
+        $this->postJson('/api/v1/billing/chapa/checkout', [
+            'product_id' => $pro->id, 'price_id' => $price->id,
+        ])->assertConflict();
+        \Illuminate\Support\Facades\Http::assertNothingSent();
+        $currentPrice = $pro->prices()->where('default', true)->firstOrFail();
+        $this->assertNotSame($price->id, $currentPrice->id);
+        $this->postJson('/api/v1/billing/chapa/checkout', [
+            'product_id' => $pro->id, 'price_id' => $currentPrice->id,
+        ])->assertOk()->assertJsonPath('checkout_url', 'https://checkout.chapa.global/price-fixture');
+        \Illuminate\Support\Facades\Http::assertSent(fn ($request) => $request['amount'] === '700.00');
+        $this->assertSame(50000, $pendingPayment->fresh()->amount_cents);
+        $this->assertSame('pending_payment', $pendingPayment->fresh()->status);
     }
 
     private function freePlan(): Product

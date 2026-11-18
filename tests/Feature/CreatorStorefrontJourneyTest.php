@@ -277,7 +277,7 @@ test('creator uploads a product for approval and a buyer receives the approved d
             ->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => false]);
         config()->set('services.verify_et.enabled', true);
         $this->getJson('/api/v1/storefront/payment-methods')->assertOk()
-            ->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => true]);
+            ->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => false, 'account_ready' => true]);
         config()->set('services.verify_et.enabled', false);
         $this->postJson('/auth/logout')->assertSuccessful();
         $this->app['auth']->forgetGuards();
@@ -292,43 +292,46 @@ test('creator uploads a product for approval and a buyer receives the approved d
         $this->postJson("{$base}/checkout", ['buyer_name' => 'Buyer', 'buyer_email' => 'journey@example.test'])->assertStatus(503);
         $this->assertDatabaseMissing('storefront_orders', ['digital_product_id' => $id, 'status' => 'paid']);
 
+        // Even with historical receiving accounts enabled, checkout must use Chapa.
         config()->set('services.verify_et.enabled', true);
         config()->set('services.verify_et.api_key', 'synthetic-test-key');
+        config()->set('services.chapa.secret', 'CHASECK_TEST-creator-journey');
         \Illuminate\Support\Facades\Queue::fake();
         \Illuminate\Support\Facades\Http::preventStrayRequests();
-        \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify?*' => \Illuminate\Support\Facades\Http::response([
-            'requestId' => 'synthetic-journey-request',
-            'verification' => ['processingStatus' => 'completed'],
-            'data' => [[
-                'bank' => 'cbe', 'status' => 'success', 'verified' => true, 'amount' => 50, 'currency' => 'ETB',
-                'receiptNumber' => 'JOURNEYVERIFY123',
-                'settlementAccountMatch' => ['matched' => true, 'ambiguous' => false, 'matchConfidence' => 'high', 'candidateCount' => 1, 'matchedSettlementAccount' => '1000123456789'],
-            ]],
-        ], 200)]);
-        $transport = \Mockery::mock(\App\Payments\VerifyEt\VerifyEtHttp::class);
-        $transport->shouldReceive('factory')->andReturn(\Illuminate\Support\Facades\Http::getFacadeRoot());
-        app()->instance(\App\Payments\VerifyEt\VerifyEtHttp::class, $transport);
-        $directCheckout = $this->postJson("{$base}/checkout", [
+        \Illuminate\Support\Facades\Http::fake([
+            'https://api.chapa.co/v1/transaction/initialize' => \Illuminate\Support\Facades\Http::response([
+                'status' => 'success',
+                'data' => ['checkout_url' => 'https://checkout.chapa.global/JOURNEY42'],
+            ]),
+            'https://api.chapa.co/v1/transaction/verify/*' => fn ($request) => \Illuminate\Support\Facades\Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'success', 'amount' => '50.00', 'currency' => 'ETB',
+                    'tx_ref' => basename(parse_url($request->url(), PHP_URL_PATH)),
+                    'reference' => 'JOURNEY42', 'email' => 'direct-journey@example.test',
+                ],
+            ]),
+        ]);
+        $this->getJson($base)->assertOk()->assertJsonPath('data.can_buy', true)
+            ->assertJsonPath('data.receiving_accounts', []);
+        $checkout = $this->postJson("{$base}/checkout", [
             'buyer_name' => 'Direct buyer', 'buyer_email' => 'direct-journey@example.test',
             'creator_payment_method_id' => $methodId,
-        ])->assertOk();
-        $this->withHeader('X-Order-Access-Token', $directCheckout->json('access_token'))
-            ->postJson($directCheckout->json('reference_endpoint'), ['reference' => 'JOURNEYVERIFY123'])
-            ->assertOk()->assertJsonPath('status', 'paid');
-        $this->assertDatabaseHas('storefront_orders', [
-            'uuid' => $directCheckout->json('order_id'), 'creator_id' => $creator->id,
-            'creator_payment_method_id' => $methodId, 'status' => 'paid',
-        ]);
-        \Illuminate\Support\Facades\Http::assertSent(fn ($request): bool => $request['bank'] === 'cbe'
-            && $request['reference'] === 'JOURNEYVERIFY123'
-            && $request['settlementAccount'] === '1000123456789');
-        $directOrderUrl = "{$base}/orders/{$directCheckout->json('order_id')}";
-        $this->withHeader('X-Order-Access-Token', 'invalid-token')->getJson($directOrderUrl)->assertForbidden();
-        $directOrder = $this->withHeader('X-Order-Access-Token', $directCheckout->json('access_token'))
-            ->getJson($directOrderUrl)->assertOk()->assertJsonPath('data.status', 'paid')->assertJsonCount(1, 'data.downloads');
-        $directDownload = $directOrder->json('data.downloads.0.url');
-        expect($this->get($directDownload)->assertOk()->streamedContent())->toBe($content);
-        $this->getJson(strtok($directDownload, '?'))->assertForbidden();
+        ])->assertOk()->assertJsonPath('checkout_url', 'https://checkout.chapa.global/JOURNEY42')
+            ->assertJsonPath('reference_endpoint', null);
+        $order = \App\Storefront\Models\StorefrontOrder::query()->where('uuid', $checkout->json('order_id'))->firstOrFail();
+        expect($order->collection_owner)->toBe(\App\Storefront\Models\StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA)
+            ->and($order->creator_payment_method_id)->toBeNull()
+            ->and($order->status)->toBe('pending_payment');
+        $orderUrl = "{$base}/orders/{$order->uuid}";
+        $this->getJson($orderUrl.'?tx_ref=invalid-reference')->assertForbidden();
+        // A verified browser return can recover delivery even if the webhook is delayed.
+        $paidOrder = $this->getJson($orderUrl.'?tx_ref='.$order->chapa_tx_ref)
+            ->assertOk()->assertJsonPath('data.status', 'paid')->assertJsonCount(1, 'data.downloads');
+        $download = $paidOrder->json('data.downloads.0.url');
+        expect($this->get($download)->assertOk()->streamedContent())->toBe($content);
+        $this->getJson(strtok($download, '?'))->assertForbidden();
+        \Illuminate\Support\Facades\Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'verify.et'));
 
         $this->postJson('/auth/logout')->assertSuccessful();
         $this->app['auth']->forgetGuards();

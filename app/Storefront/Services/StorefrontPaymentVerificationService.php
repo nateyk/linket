@@ -27,7 +27,7 @@ class StorefrontPaymentVerificationService
             ->firstOrFail();
 
         $order = $attempt->order;
-        if ($attempt->isSuccessful() && $order?->status === 'paid') {
+        if ($order?->status === 'refunded' || ($attempt->isSuccessful() && $order?->isCompleted())) {
             return $order;
         }
 
@@ -59,7 +59,7 @@ class StorefrontPaymentVerificationService
                 ->firstOrFail();
 
             $order = $lockedAttempt->order()->lockForUpdate()->firstOrFail();
-            if ($lockedAttempt->isSuccessful() && $order->status === 'paid') {
+            if ($order->status === 'refunded' || ($lockedAttempt->isSuccessful() && $order->isCompleted())) {
                 return $order;
             }
 

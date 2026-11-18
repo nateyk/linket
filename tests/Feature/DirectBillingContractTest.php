@@ -24,30 +24,38 @@ class DirectBillingContractTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function testPendingProPaymentRetainsItsSnapshotWhenCurrentPriceIsUnavailable(): void
+    public function testPendingProPaymentRetainsSnapshotButCannotStartNewLegacyCheckout(): void
     {
         config()->set('services.verify_et.enabled', true);
         config()->set('services.verify_et.corporate_account', '1000123456789');
         $creator = User::factory()->create();
         [$plan] = $this->proPlan();
-        $payment = ProSubscriptionPayment::query()->create(['uuid' => (string) Str::uuid(), 'creator_id' => $creator->id, 'product_id' => $plan->id, 'amount_cents' => 50000, 'status' => 'pending_payment']);
+        $payment = ProSubscriptionPayment::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'creator_id' => $creator->id,
+            'product_id' => $plan->id,
+            'amount_cents' => 50000,
+            'status' => 'pending_payment',
+        ]);
         Price::query()->where('product_id', $plan->id)->where('currency', 'ETB')->where('interval', 'month')->update(['amount' => 0]);
-        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertOk()->assertJsonPath('payment_id', $payment->uuid)->assertJsonPath('amount_cents', 50000);
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertConflict();
+        $this->assertSame(50000, $payment->fresh()->amount_cents);
+        $this->assertSame('pending_payment', $payment->fresh()->status);
     }
 
-    public function testNewProPaymentUsesUpdatedPriceWithoutChangingExistingSnapshot(): void
+    public function testLegacyProPaymentEndpointNeverCreatesANewPayment(): void
     {
         config()->set('services.verify_et.enabled', true);
         config()->set('services.verify_et.corporate_account', '1000123456789');
         [$plan, $price] = $this->proPlan();
         $creator = User::factory()->create();
-        $this->stateful()->actingAs($creator);
-        $first = $this->postJson('/api/v1/billing/direct/pro')->assertOk()->assertJsonPath('amount_cents', 50000);
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertConflict();
         $price->update(['amount' => 700]);
-        $this->postJson('/api/v1/billing/direct/pro')->assertOk()->assertJsonPath('payment_id', $first->json('payment_id'))->assertJsonPath('amount_cents', 50000);
-        ProSubscriptionPayment::query()->where('uuid', $first->json('payment_id'))->update(['status' => 'paid']);
-        $this->postJson('/api/v1/billing/direct/pro')->assertOk()->assertJsonPath('amount_cents', 70000);
-        $this->assertSame(50000, ProSubscriptionPayment::query()->where('uuid', $first->json('payment_id'))->value('amount_cents'));
+        $this->postJson('/api/v1/billing/direct/pro')->assertConflict();
+        $this->assertSame(0, ProSubscriptionPayment::query()
+            ->where('creator_id', $creator->id)->where('product_id', $plan->id)->count());
     }
 
     public function testCreatorBillingSummaryIncludesConfiguredProPriceAndSubscriptionDates(): void
@@ -255,21 +263,24 @@ class DirectBillingContractTest extends TestCase
         $this->stateful()->actingAs($otherCreator)->get('/api/v1/billing/direct/pro/'.$payment->uuid.'/receipt')->assertNotFound();
     }
 
-    public function testNewProCheckoutCannotUseChapa(): void
+    public function testNewProCheckoutFailsClosedWithoutChapaAndCannotUseRetiredProvider(): void
     {
-        config()->set('services.verify_et.enabled', false);
-        $this->stateful()->actingAs(User::factory()->create());
+        config()->set('services.verify_et.enabled', true);
+        config()->set('services.chapa.secret', '');
+        $creator = User::factory()->create();
+        $this->stateful()->actingAs($creator);
         [$plan, $price] = $this->proPlan();
+        $this->postJson('/api/v1/billing/direct/pro')->assertConflict();
 
         $this->postJson('/api/v1/billing/chapa/checkout', [
             'product_id' => $plan->id,
             'price_id' => $price->id,
-        ])->assertConflict();
+        ])->assertStatus(503);
 
-        $this->assertDatabaseMissing('subscriptions', ['gateway_name' => 'chapa', 'product_id' => $plan->id]);
+        $this->assertDatabaseMissing('subscriptions', ['user_id' => $creator->id, 'gateway_name' => 'chapa', 'product_id' => $plan->id]);
     }
 
-    public function testAdminCanRunProUpgradesThroughEitherChapaOrVerifyEt(): void
+    public function testAdminCanConfigureChapaButCannotRestoreVerifyEtForPro(): void
     {
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
@@ -283,7 +294,7 @@ class DirectBillingContractTest extends TestCase
             $admin->permissions()->attach(\Common\Permissions\Models\Permission::query()->firstOrCreate(['name' => $permission]));
         }
         $this->stateful()->actingAs($admin)->getJson('/api/v1/admin/billing/subscription-gateway')
-            ->assertOk()->assertJsonPath('data.gateway', 'verify_et');
+            ->assertOk()->assertJsonPath('data.gateway', 'chapa');
         $this->putJson('/api/v1/admin/billing/subscription-gateway', ['gateway' => 'chapa'])
             ->assertOk()->assertJsonPath('data.gateway', 'chapa');
 
@@ -296,11 +307,9 @@ class DirectBillingContractTest extends TestCase
         ])->assertOk()->assertJsonPath('checkout_url', 'https://checkout.chapa.global/CHPRO1');
 
         $this->stateful()->actingAs($admin)->putJson('/api/v1/admin/billing/subscription-gateway', ['gateway' => 'verify_et'])
-            ->assertOk()->assertJsonPath('data.gateway', 'verify_et');
-        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/chapa/checkout', [
-            'product_id' => $plan->id,
-            'price_id' => $price->id,
-        ])->assertConflict();
+            ->assertUnprocessable();
+        $this->getJson('/api/v1/admin/billing/subscription-gateway')
+            ->assertOk()->assertJsonPath('data.gateway', 'chapa');
     }
 
     public function testAdminCanStoreThePlatformChapaKeysForProUpgrades(): void

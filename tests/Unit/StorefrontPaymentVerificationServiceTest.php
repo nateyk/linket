@@ -262,6 +262,24 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         $this->assertNull($attempt->fresh()->error_message);
     }
 
+    public function testRefundedOrderCannotBeFulfilledAgainByAStaleBrowserReturn(): void
+    {
+        $ref = 'lk-validref12345';
+        [$order, $attempt] = $this->createOrderAndAttempt(ref: $ref);
+        $order->update(['status' => 'refunded', 'paid_at' => now()]);
+        $attempt->update(['status' => StorefrontPaymentAttempt::STATUS_SUCCESSFUL, 'verified_at' => now()]);
+
+        Http::preventStrayRequests();
+        $manager = $this->createMock(LinketChapaManager::class);
+        $manager->expects($this->never())->method('platformSecret');
+        $handler = $this->createMock(StorefrontWebhookHandler::class);
+        $handler->expects($this->never())->method('fulfill');
+
+        $service = new StorefrontPaymentVerificationService($manager, $handler);
+        $this->assertSame('refunded', $service->verifyAndFulfill($ref)->status);
+        $this->assertSame(StorefrontPaymentAttempt::STATUS_SUCCESSFUL, $attempt->fresh()->status);
+    }
+
     public function testIdempotentWhenAlreadyFulfilled(): void
     {
         $ref = 'lk-validref12345';

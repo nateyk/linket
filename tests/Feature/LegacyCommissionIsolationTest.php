@@ -241,7 +241,7 @@ class LegacyCommissionIsolationTest extends TestCase
         $invoices = CommissionInvoice::query()->where('creator_id', $order->creator_id)->count();
 
         app(ProcessDirectSubscriptionRenewals::class)->handle();
-        $this->stateful()->actingAs($order->creator)->postJson('/api/v1/billing/direct/pro')->assertOk();
+        $this->stateful()->actingAs($order->creator)->postJson('/api/v1/billing/direct/pro')->assertConflict();
 
         $this->assertSame(0, CommissionAccrual::query()->where('creator_id', $order->creator_id)->count());
         $this->assertSame($invoices, CommissionInvoice::query()->where('creator_id', $order->creator_id)->count());

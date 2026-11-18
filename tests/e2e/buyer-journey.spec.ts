@@ -11,7 +11,6 @@ type BuyerFixture = {
   product_title: string;
   buyer_email: string;
   buyer_name: string;
-  account_number: string;
 };
 
 function loadFixture(): BuyerFixture {
@@ -32,7 +31,7 @@ function readRecoveryCode(email: string): string {
 }
 
 test.describe('isolated buyer journey', () => {
-  test.skip(process.env.LINKET_ISOLATED_E2E !== '1', 'Requires LINKET_ISOLATED_E2E=1 against disposable db_test + mocked Verify.et');
+  test.skip(process.env.LINKET_ISOLATED_E2E !== '1', 'Requires LINKET_ISOLATED_E2E=1 against disposable db_test + mocked Chapa');
 
   // CrawlerDetect treats Playwright's default HeadlessChrome UA as a bot and
   // returns the SEO prerender stub (no Buy button). Use a normal Chrome UA.
@@ -53,23 +52,35 @@ test.describe('isolated buyer journey', () => {
     const buyerEmail = `e2e-reject-${randomUUID().slice(0, 8)}@example.test`;
     await page.getByLabel(/^Name$/i).fill(fixture.buyer_name);
     await page.getByLabel(/^Email$/i).fill(buyerEmail);
+    const checkoutRequest = page.waitForRequest(request =>
+      request.url().includes('/digital-products/') && request.url().endsWith('/checkout') && request.method() === 'POST',
+    );
     const buyerForm = page.locator('#digital-product-buyer-details');
     if (await buyerForm.count()) {
       await buyerForm.evaluate((form: HTMLFormElement) => form.requestSubmit());
     } else {
       await page.getByRole('button', {name: /Continue|Start payment|Pay/i}).first().click();
     }
-    // Mobile checkout may already be on instructions by the time submit resolves;
-    // assert UI state rather than racing a specific network URL.
-    await expect(page.getByTestId('buyer-payment-status')).toContainText(/Pending payment/i, {timeout: 30000});
-    await expect(page.getByText(fixture.account_number)).toBeVisible({timeout: 15000});
+    await expect(page).toHaveURL(/\/orders\/[^/]+\/success\?tx_ref=/, {timeout: 30000});
+    await expect(page.getByRole('heading', {name: /Finalizing your payment/i})).toBeVisible();
+    await expect(page.getByRole('heading', {name: /Payment successful/i})).toHaveCount(0);
+    await expect(page.getByLabel(/Transaction reference/i)).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-
-    await page.getByLabel(/Transaction reference/i).fill(`REJECT${Date.now().toString().slice(-8)}`);
-    await expect(page.getByRole('button', {name: /Verify payment/i})).toBeEnabled({timeout: 15000});
-    await page.getByRole('button', {name: /Verify payment/i}).click();
-    await expect(page.getByTestId('buyer-payment-status')).toContainText(/Rejected/i, {timeout: 30000});
-    await expect(page.getByRole('link', {name: /e2e-guide\.pdf|guide/i})).toHaveCount(0);
+    // The browser navigates immediately after checkout. Use the request URL
+    // and actual return path, not a discarded response body from Chromium.
+    const checkout = await checkoutRequest;
+    const returnUrl = new URL(page.url());
+    const orderId = returnUrl.pathname.match(/\/orders\/([^/]+)\/success$/)?.[1];
+    expect(orderId).toBeTruthy();
+    const statusUrl = new URL(checkout.url().replace(/\/checkout$/, '/orders/' + orderId));
+    statusUrl.searchParams.set('tx_ref', returnUrl.searchParams.get('tx_ref')!);
+    const headers = {Accept: 'application/json', Referer: page.url()};
+    const unpaid = await page.request.get(statusUrl.toString(), {headers});
+    expect(unpaid.status()).toBe(200);
+    expect((await unpaid.json()).data.downloads).toEqual([]);
+    statusUrl.searchParams.set('tx_ref', 'wrong-reference');
+    expect((await page.request.get(statusUrl.toString(), {headers})).status()).toBe(403);
+    await expect(page.getByRole('link', {name: /Download e2e-guide\.pdf/i})).toHaveCount(0);
   });
 
   test('storefront → checkout → verified payment → download → recovery → re-download', async ({page}) => {
@@ -87,24 +98,13 @@ test.describe('isolated buyer journey', () => {
       .locator('#digital-product-buyer-details')
       .evaluate((form: HTMLFormElement) => form.requestSubmit());
 
-    await expect(page.getByRole('heading', {name: /Pay the creator directly/i})).toBeVisible({timeout: 30000});
-    await expect(page.getByTestId('buyer-payment-status')).toContainText(/Pending payment/i, {
-      timeout: 30000,
-    });
-    await expect(page.getByText(fixture.account_number)).toBeVisible({timeout: 15000});
-
-    const reference = `E2E${Date.now().toString().slice(-10)}`;
-    await page.getByLabel(/Transaction reference/i).fill(reference);
-    await expect(page.getByRole('button', {name: /Verify payment/i})).toBeEnabled({timeout: 15000});
-    await page.getByRole('button', {name: /Verify payment/i}).click();
-
-    // Avoid matching FAQ copy that contains "payment is confirmed".
-    await expect(page.getByTestId('buyer-payment-status')).toContainText(/^Paid$/i, {timeout: 30000});
-    await expect(
-      page.getByText(/Payment confirmed\. Your purchased files are ready to download/i),
-    ).toBeVisible({timeout: 15000});
-    const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('link', {name: /e2e-guide\.pdf/i}).first().click();
+    await expect(page).toHaveURL(/\/orders\/[^/]+\/success\?tx_ref=/, {timeout: 30000});
+    await expect(page.getByRole('heading', {name: /Payment successful/i})).toBeVisible({timeout: 30000});
+    await expect(page.getByText(/Your payment is confirmed\. Your downloads are ready below\./i)).toBeVisible();
+    const fileLink = page.getByRole('link', {name: /Download e2e-guide\.pdf/i});
+    await expect(fileLink).toBeVisible({timeout: 15000});
+    const downloadPromise = page.waitForEvent('download', {timeout: 30000});
+    await fileLink.click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
 

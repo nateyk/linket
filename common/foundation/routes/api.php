@@ -306,10 +306,10 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('admin/storefront/creators/{user}', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'show'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods', [CreatorPaymentMethodsController::class, 'adminIndex'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods/{method}', [CreatorPaymentMethodsController::class, 'adminShow'])->middleware('auth:sanctum');
+        // Return an actual 404 rather than the SPA shell for retired provider configuration.
+        Route::match(['get', 'patch'], 'admin/storefront/verify-et-settings', static fn () => abort(404));
         Route::get('admin/billing/subscription-gateway', [\App\Payments\Controllers\AdminSubscriptionGatewayController::class, 'show'])->middleware('auth:sanctum');
         Route::put('admin/billing/subscription-gateway', [\App\Payments\Controllers\AdminSubscriptionGatewayController::class, 'update'])->middleware(['auth:sanctum', 'throttle:10,1']);
-        Route::get('admin/storefront/verify-et-settings', [\App\Payments\Controllers\AdminVerifyEtSettingsController::class, 'show'])->middleware('auth:sanctum');
-        Route::patch('admin/storefront/verify-et-settings', [\App\Payments\Controllers\AdminVerifyEtSettingsController::class, 'update'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-method-catalog', [CreatorPaymentMethodsController::class, 'catalog'])->middleware('auth:sanctum');
         Route::patch('admin/storefront/payment-method-catalog/{paymentMethod}', [CreatorPaymentMethodsController::class, 'updateCatalog'])->middleware('auth:sanctum');
         Route::post('admin/storefront/payment-methods/{method}/approve', [CreatorPaymentMethodsController::class, 'approve'])->middleware('auth:sanctum');
