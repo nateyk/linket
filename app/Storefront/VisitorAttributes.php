@@ -2,6 +2,7 @@
 
 namespace App\Storefront;
 
+use App\Analytics\Actions\ResolveVisitorLocation;
 use Illuminate\Support\Str;
 
 class VisitorAttributes
@@ -12,11 +13,7 @@ class VisitorAttributes
      */
     public static function country(): ?string
     {
-        $ip = static::resolveIp();
-        if (!$ip) {
-            return null;
-        }
-        return geoip($ip)->iso_code ?: null;
+        return ResolveVisitorLocation::resolve()['iso_code'];
     }
 
     /**
@@ -40,49 +37,11 @@ class VisitorAttributes
      */
     public static function ipHash(): ?string
     {
-        $ip = static::resolveIp();
+        $ip = ResolveVisitorLocation::publicIp();
         if (!$ip) {
             return null;
         }
         return hash('sha256', $ip);
     }
 
-    /**
-     * Resolve the visitor IP from proxy headers first (so requests behind
-     * Cloudflare or a reverse proxy are attributed correctly), falling
-     * back to the request's client IP. Mirrors LogTrackedEvent.
-     */
-    private static function resolveIp(): ?string
-    {
-        foreach (
-            [
-                'HTTP_CF_CONNECTING_IP',
-                'HTTP_CLIENT_IP',
-                'HTTP_X_FORWARDED_FOR',
-                'HTTP_X_FORWARDED',
-                'HTTP_X_CLUSTER_CLIENT_IP',
-                'HTTP_FORWARDED_FOR',
-                'HTTP_FORWARDED',
-                'REMOTE_ADDR',
-            ]
-            as $key
-        ) {
-            if (array_key_exists($key, $_SERVER) === true) {
-                foreach (explode(',', $_SERVER[$key]) as $candidate) {
-                    $candidate = trim($candidate);
-                    if (
-                        filter_var(
-                            $candidate,
-                            FILTER_VALIDATE_IP,
-                            FILTER_FLAG_NO_PRIV_RANGE |
-                                FILTER_FLAG_NO_RES_RANGE,
-                        ) !== false
-                    ) {
-                        return $candidate;
-                    }
-                }
-            }
-        }
-        return request()->ip() ?: null;
-    }
 }
