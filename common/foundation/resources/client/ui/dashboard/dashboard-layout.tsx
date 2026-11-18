@@ -43,9 +43,9 @@ function Root({
         <div
           {...domProps}
           className={cn(
-            // Clip the shell so a positioned control inside a scrolling
-            // section cannot stretch the document and scroll the window.
-            'group/dashboard-layout relative isolate flex h-screen supports-[height:100dvh]:h-dvh flex-col overflow-hidden bg-background',
+            // Keep positioned controls visible at the outer shell boundary.
+            // Individual content sections own their scrolling and clipping.
+            'group/dashboard-layout relative isolate flex h-screen supports-[height:100dvh]:h-dvh flex-col bg-background',
             !isMobileMode &&
               'has-data-[variant=floating]:gap-2 has-data-[variant=floating]:p-2 light:has-data-[variant=floating]:bg-muted light:has-data-[variant=inset]:bg-muted',
             className,
