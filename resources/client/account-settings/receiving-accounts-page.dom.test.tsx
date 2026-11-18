@@ -89,6 +89,16 @@ if (!(Element.prototype as unknown as {getAnimations?: unknown}).getAnimations) 
   (Element.prototype as unknown as {getAnimations: () => []}).getAnimations = () => [];
 }
 
+api.get.mockImplementation((url: string) => {
+  if (url === '/api/v1/items/withdrawal-methods') {
+    return Promise.resolve({data: {data: [
+      {code: 'bank_transfer'}, {code: 'telebirr'}, {code: 'mpesa'},
+      {code: 'yaya'}, {code: 'cbebirr'},
+    ]}});
+  }
+  return Promise.resolve({data: {data: []}});
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -122,7 +132,9 @@ it('lists payout accounts with default badges and masked account numbers', async
     status: 'active',
   };
 
-  api.get.mockResolvedValue({data: {data: [account1, account2]}});
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: [account1, account2]}}));
 
   render(<Component />);
 
@@ -133,8 +145,81 @@ it('lists payout accounts with default badges and masked account numbers', async
   expect(screen.getByText('Default')).toBeTruthy();
 });
 
-it('opens modal and creates a new payout destination via POST /api/items/payout-methods', async () => {
-  api.get.mockResolvedValue({data: {data: []}});
+it('shows only admin-enabled Chapa v1 banks and wallets in seller dropdown', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/items/withdrawal-methods') {
+      return Promise.resolve({data: {data: [
+        {code: 'bank_transfer', is_active: true},
+        {code: 'telebirr', is_active: true},
+        {code: 'mpesa', is_active: false},
+        {code: 'yaya', is_active: false},
+        {code: 'cbebirr', is_active: false},
+        {code: 'paypal', is_active: true},
+        {code: 'other', is_active: true},
+      ]}});
+    }
+    if (url === '/api/v1/items/payout-methods') {
+      return Promise.resolve({data: {data: []}});
+    }
+    return Promise.reject(new Error('Unexpected API route: ' + url));
+  });
+
+  render(<Component />);
+  expect(await screen.findByText('No payout accounts yet')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', {name: 'Add payout account'}));
+
+  const options = Array.from(
+    (screen.getByLabelText('Bank or Wallet') as HTMLSelectElement).options,
+  ).map(option => option.value);
+
+  expect(options).toContain('telebirr');
+  expect(options).toContain('cbe');
+  expect(options).toContain('awash');
+  expect(options).not.toContain('mpesa');
+  expect(options).not.toContain('yaya');
+  expect(options).not.toContain('cbebirr');
+  expect(options).not.toContain('paypal');
+  expect(options).not.toContain('other');
+  expect(api.get).toHaveBeenCalledWith('/api/v1/items/withdrawal-methods');
+  expect(api.get).toHaveBeenCalledWith('/api/v1/items/payout-methods');
+});
+
+it('keeps account creation disabled if no providers are enabled', async () => {
+  api.get.mockImplementation((url: string) =>
+    url === '/api/v1/items/withdrawal-methods'
+      ? Promise.resolve({data: {data: []}})
+      : Promise.resolve({data: {data: []}}),
+  );
+
+  render(<Component />);
+
+  expect(await screen.findByText(
+    'No bank or wallet payout methods are enabled. Contact Linket support.',
+  )).toBeTruthy();
+  expect((screen.getByRole('button', {name: 'Add payout account'}) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it('shows retry instead of a blank picker when provider loading fails', async () => {
+  api.get.mockImplementation((url: string) =>
+    url === '/api/v1/items/withdrawal-methods'
+      ? Promise.reject(new Error('Network unavailable'))
+      : Promise.resolve({data: {data: []}}),
+  );
+
+  render(<Component />);
+
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Unable to load payout methods or accounts. Retry to continue.',
+  );
+  expect(screen.getByRole('button', {name: 'Retry loading payout methods'})).toBeTruthy();
+  expect((screen.getByRole('button', {name: 'Add payout account'}) as HTMLButtonElement).disabled).toBe(true);
+  expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/payment-methods');
+});
+
+it('opens modal and creates a new payout destination via POST /api/v1/items/payout-methods', async () => {
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: []}}));
   api.post.mockResolvedValue({data: {data: {id: 10}}});
 
   render(<Component />);
@@ -149,7 +234,7 @@ it('opens modal and creates a new payout destination via POST /api/items/payout-
   fireEvent.click(screen.getByRole('button', {name: 'Save payout account'}));
 
   await waitFor(() => {
-    expect(api.post).toHaveBeenCalledWith('/api/items/payout-methods', {
+    expect(api.post).toHaveBeenCalledWith('/api/v1/items/payout-methods', {
       type: 'bank_transfer',
       bank_code: 'cbe',
       bank_name: 'Commercial Bank of Ethiopia (CBE)',
@@ -160,7 +245,7 @@ it('opens modal and creates a new payout destination via POST /api/items/payout-
   });
 });
 
-it('edits an existing payout destination via PUT /api/items/payout-methods/:id', async () => {
+it('edits an existing payout destination via PUT /api/v1/items/payout-methods/:id', async () => {
   const account = {
     id: 5,
     type: 'telebirr',
@@ -174,7 +259,9 @@ it('edits an existing payout destination via PUT /api/items/payout-methods/:id',
     status: 'active',
   };
 
-  api.get.mockResolvedValue({data: {data: [account]}});
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: [account]}}));
   api.put.mockResolvedValue({data: {data: {...account, account_holder: 'Updated Holder'}}});
 
   render(<Component />);
@@ -190,7 +277,7 @@ it('edits an existing payout destination via PUT /api/items/payout-methods/:id',
   fireEvent.click(screen.getByRole('button', {name: 'Save payout account'}));
 
   await waitFor(() => {
-    expect(api.put).toHaveBeenCalledWith('/api/items/payout-methods/5', {
+    expect(api.put).toHaveBeenCalledWith('/api/v1/items/payout-methods/5', {
       type: 'telebirr',
       bank_code: 'telebirr',
       bank_name: 'Telebirr (Ethio Telecom)',
@@ -201,7 +288,7 @@ it('edits an existing payout destination via PUT /api/items/payout-methods/:id',
   });
 });
 
-it('sets a destination as default via POST /api/items/payout-methods/:id/default', async () => {
+it('sets a destination as default via POST /api/v1/items/payout-methods/:id/default', async () => {
   const account = {
     id: 8,
     type: 'bank_transfer',
@@ -215,7 +302,9 @@ it('sets a destination as default via POST /api/items/payout-methods/:id/default
     status: 'active',
   };
 
-  api.get.mockResolvedValue({data: {data: [account]}});
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: [account]}}));
   api.post.mockResolvedValue({data: {}});
 
   render(<Component />);
@@ -226,11 +315,11 @@ it('sets a destination as default via POST /api/items/payout-methods/:id/default
   fireEvent.click(await screen.findByRole('menuitem', {name: 'Set as default'}));
 
   await waitFor(() => {
-    expect(api.post).toHaveBeenCalledWith('/api/items/payout-methods/8/default');
+    expect(api.post).toHaveBeenCalledWith('/api/v1/items/payout-methods/8/default');
   });
 });
 
-it('removes a payout destination via DELETE /api/items/payout-methods/:id', async () => {
+it('removes a payout destination via DELETE /api/v1/items/payout-methods/:id', async () => {
   const account = {
     id: 9,
     type: 'bank_transfer',
@@ -244,7 +333,9 @@ it('removes a payout destination via DELETE /api/items/payout-methods/:id', asyn
     status: 'active',
   };
 
-  api.get.mockResolvedValue({data: {data: [account]}});
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: [account]}}));
   api.delete.mockResolvedValue({data: {}});
 
   render(<Component />);
@@ -255,12 +346,14 @@ it('removes a payout destination via DELETE /api/items/payout-methods/:id', asyn
   fireEvent.click(await screen.findByRole('menuitem', {name: 'Remove account'}));
 
   await waitFor(() => {
-    expect(api.delete).toHaveBeenCalledWith('/api/items/payout-methods/9');
+    expect(api.delete).toHaveBeenCalledWith('/api/v1/items/payout-methods/9');
   });
 });
 
 it('displays info popover explaining Linket withdrawal payouts', async () => {
-  api.get.mockResolvedValue({data: {data: []}});
+  api.get.mockImplementation((url: string) => url === '/api/v1/items/withdrawal-methods'
+    ? Promise.resolve({data: {data: [{code: 'bank_transfer'}, {code: 'telebirr'}]}})
+    : Promise.resolve({data: {data: []}}));
 
   render(<Component />);
 

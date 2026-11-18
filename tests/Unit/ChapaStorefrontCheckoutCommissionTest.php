@@ -14,10 +14,8 @@ use App\Storefront\Services\ChapaStorefrontCheckout;
 use App\Storefront\Services\StorefrontPaymentReferenceGenerator;
 use Common\Billing\Models\Product;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
-use Nateyk\Chapa\ChapaClient;
-use Nateyk\Chapa\Http\RawResponse;
-use Nateyk\Chapa\Http\Transport;
 use Tests\TestCase;
 
 class ChapaStorefrontCheckoutCommissionTest extends TestCase
@@ -75,31 +73,17 @@ class ChapaStorefrontCheckoutCommissionTest extends TestCase
         parent::tearDown();
     }
 
-    private function mockChapaClient(): ChapaClient
-    {
-        $transport = $this->createMock(Transport::class);
-        $transport->method('send')->willReturn(
-            new RawResponse(200, (string) json_encode([
-                'status' => 'success',
-                'data' => [
-                    'checkout_url' => 'https://checkout.chapa.global/test-commission',
-                    'chapa_reference' => 'CHP-TEST-COMMISSION',
-                ],
-            ]))
-        );
-
-        return new ChapaClient(
-            privateKey: 'sec-test-commission',
-            webhookSecret: 'wh-secret',
-            transport: $transport,
-        );
-    }
-
     public function testPlatformOrderSnapshotsProCommissionPolicy(): void
     {
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
+                'status' => 'success',
+                'data' => ['checkout_url' => 'https://checkout.chapa.co/checkout/payment/test1234'],
+            ]),
+        ]);
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->method('isEnabled')->willReturn(true);
-        $manager->method('platformClient')->willReturn($this->mockChapaClient());
+        $manager->method('platformSecret')->willReturn('sec-test-commission');
 
         $plan = new Product(['id' => 99]);
         $commissionPolicy = new CommissionPolicy(
@@ -142,9 +126,15 @@ class ChapaStorefrontCheckoutCommissionTest extends TestCase
 
     public function testPlatformOrderSnapshotsFreeCreatorCommission(): void
     {
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
+                'status' => 'success',
+                'data' => ['checkout_url' => 'https://checkout.chapa.co/checkout/payment/test1234'],
+            ]),
+        ]);
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->method('isEnabled')->willReturn(true);
-        $manager->method('platformClient')->willReturn($this->mockChapaClient());
+        $manager->method('platformSecret')->willReturn('sec-test-commission');
 
         $commissionPolicy = new CommissionPolicy(
             bpsResolver: fn (User $u) => 1000,

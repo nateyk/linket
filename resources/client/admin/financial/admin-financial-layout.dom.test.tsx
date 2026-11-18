@@ -55,28 +55,26 @@ describe('AdminFinancialLayout', () => {
 
     // Secondary navigation items
     expect(screen.getByText('General defaults')).toBeTruthy();
-    expect(screen.getByText('Payment gateways')).toBeTruthy();
-    expect(screen.getByText('Receiving accounts')).toBeTruthy();
+    expect(screen.queryByText('Payment gateways')).toBeNull();
+    expect(screen.queryByText('Receiving accounts')).toBeNull();
+    expect(screen.getByText('Withdrawals')).toBeTruthy();
+    expect(screen.getByText('Payment activity')).toBeTruthy();
     expect(screen.getByText('Withdrawal methods')).toBeTruthy();
     expect(screen.getByText('Ledger & reconciliation')).toBeTruthy();
-
-    // Operational quick links
-    expect(screen.getByText('Withdrawals queue')).toBeTruthy();
-    expect(screen.getByText('Payment activity')).toBeTruthy();
 
     // Child content rendered in outlet
     expect(screen.getByTestId('financial-outlet')).toBeTruthy();
   });
 
-  it('highlights the active navigation link based on current path', () => {
-    currentPath = '/admin/financial/payment-gateways';
+  it('links to the canonical withdrawal page while highlighting the active financial section', () => {
+    currentPath = '/admin/financial/general';
     renderLayout();
 
-    const gatewaysLink = screen.getByText('Payment gateways').closest('a');
-    expect(gatewaysLink).toBeTruthy();
-    expect(gatewaysLink?.getAttribute('data-active')).toBe('true');
+    const withdrawalsLink = screen.getByText('Withdrawals').closest('a');
+    expect(withdrawalsLink?.getAttribute('href')).toBe('/admin/withdrawals');
+    expect(withdrawalsLink?.getAttribute('data-active')).toBe('false');
 
     const generalLink = screen.getByText('General defaults').closest('a');
-    expect(generalLink?.getAttribute('data-active')).toBe('false');
+    expect(generalLink?.getAttribute('data-active')).toBe('true');
   });
 });

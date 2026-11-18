@@ -80,7 +80,7 @@ log "PHP $PHP_VER ($PHP_BIN)"
 if ! $PHP_BIN -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);' 2>&1; then
   fail "PHP $PHP_VER < 8.2 required"
 fi
-for ext in pdo_mysql mbstring openssl fileinfo curl zip bcmath; do
+for ext in pdo_mysql mbstring openssl fileinfo curl zip bcmath intl; do
   if ! $PHP_BIN -m 2>&1 | grep -qi "^${ext}\|^${ext} "; then
     # case-insensitive fallback for gd naming
     if [[ "$ext" == "fileinfo" ]]; then continue; fi
@@ -89,6 +89,12 @@ for ext in pdo_mysql mbstring openssl fileinfo curl zip bcmath; do
     fi
   fi
 done
+
+# laraveldaily/laravel-invoices requires intl's NumberFormatter to render PDFs.
+# Check the deploy CLI here; operators must also enable intl for the web PHP handler.
+if ! "$PHP_BIN" -r 'exit(class_exists("NumberFormatter") ? 0 : 1);'; then
+  fail "PHP NumberFormatter unavailable ($PHP_BIN): enable the intl extension for the deploy PHP binary and the web PHP handler"
+fi
 
 if [[ ! -f "$SHARED/.env" ]]; then fail "Shared env missing: $SHARED/.env — create from env.example per docs/production-operations.md"; fi
 if [[ ! -e "$ARTIFACT" ]]; then fail "Artifact not found: $ARTIFACT"; fi

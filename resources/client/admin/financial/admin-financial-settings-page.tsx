@@ -25,6 +25,7 @@ import {
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
 import {CurrencySettingsCard} from './currency-settings-card';
+import {ChapaPayoutReadinessCard} from './chapa-payout-readiness-card';
 
 type Tab = 'chapa' | 'currency' | 'payout-methods' | 'commission' | 'reconciliation';
 
@@ -45,6 +46,21 @@ type WithdrawalMethod = {
   maximum_amount_cents?: number | null;
   is_active: boolean;
 };
+
+const subscriptionGatewayUrl = '/api/v1/admin/billing/subscription-gateway';
+const financialSummaryUrl = '/api/v1/admin/marketplace/financial-summary';
+const reconcileUrl = '/api/v1/admin/marketplace/reconcile';
+
+function canSaveChapaCredentials(publicKey: string, secretKey: string, webhookSecret: string): boolean {
+  const hasPublic = publicKey.trim() !== '';
+  const hasSecret = secretKey.trim() !== '';
+  const hasWebhook = webhookSecret.trim() !== '';
+  if (hasPublic !== hasSecret) {
+    return false;
+  }
+
+  return (hasPublic && hasSecret) || hasWebhook;
+}
 
 type ReconciliationData = {
   ledger_audit: {
@@ -93,7 +109,7 @@ export function Component() {
               <Tabs.List variant="line" className="w-max justify-start">
                 <Tabs.Tab value="chapa" className="flex-none">
                   <CreditCardIcon className="size-4" />
-                  <Trans message="Platform Chapa v2" />
+                  <Trans message="Platform Chapa" />
                 </Tabs.Tab>
                 <Tabs.Tab value="currency" className="flex-none">
                   <CoinsIcon className="size-4" />
@@ -149,7 +165,7 @@ function ChapaPlatformGatewayTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/api/admin/billing/subscription-gateway');
+      const res = await apiClient.get(subscriptionGatewayUrl);
       setConfig(res.data.data);
     } catch {
       setStatusMsg({type: 'error', text: 'Unable to load Chapa gateway configuration.'});
@@ -164,15 +180,20 @@ function ChapaPlatformGatewayTab() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSaveChapaCredentials(publicKey, secretKey, webhookSecret)) {
+      return;
+    }
     setSaving(true);
     setStatusMsg(undefined);
     try {
       const payload: Record<string, string> = {gateway: 'chapa'};
-      if (publicKey.trim()) payload.public_key = publicKey.trim();
-      if (secretKey.trim()) payload.secret_key = secretKey.trim();
+      if (publicKey.trim() && secretKey.trim()) {
+        payload.public_key = publicKey.trim();
+        payload.secret_key = secretKey.trim();
+      }
       if (webhookSecret.trim()) payload.webhook_secret = webhookSecret.trim();
 
-      const res = await apiClient.put('/api/admin/billing/subscription-gateway', payload);
+      const res = await apiClient.put(subscriptionGatewayUrl, payload);
       setConfig(res.data.data);
       setPublicKey('');
       setSecretKey('');
@@ -224,9 +245,11 @@ function ChapaPlatformGatewayTab() {
               <Input
                 value={publicKey}
                 onChange={e => setPublicKey(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
                 placeholder={config?.public_key_masked ?? 'CHAPUBK_TEST-...'}
               />
-              <Field.Description><Trans message="Your Chapa API v2 public key." /></Field.Description>
+              <Field.Description><Trans message="Your Chapa public key. Test keys start with CHAPUBK_TEST- and live keys start with CHAPUBK-." /></Field.Description>
             </Field.Root>
 
             <Field.Root>
@@ -235,9 +258,11 @@ function ChapaPlatformGatewayTab() {
                 type="password"
                 value={secretKey}
                 onChange={e => setSecretKey(e.target.value)}
+                autoComplete="new-password"
+                spellCheck={false}
                 placeholder={config?.secret_configured ? '••••••••••••••••' : 'CHASECK_TEST-...'}
               />
-              <Field.Description><Trans message="Validated directly against Chapa before saving." /></Field.Description>
+              <Field.Description><Trans message="Secret key from the same page. Chapa checks it before saving." /></Field.Description>
             </Field.Root>
           </div>
 
@@ -247,6 +272,8 @@ function ChapaPlatformGatewayTab() {
               type="password"
               value={webhookSecret}
               onChange={e => setWebhookSecret(e.target.value)}
+              autoComplete="new-password"
+              spellCheck={false}
               placeholder={config?.webhook_secret_configured ? '••••••••••••••••' : 'Enter webhook secret...'}
             />
             <Field.Description><Trans message="Used to verify HMAC-SHA256 signatures on inbound Chapa webhooks." /></Field.Description>
@@ -264,10 +291,17 @@ function ChapaPlatformGatewayTab() {
             <Field.Description><Trans message="Register this endpoint in your Chapa Merchant Dashboard." /></Field.Description>
           </Field.Root>
 
-          <Button type="submit" color="primary" disabled={saving || (!publicKey.trim() && !secretKey.trim() && !webhookSecret.trim())}>
+          {(publicKey.trim() !== '') !== (secretKey.trim() !== '') && (
+            <p role="alert" className="text-sm text-destructive">
+              <Trans message="Enter the public key and the secret key together." />
+            </p>
+          )}
+
+          <Button type="submit" color="primary" disabled={saving || !canSaveChapaCredentials(publicKey, secretKey, webhookSecret)}>
             {saving ? <Trans message="Saving & validating..." /> : <Trans message="Save Chapa credentials" />}
           </Button>
         </form>
+        <ChapaPayoutReadinessCard />
       </Card.Content>
     </Card.Root>
   );
@@ -276,77 +310,91 @@ function ChapaPlatformGatewayTab() {
 function PayoutMethodsTab() {
   const [methods, setMethods] = useState<WithdrawalMethod[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string>();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/api/v1/admin/financial/withdrawal-methods');
-      setMethods(res.data.data ?? []);
-    } catch {
-      // ignore
+      const methodRes = await apiClient.get('/api/v1/admin/financial/withdrawal-methods');
+      setMethods(methodRes.data.data ?? []);
+      setError(undefined);
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
+
+  const toggleMethod = async (method: WithdrawalMethod, enabled: boolean) => {
+    setBusyId('method-' + method.id);
+    try {
+      await apiClient.put('/api/v1/admin/financial/withdrawal-methods/' + method.id, {is_active: enabled});
+      await load();
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e));
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   if (loading) return <TabLoadingSpinner />;
 
   return (
-    <Card.Root>
-      <Card.Header>
-        <div className="flex items-center justify-between">
-          <div>
-            <Card.Title><Trans message="Supported withdrawal methods" /></Card.Title>
-            <Card.Description>
-              <Trans message="Banks and mobile wallets available for creator withdrawals with configured limits." />
-            </Card.Description>
+    <div className="space-y-4">
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <Card.Root>
+        <Card.Header>
+          <Card.Title><Trans message="Withdrawal providers" /></Card.Title>
+          <Card.Description>
+            <Trans message="Enabled Chapa v1 ETB banks and wallets appear in seller payout account setup. PayPal and manual payouts are legacy methods and are not available as Chapa receiving accounts." />
+          </Card.Description>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <p className="text-xs text-muted-foreground">
+              <Trans message="Configure Chapa Transfer Approval URL in your merchant dashboard:" /> <code>/api/v1/chapa/transfer-approval</code>
+            </p>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods/legacy" />}>
+              <Trans message="Manage provider limits" />
+            </Button>
           </div>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods" />}>
-            <Trans message="Creator receiving accounts" />
-          </Button>
-        </div>
-      </Card.Header>
-      <Card.Content>
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head><Trans message="Method" /></Table.Head>
-              <Table.Head><Trans message="Code" /></Table.Head>
-              <Table.Head><Trans message="Min withdrawal" /></Table.Head>
-              <Table.Head><Trans message="Max withdrawal" /></Table.Head>
-              <Table.Head><Trans message="Status" /></Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {methods.length === 0 ? (
+        </Card.Header>
+        <Card.Content>
+          <Table.Root>
+            <Table.Header>
               <Table.Row>
-                <Table.Cell colSpan={5} className="text-center py-6 text-muted-foreground">
-                  <Trans message="No withdrawal methods configured." />
-                </Table.Cell>
+                <Table.Head><Trans message="Provider" /></Table.Head>
+                <Table.Head><Trans message="Minimum" /></Table.Head>
+                <Table.Head><Trans message="Maximum" /></Table.Head>
+                <Table.Head><Trans message="Enabled" /></Table.Head>
               </Table.Row>
-            ) : (
-              methods.map(m => (
+            </Table.Header>
+            <Table.Body>
+              {methods.map(m => (
                 <Table.Row key={m.id}>
                   <Table.Cell className="font-medium">{m.name}</Table.Cell>
-                  <Table.Cell className="font-mono text-xs text-muted-foreground">{m.code}</Table.Cell>
-                  <Table.Cell>{m.minimum_amount_cents ? formatMoney(m.minimum_amount_cents, 'ETB') : '100.00 ETB'}</Table.Cell>
+                  <Table.Cell>{formatMoney(m.minimum_amount_cents ?? 0, 'ETB')}</Table.Cell>
                   <Table.Cell>{m.maximum_amount_cents ? formatMoney(m.maximum_amount_cents, 'ETB') : 'Unlimited'}</Table.Cell>
                   <Table.Cell>
-                    <Badge variant={m.is_active ? 'positive' : 'outline'}>
-                      {m.is_active ? <Trans message="Active" /> : <Trans message="Inactive" />}
-                    </Badge>
+                    <Switch
+                      checked={m.is_active}
+                      disabled={busyId !== null}
+                      onCheckedChange={enabled => void toggleMethod(m, enabled)}
+                      aria-label={m.name + ' payouts'}
+                    />
                   </Table.Cell>
                 </Table.Row>
-              ))
-            )}
-          </Table.Body>
-        </Table.Root>
-      </Card.Content>
-    </Card.Root>
+              ))}
+              {methods.length === 0 && (
+                <Table.Row><Table.Cell colSpan={4}><Trans message="No withdrawal methods available." /></Table.Cell></Table.Row>
+              )}
+            </Table.Body>
+          </Table.Root>
+        </Card.Content>
+      </Card.Root>
+
+    </div>
   );
 }
 
@@ -403,7 +451,7 @@ function ReconciliationAuditTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/api/admin/marketplace/financial-summary');
+      const res = await apiClient.get(financialSummaryUrl);
       setData(res.data.data);
     } catch {
       setError('Unable to load reconciliation summary.');
@@ -421,7 +469,7 @@ function ReconciliationAuditTab() {
     setReport(undefined);
     setError(undefined);
     try {
-      const res = await apiClient.post('/api/admin/marketplace/reconcile', {dry_run: dryRun});
+      const res = await apiClient.post(reconcileUrl, {dry_run: dryRun});
       const d = res.data.data;
       setReport(
         `Reconciliation complete (${d.dry_run ? 'Dry Run' : 'Applied'}): ${d.matured_orders_count} matured orders, ${d.reconciled_payments_count} payments, ${d.reconciled_payouts_count} payouts processed.`

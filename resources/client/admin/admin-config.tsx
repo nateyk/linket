@@ -53,6 +53,7 @@ export const AdminSidebarIcons: Record<
   '/admin/payment-activity': <CircleDollarSignIcon />,
   '/admin/kyc-verifications': <ShieldCheckIcon />,
   '/admin/withdrawals': <CreditCardIcon />,
+  '/admin/payout-accounts': <CoinsIcon />,
   '/admin/financial/payment-gateways': <LandmarkIcon />,
   '/admin/financial/withdrawal-methods': <CoinsIcon />,
   '/admin/financial': <LandmarkIcon />,
@@ -66,7 +67,6 @@ for (const [key, value] of Object.entries(sharedDashboardIcons)) {
 
 // settings nav config
 export const AppSettingsNavConfig: SettingsNavItem[] = [
-  {label: message('Payment gateways'), to: 'payment-gateways', position: 5},
   {label: message('Links'), to: 'links', position: 2},
   {label: message('Biolinks'), to: 'biolinks', position: 2},
   {label: message('Verification'), to: 'kyc', position: 2},

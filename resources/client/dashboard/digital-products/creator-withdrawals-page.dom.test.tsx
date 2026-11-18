@@ -81,6 +81,9 @@ describe('CreatorWithdrawalsPage', () => {
       destination: '+251911223344',
       account_number_last_four: '3344',
       display_label: 'Telebirr (•••• 3344)',
+      status: 'active',
+      approved_at: '2026-11-15T12:00:00Z',
+      withdrawal_method: {code: 'telebirr', is_active: true, minimum_amount_cents: 0, maximum_amount_cents: 30000},
       is_active: true,
       is_default: true,
     },
@@ -93,6 +96,9 @@ describe('CreatorWithdrawalsPage', () => {
       destination: '1000123456789',
       account_number_last_four: '6789',
       display_label: 'CBE (•••• 6789)',
+      status: 'active',
+      approved_at: '2026-11-15T12:00:00Z',
+      withdrawal_method: {code: 'bank_transfer', is_active: true, minimum_amount_cents: 15000, maximum_amount_cents: 18000},
       is_active: true,
       is_default: false,
     },
@@ -106,7 +112,7 @@ describe('CreatorWithdrawalsPage', () => {
       if (url.startsWith('/api/v1/items/payout-requests')) {
         return Promise.resolve({data: {data: mockPayouts, total: 2, per_page: 25, current_page: 1}});
       }
-      if (url === '/api/items/payout-methods') {
+      if (url === '/api/v1/items/payout-methods') {
         return Promise.resolve({data: {data: mockDestinations}});
       }
       return Promise.reject(new Error(`Unexpected url: ${url}`));
@@ -129,17 +135,40 @@ describe('CreatorWithdrawalsPage', () => {
   it('renders metric cards with correct monetary values and labels', async () => {
     renderPage();
 
-    expect(await screen.findByText('Available balance')).toBeTruthy();
+    expect(await screen.findByText('Available Balance')).toBeTruthy();
     expect(screen.getByText('500.00 ETB')).toBeTruthy();
 
-    expect(screen.getByText('Settling funds')).toBeTruthy();
+    expect(screen.getByText('Held earnings')).toBeTruthy();
     expect(screen.getByText('200.00 ETB')).toBeTruthy();
 
     expect(screen.getByText('Pending withdrawals')).toBeTruthy();
     expect(screen.getByText('100.00 ETB')).toBeTruthy();
 
-    expect(screen.getByText('Total withdrawn')).toBeTruthy();
+    expect(screen.getByText('Paid out')).toBeTruthy();
     expect(screen.getByText('150.00 ETB')).toBeTruthy();
+  });
+
+  it('explains a reconciliation mismatch without enabling a zero-balance withdrawal', async () => {
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') {
+        return Promise.resolve({data: {summary: {
+          ...mockSummary,
+          available_for_payout_cents: 0,
+          balance_reconciliation_required: true,
+        }}});
+      }
+      if (url.includes('/api/v1/items/payout-requests')) {
+        return Promise.resolve({data: {data: mockPayouts}});
+      }
+      if (url === '/api/v1/items/payout-methods') {
+        return Promise.resolve({data: {data: mockDestinations}});
+      }
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+    renderPage();
+    expect(await screen.findByText(/Some historical earnings or pending withdrawals still need ledger reconciliation/)).toBeTruthy();
+    expect(screen.getByText('0.00 ETB')).toBeTruthy();
+    expect(screen.getByRole('button', {name: /Request withdrawal/i})).toHaveProperty('disabled', true);
   });
 
   it('renders withdrawal history with status badges and destination labels', async () => {
@@ -160,7 +189,10 @@ describe('CreatorWithdrawalsPage', () => {
     const requestBtn = await screen.findByRole('button', {name: /Request withdrawal/i});
     fireEvent.click(requestBtn);
 
-    expect(screen.getByText('Minimum withdrawal is 100.00 ETB.')).toBeTruthy();
+    expect(screen.getByText('Minimum withdrawal')).toBeTruthy();
+    const minField = screen.getByLabelText(/Withdrawal amount/i) as HTMLInputElement;
+    expect(minField.min).toBe('1');
+    expect(minField.max).toBe('300');
 
     const destinationSelect = screen.getByLabelText(/Destination account/i) as HTMLSelectElement;
     expect(destinationSelect.value).toBe('1');
@@ -175,6 +207,31 @@ describe('CreatorWithdrawalsPage', () => {
       expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/items/payout-requests', {
         amount_cents: 20000,
         payout_method_id: 1,
+      });
+    });
+  });
+
+  it('enforces the selected approved bank method limits and caps Max accordingly', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', {name: /Request withdrawal/i}));
+    const select = screen.getByLabelText(/Destination account/i) as HTMLSelectElement;
+    fireEvent.change(select, {target: {value: '2'}});
+
+    const amountInput = screen.getByLabelText(/Withdrawal amount/i) as HTMLInputElement;
+    expect(amountInput.min).toBe('150');
+    expect(amountInput.max).toBe('180');
+    fireEvent.change(amountInput, {target: {value: '100'}});
+    expect((screen.getByRole('button', {name: /Confirm withdrawal/i}) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Max'}));
+    expect(amountInput.value).toBe('180.00');
+    fireEvent.click(screen.getByRole('button', {name: /Confirm withdrawal/i}));
+
+    await waitFor(() => {
+      expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/items/payout-requests', {
+        amount_cents: 18000,
+        payout_method_id: 2,
       });
     });
   });
@@ -198,7 +255,7 @@ describe('CreatorWithdrawalsPage', () => {
       if (url.startsWith('/api/v1/items/payout-requests')) {
         return Promise.resolve({data: {data: [], total: 0, per_page: 25, current_page: 1}});
       }
-      if (url === '/api/items/payout-methods') {
+      if (url === '/api/v1/items/payout-methods') {
         return Promise.resolve({data: {data: []}});
       }
       return Promise.reject(new Error(`Unexpected url: ${url}`));
@@ -206,10 +263,13 @@ describe('CreatorWithdrawalsPage', () => {
 
     renderPage();
 
+    expect(await screen.findByText('You do not have any withdrawals')).toBeTruthy();
+    expect(screen.getByText('When you have withdrawal requests, you will be able to see them here.')).toBeTruthy();
+
     const requestBtn = await screen.findByRole('button', {name: /Request withdrawal/i});
     fireEvent.click(requestBtn);
 
-    expect(await screen.findByText('No payout account configured')).toBeTruthy();
+    expect(await screen.findByText('No approved payout account')).toBeTruthy();
     const configureLink = screen.getByRole('button', {name: /Configure payout accounts/i});
     expect(configureLink.getAttribute('href')).toBe('/account-settings/receiving-accounts');
   });

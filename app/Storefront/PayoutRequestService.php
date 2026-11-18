@@ -29,7 +29,9 @@ class PayoutRequestService
             $accountQuery = DigitalProductPayoutMethod::query()
                 ->with('withdrawalMethod')
                 ->where('creator_id', $creatorId)
-                ->where('is_active', true);
+                ->where('is_active', true)
+                ->where('status', DigitalProductPayoutMethod::STATUS_ACTIVE)
+                ->whereNotNull('approved_at');
 
             $account = $payoutMethodId
                 ? $accountQuery->where('id', $payoutMethodId)->lockForUpdate()->first()
@@ -40,7 +42,11 @@ class PayoutRequestService
                 throw ValidationException::withMessages(['withdrawal_method' => __('Choose an active withdrawal method before requesting a payout.')]);
             }
 
-            if ($amountCents < $method->minimum_amount_cents || ($method->maximum_amount_cents && $amountCents > $method->maximum_amount_cents)) {
+            // Chapa v1 transfers require at least 1.00 ETB, even if Finance
+            // configures a lower provider minimum.
+            $effectiveMinimumCents = max(100, (int) $method->minimum_amount_cents);
+            if ($amountCents < $effectiveMinimumCents
+                || ($method->maximum_amount_cents && $amountCents > $method->maximum_amount_cents)) {
                 throw ValidationException::withMessages(['amount_cents' => __('This amount is outside the selected withdrawal method limits.')]);
             }
 
@@ -48,6 +54,8 @@ class PayoutRequestService
                 throw ValidationException::withMessages(['amount_cents' => __('You already have a payout being reviewed.')]);
             }
 
+            // The finance summary caps the legacy earnings ledger at the
+            // verified, deficit-adjusted Chapa double-entry balance.
             $available = app(DigitalProductFinance::class)->summary($creatorId, $workspaceId, true)['available_for_payout_cents'];
             if ($amountCents > $available) {
                 throw ValidationException::withMessages(['amount_cents' => __('The requested payout exceeds your available balance.')]);
@@ -61,7 +69,10 @@ class PayoutRequestService
                 'payout_method_label' => $account->display_label,
                 'withdrawal_method_name' => $method->name,
                 'payout_destination' => $account->destination,
-                'currency' => config('storefront.currency', 'ETB'),
+                'account_holder_snapshot' => $account->account_holder,
+                'bank_code_snapshot' => $account->bank_code,
+                // Chapa and journal entries use canonical uppercase currency codes.
+                'currency' => strtoupper((string) config('storefront.currency', 'ETB')),
                 'amount_cents' => $amountCents,
                 'status' => 'requested',
             ]);
@@ -93,7 +104,7 @@ class PayoutRequestService
     public function transition(PayoutRequest $payout, string $action, int $actorId, array $data = []): PayoutRequest
     {
         return DB::transaction(function () use ($payout, $action, $actorId, $data): PayoutRequest {
-            $payout = PayoutRequest::query()->with('withdrawalMethod')->lockForUpdate()->findOrFail($payout->id);
+            $payout = PayoutRequest::query()->with(['withdrawalMethod', 'payoutMethod'])->lockForUpdate()->findOrFail($payout->id);
             $target = match ($action) {
                 'start_processing' => 'processing',
                 'mark_paid' => 'paid',
@@ -106,17 +117,37 @@ class PayoutRequestService
                 throw ValidationException::withMessages(['status' => __('This payout can no longer be changed.')]);
             }
 
-            $transferReference = $data['transfer_reference'] ?? null;
-            $autoTransfer = (bool) ($data['auto_transfer'] ?? false);
+            if ($target === 'processing' && (!$payout->withdrawalMethod?->is_active
+                || !$payout->payoutMethod?->is_active
+                || $payout->payoutMethod->status !== DigitalProductPayoutMethod::STATUS_ACTIVE
+                || !$payout->payoutMethod->approved_at)) {
+                throw ValidationException::withMessages([
+                    'payout_method' => __('Approve the receiving account and enable its provider before approving withdrawal.'),
+                ]);
+            }
+            if ($target === 'processing' && !$this->isWithinCurrentMethodLimits($payout)) {
+                throw ValidationException::withMessages([
+                    'amount_cents' => __('The provider withdrawal limits changed. Review the request before approving it.'),
+                ]);
+            }
 
-            if ($target === 'paid') {
-                if ($autoTransfer && in_array($payout->withdrawalMethod?->code, ['bank_transfer', 'telebirr'], true)) {
-                    $transferReference = app(ChapaPayoutService::class)->createTransfer($payout);
-                } elseif ($autoTransfer) {
-                    $transferReference = 'MANUAL-'.strtoupper(substr(md5($payout->id.time()), 0, 12));
-                } elseif (blank($transferReference)) {
-                    throw ValidationException::withMessages(['transfer_reference' => __('A transfer reference is required before marking a payout paid.')]);
-                }
+            // Automated transfers must only be marked paid by verified Chapa settlement.
+            if ($target === 'paid' && ($payout->withdrawalMethod?->code !== 'other'
+                || $payout->payoutIntents()->exists()
+                || (bool) ($data['auto_transfer'] ?? false))) {
+                throw ValidationException::withMessages([
+                    'status' => __('Use Chapa settlement verification. A queued transfer is not a paid withdrawal.'),
+                ]);
+            }
+
+            if (in_array($target, ['rejected', 'cancelled'], true) && $payout->payoutIntents()->exists()) {
+                throw ValidationException::withMessages([
+                    'status' => __('A transfer already exists. Verify its final status before releasing reserved funds.'),
+                ]);
+            }
+            $transferReference = $data['transfer_reference'] ?? null;
+            if ($target === 'paid' && blank($transferReference)) {
+                throw ValidationException::withMessages(['transfer_reference' => __('Manual settlement reference is required.')]);
             }
 
             $updates = ['status' => $target];
@@ -164,17 +195,67 @@ class PayoutRequestService
 
     public function submitChapaPayout(PayoutRequest $payout, int $actorId): StorefrontPayoutIntent
     {
-        if (!in_array($payout->status, ['requested', 'processing'], true)) {
-            throw ValidationException::withMessages(['status' => __('Payout must be requested or processing to submit to Chapa.')]);
+        if (!app(\App\Storefront\Services\ChapaV1PayoutMode::class)->enabled()) {
+            throw ValidationException::withMessages(['status' => __('Chapa payouts are disabled for the configured merchant mode.')]);
+        }
+        if ($payout->status !== 'processing') {
+            throw ValidationException::withMessages(['status' => __('An administrator must approve the withdrawal before Chapa submission.')]);
         }
 
+        $payout->load(['payoutMethod', 'withdrawalMethod']);
+        if (!$payout->withdrawalMethod?->is_active
+            || !$payout->payoutMethod?->is_active
+            || $payout->payoutMethod->status !== DigitalProductPayoutMethod::STATUS_ACTIVE
+            || !$payout->payoutMethod->approved_at
+            || blank($payout->account_holder_snapshot)
+            || blank($payout->bank_code_snapshot)) {
+            throw ValidationException::withMessages(['payout_method' => __('The approved receiving account is unavailable or was modified.')]);
+        }
+        if (!$this->isWithinCurrentMethodLimits($payout)) {
+            throw ValidationException::withMessages([
+                'amount_cents' => __('The provider withdrawal limits changed. Review the request before transfer.'),
+            ]);
+        }
+
+        if (!in_array($payout->withdrawalMethod->code, [
+            'bank_transfer', ...ChapaPayoutService::WALLET_CODES,
+        ], true)) {
+            throw ValidationException::withMessages(['withdrawal_method' => __('The selected provider cannot be disbursed with Chapa v1.')]);
+        }
+
+        $existingIntent = $payout->payoutIntents()->first();
+        if ($existingIntent && $existingIntent->status !== StorefrontPayoutIntent::STATUS_PREPARED) {
+            throw ValidationException::withMessages(['status' => __('Transfer already initiated. Verify its existing reference; never resubmit it.')]);
+        }
+
+        // Reject missing approval configuration before provider preflight or
+        // any payout intent mutation. A test-mode POST still needs a valid
+        // server approval callback to complete the queued transfer.
+        app(\App\Storefront\Services\ChapaV1PayoutMode::class)->assertDispatchReady();
+
+        // Ensure the current Chapa v1 directory accepts this bank/wallet BEFORE
+        // allocating a durable payout reference and making an uncertain POST.
+        $provider = app(ChapaPayoutService::class);
+        $provider->resolveBank($payout->bank_code_snapshot);
+        $provider->assertSufficientBalance((int) $payout->amount_cents);
+
         $processingService = app(StorefrontPayoutProcessingService::class);
-        $intent = $processingService->prepareIntent($payout, $payout->withdrawalMethod?->code ?? 'bank_transfer');
+        $intent = $existingIntent ?? $processingService->prepareIntent($payout, $payout->withdrawalMethod?->code ?? 'bank_transfer');
         $intent = $processingService->submitPayout($intent);
 
-        $this->activity($payout, $actorId, 'chapa_transfer_submitted', "Submitted transfer via Chapa ({$intent->merchant_reference})");
+        $this->activity($payout, $actorId, 'chapa_transfer_submitted', "Chapa v1 reference: {$intent->merchant_reference}; status: {$intent->status}");
 
         return $intent;
+    }
+
+    private function isWithinCurrentMethodLimits(PayoutRequest $payout): bool
+    {
+        $method = $payout->withdrawalMethod;
+        $minimum = max(100, (int) ($method?->minimum_amount_cents ?? 0));
+        $maximum = (int) ($method?->maximum_amount_cents ?? 0);
+        $amount = (int) $payout->amount_cents;
+
+        return $amount >= $minimum && ($maximum === 0 || $amount <= $maximum);
     }
 
     public static function canTransition(string $from, string $to): bool

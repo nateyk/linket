@@ -11,6 +11,19 @@ afterEach(function () {
     $this->deployment->cleanup();
 });
 
+test('deploy refuses missing intl before any migrations or activation', function () {
+    $fixture = $this->deployment;
+    $bin = $fixture->root.'/bin/php';
+    file_put_contents($bin, str_replace('zip bcmath intl', 'zip bcmath', file_get_contents($bin)));
+
+    $result = $fixture->deploy();
+
+    expect($result->isSuccessful())->toBeFalse()
+        ->and($result->getErrorOutput())->toContain('PHP extension missing: intl')
+        ->and(readlink($fixture->root.'/current'))->toBe($fixture->root.'/releases/previous')
+        ->and(file_exists($fixture->root.'/commands.jsonl'))->toBeFalse();
+});
+
 test('artifact verification uses the explicit cPanel PHP binary over the environment default', function () {
     $result = $this->deployment->deploy(environment: ['PHP_BINARY' => '/bin/false']);
 

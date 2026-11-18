@@ -9,14 +9,14 @@ use Tests\TestCase;
 
 class ChapaV2ClientTest extends TestCase
 {
-    public function testItCreatesAHostedPaymentInIntegerCents(): void
+    public function testItCreatesAHostedPaymentInMajorCurrency(): void
     {
         Http::fake([
-            'https://api.chapa.global/v2/payments/hosted' => Http::response([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
-                'message' => 'Payment initiated successfully',
+                'message' => 'Hosted Link',
                 'data' => [
-                    'checkout_url' => 'https://checkout.chapa.global/CH0Vn2VASWCi',
+                    'checkout_url' => 'https://checkout.chapa.co/checkout/payment/CH0Vn2VASWCi',
                 ],
             ]),
         ]);
@@ -35,16 +35,18 @@ class ChapaV2ClientTest extends TestCase
             ],
         ]);
 
-        $this->assertSame('https://checkout.chapa.global/CH0Vn2VASWCi', $result['checkout_url']);
+        $this->assertSame('https://checkout.chapa.co/checkout/payment/CH0Vn2VASWCi', $result['checkout_url']);
         $this->assertSame('CH0Vn2VASWCi', $result['chapa_reference']);
 
         Http::assertSent(function ($request): bool {
-            return $request->url() === 'https://api.chapa.global/v2/payments/hosted'
+            return $request->url() === 'https://api.chapa.co/v1/transaction/initialize'
                 && $request->hasHeader('Authorization', 'Bearer seller-secret')
-                && $request->hasHeader('Idempotency-Key', 'idem-1')
-                && $request['amount'] === 10000
+                && !$request->hasHeader('Idempotency-Key')
+                && $request['amount'] === '100.00'
                 && $request['currency'] === 'ETB'
-                && $request['merchant_reference'] === 'ref-1791192600';
+                && $request['tx_ref'] === 'ref-1791192600'
+                && $request['email'] === 'buyer@example.com'
+                && $request['first_name'] === 'Abebe';
         });
     }
 
@@ -65,42 +67,109 @@ class ChapaV2ClientTest extends TestCase
         }
     }
 
+    public function testItMapsNestedCustomerEmailWhenVerifying(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/ref-email-map' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'reference' => 'CH-EMAIL',
+                    'tx_ref' => 'ref-email-map',
+                    'amount' => '50.25',
+                    'currency' => 'ETB',
+                    'status' => 'success',
+                    'customer' => ['email' => 'buyer@example.com'],
+                ],
+            ]),
+        ]);
+
+        $data = (new ChapaV2Client())->verifyPayment('platform-secret', 'ref-email-map');
+
+        $this->assertSame('buyer@example.com', $data['email']);
+        $this->assertSame('50.25', $data['amount']);
+    }
+
     public function testItVerifiesAPaymentByReference(): void
     {
         Http::fake([
-            'https://api.chapa.global/v2/payments/CH0Vn2VASWCi/verify' => Http::response([
+            'https://api.chapa.co/v1/transaction/verify/CH0Vn2VASWCi' => Http::response([
                 'status' => 'success',
-                'message' => 'Payment verification result',
+                'message' => 'Payment details',
                 'data' => [
-                    'chapa_reference' => 'CH0Vn2VASWCi',
-                    'merchant_reference' => 'ref-1791192600',
-                    'amount' => 10000,
+                    'reference' => 'CH0Vn2VASWCi',
+                    'tx_ref' => 'ref-1791192600',
+                    'amount' => 100,
                     'currency' => 'ETB',
-                    'status' => 'SUCCESS',
+                    'status' => 'success',
                 ],
             ]),
         ]);
 
         $data = (new ChapaV2Client())->verifyPayment('platform-secret', 'CH0Vn2VASWCi');
 
-        $this->assertSame('SUCCESS', $data['status']);
-        $this->assertSame(10000, $data['amount']);
+        $this->assertSame('success', $data['status']);
+        $this->assertSame('100.00', $data['amount']);
         $this->assertSame('ref-1791192600', $data['merchant_reference']);
-        Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer platform-secret'));
+        $this->assertSame('CH0Vn2VASWCi', $data['chapa_reference']);
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.chapa.co/v1/transaction/verify/CH0Vn2VASWCi'
+            && $request->hasHeader('Authorization', 'Bearer platform-secret'));
     }
 
-    public function testItAuthenticatesASecretWithThePaymentMethodsEndpoint(): void
+    public function testItAuthenticatesASecretWithTheBanksEndpoint(): void
     {
         Http::fake([
-            'https://api.chapa.global/v2/payments/methods' => Http::sequence()
-                ->push(['status' => 'success', 'data' => [['slug' => 'telebirr']]])
+            'https://api.chapa.co/v1/banks' => Http::sequence()
+                ->push([
+                    'message' => 'Banks retrieved',
+                    'data' => [['id' => 855, 'slug' => 'telebirr']],
+                ])
                 ->push(['status' => 'error', 'message' => 'Invalid API key'], 401),
         ]);
 
         $client = new ChapaV2Client();
 
-        $this->assertTrue($client->secretAuthenticates('good-secret'));
-        $this->assertFalse($client->secretAuthenticates('bad-secret'));
+        $this->assertTrue($client->secretAuthenticates('CHASECK_TEST-good'));
+        $this->assertFalse($client->secretAuthenticates('CHASECK_TEST-bad'));
+    }
+
+    public function testItReportsAChapaEnvironmentMismatch(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/banks' => Http::response([
+                'status' => 'error',
+                'error' => ['code' => 'INVALID_VALUE'],
+            ], 403),
+        ]);
+
+        $this->assertSame('environment_mismatch', (new ChapaV2Client())->secretStatus('CHAPA_LIVE_examplesecret'));
+    }
+
+    public function testItAcceptsLegacyBanksEnvelopeWithStatusSuccess(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/banks' => Http::response([
+                'status' => 'success',
+                'message' => 'Banks retrieved',
+            ]),
+        ]);
+
+        $this->assertTrue((new ChapaV2Client())->secretAuthenticates('CHASECK_TEST-legacy'));
+    }
+
+    public function testItRejectsMalformedBanksPayloads(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/banks' => Http::response([
+                'message' => 'Unexpected response',
+            ]),
+        ]);
+
+        try {
+            (new ChapaV2Client())->secretStatus('CHASECK_TEST-malformed');
+            $this->fail('Malformed Chapa banks response must be rejected.');
+        } catch (RuntimeException) {
+            $this->addToAssertionCount(1);
+        }
     }
 
     public function testItConvertsMajorCurrencyAmountsToIntegerCents(): void

@@ -56,16 +56,16 @@ export type BankOption = {
 
 export const ETHIOPIAN_BANKS: BankOption[] = [
   {code: 'telebirr', name: 'Telebirr (Ethio Telecom)', type: 'telebirr'},
+  {code: 'mpesa', name: 'M-Pesa', type: 'mpesa'},
+  {code: 'yaya', name: 'Yaya Wallet', type: 'yaya'},
   {code: 'cbe', name: 'Commercial Bank of Ethiopia (CBE)', type: 'bank_transfer'},
   {code: 'boa', name: 'Bank of Abyssinia (BOA)', type: 'bank_transfer'},
   {code: 'dashen', name: 'Dashen Bank', type: 'bank_transfer'},
   {code: 'awash', name: 'Awash Bank', type: 'bank_transfer'},
-  {code: 'cbebirr', name: 'CBE Birr', type: 'telebirr'},
-  {code: 'coop', name: 'Cooperative Bank of Oromia', type: 'bank_transfer'},
+  {code: 'cbebirr', name: 'CBE Birr', type: 'cbebirr'},
   {code: 'hibret', name: 'Hibret Bank', type: 'bank_transfer'},
   {code: 'wegagen', name: 'Wegagen Bank', type: 'bank_transfer'},
   {code: 'zemen', name: 'Zemen Bank', type: 'bank_transfer'},
-  {code: 'other', name: 'Other Bank / Account', type: 'bank_transfer'},
 ];
 
 const logos: Record<string, string> = {awash, boa, cbe, cbebirr, dashen, telebirr};
@@ -114,9 +114,10 @@ function isValidAccountNumber(number: string, bankCode: string): boolean {
   const trimmed = number.trim();
   const normalized = trimmed.replace(/[\s-]+/g, '');
   if (!/^[0-9+ -]{8,100}$/.test(trimmed)) return false;
-  if (bankCode === 'telebirr' || bankCode === 'cbebirr') {
+  if (['telebirr', 'cbebirr', 'mpesa'].includes(bankCode)) {
     return /^(?:0\d{9}|\+251\d{9})$/.test(normalized);
   }
+  if (bankCode === 'yaya') return /^\d{12}$/.test(normalized);
   if (bankCode === 'cbe') return /^\d{13}$/.test(normalized);
   if (bankCode === 'boa') return /^(?:\d{8}|\d{10}|\d{16})$/.test(normalized);
   return true;
@@ -175,6 +176,11 @@ function PayoutAccountCard({
                 <h2 className="min-w-0 truncate text-sm font-semibold text-foreground">
                   {displayName}
                 </h2>
+                {account.status !== 'active' && (
+                  <Badge variant="outline" className="text-xs">
+                    {account.status === 'pending_verification' ? 'Awaiting approval' : 'Needs review'}
+                  </Badge>
+                )}
                 {account.is_default && (
                   <Badge variant="positive" className="gap-1 text-xs font-medium">
                     <CheckIcon className="size-3" />
@@ -225,6 +231,7 @@ function PayoutAccountCard({
 
 export function Component() {
   const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
+  const [enabledCodes, setEnabledCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [actionError, setActionError] = useState(false);
@@ -240,35 +247,40 @@ export function Component() {
   const [isDefault, setIsDefault] = useState(false);
 
   const selectedBank = ETHIOPIAN_BANKS.find(b => b.code === bankCode);
+  const walletCodes = ['telebirr', 'mpesa', 'yaya', 'cbebirr'];
+  const availableBanks = ETHIOPIAN_BANKS.filter(b =>
+    enabledCodes.includes(walletCodes.includes(b.code) ? b.code : 'bank_transfer')
+  );
   const validNumber = isValidAccountNumber(accountNumber, bankCode);
   const invalidNumber = accountNumber.trim().length > 0 && !validNumber;
   const invalidName = accountHolder.trim().length > 0 && accountHolder.trim().length < 3;
   const canSubmit = !!bankCode && validNumber && accountHolder.trim().length >= 3 && !busy;
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await apiClient.get('/api/items/payout-methods');
-      setAccounts(response.data.data ?? []);
+      const [methodsResponse, accountsResponse] = await Promise.all([
+        apiClient.get('/api/v1/items/withdrawal-methods'),
+        apiClient.get('/api/v1/items/payout-methods'),
+      ]);
+      const methods = methodsResponse.data?.data;
+      const destinations = accountsResponse.data?.data;
+      if (!Array.isArray(methods) || !Array.isArray(destinations)) {
+        throw new Error('Invalid payout methods response');
+      }
+
+      setEnabledCodes(
+        methods
+          .filter((method: {code: string; is_active?: boolean}) => method.is_active !== false)
+          .map((method: {code: string}) => method.code)
+      );
+      setAccounts(destinations);
       setLoadError(false);
     } catch {
-      try {
-        const fallback = await apiClient.get('/api/v1/storefront/payment-methods');
-        const list = (fallback.data.data ?? []).map((item: Record<string, unknown>) => ({
-          id: item.id as number,
-          type: (item.provider as string) ?? 'bank_transfer',
-          bank_code: (item.provider as string) ?? null,
-          account_holder: (item.account_name as string) ?? '',
-          account_number_last_four: (item.account_ending as string) ?? '',
-          masked_account_number: item.account_ending ? `•••• ${item.account_ending}` : '••••',
-          is_active: (item.is_active as boolean) ?? true,
-          is_default: (item.is_default as boolean) ?? true,
-          status: (item.status as string) ?? 'active',
-        }));
-        setAccounts(list);
-        setLoadError(false);
-      } catch {
-        setLoadError(true);
-      }
+      // Do not substitute checkout receiving methods or present a blank select as valid.
+      setEnabledCodes([]);
+      setAccounts([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -304,7 +316,7 @@ export function Component() {
   };
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || !selectedBank || !availableBanks.some(b => b.code === bankCode)) return;
     setBusy(true);
     setFormError(false);
     setSaved(false);
@@ -320,9 +332,9 @@ export function Component() {
       };
 
       if (editingAccount) {
-        await apiClient.put(`/api/items/payout-methods/${editingAccount.id}`, payload);
+        await apiClient.put(`/api/v1/items/payout-methods/${editingAccount.id}`, payload);
       } else {
-        await apiClient.post('/api/items/payout-methods', payload);
+        await apiClient.post('/api/v1/items/payout-methods', payload);
       }
 
       setOpen(false);
@@ -341,7 +353,7 @@ export function Component() {
     setBusy(true);
     setActionError(false);
     try {
-      await apiClient.post(`/api/items/payout-methods/${account.id}/default`);
+      await apiClient.post(`/api/v1/items/payout-methods/${account.id}/default`);
       await load();
     } catch {
       setActionError(true);
@@ -355,7 +367,7 @@ export function Component() {
     setBusy(true);
     setActionError(false);
     try {
-      await apiClient.delete(`/api/items/payout-methods/${account.id}`);
+      await apiClient.delete(`/api/v1/items/payout-methods/${account.id}`);
       await load();
     } catch {
       setActionError(true);
@@ -374,7 +386,7 @@ export function Component() {
       }
       headerRightContent={
         <Button
-          disabled={loading || busy}
+          disabled={loading || busy || loadError || availableBanks.length === 0}
           onClick={openNewAccount}
           className="gap-1.5"
         >
@@ -387,7 +399,17 @@ export function Component() {
         {loading && <Spinner />}
         {loadError && (
           <p role="alert" className="text-sm text-destructive">
-            <Trans message="Unable to load payout accounts. Try again." />
+            <Trans message="Unable to load payout methods or accounts. Retry to continue." />
+          </p>
+        )}
+        {loadError && (
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+            <Trans message="Retry loading payout methods" />
+          </Button>
+        )}
+        {!loading && !loadError && availableBanks.length === 0 && (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans message="No bank or wallet payout methods are enabled. Contact Linket support." />
           </p>
         )}
         {actionError && (
@@ -397,7 +419,7 @@ export function Component() {
         )}
         {saved && (
           <p role="status" className="text-sm font-medium text-positive">
-            <Trans message="Payout account saved successfully." />
+            <Trans message="Payout account submitted for admin review." />
           </p>
         )}
 
@@ -448,7 +470,7 @@ export function Component() {
                 )}
               </Dialog.Title>
               <Dialog.Description>
-                <Trans message="Your Linket earnings will be disbursed to this verified destination." />
+                <Trans message="Admin approval is required before Linket can send earnings to this destination." />
               </Dialog.Description>
             </Dialog.Header>
 
@@ -460,7 +482,7 @@ export function Component() {
                   </label>
                   <Select.Root
                     value={bankCode}
-                    disabled={busy}
+                    disabled={busy || availableBanks.length === 0}
                     onValueChange={value => {
                       setBankCode(value ?? '');
                       setAccountNumber('');
@@ -479,27 +501,29 @@ export function Component() {
                         </span>
                       )}
                     </Select.Trigger>
-                    <Select.Content
-                      align="start"
-                      className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
-                    >
-                      <Select.Group>
-                        {ETHIOPIAN_BANKS.map(bank => (
-                          <Select.Item key={bank.code} value={bank.code} className="min-h-12">
-                            <span className="flex min-w-0 items-center gap-2.5 py-1">
-                              <BankLogo code={bank.code} name={bank.name} compact decorative />
-                              <span className="min-w-0 whitespace-normal font-medium">{bank.name}</span>
-                            </span>
-                          </Select.Item>
-                        ))}
-                      </Select.Group>
-                    </Select.Content>
+                    {availableBanks.length > 0 && (
+                      <Select.Content
+                        align="start"
+                        className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
+                      >
+                        <Select.Group>
+                          {availableBanks.map(bank => (
+                            <Select.Item key={bank.code} value={bank.code} className="min-h-12">
+                              <span className="flex min-w-0 items-center gap-2.5 py-1">
+                                <BankLogo code={bank.code} name={bank.name} compact decorative />
+                                <span className="min-w-0 whitespace-normal font-medium">{bank.name}</span>
+                              </span>
+                            </Select.Item>
+                          ))}
+                        </Select.Group>
+                      </Select.Content>
+                    )}
                   </Select.Root>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="payout-account-number" className="text-sm font-medium">
-                    {bankCode === 'telebirr' || bankCode === 'cbebirr' ? (
+                    {['telebirr', 'cbebirr', 'mpesa', 'yaya'].includes(bankCode) ? (
                       <Trans message="Phone number (e.g. 0911223344)" />
                     ) : (
                       <Trans message="Account number" />
@@ -510,7 +534,7 @@ export function Component() {
                     id="payout-account-number"
                     aria-label="Account or wallet number"
                     className="h-11 font-mono"
-                    inputMode={bankCode === 'telebirr' || bankCode === 'cbebirr' ? 'tel' : 'numeric'}
+                    inputMode={['telebirr', 'cbebirr', 'mpesa', 'yaya'].includes(bankCode) ? 'tel' : 'numeric'}
                     autoComplete="off"
                     value={accountNumber}
                     disabled={busy}

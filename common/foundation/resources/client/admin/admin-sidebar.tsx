@@ -1,5 +1,6 @@
 import {AdminSidebarIcons} from '@app/admin/admin-config';
 import {
+  isObsoleteAdminSidebarItem,
   isSettingsNavOnlyAdminItem,
   shouldEndMatchSidebarItem,
 } from '@common/admin/admin-sidebar-nav-end';
@@ -15,18 +16,12 @@ import {Sidebar} from '@common/ui/dashboard/sidebar';
 import {Logo} from '@common/ui/navigation/navbar/logo';
 import {NavbarAuthMenu} from '@common/ui/navigation/navbar/navbar-auth-menu';
 import {Avatar} from '@shadcn/avatar/avatar';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@shadcn/collapsible/collapsible';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
-import {cn} from '@ui/utils/cn';
-import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon, CreditCardIcon, CoinsIcon, LandmarkIcon} from 'lucide-react';
-import {JSXElementConstructor, use, useState} from 'react';
-import {Link, NavLink, useLocation, useSearchParams} from 'react-router';
+import {BanknoteArrowUpIcon, BellIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, LandmarkIcon, WalletCardsIcon} from 'lucide-react';
+import {JSXElementConstructor, use} from 'react';
+import {NavLink, useLocation} from 'react-router';
 
 const DIGITAL_PRODUCTS_PATH = '/admin/items';
 
@@ -35,29 +30,18 @@ export function AdminSidebar() {
   const isCompactMode = !isMobileMode && leftSidebar.status === 'collapsed';
   const adminMenu = useCustomMenu('admin-sidebar');
   const {pathname} = useLocation();
-  const [searchParams] = useSearchParams();
-  const onDigitalProducts = pathname === DIGITAL_PRODUCTS_PATH;
-  const updatedActive =
-    onDigitalProducts && searchParams.get('scope') === 'updated';
-  const allProductsActive = onDigitalProducts && !updatedActive;
-  const [productsOpen, setProductsOpen] = useState(onDigitalProducts);
-  const hasTransactions = adminMenu?.items.some(
-    item => item.action === '/admin/payment-activity',
+  const hasFinancial = adminMenu?.items.some(
+    item =>
+      item.action === '/admin/financial' ||
+      item.action === '/admin/financial/general',
   );
   const hasKyc = adminMenu?.items.some(
     item => item.action === '/admin/kyc-verifications',
   );
-  const hasWithdrawals = adminMenu?.items.some(
-    item => item.action === '/admin/withdrawals',
-  );
-  const hasPaymentGateways = adminMenu?.items.some(
-    item => item.action === '/admin/financial/payment-gateways',
-  );
-  const hasWithdrawalMethods = adminMenu?.items.some(
-    item => item.action === '/admin/financial/withdrawal-methods',
-  );
   const visibleMenuItems = (adminMenu?.items ?? []).filter(
-    item => !isSettingsNavOnlyAdminItem(item.action),
+    item =>
+      !isSettingsNavOnlyAdminItem(item.action) &&
+      !isObsoleteAdminSidebarItem(item.action),
   );
 
   return (
@@ -92,91 +76,47 @@ export function AdminSidebar() {
               }
               filter={item =>
                 item.action !== DIGITAL_PRODUCTS_PATH &&
-                !isSettingsNavOnlyAdminItem(item.action)
+                !isSettingsNavOnlyAdminItem(item.action) &&
+                !isObsoleteAdminSidebarItem(item.action)
               }
             />
-            {isCompactMode ? (
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to={DIGITAL_PRODUCTS_PATH} />}
+                  icon={<StoreIcon />}
+                >
+                  <Trans message="Items" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to="/admin/withdrawals" />}
+                  icon={<BanknoteArrowUpIcon />}
+                >
+                  <Trans message="Withdrawals" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to="/admin/payout-accounts" />}
+                  icon={<WalletCardsIcon />}
+                >
+                  <Trans message="Payout accounts" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
+            {(!hasFinancial || !hasKyc) && (
               <Sidebar.Menu>
-                <Sidebar.MenuItem>
-                  <Sidebar.MenuButton
-                    render={<Link to={DIGITAL_PRODUCTS_PATH} />}
-                    icon={<StoreIcon />}
-                  >
-                    <Trans message="Products" />
-                  </Sidebar.MenuButton>
-                </Sidebar.MenuItem>
-              </Sidebar.Menu>
-            ) : (
-              <Sidebar.Menu>
-                <Sidebar.MenuItem>
-                  <Collapsible
-                    open={productsOpen}
-                    onOpenChange={setProductsOpen}
-                  >
-                    <CollapsibleTrigger
-                      render={
-                        <Sidebar.MenuButton
-                          icon={<StoreIcon />}
-                          rightIcon={
-                            <ChevronRightIcon
-                              className={cn(
-                                'transition-transform duration-150',
-                                productsOpen && 'rotate-90',
-                              )}
-                            />
-                          }
-                        />
-                      }
-                    >
-                      <Trans message="Products" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <Sidebar.Menu className="ps-5">
-                        <Sidebar.MenuItem>
-                          <Sidebar.MenuButton
-                            size="sm"
-                            render={
-                              <Link
-                                to={DIGITAL_PRODUCTS_PATH}
-                                aria-current={
-                                  allProductsActive ? 'page' : undefined
-                                }
-                              />
-                            }
-                          >
-                            <Trans message="All products" />
-                          </Sidebar.MenuButton>
-                        </Sidebar.MenuItem>
-                        <Sidebar.MenuItem>
-                          <Sidebar.MenuButton
-                            size="sm"
-                            render={
-                              <Link
-                                to={`${DIGITAL_PRODUCTS_PATH}?scope=updated`}
-                                aria-current={
-                                  updatedActive ? 'page' : undefined
-                                }
-                              />
-                            }
-                          >
-                            <Trans message="Updated" />
-                          </Sidebar.MenuButton>
-                        </Sidebar.MenuItem>
-                      </Sidebar.Menu>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </Sidebar.MenuItem>
-              </Sidebar.Menu>
-            )}
-            {(!hasTransactions || !hasKyc || !hasWithdrawals || !hasPaymentGateways || !hasWithdrawalMethods) && (
-              <Sidebar.Menu>
-                {!hasTransactions && (
+                {!hasFinancial && (
                   <Sidebar.MenuItem>
                     <Sidebar.MenuButton
-                      render={<NavLink to="/admin/payment-activity" />}
-                      icon={<WalletCardsIcon />}
+                      render={<NavLink to="/admin/financial" />}
+                      icon={<LandmarkIcon />}
                     >
-                      <Trans message="Transactions" />
+                      <Trans message="Financial" />
                     </Sidebar.MenuButton>
                   </Sidebar.MenuItem>
                 )}
@@ -187,36 +127,6 @@ export function AdminSidebar() {
                       icon={<ShieldCheckIcon />}
                     >
                       <Trans message="Verification" />
-                    </Sidebar.MenuButton>
-                  </Sidebar.MenuItem>
-                )}
-                {!hasWithdrawals && (
-                  <Sidebar.MenuItem>
-                    <Sidebar.MenuButton
-                      render={<NavLink to="/admin/withdrawals" />}
-                      icon={<CreditCardIcon />}
-                    >
-                      <Trans message="Withdrawals" />
-                    </Sidebar.MenuButton>
-                  </Sidebar.MenuItem>
-                )}
-                {!hasPaymentGateways && (
-                  <Sidebar.MenuItem>
-                    <Sidebar.MenuButton
-                      render={<NavLink to="/admin/financial/payment-gateways" />}
-                      icon={<LandmarkIcon />}
-                    >
-                      <Trans message="Payment Gateways" />
-                    </Sidebar.MenuButton>
-                  </Sidebar.MenuItem>
-                )}
-                {!hasWithdrawalMethods && (
-                  <Sidebar.MenuItem>
-                    <Sidebar.MenuButton
-                      render={<NavLink to="/admin/financial/withdrawal-methods" />}
-                      icon={<CoinsIcon />}
-                    >
-                      <Trans message="Receiving accounts" />
                     </Sidebar.MenuButton>
                   </Sidebar.MenuItem>
                 )}

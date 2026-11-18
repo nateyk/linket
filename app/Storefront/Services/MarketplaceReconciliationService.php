@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Storefront\Services;
 
+use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Ledger\BalanceQuery;
@@ -167,18 +168,30 @@ class MarketplaceReconciliationService
     private function reconcileSinglePaymentAttempt(StorefrontPaymentAttempt $attempt): bool
     {
         try {
-            $verified = $this->manager()->platformClient()->payments()->verifyTyped($attempt->merchant_reference);
+            $verified = app(ChapaV2Client::class)->verifyPayment(
+                (string) $this->manager()->platformSecret(),
+                $attempt->merchant_reference,
+            );
+            $status = strtoupper((string) ($verified['status'] ?? ''));
+            $amountCents = ChapaV2Client::centsFromMajor((string) ($verified['amount'] ?? '0'));
+            $currency = strtoupper((string) ($verified['currency'] ?? ''));
+            $reference = (string) ($verified['merchant_reference'] ?? '');
+            $matches = $status === 'SUCCESS'
+                && $amountCents === (int) $attempt->amount_cents
+                && $currency === strtoupper((string) $attempt->currency)
+                && $reference !== ''
+                && hash_equals($reference, $attempt->merchant_reference);
 
-            if ($verified->matchesPayment($attempt->amount_cents, $attempt->currency, $attempt->merchant_reference)) {
+            if ($matches) {
                 $this->verificationService()->verifyAndFulfill($attempt->merchant_reference);
                 return true;
             }
 
-            if ($verified->status === 'FAILED') {
+            if ($status === 'FAILED') {
                 $attempt->update([
                     'status' => StorefrontPaymentAttempt::STATUS_FAILED,
                     'error_message' => 'Payment verification confirmed failed by Chapa API.',
-                    'verification_data' => $verified->raw,
+                    'verification_data' => $verified,
                 ]);
                 return true;
             }
@@ -268,17 +281,37 @@ class MarketplaceReconciliationService
 
     private function auditCreatorBalances(LedgerAuditResult $result): void
     {
-        $creatorIds = StorefrontJournalLine::query()->whereNotNull('creator_id')->distinct()->pluck('creator_id');
+        // Withdrawal-facing balances are clamped to zero. Audit the signed
+        // journal amounts instead, keeping workspaces and currencies separate.
+        $accounts = [
+            AccountCodes::CREATOR_HELD => 'held',
+            AccountCodes::CREATOR_AVAILABLE => 'available',
+            AccountCodes::CREATOR_RESERVED => 'reserved',
+        ];
+        $rows = StorefrontJournalLine::query()
+            ->whereNotNull('creator_id')
+            ->whereIn('account_code', array_keys($accounts))
+            // Debit and credit columns are UNSIGNED on MySQL; subtract their
+            // separately signed sums to avoid an unsigned underflow error.
+            ->selectRaw('creator_id, workspace_id, currency, account_code, CAST(SUM(credit_cents) AS SIGNED) - CAST(SUM(debit_cents) AS SIGNED) AS signed_balance')
+            ->groupBy('creator_id', 'workspace_id', 'currency', 'account_code')
+            ->get();
 
-        foreach ($creatorIds as $creatorId) {
-            $balances = $this->creatorLedger()->getBalances(BalanceQuery::for((int) $creatorId, 'ETB'));
-            if ($this->hasNegativeBalance($balances)) {
-                $result->negativeBalancesFound[] = [
-                    'creator_id' => $creatorId,
-                    'balances' => $balances,
-                ];
-                $result->issues[] = "CRITICAL: Creator #{$creatorId} has negative balance: " . (string) json_encode($balances);
+        foreach ($rows->groupBy(fn ($row) => json_encode([$row->creator_id, $row->workspace_id, $row->currency])) as $group) {
+            $first = $group->first();
+            $balances = ['held' => 0, 'available' => 0, 'reserved' => 0, 'currency' => $first->currency];
+            foreach ($group as $row) {
+                $balances[$accounts[$row->account_code]] = (int) $row->signed_balance;
             }
+            if (!$this->hasNegativeBalance($balances)) {
+                continue;
+            }
+            $result->negativeBalancesFound[] = [
+                'creator_id' => (int) $first->creator_id,
+                'workspace_id' => $first->workspace_id === null ? null : (int) $first->workspace_id,
+                'balances' => $balances,
+            ];
+            $result->issues[] = "CRITICAL: Creator #{$first->creator_id} has negative {$first->currency} balance in workspace " . ($first->workspace_id ?? 'unassigned') . ': ' . json_encode($balances);
         }
     }
 

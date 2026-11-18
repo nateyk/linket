@@ -6,11 +6,14 @@ use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\ChapaGateway;
 use App\Payments\SubscriptionPaymentGateway;
 use Common\Settings\Models\Setting;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 final class AdminSubscriptionGatewayController extends Controller
 {
@@ -34,6 +37,14 @@ final class AdminSubscriptionGatewayController extends Controller
         ]);
         $publicKey = trim((string) ($data['public_key'] ?? ''));
         $secretKey = trim((string) ($data['secret_key'] ?? ''));
+        $webhookSecret = trim((string) ($data['webhook_secret'] ?? ''));
+        if ($this->containsWhitespace($publicKey) || $this->containsWhitespace($secretKey) || $this->containsWhitespace($webhookSecret)) {
+            throw ValidationException::withMessages([
+                'public_key' => __('Chapa credentials cannot contain spaces.'),
+                'secret_key' => __('Chapa credentials cannot contain spaces.'),
+                'webhook_secret' => __('Chapa credentials cannot contain spaces.'),
+            ]);
+        }
         if ($publicKey !== '' || $secretKey !== '') {
             if ($publicKey === '' || $secretKey === '') {
                 throw ValidationException::withMessages([
@@ -41,7 +52,23 @@ final class AdminSubscriptionGatewayController extends Controller
                     'secret_key' => __('Enter the public key and the secret key.'),
                 ]);
             }
-            if (!app(ChapaV2Client::class)->secretAuthenticates($secretKey)) {
+            try {
+                $status = app(ChapaV2Client::class)->secretStatus($secretKey);
+            } catch (ConnectionException|RuntimeException $exception) {
+                Log::warning('Chapa credential validation could not reach Chapa.', [
+                    'exception' => $exception::class,
+                ]);
+
+                throw ValidationException::withMessages([
+                    'secret_key' => __('Chapa could not be reached to validate this secret key.'),
+                ]);
+            }
+            if ($status === 'environment_mismatch') {
+                throw ValidationException::withMessages([
+                    'secret_key' => __('This private key is for the other Chapa environment. Use the test key while the business is in test mode, or the live key while it is live.'),
+                ]);
+            }
+            if ($status !== 'accepted') {
                 throw ValidationException::withMessages([
                     'secret_key' => __('Chapa did not accept this secret key.'),
                 ]);
@@ -54,7 +81,6 @@ final class AdminSubscriptionGatewayController extends Controller
         if (isset($data['gateway'])) {
             settings()->save([SubscriptionPaymentGateway::KEY => $data['gateway']]);
         }
-        $webhookSecret = trim((string) ($data['webhook_secret'] ?? ''));
         if ($webhookSecret !== '') {
             settings()->save(['billing.chapa.webhook_secret' => $webhookSecret]);
         }
@@ -81,5 +107,10 @@ final class AdminSubscriptionGatewayController extends Controller
         $visible = substr($key, -4);
 
         return str_repeat('•', max(4, strlen($key) - 4)).$visible;
+    }
+
+    private function containsWhitespace(string $value): bool
+    {
+        return $value !== '' && preg_match('/\s/u', $value) === 1;
     }
 }

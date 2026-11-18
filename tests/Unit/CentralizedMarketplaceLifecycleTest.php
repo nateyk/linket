@@ -7,6 +7,8 @@ namespace Tests\Unit;
 use App\Models\User;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Commission\CommissionPolicy;
+use App\Storefront\ChapaPayoutService;
+use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\JournalPostingService;
@@ -22,7 +24,9 @@ use App\Storefront\Services\StorefrontPayoutProcessingService;
 use App\Storefront\StorefrontWebhookHandler;
 use Common\Billing\Models\Product;
 use Illuminate\Database\Schema\Blueprint;
+use App\Payments\Chapa\ChapaV2Client;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Nateyk\Chapa\ChapaClient;
@@ -88,6 +92,15 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             $table->timestamps();
         });
 
+        // Ledger hold release includes completed refund reversals.
+        Schema::create('digital_product_payment_refunds', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('storefront_order_id');
+            $table->string('status', 32)->default('completed');
+            $table->unsignedBigInteger('creator_earnings_reversal_cents')->default(0);
+            $table->timestamps();
+        });
+
         Schema::create('payout_requests', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('workspace_id')->default(1);
@@ -115,6 +128,7 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         Schema::dropIfExists('storefront_journal_lines');
         Schema::dropIfExists('storefront_journal_entries');
         Schema::dropIfExists('payout_requests');
+        Schema::dropIfExists('digital_product_payment_refunds');
         Schema::dropIfExists('storefront_order_items');
         Schema::dropIfExists('storefront_orders');
         Schema::dropIfExists('user_sessions');
@@ -161,11 +175,21 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             'amount_cents' => $grossAmountCents,
         ]);
 
-        $chapaClient = $this->createMockChapaClient(
-            MockChapaConfig::forPayment('SUCCESS', $grossAmountCents, $merchantRef),
-        );
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/'.$merchantRef => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'success',
+                    'amount' => ChapaV2Client::majorFromCents($grossAmountCents),
+                    'currency' => 'ETB',
+                    'tx_ref' => $merchantRef,
+                    'reference' => 'CHP-VERIFIED-99',
+                    'email' => 'buyer@test.com',
+                ],
+            ]),
+        ]);
         $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
+        $chapaManager->method('platformSecret')->willReturn('platform-secret');
 
         $webhookHandler = $this->createMock(StorefrontWebhookHandler::class);
         $webhookHandler->expects($this->once())->method('fulfill');
@@ -209,7 +233,7 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             'creator_id' => $creatorId,
             'amount_cents' => $amountCents,
             'currency' => 'ETB',
-            'status' => 'requested',
+            'status' => 'processing',
             'payout_destination' => 'CBE:100012345678',
         ]);
         $ledgerService->reserveForPayout($payoutRequest, $amountCents);
@@ -218,15 +242,21 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         $this->assertSame(0, $balancesAfterReserve['available']);
         $this->assertSame($amountCents, $balancesAfterReserve['reserved']);
 
-        $chapaClient = $this->createMockChapaClient(
-            MockChapaConfig::forPayout('SUCCESS', $amountCents),
+        $provider = $this->createMock(ChapaPayoutService::class);
+        $provider->method('createTransfer')->willReturnCallback(
+            fn (StorefrontPayoutIntent $intent): array => [
+                'status' => 'success',
+                'message' => 'Transfer Queued Successfully',
+                'data' => ['reference' => $intent->merchant_reference, 'status' => 'pending'],
+            ],
         );
-        $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
-
+        $provider->method('verifyTransfer')->willReturnCallback(fn (string $ref): array => [
+            'status' => 'success',
+            'data' => ['status' => 'success', 'reference' => $ref, 'amount' => '1350.00', 'currency' => 'ETB'],
+        ]);
         $payoutProcessingService = new StorefrontPayoutProcessingService(
-            chapaManager: $chapaManager,
             creatorLedger: $ledgerService,
+            chapaPayoutService: $provider,
         );
 
         $intent = $payoutProcessingService->prepareIntent($payoutRequest);
@@ -261,21 +291,32 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             'creator_id' => $creatorId,
             'amount_cents' => $amountCents,
             'currency' => 'ETB',
-            'status' => 'requested',
+            'status' => 'processing',
             'payout_destination' => 'CBE:100099999999',
         ]);
         $ledgerService->reserveForPayout($payout, $amountCents);
 
-        $chapaClient = $this->createMockChapaClient(
-            MockChapaConfig::forPayout('FAILED', $amountCents),
+        $provider = $this->createMock(ChapaPayoutService::class);
+        $provider->method('createTransfer')->willReturnCallback(
+            fn (StorefrontPayoutIntent $intent): array => [
+                'status' => 'success',
+                'message' => 'Transfer Queued Successfully',
+                'data' => ['reference' => $intent->merchant_reference, 'status' => 'pending'],
+            ],
         );
-        $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
-
+        $provider->method('verifyTransfer')->willReturnCallback(fn (string $ref): array => [
+            'status' => 'success',
+            'data' => ['status' => 'failed', 'reference' => $ref, 'amount' => '750.00', 'currency' => 'ETB'],
+        ]);
         $processingService = new StorefrontPayoutProcessingService(
-            chapaManager: $chapaManager,
             creatorLedger: $ledgerService,
+            chapaPayoutService: $provider,
         );
+
+        $finance = $this->createMock(DigitalProductFinance::class);
+        $finance->expects($this->once())->method('record');
+        $this->app->instance(DigitalProductFinance::class, $finance);
+
         $intent = $processingService->prepareIntent($payout);
         $processingService->submitPayout($intent);
 
@@ -311,6 +352,12 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         ]);
         $ledgerService->recordPlatformSale($order);
         $ledgerService->releaseHeldToAvailable($order);
+        // The standalone fixture does not have a products/workspaces table.
+        // Attribute its funded journal lines to the same workspace used by
+        // the synthetic payout request, rather than weakening payout guards.
+        StorefrontJournalLine::query()
+            ->where('creator_id', $creatorId)
+            ->update(['workspace_id' => 1]);
     }
 
     private function createMockChapaClient(?MockChapaConfig $config = null): ChapaClient

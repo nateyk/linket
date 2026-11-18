@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Payments\Models\DirectPaymentVerification;
 use App\Storefront\Models\DigitalProduct;
+use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\StorefrontOrder;
 use Common\Files\FileEntry;
@@ -165,6 +166,179 @@ test('creator orders dashboard lists only owned orders with real summary totals'
     $this->getJson('/api/v1/storefront/direct-orders?search=Synthetic%20buyer&from='.now()->subDay()->format('Y-m-d').'&to='.now()->addDay()->format('Y-m-d'))
         ->assertOk()
         ->assertJsonPath('data.total', 4);
+});
+
+test('gateway-scoped orders and financial metrics exclude historical Verify.et from Chapa totals', function () {
+    [$creator, , $product] = creatorOrdersDashboardFixture();
+    [$otherCreator, , $otherProduct] = creatorOrdersDashboardFixture();
+
+    $chapaPaid = creatorOrdersDashboardOrder($creator, $product, [
+        'payment_gateway' => 'chapa',
+        'status' => 'paid',
+        'gross_amount_cents' => 10000,
+        'creator_earnings_cents' => 8500,
+        'platform_fee_cents' => 1500,
+        'paid_at' => now(),
+    ]);
+    $chapaPending = creatorOrdersDashboardOrder($creator, $product, [
+        'payment_gateway' => 'chapa',
+        'status' => 'pending_payment',
+        'gross_amount_cents' => 4000,
+    ]);
+    $legacyPaid = creatorOrdersDashboardOrder($creator, $product, [
+        'payment_gateway' => 'verify_et',
+        'status' => 'paid',
+        'gross_amount_cents' => 25000,
+        'paid_at' => now(),
+    ]);
+    $legacyReview = creatorOrdersDashboardOrder($creator, $product, [
+        'payment_gateway' => 'verify_et',
+        'status' => 'manual_review',
+        'gross_amount_cents' => 5000,
+    ]);
+    $unowned = creatorOrdersDashboardOrder($otherCreator, $otherProduct, [
+        'payment_gateway' => 'chapa',
+        'status' => 'paid',
+        'gross_amount_cents' => 99000,
+    ]);
+
+    creatorOrdersDashboardActAs($this, $creator);
+
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa')
+        ->assertOk()
+        ->assertJsonPath('data.total', 2)
+        ->assertJsonPath('summary.verified_sales_count', 1)
+        ->assertJsonPath('summary.verified_revenue_cents', 10000)
+        ->assertJsonPath('summary.creator_earnings_cents', 8500)
+        ->assertJsonPath('summary.platform_fee_cents', 1500)
+        ->assertJsonPath('summary.paid_orders_count', 1)
+        ->assertJsonPath('summary.pending_count', 1)
+        ->assertJsonPath('summary.manual_review_count', 0)
+        ->assertJsonFragment(['uuid' => $chapaPaid->uuid])
+        ->assertJsonFragment(['uuid' => $chapaPending->uuid])
+        ->assertJsonMissing(['uuid' => $legacyPaid->uuid])
+        ->assertJsonMissing(['uuid' => $legacyReview->uuid])
+        ->assertJsonMissing(['uuid' => $unowned->uuid]);
+
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=verify_et')
+        ->assertOk()
+        ->assertJsonPath('data.total', 2)
+        ->assertJsonPath('summary.verified_revenue_cents', 25000)
+        ->assertJsonPath('summary.manual_review_count', 1)
+        ->assertJsonFragment(['uuid' => $legacyPaid->uuid])
+        ->assertJsonFragment(['uuid' => $legacyReview->uuid])
+        ->assertJsonMissing(['uuid' => $chapaPaid->uuid]);
+
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=all')
+        ->assertOk()
+        ->assertJsonPath('data.total', 4)
+        ->assertJsonPath('summary.verified_revenue_cents', 35000)
+        ->assertJsonPath('summary.manual_review_count', 1);
+
+    // An archived order can still be inspected securely without re-enabling checkout.
+    $this->getJson('/api/v1/storefront/direct-orders/'.$legacyReview->uuid)
+        ->assertOk()->assertJsonPath('data.payment_gateway', 'verify_et');
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=invalid')->assertUnprocessable();
+});
+
+test('creator Chapa net earnings account for completed partial refunds without changing gross sales', function () {
+    [$creator, , $product] = creatorOrdersDashboardFixture();
+    $paid = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid',
+        'payment_gateway' => 'chapa',
+        'collection_owner' => StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA,
+        'gross_amount_cents' => 10000,
+        'creator_earnings_cents' => 9000,
+        'platform_fee_cents' => 1000,
+        'paid_at' => now(),
+    ]);
+    DigitalProductPaymentRefund::query()->create([
+        'storefront_order_id' => $paid->id,
+        'recorded_by' => $creator->id,
+        'amount_cents' => 4000,
+        'creator_earnings_reversal_cents' => 3600,
+        'platform_fee_reversal_cents' => 400,
+        'currency' => 'ETB',
+        'external_reference' => 'synthetic-partial-refund',
+        'reason' => 'Synthetic partial return',
+        'status' => DigitalProductPaymentRefund::STATUS_COMPLETED,
+        'refunded_at' => now(),
+    ]);
+
+    creatorOrdersDashboardActAs($this, $creator);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa')
+        ->assertOk()
+        ->assertJsonPath('summary.verified_revenue_cents', 10000)
+        ->assertJsonPath('summary.creator_earnings_cents', 5400)
+        ->assertJsonPath('summary.paid_orders_count', 1);
+});
+
+test('Chapa dashboard commerce cards use paid item quantities and net refunds, not pending or legacy data', function () {
+    [$creator, , $product] = creatorOrdersDashboardFixture();
+    $first = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa',
+        'gross_amount_cents' => 10000, 'platform_fee_cents' => 1000,
+        'creator_earnings_cents' => 9000, 'paid_at' => now(),
+    ]);
+    $second = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa',
+        'gross_amount_cents' => 5000, 'platform_fee_cents' => 500,
+        'creator_earnings_cents' => 4500, 'paid_at' => now(),
+    ]);
+    $first->items()->create([
+        'digital_product_id' => $product->id, 'title' => 'Bundle',
+        'unit_amount_cents' => 5000, 'quantity' => 2,
+    ]);
+    $second->items()->create([
+        'digital_product_id' => $product->id, 'title' => 'Guide',
+        'unit_amount_cents' => 5000, 'quantity' => 1,
+    ]);
+    DigitalProductPaymentRefund::query()->create([
+        'storefront_order_id' => $first->id, 'recorded_by' => $creator->id,
+        'amount_cents' => 4000, 'creator_earnings_reversal_cents' => 3600,
+        'platform_fee_reversal_cents' => 400, 'currency' => 'ETB',
+        'external_reference' => 'test-kpi-partial-refund',
+        'reason' => 'Synthetic refund', 'status' => DigitalProductPaymentRefund::STATUS_COMPLETED,
+        'refunded_at' => now(),
+    ]);
+
+    creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'refunded', 'payment_gateway' => 'chapa', 'gross_amount_cents' => 12000,
+    ]);
+    creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'pending_payment', 'payment_gateway' => 'chapa', 'gross_amount_cents' => 7000,
+    ]);
+    creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'verify_et', 'gross_amount_cents' => 30000,
+    ]);
+    creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa', 'currency' => 'USD', 'gross_amount_cents' => 50000,
+    ]);
+
+    creatorOrdersDashboardActAs($this, $creator);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa')
+        ->assertOk()
+        ->assertJsonPath('summary.verified_revenue_cents', 15000)
+        ->assertJsonPath('summary.net_sales_cents', 11000)
+        ->assertJsonPath('summary.paid_orders_count', 2)
+        ->assertJsonPath('summary.items_sold_count', 3)
+        ->assertJsonPath('summary.average_order_cents', 5500)
+        ->assertJsonPath('summary.creator_earnings_cents', 9900)
+        ->assertJsonPath('summary.gross_profit_cents', 9900)
+        ->assertJsonPath('summary.gross_profit_margin_percent', 90)
+        ->assertJsonPath('summary.pending_count', 1);
+});
+
+test('empty sales safely produce zero average order and zero margin', function () {
+    [$creator] = creatorOrdersDashboardFixture();
+    creatorOrdersDashboardActAs($this, $creator);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa')
+        ->assertOk()
+        ->assertJsonPath('summary.net_sales_cents', 0)
+        ->assertJsonPath('summary.paid_orders_count', 0)
+        ->assertJsonPath('summary.items_sold_count', 0)
+        ->assertJsonPath('summary.average_order_cents', 0)
+        ->assertJsonPath('summary.gross_profit_margin_percent', 0);
 });
 
 test('creator can inspect an owned order with masked account evidence and delivery state', function () {

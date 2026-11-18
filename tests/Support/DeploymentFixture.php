@@ -53,7 +53,7 @@ final class DeploymentFixture
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "${1:-}" == -m ]]; then
-  printf '%s\n' pdo_mysql mbstring openssl fileinfo curl zip bcmath
+  printf '%s\n' pdo_mysql mbstring openssl fileinfo curl zip bcmath intl
 elif [[ "${1:-}" == artisan ]]; then
   exec "$REAL_PHP" "$FIXTURE_ROOT/fake-artisan.php" "$@"
 else

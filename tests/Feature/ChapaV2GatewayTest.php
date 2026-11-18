@@ -21,7 +21,7 @@ class ChapaV2GatewayTest extends TestCase
     {
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
-            'https://api.chapa.global/v2/payments/hosted' => Http::response([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
                 'data' => ['checkout_url' => 'https://checkout.chapa.global/CHPLATFORM1'],
             ]),
@@ -40,14 +40,16 @@ class ChapaV2GatewayTest extends TestCase
         $this->assertLessThanOrEqual(20, strlen($transaction->tx_ref));
         $this->assertSame('https://checkout.chapa.global/CHPLATFORM1', $transaction->checkout_url);
         Http::assertSent(function ($request) use ($transaction): bool {
-            return $request->url() === 'https://api.chapa.global/v2/payments/hosted'
+            return $request->url() === 'https://api.chapa.co/v1/transaction/initialize'
                 && $request->hasHeader('Authorization', 'Bearer platform-secret')
-                && $request->hasHeader('Idempotency-Key', $transaction->uuid)
-                && $request['amount'] === 10000
+                && !$request->hasHeader('Idempotency-Key')
+                && $request['amount'] === '100.00'
                 && $request['currency'] === 'ETB'
-                && $request['merchant_reference'] === $transaction->tx_ref
+                && $request['tx_ref'] === $transaction->tx_ref
                 && $request['return_url'] === 'https://linket.test/return?tx_ref='.$transaction->tx_ref
-                && $request['customer']['email'] === 'abebe@example.test';
+                && $request['email'] === 'abebe@example.test'
+                && $request['first_name'] === 'Abebe'
+                && $request['phone_number'] === '251911000000';
         });
     }
 
@@ -65,12 +67,12 @@ class ChapaV2GatewayTest extends TestCase
             'currency' => 'ETB',
         ]);
         Http::fake([
-            'https://api.chapa.global/v2/payments/refplatform01/verify' => Http::response([
+            'https://api.chapa.co/v1/transaction/verify/refplatform01' => Http::response([
                 'status' => 'success',
                 'data' => [
                     'chapa_reference' => 'CHPLATFORM1',
                     'merchant_reference' => 'refplatform01',
-                    'amount' => 10000,
+                    'amount' => '100.00',
                     'currency' => 'ETB',
                     'status' => 'SUCCESS',
                     'customer' => [
@@ -111,12 +113,12 @@ class ChapaV2GatewayTest extends TestCase
             'status' => 'pending',
         ]);
         Http::fake([
-            'https://api.chapa.global/v2/payments/refplatform01/verify' => Http::response([
+            'https://api.chapa.co/v1/transaction/verify/refplatform01' => Http::response([
                 'status' => 'success',
                 'data' => [
                     'chapa_reference' => 'CHPLATFORM1',
                     'merchant_reference' => 'refplatform01',
-                    'amount' => 10000,
+                    'amount' => '100.00',
                     'currency' => 'ETB',
                     'status' => 'SUCCESS',
                 ],
@@ -156,7 +158,7 @@ class ChapaV2GatewayTest extends TestCase
             'status' => 'pending',
         ]);
         Http::fake([
-            'https://api.chapa.global/v2/payments/legacyref01/verify' => Http::response([
+            'https://api.chapa.co/v1/transaction/verify/legacyref01' => Http::response([
                 'status' => 'success',
                 'data' => [
                     'tx_ref' => 'legacyref01',

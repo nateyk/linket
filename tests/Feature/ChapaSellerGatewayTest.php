@@ -37,11 +37,11 @@ class ChapaSellerGatewayTest extends TestCase
         [$creator, $product] = $this->seller();
         $this->activatePro($creator);
         Http::fake([
-            'https://api.chapa.global/v2/payments/methods' => Http::response([
-                'status' => 'success',
+            'https://api.chapa.co/v1/banks' => Http::response([
+                'message' => 'Banks retrieved',
                 'data' => [['slug' => 'telebirr']],
             ]),
-            'https://api.chapa.global/v2/payments/hosted' => Http::response([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
                 'data' => ['checkout_url' => 'https://checkout.chapa.global/CHSELLER1'],
             ]),
@@ -74,10 +74,11 @@ class ChapaSellerGatewayTest extends TestCase
         $this->assertSame('https://checkout.chapa.global/CHSELLER1', $order->chapaCheckoutUrl);
         $this->assertLessThanOrEqual(20, strlen((string) $order->chapa_tx_ref));
         $this->assertSame(0, \App\Payments\Models\DirectPaymentVerification::query()->where('payable_id', $order->id)->count());
-        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.chapa.global/v2/payments/hosted'
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.chapa.co/v1/transaction/initialize'
             && $request->hasHeader('Authorization', 'Bearer seller-secret')
-            && $request['amount'] === 10000
-            && $request['merchant_reference'] === $order->chapa_tx_ref);
+            && !$request->hasHeader('Idempotency-Key')
+            && $request['amount'] === '100.00'
+            && $request['tx_ref'] === $order->chapa_tx_ref);
     }
 
     public function testABadSecretIsNotStored(): void
@@ -85,7 +86,7 @@ class ChapaSellerGatewayTest extends TestCase
         [$creator] = $this->seller();
         $this->activatePro($creator);
         Http::fake([
-            'https://api.chapa.global/v2/payments/methods' => Http::response(['status' => 'error'], 401),
+            'https://api.chapa.co/v1/banks' => Http::response(['status' => 'error'], 401),
         ]);
 
         $this->browser()->actingAs($creator)->putJson('/api/v1/storefront/chapa-gateway', [
@@ -124,8 +125,8 @@ class ChapaSellerGatewayTest extends TestCase
         $order = $this->chapaOrderAwaitingReturn();
 
         $this->fakeVerification($order, amount: 5000, currency: 'ETB', reference: (string) $order->chapa_tx_ref);
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
-        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/payments/'.$order->chapa_tx_ref.'/verify'));
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/transaction/verify/'.$order->chapa_tx_ref));
 
         $this->assertSame('pending_payment', $order->fresh()->status);
         $this->assertSame(0, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
@@ -136,8 +137,8 @@ class ChapaSellerGatewayTest extends TestCase
         $order = $this->chapaOrderAwaitingReturn();
 
         $this->fakeVerification($order, amount: 10000, currency: 'USD', reference: (string) $order->chapa_tx_ref);
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
-        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/payments/'.$order->chapa_tx_ref.'/verify'));
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/transaction/verify/'.$order->chapa_tx_ref));
 
         $this->assertSame('pending_payment', $order->fresh()->status);
         $this->assertSame(0, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
@@ -148,8 +149,8 @@ class ChapaSellerGatewayTest extends TestCase
         $order = $this->chapaOrderAwaitingReturn();
 
         $this->fakeVerification($order, amount: 10000, currency: 'ETB', reference: 'wrongrefwrongrefwr');
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
-        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/payments/'.$order->chapa_tx_ref.'/verify'));
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/transaction/verify/'.$order->chapa_tx_ref));
 
         $this->assertSame('pending_payment', $order->fresh()->status);
         $this->assertSame(0, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
@@ -174,7 +175,7 @@ class ChapaSellerGatewayTest extends TestCase
             'is_active' => true,
         ]);
         Http::fake([
-            'https://api.chapa.global/v2/payments/hosted' => Http::response([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
                 'data' => ['checkout_url' => 'https://checkout.chapa.global/CHSWITCH1'],
             ]),
@@ -232,23 +233,23 @@ class ChapaSellerGatewayTest extends TestCase
         ]);
         $product->workspace->update(['active_payment_collector' => 'chapa']);
         Http::fake(function ($request) {
-            if (str_contains($request->url(), '/payments/hosted')) {
+            if (str_contains($request->url(), '/transaction/initialize')) {
                 return Http::response([
                     'status' => 'success',
                     'data' => ['checkout_url' => 'https://checkout.chapa.global/CHSELLER2'],
                 ]);
             }
 
-            $reference = basename(dirname((string) parse_url($request->url(), PHP_URL_PATH)));
+            $reference = basename((string) parse_url($request->url(), PHP_URL_PATH));
 
             return Http::response([
                 'status' => 'success',
                 'data' => [
-                    'status' => 'SUCCESS',
-                    'amount' => 10000,
+                    'status' => 'success',
+                    'amount' => '100.00',
                     'currency' => 'ETB',
-                    'merchant_reference' => $reference,
-                    'chapa_reference' => 'CHSELLER2',
+                    'tx_ref' => $reference,
+                    'reference' => 'CHSELLER2',
                 ],
             ]);
         });
@@ -259,8 +260,8 @@ class ChapaSellerGatewayTest extends TestCase
         $subscription->update(['ends_at' => now()->subDay(), 'renews_at' => now()->subDay()]);
         $this->assertFalse(app(CreatorVerificationAllowance::class)->isPro($creator->fresh()));
 
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
-        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertRedirect();
 
         $this->assertSame('paid', $order->fresh()->status);
         $this->assertSame(1, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
@@ -290,7 +291,7 @@ class ChapaSellerGatewayTest extends TestCase
         ]);
         $product->workspace->update(['active_payment_collector' => 'chapa']);
         Http::fake([
-            'https://api.chapa.global/v2/payments/hosted' => Http::response([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
                 'data' => ['checkout_url' => 'https://checkout.chapa.global/CHMISMATCH'],
             ]),
@@ -305,14 +306,14 @@ class ChapaSellerGatewayTest extends TestCase
     private function fakeVerification(StorefrontOrder $order, int $amount, string $currency, string $reference): void
     {
         Http::fake([
-            'https://api.chapa.global/v2/payments/'.$order->chapa_tx_ref.'/verify' => Http::response([
+            'https://api.chapa.co/v1/transaction/verify/'.$order->chapa_tx_ref => Http::response([
                 'status' => 'success',
                 'data' => [
-                    'status' => 'SUCCESS',
-                    'amount' => $amount,
+                    'status' => 'success',
+                    'amount' => \App\Payments\Chapa\ChapaV2Client::majorFromCents($amount),
                     'currency' => $currency,
-                    'merchant_reference' => $reference,
-                    'chapa_reference' => 'CHMISMATCH',
+                    'tx_ref' => $reference,
+                    'reference' => 'CHMISMATCH',
                 ],
             ]),
         ]);

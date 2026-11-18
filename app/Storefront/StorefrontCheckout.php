@@ -27,16 +27,16 @@ class StorefrontCheckout
             ->value('active_payment_collector') ?? 'verify_et';
 
         if ((int) $product->price_cents > 0) {
-            if ($collector === 'chapa' || ($chapaEnabled && ($paymentMethodId === null || ! VerifyEtSettings::get('enabled')))) {
+            // Platform Chapa takes precedence for new paid orders, including
+            // requests carrying an obsolete creator receiving-account ID.
+            // Preserve creator-managed Chapa checkout when platform Chapa is off.
+            if ($chapaEnabled || $collector === 'chapa') {
                 return app(\App\Storefront\Services\ChapaStorefrontCheckout::class)->create($product, $biolink, $buyer);
             }
 
+            // Historical Verify.et orders keep their own verification paths.
             if (VerifyEtSettings::get('enabled')) {
                 return app(\App\Storefront\Services\DirectStorefrontCheckout::class)->create($product, $biolink, $buyer, $paymentMethodId);
-            }
-
-            if ($chapaEnabled) {
-                return app(\App\Storefront\Services\ChapaStorefrontCheckout::class)->create($product, $biolink, $buyer);
             }
 
             abort(503, __('Checkout is temporarily unavailable.'));

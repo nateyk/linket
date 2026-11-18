@@ -39,6 +39,7 @@ export type Summary = {
   reserved_payout_cents: number;
   paid_out_cents: number;
   lifetime_earnings_cents: number;
+  balance_reconciliation_required?: boolean;
   currency: string;
 };
 
@@ -82,6 +83,14 @@ export type PayoutDestination = {
   display_label: string;
   is_active: boolean;
   is_default: boolean;
+  status?: string;
+  approved_at?: string | null;
+  withdrawal_method?: {
+    code: string;
+    is_active: boolean;
+    minimum_amount_cents?: number | null;
+    maximum_amount_cents?: number | null;
+  } | null;
 };
 
 const statusLabels: Record<PayoutStatus, string> = {
@@ -111,7 +120,7 @@ export function Component() {
       const [salesRes, payoutsRes, destsRes] = await Promise.all([
         apiClient.get('/api/v1/items/sales'),
         apiClient.get(`/api/v1/items/payout-requests?page=${page}`),
-        apiClient.get('/api/items/payout-methods'),
+        apiClient.get('/api/v1/items/payout-methods'),
       ]);
       setSummary(salesRes.data.summary);
       setPayouts(payoutsRes.data.data ?? []);
@@ -163,6 +172,11 @@ export function Component() {
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
           {error && <WithdrawalsAlert message={error} onRetry={() => void loadData()} />}
+          {summary?.balance_reconciliation_required && (
+            <p role="status" className="rounded-card-sm border border-border px-4 py-3 text-sm text-muted-foreground">
+              <Trans message="Some historical earnings or pending withdrawals still need ledger reconciliation. Only cleared Chapa funds are eligible for withdrawal." />
+            </p>
+          )}
           <WithdrawalStatCards summary={summary} available={available} currency={currency} loading={loading} />
           <WithdrawalHistoryTable
             payouts={payouts}
@@ -249,36 +263,28 @@ function WithdrawalStatCards({
     <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <WithdrawalMetricCard
         icon={LandmarkIcon}
-        tone="text-amber-600 bg-amber-500/10 dark:text-amber-400"
-        label="Available balance"
-        scope="Ready to withdraw"
+        label="Available Balance"
         valueInCents={available}
         currency={currency}
         loading={loading}
       />
       <WithdrawalMetricCard
         icon={Clock3Icon}
-        tone="text-blue-600 bg-blue-500/10 dark:text-blue-400"
-        label="Settling funds"
-        scope="Clearing period"
+        label="Held earnings"
         valueInCents={summary?.held_earnings_cents ?? 0}
         currency={currency}
         loading={loading}
       />
       <WithdrawalMetricCard
         icon={Clock3Icon}
-        tone="text-muted-foreground bg-muted"
         label="Pending withdrawals"
-        scope="Reserved for active requests"
         valueInCents={summary?.reserved_payout_cents ?? 0}
         currency={currency}
         loading={loading}
       />
       <WithdrawalMetricCard
         icon={CheckCircleIcon}
-        tone="text-positive bg-positive/10"
-        label="Total withdrawn"
-        scope="Successfully settled"
+        label="Paid out"
         valueInCents={summary?.paid_out_cents ?? 0}
         currency={currency}
         loading={loading}
@@ -289,17 +295,13 @@ function WithdrawalStatCards({
 
 function WithdrawalMetricCard({
   icon: Icon,
-  tone,
   label,
-  scope,
   valueInCents,
   currency,
   loading,
 }: {
   icon: LucideIcon;
-  tone: string;
   label: string;
-  scope: string;
   valueInCents: number;
   currency: string;
   loading: boolean;
@@ -310,11 +312,8 @@ function WithdrawalMetricCard({
         <Card.Title className="truncate text-sm font-normal text-muted-foreground">
           <Trans message={label} />
         </Card.Title>
-        <Card.Description className="text-xs">
-          <Trans message={scope} />
-        </Card.Description>
         <Card.Action>
-          <span className={`flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4 ${tone}`}>
+          <span className="flex size-9 items-center justify-center rounded-card-sm bg-muted text-muted-foreground [&>svg]:size-4">
             <Icon aria-hidden="true" />
           </span>
         </Card.Action>
@@ -377,8 +376,8 @@ function WithdrawalHistoryTable({
                 <Table.Cell colSpan={7} className="p-0">
                   <TableEmptyState
                     icon={InboxIcon}
-                    message="No withdrawals yet"
-                    description="Request a withdrawal once you have cleared sales."
+                    message="You do not have any withdrawals"
+                    description="When you have withdrawal requests, you will be able to see them here."
                   />
                 </Table.Cell>
               </Table.Row>
@@ -485,7 +484,10 @@ function RequestWithdrawalModal({
   destinations: PayoutDestination[];
   onSuccess: () => Promise<void>;
 }) {
-  const defaultDest = destinations.find(d => d.is_default && d.is_active) ?? destinations.find(d => d.is_active);
+  const approvedDestinations = destinations.filter(d =>
+    d.is_active && d.status === 'active' && !!d.approved_at && d.withdrawal_method?.is_active === true
+  );
+  const defaultDest = approvedDestinations.find(d => d.is_default) ?? approvedDestinations[0];
   const [selectedDestId, setSelectedDestId] = useState<number | null>(null);
   const [amountStr, setAmountStr] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -494,14 +496,21 @@ function RequestWithdrawalModal({
   useEffect(() => {
     if (open) {
       setSelectedDestId(defaultDest?.id ?? null);
-      setAmountStr((available / 100).toFixed(2));
+      const limit = defaultDest?.withdrawal_method?.maximum_amount_cents;
+      setAmountStr((Math.min(available, limit || available) / 100).toFixed(2));
       setSubmitError(undefined);
     }
   }, [open, defaultDest, available]);
 
-  const activeDestinations = destinations.filter(d => d.is_active);
+  const activeDestinations = approvedDestinations;
+  const selectedDest = approvedDestinations.find(d => d.id === selectedDestId);
+  const methodMinCents = selectedDest?.withdrawal_method?.minimum_amount_cents ?? 0;
+  const methodMaxCents = selectedDest?.withdrawal_method?.maximum_amount_cents;
+  const minimumCents = Math.max(100, methodMinCents);
+  const maximumCents = Math.min(available, methodMaxCents || available);
   const amountCents = Math.round((parseFloat(amountStr) || 0) * 100);
-  const isValidAmount = amountCents >= 10000 && amountCents <= available;
+  const isValidAmount = !!selectedDest && amountCents >= minimumCents &&
+    amountCents <= maximumCents;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -537,10 +546,10 @@ function RequestWithdrawalModal({
             {activeDestinations.length === 0 ? (
               <div className="flex flex-col gap-3 rounded-card border border-primary/20 bg-primary/5 p-4 text-sm">
                 <p className="font-semibold text-primary">
-                  <Trans message="No payout account configured" />
+                  <Trans message="No approved payout account" />
                 </p>
                 <p className="text-muted-foreground">
-                  <Trans message="Add a bank or mobile wallet destination before requesting a withdrawal." />
+                  <Trans message="Add a bank or mobile wallet and have the account approved before requesting a withdrawal." />
                 </p>
                 <Button
                   variant="default"
@@ -587,7 +596,7 @@ function RequestWithdrawalModal({
                     <button
                       type="button"
                       className="text-primary hover:underline"
-                      onClick={() => setAmountStr((available / 100).toFixed(2))}
+                      onClick={() => setAmountStr((maximumCents / 100).toFixed(2))}
                     >
                       <Trans message="Max" />
                     </button>
@@ -596,8 +605,8 @@ function RequestWithdrawalModal({
                     id="withdraw-amount"
                     type="number"
                     step="0.01"
-                    min="100"
-                    max={available / 100}
+                    min={minimumCents / 100}
+                    max={maximumCents / 100}
                     className="flex h-9 w-full rounded-input border bg-background px-3 text-sm focus-visible:outline-2"
                     value={amountStr}
                     onChange={e => setAmountStr(e.target.value)}
@@ -605,9 +614,15 @@ function RequestWithdrawalModal({
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    <Trans message="Minimum withdrawal is 100.00 ETB." />
+                    <Trans message="Minimum withdrawal" />: <FormattedCurrency value={minimumCents / 100} currency={currency} />
                   </p>
                 </div>
+
+                {maximumCents < minimumCents && (
+                  <p role="status" className="text-xs text-muted-foreground">
+                    <Trans message="The available balance is below the selected payout method minimum." />
+                  </p>
+                )}
 
                 {submitError && (
                   <p role="alert" className="text-xs text-destructive">{submitError}</p>

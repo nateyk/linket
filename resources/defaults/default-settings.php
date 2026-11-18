@@ -109,6 +109,12 @@ return [
                     ],
                     [
                         'type' => 'route',
+                        'label' => 'Withdrawals',
+                        'action' => '/dashboard/withdrawals',
+                        'id' => 'creator-withdrawals-dashboard',
+                    ],
+                    [
+                        'type' => 'route',
                         'label' => 'Insights',
                         'action' => '/dashboard/insights',
                         'id' => 318,
@@ -226,6 +232,12 @@ return [
                         'label' => 'Orders & Sales',
                         'action' => '/dashboard/orders',
                         'id' => 'sales-payouts-mobile',
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Withdrawals',
+                        'action' => '/dashboard/withdrawals',
+                        'id' => 'creator-withdrawals-mobile',
                     ],
                 ],
             ],
@@ -420,33 +432,15 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Withdrawals',
-                        'action' => '/admin/withdrawals',
-                        'id' => 'admin-withdrawals',
-                    ],
-                    [
-                        'type' => 'route',
-                        'label' => 'Payment Activity',
-                        'action' => '/admin/payment-activity',
-                        'id' => 'admin-payment-activity',
+                        'label' => 'Financial',
+                        'action' => '/admin/financial',
+                        'id' => 'admin-financial',
                     ],
                     [
                         'type' => 'route',
                         'label' => 'KYC Verifications',
                         'action' => '/admin/kyc-verifications',
                         'id' => 'admin-kyc-verifications',
-                    ],
-                    [
-                        'type' => 'route',
-                        'label' => 'Payment Gateways',
-                        'action' => '/admin/financial/payment-gateways',
-                        'id' => 'admin-payment-gateways',
-                    ],
-                    [
-                        'type' => 'route',
-                        'label' => 'Receiving accounts',
-                        'action' => '/admin/financial/withdrawal-methods',
-                        'id' => 'admin-withdrawal-methods',
                     ],
                     [
                         'label' => 'Custom pages',

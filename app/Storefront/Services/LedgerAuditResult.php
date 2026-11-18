@@ -14,7 +14,7 @@ final class LedgerAuditResult
     public int $platformCommissionCents = 0;
     public int $totalDisbursedCents = 0;
 
-    /** @var array<int, array{creator_id: int|string, balances: array<string, mixed>}> */
+    /** @var array<int, array{creator_id: int, workspace_id: int|null, balances: array<string, mixed>}> */
     public array $negativeBalancesFound = [];
 
     /** @var string[] */

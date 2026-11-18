@@ -43,6 +43,7 @@ describe('AdminWithdrawalReviewPage', () => {
     status: 'requested',
     payout_method_label: 'Telebirr (•••• 4321)',
     withdrawal_method_name: 'Telebirr',
+    payout_mode: {mode: 'test', enabled: true, approval_configured: true, test_only: true},
     payout_destination: '+251911223344',
     created_at: '2026-11-15T10:00:00Z',
     creator: {id: 42, name: 'Abebe Bikila', email: 'abebe@example.test'},
@@ -67,6 +68,18 @@ describe('AdminWithdrawalReviewPage', () => {
         {() => <AdminWithdrawalReviewPage />}
       </DashboardLayoutContextProvider>,
     );
+
+  it('shows a recoverable error and retry when withdrawal details cannot load', async () => {
+    mockApiClient.get.mockRejectedValueOnce(new Error('temporary failure'));
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'Try again'})).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', {name: 'Try again'}));
+
+    await waitFor(() => expect(mockApiClient.get).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Withdrawal request #123')).toBeTruthy();
+  });
 
   it('renders withdrawal request details, creator info, and activity log', async () => {
     renderPage();
@@ -113,6 +126,59 @@ describe('AdminWithdrawalReviewPage', () => {
     });
   });
 
+  it('requires Linket admin password for configured step-up before sending the exact transfer', async () => {
+    mockApiClient.get.mockResolvedValue({data: {data: {
+      ...basePayout,
+      status: 'processing',
+      admin_step_up_required: true,
+    }}});
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', {name: /Submit transfer to Chapa/i}));
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+    expect(await screen.findByText('Confirm Chapa transfer')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Linket admin password'), {target: {value: 'correct-admin-password'}});
+    fireEvent.click(screen.getByRole('button', {name: /Confirm and submit transfer/i}));
+    await waitFor(() => {
+      expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/admin/withdrawals/123/submit-transfer', {
+        admin_password: 'correct-admin-password',
+        confirmation_id: 123,
+        confirmation_amount_cents: 50000,
+        confirmation_currency: 'ETB',
+        confirmation_destination_label: 'Telebirr (•••• 4321)',
+      });
+    });
+  });
+
+  it('blocks test transfer until the approval secret is configured', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {data: {
+        ...basePayout,
+        status: 'processing',
+        payout_mode: {mode: 'test', enabled: true, approval_configured: false, test_only: true},
+      }},
+    });
+    renderPage();
+
+    const submit = await screen.findByRole('button', {name: /Submit transfer to Chapa/i});
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Configure test credentials and the transfer approval secret/)).toBeTruthy();
+    expect(screen.getByText(/Chapa test mode/)).toBeTruthy();
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+  });
+
+  it('does not activate live disbursements with sandbox-only toggle', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {data: {
+        ...basePayout,
+        status: 'processing',
+        payout_mode: {mode: 'live', enabled: false, approval_configured: true, test_only: false},
+      }},
+    });
+    renderPage();
+    expect((await screen.findByRole('button', {name: /Submit transfer to Chapa/i}) as HTMLButtonElement).disabled).toBe(true);
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+  });
+
   it('verifies settlement with Chapa (Stage 3)', async () => {
     mockApiClient.get.mockResolvedValue({
       data: {
@@ -122,7 +188,7 @@ describe('AdminWithdrawalReviewPage', () => {
           latest_payout_intent: {
             id: 88,
             merchant_reference: 'payout-intent-88',
-            status: 'pending',
+            status: 'provider_pending',
             chapa_reference: 'CHP-8899',
           },
         },
@@ -140,12 +206,72 @@ describe('AdminWithdrawalReviewPage', () => {
     });
   });
 
+  it('keeps an uncertain Chapa submission available for verification but never resends it', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {data: {
+        ...basePayout,
+        status: 'processing',
+        withdrawalMethod: {name: 'Telebirr', code: 'telebirr'},
+        latest_payout_intent: {
+          id: 99,
+          merchant_reference: 'lk-po-uncertain',
+          status: 'submitted',
+          last_error: 'Submission not confirmed. Verify this reference with Chapa.',
+        },
+      }},
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Submission unconfirmed')).toBeTruthy();
+    expect(screen.getByText(/Transfer outcome is uncertain/)).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /Submit transfer to Chapa/i})).toBeNull();
+    expect(screen.getByRole('button', {name: /Verify settlement with Chapa/i})).toBeTruthy();
+  });
+
+  it('does not permit a repeat verification or transfer after confirmed settlement', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {data: {
+        ...basePayout,
+        status: 'paid',
+        withdrawalMethod: {name: 'Telebirr', code: 'telebirr'},
+        latest_payout_intent: {
+          id: 100,
+          merchant_reference: 'lk-po-settled',
+          status: 'successful',
+        },
+      }},
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('This withdrawal was settled and marked as paid.')).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /Verify settlement with Chapa/i})).toBeNull();
+    expect(screen.queryByRole('button', {name: /Submit transfer to Chapa/i})).toBeNull();
+  });
+
+  it('keeps legacy manual payouts separate from Chapa submission', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {data: {
+        ...basePayout,
+        status: 'processing',
+        withdrawalMethod: {name: 'Custom manual transfer', code: 'other'},
+      }},
+    });
+
+    renderPage();
+
+    expect(await screen.findByRole('button', {name: /Record manual settlement/i})).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /Submit transfer to Chapa/i})).toBeNull();
+  });
+
   it('records manual settlement with transfer reference (Stage 3 manual)', async () => {
     mockApiClient.get.mockResolvedValue({
       data: {
         data: {
           ...basePayout,
           status: 'processing',
+          withdrawalMethod: {name: 'Custom manual transfer', code: 'other'},
         },
       },
     });

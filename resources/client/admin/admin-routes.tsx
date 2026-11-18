@@ -145,7 +145,7 @@ export const adminRoutes: RouteObject[] = [
 
       commonAdminSettingsRoutes(
         [
-          {path: 'payment-gateways', loader: () => redirect('/admin/financial/payment-gateways')},
+          {path: 'payment-gateways', loader: () => redirect('/admin/financial/general')},
           {path: 'financial', loader: () => redirect('/admin/financial/general')},
           {
             path: 'search',
@@ -232,7 +232,7 @@ export const adminRoutes: RouteObject[] = [
       },
       {
         path: 'items/payment-methods',
-        lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+        loader: () => redirect('/admin/financial/general'),
       },
       {
         path: 'items/:productId/reviews',
@@ -246,12 +246,24 @@ export const adminRoutes: RouteObject[] = [
       },
       {
         path: 'payment-activity',
-        lazy: () => import('@app/admin/digital-products/admin-payment-activity-page'),
+        loader: () => redirect('/admin/financial/payment-activity'),
       },
       {
         path: 'kyc-verifications',
         lazy: () =>
           import('@app/admin/kyc/admin-kyc-verifications-page'),
+      },
+      {
+        path: 'payout-accounts',
+        lazy: () => import('@app/admin/financial/admin-payout-accounts-page'),
+      },
+      {
+        path: 'payout-acc',
+        loader: () => redirect('/admin/payout-accounts'),
+      },
+      {
+        path: 'withdrawal-methods',
+        loader: () => redirect('/admin/payout-accounts'),
       },
       {
         path: 'withdrawals',
@@ -276,11 +288,11 @@ export const adminRoutes: RouteObject[] = [
           },
           {
             path: 'payment-gateways',
-            lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawal-methods',
-            lazy: () => import('@app/admin/financial/admin-receiving-accounts-page'),
+            loader: () => redirect('/admin/payout-accounts'),
           },
           {
             path: 'withdrawal-methods/legacy',
@@ -293,6 +305,19 @@ export const adminRoutes: RouteObject[] = [
           {
             path: 'withdrawal-methods/:methodId/edit',
             lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
+          },
+          {
+            path: 'withdrawals',
+            loader: () => redirect('/admin/withdrawals'),
+          },
+          {
+            path: 'withdrawals/:withdrawalId/review',
+            loader: ({params}) =>
+              redirect(`/admin/withdrawals/${params.withdrawalId}/review`),
+          },
+          {
+            path: 'payment-activity',
+            lazy: () => import('@app/admin/digital-products/admin-payment-activity-page'),
           },
           {
             path: 'reconciliation',

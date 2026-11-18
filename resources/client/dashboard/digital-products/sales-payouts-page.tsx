@@ -70,7 +70,15 @@ type Payout = {
 
 type PayoutMethod = {
   id: number;
-  type: 'bank_transfer' | 'paypal' | 'other';
+  type: string;
+  status?: string;
+  approved_at?: string | null;
+  withdrawal_method?: {
+    code: string;
+    is_active: boolean;
+    minimum_amount_cents?: number | null;
+    maximum_amount_cents?: number | null;
+  } | null;
   withdrawal_method_id?: number | null;
   account_holder: string;
   display_label: string;
@@ -117,7 +125,9 @@ export function Component() {
         const methodResponse = await apiClient.get(
           '/api/v1/items/payout-method',
         );
-        setMethod(methodResponse.data.data ?? undefined);
+        const candidate = methodResponse.data.data as PayoutMethod | undefined;
+        setMethod(candidate?.status === 'active' && candidate.approved_at
+          && candidate.withdrawal_method?.is_active === true ? candidate : undefined);
       } catch {
         setMethod(undefined);
       }
@@ -134,13 +144,17 @@ export function Component() {
 
   const currency = summary?.currency ?? 'ETB';
   const available = summary?.available_for_payout_cents ?? 0;
+  const minWithdrawal = Math.max(100, method?.withdrawal_method?.minimum_amount_cents ?? 0);
+  const maxWithdrawal = Math.min(available, method?.withdrawal_method?.maximum_amount_cents || available);
 
   const requestPayout = async () => {
+    if (!method || maxWithdrawal < minWithdrawal) return;
     setRequesting(true);
     setWithdrawError(undefined);
     try {
       await apiClient.post('/api/v1/items/payout-requests', {
-        amount_cents: available,
+        amount_cents: maxWithdrawal,
+        payout_method_id: method.id,
       });
       setWithdrawOpen(false);
       await load();
@@ -599,6 +613,10 @@ function WithdrawDialog({
   error?: string;
   onConfirm: () => void;
 }) {
+  const minimum = Math.max(100, method?.withdrawal_method?.minimum_amount_cents ?? 0);
+  const maximum = Math.min(available, method?.withdrawal_method?.maximum_amount_cents || available);
+  const canWithdraw = !!method && maximum >= minimum;
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -619,20 +637,20 @@ function WithdrawDialog({
                     <Trans message="No payout method set up" />
                   </p>
                   <p className="mt-1 text-muted-foreground">
-                    <Trans message="Add a withdrawal method in your account settings before requesting a payout." />
+                    <Trans message="Configure a payout destination and have it approved before requesting a withdrawal." />
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-3"
                     nativeButton={false}
-                    render={<Link to="/account-settings/billing" />}
+                    render={<Link to="/account-settings/receiving-accounts" />}
                   >
                     <Trans message="Set up now" />
                   </Button>
                 </div>
               </div>
-            ) : available <= 0 ? (
+            ) : !canWithdraw ? (
               <div className="flex items-start gap-3 rounded-input border border-warning/30 bg-warning/5 p-4">
                 <TriangleAlertIcon className="mt-0.5 size-5 shrink-0 text-warning" />
                 <div className="min-w-0 text-sm">
@@ -640,7 +658,7 @@ function WithdrawDialog({
                     <Trans message="Not enough balance" />
                   </p>
                   <p className="mt-1 text-muted-foreground">
-                    <Trans message="You don't have enough available balance to withdraw yet. Keep selling to build up your earnings." />
+                    <Trans message="Your available balance is below the configured minimum for this payout method." />
                   </p>
                 </div>
               </div>
@@ -652,7 +670,7 @@ function WithdrawDialog({
                     values={{
                       amount: (
                         <FormattedCurrency
-                          valueInCents={available}
+                          valueInCents={maximum}
                           currency={currency.toUpperCase()}
                         />
                       ),
@@ -673,7 +691,7 @@ function WithdrawDialog({
             <Dialog.CloseButton variant="outline">
               <Trans message="Cancel" />
             </Dialog.CloseButton>
-            {method && available > 0 && (
+            {canWithdraw && (
               <Button disabled={requesting} onClick={onConfirm}>
                 <Trans message="Confirm withdrawal" />
               </Button>

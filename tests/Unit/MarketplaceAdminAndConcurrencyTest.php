@@ -17,7 +17,9 @@ use App\Storefront\Models\StorefrontPaymentAttempt;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
 use App\Storefront\StorefrontWebhookHandler;
 use Illuminate\Http\Request;
+use App\Payments\Chapa\ChapaV2Client;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -139,7 +141,20 @@ class MarketplaceAdminAndConcurrencyTest extends TestCase
             'status' => StorefrontPaymentAttempt::STATUS_PENDING,
         ]);
 
-        $this->bindMockChapaClient(MarketplaceMockConfig::forPayment('chp_tx_conc_123', 50000));
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/chp_tx_conc_123' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'success',
+                    'amount' => ChapaV2Client::majorFromCents(50000),
+                    'currency' => 'ETB',
+                    'tx_ref' => 'chp_tx_conc_123',
+                    'reference' => 'CHP-VERIFIED-99',
+                    'email' => 'buyer@test.com',
+                ],
+            ]),
+        ]);
+        config(['services.chapa.secret' => 'platform-secret']);
 
         $verificationService = new StorefrontPaymentVerificationService(
             app(LinketChapaManager::class),

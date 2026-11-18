@@ -7,8 +7,11 @@ namespace Tests\Unit;
 use App\Models\User;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Ledger\AccountCodes;
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
+use App\Storefront\Ledger\JournalEntryData;
+use App\Storefront\Ledger\JournalLineData;
 use App\Storefront\Ledger\JournalPostingService;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontJournalLine;
@@ -21,7 +24,9 @@ use App\Storefront\Services\StorefrontPayoutProcessingService;
 use App\Storefront\StorefrontWebhookHandler;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
+use App\Payments\Chapa\ChapaV2Client;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Nateyk\Chapa\ChapaClient;
@@ -92,6 +97,15 @@ class MarketplaceReconciliationServiceTest extends TestCase
             $table->timestamps();
         });
 
+        // Maturity reads completed refund reversals before releasing escrow.
+        Schema::create('digital_product_payment_refunds', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('storefront_order_id');
+            $table->string('status', 32)->default('completed');
+            $table->unsignedBigInteger('creator_earnings_reversal_cents')->default(0);
+            $table->timestamps();
+        });
+
         (new (require database_path('migrations/2026_11_14_200000_create_storefront_journal_tables.php')))->up();
         (new (require database_path('migrations/2026_11_14_210000_create_storefront_payment_attempts_table.php')))->up();
         (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
@@ -104,6 +118,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
         Schema::dropIfExists('storefront_journal_lines');
         Schema::dropIfExists('storefront_journal_entries');
         Schema::dropIfExists('payout_requests');
+        Schema::dropIfExists('digital_product_payment_refunds');
         Schema::dropIfExists('storefront_orders');
         Schema::dropIfExists('user_sessions');
         Schema::dropIfExists('users');
@@ -153,9 +168,21 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(30),
         ]);
 
-        $chapaClient = $this->createMockChapaClient(ReconciliationChapaMockConfig::forPayment($merchantRef, 200000));
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/'.$merchantRef => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'success',
+                    'amount' => ChapaV2Client::majorFromCents(200000),
+                    'currency' => 'ETB',
+                    'tx_ref' => $merchantRef,
+                    'reference' => 'CHP-VERIFIED-99',
+                    'email' => 'buyer@test.com',
+                ],
+            ]),
+        ]);
         $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
+        $chapaManager->method('platformSecret')->willReturn('platform-secret');
 
         $webhookHandler = $this->createMock(StorefrontWebhookHandler::class);
         $webhookHandler->expects($this->once())->method('fulfill');
@@ -178,6 +205,12 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $order = $this->seedPlatformOrder($creator, 150000, Carbon::now()->subDays(10));
         $ledger->recordPlatformSale($order);
         $ledger->releaseHeldToAvailable($order);
+        // This isolated fixture has no products/workspaces table. Attribute
+        // the synthetic settled sale to the payout's workspace, as a real
+        // product-owned platform sale would be.
+        StorefrontJournalLine::query()
+            ->where('creator_id', $creator->id)
+            ->update(['workspace_id' => 1]);
 
         $payout = PayoutRequest::create([
             'workspace_id' => 1,
@@ -204,13 +237,21 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(10),
         ]);
 
-        $chapaClient = $this->createMockChapaClient(ReconciliationChapaMockConfig::forPayout('lk-po-settled-103', 135000));
-        $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
-
-        $payoutProcessor = new StorefrontPayoutProcessingService(chapaManager: $chapaManager, creatorLedger: $ledger);
+        $provider = $this->createMock(ChapaPayoutService::class);
+        $provider->method('verifyTransfer')->willReturn([
+            'status' => 'success',
+            'data' => [
+                'status' => 'success',
+                'reference' => 'lk-po-settled-103',
+                'amount' => '1350.00',
+                'currency' => 'ETB',
+            ],
+        ]);
+        $payoutProcessor = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger,
+            chapaPayoutService: $provider,
+        );
         $service = new MarketplaceReconciliationService(
-            chapaManager: $chapaManager,
             payoutProcessingService: $payoutProcessor,
             creatorLedger: $ledger,
         );
@@ -278,6 +319,69 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $this->assertFalse($compromisedAudit->isBalanced);
         $this->assertTrue($compromisedAudit->hasAnomalies());
         $this->assertNotEmpty($compromisedAudit->issues);
+    }
+
+    public function testAuditFlagsNegativeUsdHoldEvenWhenJournalBalances(): void
+    {
+        $creator = new User(['id' => 107, 'name' => 'Creator 107', 'email' => 'creator107@test.com']);
+        $this->seedCreator($creator);
+        $ledger = new CreatorLedgerService(new JournalPostingService());
+        $ledger->recordPlatformSale($this->seedPlatformOrder($creator, 100000, Carbon::now()->subDays(1)));
+
+        $context = ['creator_id' => $creator->id, 'workspace_id' => 2];
+        (new JournalPostingService())->post(
+            new JournalEntryData(
+                sourceType: 'audit_fixture',
+                sourceId: 107,
+                eventType: 'invalid_usd_hold',
+                currency: 'USD',
+                attributes: $context,
+            ),
+            [
+                new JournalLineData(AccountCodes::CREATOR_HELD, 1, 0, 'USD', $context),
+                new JournalLineData(AccountCodes::CREATOR_AVAILABLE, 0, 1, 'USD', $context),
+            ],
+        );
+
+        $audit = (new MarketplaceReconciliationService(creatorLedger: $ledger))->auditLedgerIntegrity();
+        $this->assertTrue($audit->isBalanced);
+        $this->assertTrue($audit->hasAnomalies());
+        $this->assertCount(1, $audit->negativeBalancesFound);
+        $this->assertSame(107, $audit->negativeBalancesFound[0]['creator_id']);
+        $this->assertSame(2, $audit->negativeBalancesFound[0]['workspace_id']);
+        $this->assertSame('USD', $audit->negativeBalancesFound[0]['balances']['currency']);
+        $this->assertSame(-1, $audit->negativeBalancesFound[0]['balances']['held']);
+    }
+
+    public function testAuditDoesNotHideWorkspaceOverdraftWithAnotherWorkspacesCredit(): void
+    {
+        $creator = new User(['id' => 108, 'name' => 'Creator 108', 'email' => 'creator108@test.com']);
+        $this->seedCreator($creator);
+        $posting = new JournalPostingService();
+
+        foreach ([2 => true, 3 => false] as $workspaceId => $creditHeld) {
+            $context = ['creator_id' => $creator->id, 'workspace_id' => $workspaceId];
+            $posting->post(
+                new JournalEntryData(
+                    sourceType: 'audit_fixture',
+                    sourceId: $workspaceId,
+                    eventType: 'workspace_liability',
+                    currency: 'ETB',
+                    attributes: $context,
+                ),
+                [
+                    new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, $creditHeld ? 1 : 0, $creditHeld ? 0 : 1, 'ETB', $context),
+                    new JournalLineData(AccountCodes::CREATOR_HELD, $creditHeld ? 0 : 1, $creditHeld ? 1 : 0, 'ETB', $context),
+                ],
+            );
+        }
+
+        $audit = (new MarketplaceReconciliationService())->auditLedgerIntegrity();
+        $this->assertTrue($audit->isBalanced);
+        $this->assertTrue($audit->hasAnomalies());
+        $this->assertCount(1, $audit->negativeBalancesFound);
+        $this->assertSame(3, $audit->negativeBalancesFound[0]['workspace_id']);
+        $this->assertSame(-1, $audit->negativeBalancesFound[0]['balances']['held']);
     }
 
     public function testArtisanCommandExecutesReconciliationSuccessfully(): void

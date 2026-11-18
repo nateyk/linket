@@ -4,38 +4,25 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\ChapaPayoutService;
+use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Models\PayoutRequest;
+use App\Storefront\Models\DigitalProductWithdrawalMethod;
+use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\StorefrontPayoutIntent;
-use App\Storefront\Services\StorefrontPaymentReferenceGenerator;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Nateyk\Chapa\ChapaClient;
-use Nateyk\Chapa\Http\RawResponse;
-use Nateyk\Chapa\Http\Transport;
-use PHPUnit\Framework\Attributes\DataProvider;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
-
-final readonly class PayoutVerificationCase
-{
-    public function __construct(
-        public string $chapaStatus,
-        public string $expectedIntentStatus,
-        public string $expectedPayoutStatus,
-        public string $expectedLedgerAction,
-    ) {
-    }
-}
 
 class StorefrontPayoutProcessingServiceTest extends TestCase
 {
     protected function setUp(): void
     {
         parent::setUp();
-
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', ':memory:');
 
@@ -45,7 +32,7 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
             $table->unsignedBigInteger('creator_id');
             $table->unsignedBigInteger('amount_cents');
             $table->string('currency', 12)->default('ETB');
-            $table->string('status', 32)->default('requested');
+            $table->string('status', 32)->default('processing');
             $table->text('payout_destination')->nullable();
             $table->string('transfer_reference', 64)->nullable();
             $table->timestamp('paid_at')->nullable();
@@ -53,7 +40,6 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
             $table->text('rejection_reason')->nullable();
             $table->timestamps();
         });
-
         (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
     }
 
@@ -64,205 +50,357 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         parent::tearDown();
     }
 
-    private function mockChapaClient(string $createStatus = 'PENDING', string $verifyStatus = 'SUCCESS'): ChapaClient
+    private function payout(string $status = 'processing'): PayoutRequest
     {
-        $transport = $this->createMock(Transport::class);
-        $transport->method('send')->willReturnCallback(function (string $method, string $url) use ($createStatus, $verifyStatus) {
-            if (str_contains($url, '/verify')) {
-                return new RawResponse(200, (string) json_encode([
-                    'status' => 'success',
-                    'data' => [
-                        'status' => $verifyStatus,
-                        'chapa_reference' => 'CHP-PO-VERIFY-1',
-                        'merchant_reference' => 'lk-po-TEST-REF-01',
-                        'amount' => 50000,
-                        'currency' => 'ETB',
-                    ],
-                ]));
-            }
-
-            return new RawResponse(200, (string) json_encode([
-                'status' => 'success',
-                'data' => [
-                    'status' => $createStatus,
-                    'chapa_reference' => 'CHP-PO-CREATE-99',
-                    'created_at' => '2026-11-14T20:00:00Z',
-                ],
-            ]));
-        });
-
-        return new ChapaClient(
-            privateKey: 'sec-test-payout',
-            webhookSecret: 'wh-secret',
-            transport: $transport,
-        );
-    }
-
-    public function testPreparesDurableIntentWithStableReference(): void
-    {
-        $payout = PayoutRequest::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => 15,
-            'amount_cents' => 50000,
-            'currency' => 'ETB',
-            'payout_destination' => 'CBE:100099887766',
-            'status' => 'processing',
-        ]);
-
-        $service = new StorefrontPayoutProcessingService(
-            referenceGenerator: new StorefrontPaymentReferenceGenerator(fn (): bool => false),
-        );
-
-        $intent1 = $service->prepareIntent($payout, 'bank_transfer');
-        $this->assertSame(StorefrontPayoutIntent::STATUS_PREPARED, $intent1->status);
-        $this->assertStringStartsWith('lk-', $intent1->merchant_reference);
-        $this->assertLessThanOrEqual(20, strlen($intent1->merchant_reference));
-
-        // Re-preparing the same payout must return the exact same intent without creating a new record
-        $intent2 = $service->prepareIntent($payout, 'bank_transfer');
-        $this->assertSame($intent1->id, $intent2->id);
-        $this->assertSame($intent1->merchant_reference, $intent2->merchant_reference);
-        $this->assertSame($intent1->idempotency_key, $intent2->idempotency_key);
-        $this->assertSame(1, StorefrontPayoutIntent::query()->where('payout_request_id', $payout->id)->count());
-    }
-
-    public function testSubmitPayoutWithLowercaseCurrencySetsProviderPendingWithoutExtinguishingLiability(): void
-    {
-        $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($this->mockChapaClient(createStatus: 'PENDING'));
-
-        $ledgerMock = $this->createMock(CreatorLedgerService::class);
-        $ledgerMock->expects($this->never())->method('disbursePayout');
-
-        $payout = PayoutRequest::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => 20,
-            'amount_cents' => 50000,
-            'currency' => 'etb',
-            'payout_destination' => 'CBE:100012345678',
-            'status' => 'processing',
-        ]);
-
-        $service = new StorefrontPayoutProcessingService(
-            chapaManager: $manager,
-            referenceGenerator: new StorefrontPaymentReferenceGenerator(fn (): bool => false),
-            creatorLedger: $ledgerMock,
-        );
-
-        $intent = $service->prepareIntent($payout, 'bank_transfer');
-        $submitted = $service->submitPayout($intent);
-
-        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $submitted->status);
-        $this->assertSame('CHP-PO-CREATE-99', $submitted->chapa_reference);
-
-        $payout->refresh();
-        $this->assertSame('processing', $payout->status);
-        $this->assertSame($intent->merchant_reference, $payout->transfer_reference);
-        $this->assertNull($payout->paid_at);
-    }
-
-    #[DataProvider('payoutVerificationCases')]
-    public function testVerifyPayoutOutcomes(PayoutVerificationCase $case): void
-    {
-        $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($this->mockChapaClient(verifyStatus: $case->chapaStatus));
-
-        $ledgerMock = $this->createMock(CreatorLedgerService::class);
-        $disburseExpectation = $case->expectedLedgerAction === 'disburse' ? $this->once() : $this->never();
-        $releaseExpectation = $case->expectedLedgerAction === 'release' ? $this->once() : $this->never();
-        $ledgerMock->expects($disburseExpectation)->method('disbursePayout');
-        $ledgerMock->expects($releaseExpectation)->method('releasePayoutReservation');
-
-        $payout = PayoutRequest::query()->create([
+        return PayoutRequest::query()->create([
             'workspace_id' => 1,
             'creator_id' => 30,
             'amount_cents' => 50000,
             'currency' => 'ETB',
-            'payout_destination' => 'CBE:100012345678',
-            'status' => 'processing',
+            'payout_destination' => '1000123456789',
+            'status' => $status,
         ]);
+    }
 
-        $intent = StorefrontPayoutIntent::query()->create([
+    private function intent(PayoutRequest $payout): StorefrontPayoutIntent
+    {
+        return StorefrontPayoutIntent::query()->create([
             'payout_request_id' => $payout->id,
             'merchant_reference' => 'lk-po-TEST-REF-01',
             'idempotency_key' => 'c1d2e3f4-a5b6-7890-abcd-ef1234567890',
             'amount_cents' => 50000,
-            // Existing intents may use the lowercase storefront currency.
-            'currency' => 'etb',
+            'currency' => 'ETB',
             'provider' => 'chapa',
             'withdrawal_code' => 'bank_transfer',
-            'destination_snapshot' => 'CBE:100012345678',
+            'destination_snapshot' => '1000123456789',
             'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
         ]);
-
-        $service = new StorefrontPayoutProcessingService(
-            chapaManager: $manager,
-            creatorLedger: $ledgerMock,
-        );
-
-        $verified = $service->verifyPayout($intent);
-
-        $this->assertSame($case->expectedIntentStatus, $verified->status);
-
-        $payout->refresh();
-        $this->assertSame($case->expectedPayoutStatus, $payout->status);
     }
 
-    public function testReversalOfSettledPayoutRequiresReviewBeforeChangingLedger(): void
+    private function verified(string $status = 'success', string $reference = 'lk-po-TEST-REF-01'): array
     {
-        $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($this->mockChapaClient(verifyStatus: 'REVERSED'));
-        $ledger = $this->createMock(CreatorLedgerService::class);
-        $ledger->expects($this->never())->method('releasePayoutReservation');
-        $payout = PayoutRequest::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => 30,
-            'amount_cents' => 50000,
-            'currency' => 'ETB',
-            'status' => 'paid',
-            'paid_at' => now(),
-        ]);
-        $intent = StorefrontPayoutIntent::query()->create([
-            'payout_request_id' => $payout->id,
-            'merchant_reference' => 'lk-po-TEST-REF-01',
-            'idempotency_key' => 'c1d2e3f4-a5b6-7890-abcd-ef1234567890',
-            'amount_cents' => 50000,
-            'currency' => 'ETB',
-            'provider' => 'chapa',
-            'withdrawal_code' => 'bank_transfer',
-            'destination_snapshot' => 'CBE:100012345678',
-            'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
-        ]);
-        $service = new StorefrontPayoutProcessingService(chapaManager: $manager, creatorLedger: $ledger);
+        return [
+            'status' => 'success',
+            'data' => [
+                'status' => $status,
+                'reference' => $reference,
+                'amount' => '500.00',
+                'currency' => 'ETB',
+            ],
+        ];
+    }
 
-        $this->expectExceptionMessage('A settled payout requires manual reconciliation');
+    public function testSignedApprovalPayloadMatchesExactApprovedWalletSnapshot(): void
+    {
+        $payout = new PayoutRequest([
+            'status' => 'processing',
+            'bank_code_snapshot' => 'telebirr',
+            'account_holder_snapshot' => 'Abebe Seller',
+        ]);
+        $payout->setRelation('withdrawalMethod', new DigitalProductWithdrawalMethod([
+            'is_active' => true,
+            'code' => 'telebirr',
+        ]));
+        $payout->setRelation('payoutMethod', new DigitalProductPayoutMethod([
+            'is_active' => true,
+            'status' => 'active',
+            'approved_at' => now(),
+        ]));
+        $intent = new StorefrontPayoutIntent([
+            'merchant_reference' => 'lk-po-CALLBACK-01',
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+            'destination_snapshot' => '0911223344',
+            'status' => StorefrontPayoutIntent::STATUS_SUBMITTED,
+        ]);
+        $intent->setRelation('payoutRequest', $payout);
+
+        $payload = [
+            'reference' => 'lk-po-CALLBACK-01',
+            'amount' => '500.00',
+            'bank' => 'telebirr',
+            'account_name' => 'Abebe Seller',
+            'account_number' => '251911223344',
+        ];
+        $service = new ChapaPayoutService();
+        $this->assertTrue($service->approvalMatches($intent, $payload));
+        $this->assertFalse($service->approvalMatches($intent, [...$payload, 'amount' => '500.01']));
+        $this->assertFalse($service->approvalMatches($intent, [...$payload, 'account_number' => '251911223345']));
+        $this->assertFalse($service->approvalMatches($intent, [...$payload, 'reference' => 'wrong-reference']));
+    }
+
+    public function testPrepareIntentReusesStableReference(): void
+    {
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService();
+
+        $first = $service->prepareIntent($payout, 'bank_transfer');
+        $second = $service->prepareIntent($payout, 'bank_transfer');
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame($first->merchant_reference, $second->merchant_reference);
+        $this->assertLessThanOrEqual(20, strlen($first->merchant_reference));
+        $this->assertSame(1, StorefrontPayoutIntent::query()->count());
+    }
+
+    public function testQueuedTransferDoesNotMarkWithdrawalPaid(): void
+    {
+        $payout = $this->payout();
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('createTransfer')->once()->andReturnUsing(
+            fn (StorefrontPayoutIntent $intent) => [
+                'status' => 'success',
+                'message' => 'Transfer Queued Successfully',
+                'data' => $intent->merchant_reference,
+            ],
+        );
+
+        $service = new StorefrontPayoutProcessingService(chapaPayoutService: $provider);
+        $intent = $service->prepareIntent($payout);
+        $queued = $service->submitPayout($intent);
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $queued->status);
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertNull($payout->fresh()->paid_at);
+    }
+
+    public function testNestedProviderQueueResponseWithExactReferenceIsAccepted(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('createTransfer')->once()->andReturnUsing(
+            fn (StorefrontPayoutIntent $intent) => [
+                'status' => 'success',
+                'data' => [
+                    'id' => 123,
+                    'reference' => $intent->merchant_reference,
+                    'status' => 'pending',
+                ],
+            ],
+        );
+
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(chapaPayoutService: $provider);
+        $intent = $service->prepareIntent($payout);
+        $queued = $service->submitPayout($intent);
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $queued->status);
+        $this->assertSame($intent->merchant_reference, $queued->chapa_reference);
+        $this->assertSame('processing', $payout->fresh()->status);
+    }
+
+    public function testUnexpectedQueuedTransferReferenceRemainsUncertainAndCannotBeResent(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('createTransfer')->once()->andReturn([
+            'status' => 'success',
+            'data' => 'a-different-transfer',
+        ]);
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger, chapaPayoutService: $provider
+        );
+        $intent = $service->prepareIntent($payout);
+        $first = $service->submitPayout($intent);
+        $second = $service->submitPayout($intent);
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $first->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $second->status);
+        $this->assertNull($second->chapa_reference);
+        $this->assertSame(1, (int) $second->attempts);
+        $this->assertSame('processing', $payout->fresh()->status);
+    }
+
+    public function testFailedProviderLookupCannotDisburse(): void
+    {
+        $this->assertFailedProviderLookupLeavesFundsReserved('success');
+    }
+
+    public function testFailedProviderLookupCannotRelease(): void
+    {
+        $this->assertFailedProviderLookupLeavesFundsReserved('failed');
+    }
+
+    private function assertFailedProviderLookupLeavesFundsReserved(string $transferStatus): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $response = $this->verified($transferStatus);
+        $response['status'] = 'failed';
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($response);
+
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+        $ledger->shouldNotReceive('releasePayoutReservation');
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger, chapaPayoutService: $provider
+        );
+
+        try {
+            $service->verifyPayout($intent);
+            $this->fail('A failed provider lookup must not change the payout.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('verification lookup', $exception->getMessage());
+        }
+
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $intent->fresh()->status);
+    }
+
+    public function testMatchingRecipientFromVerificationAllowsSettlement(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $response = $this->verified();
+        $response['data']['account_number'] = '1000123456789';
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($response);
+
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('disbursePayout')->once();
+
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger, chapaPayoutService: $provider
+        );
+        $verified = $service->verifyPayout($this->intent($payout));
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $verified->status);
+        $this->assertSame('paid', $payout->fresh()->status);
+    }
+
+    public function testMismatchedRecipientFromVerificationCannotDisburse(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $response = $this->verified();
+        $response['data']['account_number'] = '1000123456788';
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($response);
+
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger, chapaPayoutService: $provider
+        );
+
+        $this->expectExceptionMessage('different recipient account');
         try {
             $service->verifyPayout($intent);
         } finally {
-            $this->assertSame('paid', $payout->fresh()->status);
-            $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $intent->fresh()->status);
+            $this->assertSame('processing', $payout->fresh()->status);
         }
     }
 
-    public static function payoutVerificationCases(): array
+    public function testTimedOutDispatchCannotBeSentTwice(): void
     {
-        return [
-            'delivered settlement disburses liability' => [
-                new PayoutVerificationCase(
-                    chapaStatus: 'SUCCESS',
-                    expectedIntentStatus: StorefrontPayoutIntent::STATUS_SUCCESSFUL,
-                    expectedPayoutStatus: 'paid',
-                    expectedLedgerAction: 'disburse',
-                ),
-            ],
-            'terminal failure releases reservation' => [
-                new PayoutVerificationCase(
-                    chapaStatus: 'FAILED',
-                    expectedIntentStatus: StorefrontPayoutIntent::STATUS_FAILED,
-                    expectedPayoutStatus: 'rejected',
-                    expectedLedgerAction: 'release',
-                ),
-            ],
-        ];
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('createTransfer')->once()->andThrow(new RuntimeException('timeout'));
+        $service = new StorefrontPayoutProcessingService(chapaPayoutService: $provider);
+        $intent = $service->prepareIntent($this->payout());
+        $first = $service->submitPayout($intent);
+        $second = $service->submitPayout($intent);
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $first->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $second->status);
+        $this->assertSame(1, (int) $second->attempts);
+    }
+
+    public function testPendingVerificationClearsUncertaintyButKeepsCreatorFundsReserved(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($this->verified('pending'));
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+        $ledger->shouldNotReceive('releasePayoutReservation');
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $intent->update([
+            'status' => StorefrontPayoutIntent::STATUS_SUBMITTED,
+            'last_error' => 'Submission uncertain.',
+        ]);
+
+        $service = new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider);
+        $verified = $service->verifyPayout($intent);
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $verified->status);
+        $this->assertNull($verified->last_error);
+        $this->assertNotNull($verified->verified_at);
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertNull($payout->fresh()->paid_at);
+    }
+
+    public function testVerifiedSuccessfulTransferDisbursesOnlyOnce(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->twice()->andReturn($this->verified());
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('disbursePayout')->once();
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $service = new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider);
+        $service->verifyPayout($intent);
+        $service->verifyPayout($intent->fresh());
+
+        $this->assertSame('paid', $payout->fresh()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $intent->fresh()->status);
+    }
+
+    public function testVerifiedFailureReleasesReservationOnce(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->twice()->andReturn($this->verified('failed'));
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('releasePayoutReservation')->once();
+        $finance = Mockery::mock(DigitalProductFinance::class);
+        $finance->shouldReceive('record')->once();
+        $this->app->instance(DigitalProductFinance::class, $finance);
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $service = new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider);
+        $service->verifyPayout($intent);
+        $service->verifyPayout($intent->fresh());
+
+        $this->assertSame('rejected', $payout->fresh()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $intent->fresh()->status);
+    }
+
+    public function testMismatchedProviderVerificationCannotSettle(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($this->verified('success', 'another-transfer'));
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider);
+
+        $this->expectExceptionMessage('verification details do not match');
+        try {
+            $service->verifyPayout($this->intent($payout));
+        } finally {
+            $this->assertSame('processing', $payout->fresh()->status);
+        }
+    }
+
+    public function testReversalOfAlreadyPaidWithdrawalCannotReleaseLedger(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($this->verified('reversed'));
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('releasePayoutReservation');
+
+        $payout = $this->payout('paid');
+        $intent = $this->intent($payout);
+        $intent->update(['status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL]);
+        $service = new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider);
+
+        $this->expectExceptionMessage('A settled payout requires manual reconciliation');
+        $service->verifyPayout($intent);
     }
 }

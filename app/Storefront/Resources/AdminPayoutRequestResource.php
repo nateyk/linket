@@ -11,6 +11,16 @@ class AdminPayoutRequestResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        // Never include full receiving destinations or internal notes in the
+        // paginated queue; admins inspect them on the protected review route.
+        $canReviewDetail = $request->user()?->can('admin.access')
+            && $request->routeIs(
+                'admin.withdrawals.review',
+                'admin.withdrawals.update',
+                'admin.withdrawals.submit-transfer',
+                'admin.withdrawals.verify-settlement',
+            );
+
         return [
             'id' => $this->id,
             'amount_cents' => $this->amount_cents,
@@ -26,10 +36,10 @@ class AdminPayoutRequestResource extends JsonResource
                 'destination_label' => $this->withdrawalMethod?->destination_label,
                 'instructions' => $this->withdrawalMethod?->instructions,
             ]),
-            'payout_destination' => $this->when($request->user()?->can('admin.access'), $this->payout_destination),
+            'payout_destination' => $this->when($canReviewDetail, fn () => $this->payout_destination),
             'status' => $this->status,
-            'transfer_reference' => $this->when($request->user()?->can('admin.access'), $this->transfer_reference),
-            'admin_notes' => $this->when($request->user()?->can('admin.access'), $this->admin_notes),
+            'transfer_reference' => $this->when($canReviewDetail, fn () => $this->transfer_reference),
+            'admin_notes' => $this->when($canReviewDetail, fn () => $this->admin_notes),
             'rejection_reason' => $this->rejection_reason,
             'created_at' => $this->created_at,
             'processed_at' => $this->processed_at,
@@ -65,13 +75,17 @@ class AdminPayoutRequestResource extends JsonResource
                 'account_holder' => $this->payoutMethod?->account_holder,
                 'display_label' => $this->payoutMethod?->display_label,
             ]),
+            'payout_mode' => $this->when($canReviewDetail, fn () => app(\App\Storefront\Services\ChapaV1PayoutMode::class)->status()),
+            'admin_step_up_required' => $this->when($canReviewDetail, fn () => (bool) config('services.chapa.admin_payout_step_up_required', false)),
             'latest_payout_intent' => $this->whenLoaded('latestPayoutIntent', fn() => [
-                'id' => $this->latestPayoutIntent?->id,
-                'merchant_reference' => $this->latestPayoutIntent?->merchant_reference,
                 'status' => $this->latestPayoutIntent?->status,
-                'chapa_reference' => $this->latestPayoutIntent?->chapa_reference,
-                'verified_at' => $this->latestPayoutIntent?->verified_at,
-                'last_error' => $this->latestPayoutIntent?->last_error,
+                ...($canReviewDetail ? [
+                    'id' => $this->latestPayoutIntent?->id,
+                    'merchant_reference' => $this->latestPayoutIntent?->merchant_reference,
+                    'chapa_reference' => $this->latestPayoutIntent?->chapa_reference,
+                    'verified_at' => $this->latestPayoutIntent?->verified_at,
+                    'last_error' => $this->latestPayoutIntent?->last_error,
+                ] : []),
             ]),
         ];
     }

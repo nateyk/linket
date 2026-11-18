@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Payments\Chapa\LinketChapaManager;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Stores\Models\Store;
 use App\Storefront\Models\CreatorPaymentMethod;
@@ -16,10 +15,8 @@ use App\Storefront\Models\StorefrontPaymentAttempt;
 use Common\Files\FileEntry;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Nateyk\Chapa\ChapaClient;
-use Nateyk\Chapa\Http\RawResponse;
-use Nateyk\Chapa\Http\Transport;
 use Tests\TestCase;
 
 class CentralizedMarketplaceCheckoutTest extends TestCase
@@ -121,7 +118,6 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
     {
         config(['services.chapa.secret' => '']);
         config(['services.verify_et.enabled' => false]);
-        app(LinketChapaManager::class)->swapClient(null);
 
         $creator = User::factory()->create();
         $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
@@ -141,10 +137,11 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
         ])->assertStatus(503);
     }
 
-    public function testVerifyEtDirectPaymentUsedWhenExplicitlySupplied(): void
+    public function testExplicitLegacyReceivingAccountCannotOverridePlatformChapa(): void
     {
         config(['services.chapa.secret' => 'platform-sec-test']);
         config(['services.verify_et.enabled' => true]);
+        $this->mockPlatformChapaClient('https://checkout.chapa.global/centralized-legacy-override', 'CHP-REF-LEGACY');
 
         $creator = User::factory()->create();
         $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
@@ -184,14 +181,18 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJsonPath('checkout_url', null)
-            ->assertJsonPath('instructions_endpoint', fn ($val) => str_contains((string) $val, '/payment-instructions'))
+            ->assertJsonPath('checkout_url', 'https://checkout.chapa.global/centralized-legacy-override')
             ->assertJsonPath('status', 'pending_payment');
 
         $orderUuid = $response->json('order_id');
         $order = StorefrontOrder::query()->where('uuid', $orderUuid)->first();
         $this->assertNotNull($order);
-        $this->assertSame('verify_et', $order->payment_gateway);
+        $this->assertSame('chapa', $order->payment_gateway);
+        $this->assertSame(StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA, $order->collection_owner);
+        $this->assertNull($order->creator_payment_method_id);
+        $this->getJson("/api/v1/public/biolinks/{$store->id}/digital-products/{$product->id}")
+            ->assertOk()
+            ->assertJsonPath('data.receiving_accounts', []);
     }
 
     private function createApprovedProduct(User $creator, $workspace, int $priceCents): DigitalProduct
@@ -224,22 +225,11 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
 
     private function mockPlatformChapaClient(string $checkoutUrl, string $reference): void
     {
-        $transport = $this->createMock(Transport::class);
-        $transport->method('send')->willReturn(
-            new RawResponse(200, (string) json_encode([
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/initialize' => Http::response([
                 'status' => 'success',
-                'data' => [
-                    'checkout_url' => $checkoutUrl,
-                    'chapa_reference' => $reference,
-                ],
-            ]))
-        );
-
-        $client = new ChapaClient(
-            privateKey: 'sec-platform-test',
-            transport: $transport,
-        );
-
-        app(LinketChapaManager::class)->swapClient($client);
+                'data' => ['checkout_url' => $checkoutUrl],
+            ]),
+        ]);
     }
 }
