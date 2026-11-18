@@ -74,6 +74,14 @@ verification payload still need observation using real Chapa test deliveries.
 Synthetic `Http::fake()` tests prove our application guards, not provider
 acceptance. Do not enable real transfers on the strength of fixture data.
 
+## Optional Linket administrator step-up confirmation
+
+Enable `CHAPA_ADMIN_PAYOUT_STEP_UP_REQUIRED=true` in the **server** configuration after updating the payout review interface and deployment. When enabled, the administrator must re-enter their **Linket account password** to submit a new Chapa transfer. The server verifies the password and the exact withdrawal ID, amount, currency and snapshotted destination label before initiating any transfer. Password attempts are rate-limited; passwords are never logged.
+
+This is **not** the Chapa Transfer Approval Secret and does not replace Chapa's independent server-to-server Approval URL check. The administrator never types the Chapa merchant key or Chapa approval secret into the payout confirmation dialog. SSO-only administrators without a local password need a separately approved MFA mechanism before enabling this option.
+
+The read-only administration endpoint `GET /api/v1/admin/financial/chapa-payout-readiness` reports mode, approval configured/disabled status, approval URL, and step-up policy; it never exposes secrets. All transfer initiation remains disabled for unrecognized credential prefixes.
+
 ## Read-only test-mode audit (no payout side effects)
 
 With a properly configured **Chapa TEST key** in Linket's platform settings, run:

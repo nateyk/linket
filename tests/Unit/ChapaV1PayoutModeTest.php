@@ -83,6 +83,14 @@ class ChapaV1PayoutModeTest extends TestCase
         $this->gate('CHASECK_TEST-fixture')->assertDispatchReady();
     }
 
+    public function testUnknownKeyCannotEnableLiveTransfers(): void
+    {
+        config()->set('services.chapa.payouts_enabled', true);
+        $mode = $this->gate('not-a-chapa-secret');
+        $this->assertSame('unconfigured', $mode->mode());
+        $this->assertFalse($mode->enabled());
+    }
+
     public function testMissingKeyCannotDispatchWithTestSwitch(): void
     {
         config()->set('services.chapa.test_payouts_enabled', true);

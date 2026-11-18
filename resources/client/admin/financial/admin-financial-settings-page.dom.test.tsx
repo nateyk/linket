@@ -87,6 +87,13 @@ describe('AdminFinancialSettingsPage', () => {
 
   beforeEach(() => {
     mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/admin/financial/chapa-payout-readiness') {
+        return Promise.resolve({data: {data: {
+          mode: 'test', enabled: true, approval_configured: true, test_only: true,
+          approval_url: 'https://linket.test/api/v1/chapa/transfer-approval',
+          admin_step_up_required: true,
+        }}});
+      }
       if (url === '/api/v1/admin/billing/subscription-gateway') {
         return Promise.resolve({data: {data: baseGatewayConfig}});
       }
@@ -146,6 +153,8 @@ describe('AdminFinancialSettingsPage', () => {
     });
 
     expect(screen.getByText('Connected')).toBeTruthy();
+    expect(await screen.findByText('Chapa transfer approval')).toBeTruthy();
+    expect(screen.getByText('https://linket.test/api/v1/chapa/transfer-approval')).toBeTruthy();
     expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/admin/billing/subscription-gateway');
     expect(
       screen.getByDisplayValue('https://linket.test/api/v1/billing/gateways/chapa/webhook'),

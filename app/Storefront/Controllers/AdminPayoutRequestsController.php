@@ -9,6 +9,7 @@ use App\Storefront\Models\PayoutRequest;
 use App\Storefront\PayoutRequestService;
 use App\Storefront\Resources\AdminPayoutRequestResource;
 use App\Storefront\Services\AdminPayoutTransferStatusFilter;
+use App\Storefront\Services\AdminPayoutStepUp;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -173,6 +174,7 @@ class AdminPayoutRequestsController extends Controller
     public function submitTransfer(Request $request, PayoutRequest $payoutRequest): JsonResponse
     {
         Gate::authorize('admin.access');
+        app(AdminPayoutStepUp::class)->confirm($request, $payoutRequest);
 
         try {
             $intent = app(PayoutRequestService::class)->submitChapaPayout($payoutRequest, $request->user()->id);

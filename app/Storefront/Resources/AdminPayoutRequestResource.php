@@ -76,6 +76,7 @@ class AdminPayoutRequestResource extends JsonResource
                 'display_label' => $this->payoutMethod?->display_label,
             ]),
             'payout_mode' => $this->when($canReviewDetail, fn () => app(\App\Storefront\Services\ChapaV1PayoutMode::class)->status()),
+            'admin_step_up_required' => $this->when($canReviewDetail, fn () => (bool) config('services.chapa.admin_payout_step_up_required', false)),
             'latest_payout_intent' => $this->whenLoaded('latestPayoutIntent', fn() => [
                 'status' => $this->latestPayoutIntent?->status,
                 ...($canReviewDetail ? [
