@@ -21,7 +21,8 @@ it('reports pass fail checks without leaking secrets', function () {
         ->and($json)->not->toMatch('/whsec_[A-Za-z0-9]{8,}/')
         ->and($json)->not->toContain('VERIFY_ET_API_KEY=')
         ->and(collect($payload['checks'])->pluck('check'))->toContain('redis_connect')
-        ->and(collect($payload['checks'])->pluck('check'))->toContain('verify_et_webhook_signing_configured');
+        ->and(collect($payload['checks'])->pluck('check'))->toContain('scheduler_marketplace_reconcile_registered')
+        ->and(collect($payload['checks'])->pluck('check'))->not->toContain('verify_et_webhook_signing_configured');
 
     foreach (collect($payload['checks'])->pluck('status') as $status) {
         expect(in_array($status, ['PASS', 'FAIL'], true))->toBeTrue();
