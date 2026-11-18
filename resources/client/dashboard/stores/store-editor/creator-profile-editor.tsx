@@ -19,9 +19,7 @@ import {
   CreatorProfileForm,
   rebaseAboutFormOnEditorReady,
 } from '@app/dashboard/stores/store-editor/creator-profile-form-values';
-import {
-  CreatorProfileConfig,
-} from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {CreatorProfileConfig} from '@app/dashboard/stores/store-editor/creator-profile-types';
 import {
   SocialsList,
   SocialsType,
