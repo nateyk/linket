@@ -156,6 +156,7 @@ function PayoutAccountCard({
     b => b.code.toLowerCase() === (account.bank_code ?? account.type).toLowerCase()
   );
   const displayName = account.bank_name || bankOption?.name || account.display_label || 'Bank Account';
+  const isSupported = !!bankOption;
   const maskedNumber = account.masked_account_number || (account.account_number_last_four ? `•••• ${account.account_number_last_four}` : '••••');
 
   return (
@@ -169,7 +170,8 @@ function PayoutAccountCard({
                 <h2 className="min-w-0 truncate text-sm font-semibold text-foreground">
                   {displayName}
                 </h2>
-                {account.status !== 'active' && (
+                {!isSupported && <Badge variant="outline" className="text-xs">Unsupported for payouts</Badge>}
+                {isSupported && account.status !== 'active' && (
                   <Badge variant="outline" className="text-xs">
                     {account.status === 'pending_verification' ? 'Awaiting approval' : 'Needs review'}
                   </Badge>
@@ -200,16 +202,16 @@ function PayoutAccountCard({
               <MoreHorizontalIcon className="size-4" />
             </Dropdown.Trigger>
             <Dropdown.Content align="end">
-              {!account.is_default && (
+              {isSupported && !account.is_default && (
                 <Dropdown.Item disabled={busy} onClick={() => onSetDefault(account)}>
                   <StarIcon className="size-4" />
                   <Trans message="Set as default" />
                 </Dropdown.Item>
               )}
-              <Dropdown.Item disabled={busy} onClick={() => onEdit(account)}>
+              {isSupported && <Dropdown.Item disabled={busy} onClick={() => onEdit(account)}>
                 <PencilIcon className="size-4" />
                 <Trans message="Edit account" />
-              </Dropdown.Item>
+              </Dropdown.Item>}
               <Dropdown.Item disabled={busy} onClick={() => onDelete(account)} className="text-destructive">
                 <Trash2Icon className="size-4" />
                 <Trans message="Remove account" />
