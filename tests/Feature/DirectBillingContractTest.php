@@ -39,7 +39,7 @@ class DirectBillingContractTest extends TestCase
         ]);
         Price::query()->where('product_id', $plan->id)->where('currency', 'ETB')->where('interval', 'month')->update(['amount' => 0]);
 
-        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertConflict();
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertNotFound();
         $this->assertSame(50000, $payment->fresh()->amount_cents);
         $this->assertSame('pending_payment', $payment->fresh()->status);
     }
@@ -51,9 +51,9 @@ class DirectBillingContractTest extends TestCase
         [$plan, $price] = $this->proPlan();
         $creator = User::factory()->create();
 
-        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertConflict();
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertNotFound();
         $price->update(['amount' => 700]);
-        $this->postJson('/api/v1/billing/direct/pro')->assertConflict();
+        $this->postJson('/api/v1/billing/direct/pro')->assertNotFound();
         $this->assertSame(0, ProSubscriptionPayment::query()
             ->where('creator_id', $creator->id)->where('product_id', $plan->id)->count());
     }
@@ -270,7 +270,7 @@ class DirectBillingContractTest extends TestCase
         $creator = User::factory()->create();
         $this->stateful()->actingAs($creator);
         [$plan, $price] = $this->proPlan();
-        $this->postJson('/api/v1/billing/direct/pro')->assertConflict();
+        $this->postJson('/api/v1/billing/direct/pro')->assertNotFound();
 
         $this->postJson('/api/v1/billing/chapa/checkout', [
             'product_id' => $plan->id,
@@ -300,7 +300,7 @@ class DirectBillingContractTest extends TestCase
 
         $creator = User::factory()->create();
         [$plan, $price] = $this->proPlan();
-        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertConflict();
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/billing/direct/pro')->assertNotFound();
         $this->postJson('/api/v1/billing/chapa/checkout', [
             'product_id' => $plan->id,
             'price_id' => $price->id,
