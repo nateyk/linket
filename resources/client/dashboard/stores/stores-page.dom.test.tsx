@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import {cleanup, fireEvent, render, screen} from '@testing-library/react';
+import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import type {Store} from '@app/gen/schemas/store';
 import type {ReactNode} from 'react';
 import {afterEach, describe, expect, it, vi} from 'vitest';
@@ -137,6 +137,24 @@ describe('storefront profile card', () => {
     expect(screen.getByRole('button', {name: 'Profile actions'})).toBeTruthy();
   });
 
+  it('shows zero clicks when the API omits the click count', () => {
+    const insights = vi.fn();
+    const edit = vi.fn();
+    render(
+      <BiolinkCard
+        biolink={{...store, clicks_count: undefined}}
+        onClick={edit}
+        onInsights={insights}
+      />,
+    );
+
+    const count = screen.getByRole('button', {name: '0 clicks'});
+    expect(count.textContent).toBe('0');
+    fireEvent.click(count);
+    expect(insights).toHaveBeenCalledOnce();
+    expect(edit).not.toHaveBeenCalled();
+  });
+
   it('opens insights from the click count without opening the editor', () => {
     const edit = vi.fn();
     const insights = vi.fn();
@@ -180,6 +198,14 @@ describe('storefront profile card', () => {
 
     expect(clipboard.copy).toHaveBeenCalledWith(store.short_url);
     expect(notifications.success).toHaveBeenCalledOnce();
+    expect(edit).not.toHaveBeenCalled();
+
+    // Reopen the menu before the clipboard success state expires.
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+    fireEvent.click(screen.getByRole('button', {name: 'Profile actions'}));
+    expect(await screen.findByRole('menuitem', {name: 'Link copied'})).toBeTruthy();
     expect(edit).not.toHaveBeenCalled();
   });
 
