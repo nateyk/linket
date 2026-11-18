@@ -53,3 +53,19 @@ test('known countries render a map and selectable country list', () => {
   expect(screen.getByRole('button', {name: /Ethiopia/})).toBeTruthy();
   expect(screen.getByText(/Visits without a known country/)).toBeTruthy();
 });
+
+
+test('Google Analytics country labels without ISO codes still display the map', () => {
+  render(
+    <GeoChart
+      data={[
+        {label: 'Ethiopia', value: 3, percentage: 75},
+        {label: '(not set)', value: 1, percentage: 25},
+      ]}
+      datasetLabel="Visitors"
+    />,
+  );
+
+  expect(screen.getByRole('img', {name: 'Country locations map'})).toBeTruthy();
+  expect(screen.getByText('Ethiopia')).toBeTruthy();
+});
