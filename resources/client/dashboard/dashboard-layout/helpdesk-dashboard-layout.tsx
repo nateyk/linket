@@ -79,7 +79,7 @@ function AgentDashboardContent({adminShell = false}: {adminShell?: boolean}) {
             to="/admin/support"
             className="shrink-0 rounded-button px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
           >
-            <Trans message="Support" />
+            <Trans message="Overview" />
           </Link>
         </div>
       )}

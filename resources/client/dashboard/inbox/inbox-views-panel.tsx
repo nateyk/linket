@@ -6,7 +6,7 @@ import {useQuery} from '@tanstack/react-query';
 import {IconButton} from '@ui/buttons/icon-button';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {Trans} from '@ui/i18n/trans';
-import {ChevronRightIcon, PlusIcon, SearchIcon, SlidersHorizontalIcon, InboxIcon, MessageCircleIcon} from 'lucide-react';
+import {ChevronRightIcon, PlusIcon, SearchIcon, InboxIcon, MessageCircleIcon} from 'lucide-react';
 import {Tooltip} from '@ui/tooltip/tooltip';
 import {useLocalStorage} from '@ui/utils/hooks/local-storage';
 import clsx from 'clsx';
@@ -35,25 +35,12 @@ export function InboxViewsPanel() {
   return (
     <Fragment>
       <Toolbar />
-      <div className="compact-scrollbar flex-auto overflow-y-auto pl-3">
+      <div className="compact-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto px-3 pb-3">
         <ViewList views={pinnedViews} />
-        <Section
-          name="views"
-          actions={
-            <IconButton
-              size="xs"
-              iconSize="sm"
-              elementType={Link}
-              to="/agent/views"
-              aria-label="Manage conversation views"
-            >
-              <SlidersHorizontalIcon aria-hidden="true" />
-            </IconButton>
-          }
-        >
+        <Section name="views">
           <Trans message="Views" />
           {views.length ? (
-            <ViewList views={views} className="pl-2" />
+            <ViewList views={views} />
           ) : pinnedViews.length === 0 ? (
             <DefaultInboxViews />
           ) : null}
@@ -61,7 +48,7 @@ export function InboxViewsPanel() {
         {groupViews.length > 0 && (
           <Section name="groups">
             <Trans message="Groups" />
-            <ViewList views={groupViews} className="pl-2" />
+            <ViewList views={groupViews} />
           </Section>
         )}
       </div>
@@ -76,7 +63,7 @@ function Toolbar() {
       padding="px-3"
       className="min-w-0"
     >
-      <span className="min-w-0 flex-1 truncate text-base font-semibold"><Trans message="Inbox" /></span>
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold"><Trans message="Inbox" /></span>
       <Tooltip label={<Trans message="Search conversations" />}>
         <IconButton
           aria-label="Search conversations"
@@ -110,7 +97,7 @@ function DefaultInboxViews() {
   const current = params.get('viewId') ?? 'all';
 
   return (
-    <nav aria-label="Default conversation views" className="flex flex-col gap-0.5 ps-2">
+    <nav aria-label="Default conversation views" className="flex min-w-0 flex-col gap-0.5">
       <DefaultInboxView to="all" active={current === 'all'} icon={<InboxIcon className="size-4" />}>
         <Trans message="All conversations" />
       </DefaultInboxView>
@@ -137,14 +124,14 @@ function DefaultInboxView({
       to={`/agent/conversations?viewId=${to}`}
       aria-current={active ? 'page' : undefined}
       className={clsx(
-        'flex min-h-9 items-center gap-2 rounded-button px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring',
+        'flex min-h-9 min-w-0 items-center gap-2 rounded-button px-2.5 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring',
         active
           ? 'bg-sidebar-accent font-medium text-accent-foreground'
           : 'hover:bg-sidebar-accent hover:text-accent-foreground',
       )}
     >
-      {icon}
-      {children}
+      <span className="shrink-0" aria-hidden="true">{icon}</span>
+      <span className="min-w-0 flex-1 truncate">{children}</span>
     </Link>
   );
 }
@@ -152,22 +139,16 @@ function DefaultInboxView({
 interface SectionProps {
   name: string;
   children: [ReactElement, ReactElement | null];
-  actions?: ReactNode;
 }
-function Section({name, children, actions}: SectionProps) {
+function Section({name, children}: SectionProps) {
   const [isExpanded, setIsExpanded] = useLocalStorage(
     `inbox-${name}-expanded`,
     true,
   );
   return (
     <Fragment>
-      <div className="group mb-2 flex items-center gap-2 pl-2.5 pr-3.5 pt-5">
-        <div className="mr-auto text-sm font-semibold">{children[0]}</div>
-        {actions && (
-          <div className="opacity-75 hover:opacity-100 focus-within:opacity-100">
-            {actions}
-          </div>
-        )}
+      <div className="group mb-1 flex items-center gap-2 px-2 pt-4">
+        <div className="mr-auto text-sm font-medium text-muted-foreground">{children[0]}</div>
         <IconButton
           size="xs"
           iconSize="sm"
@@ -211,7 +192,7 @@ function ViewListItem({view}: ViewListItemProps) {
   return (
     <Link
       className={clsx(
-        'flex min-h-9 items-center justify-between gap-2 rounded-button px-3 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-ring',
+        'flex min-h-9 min-w-0 items-center gap-2 rounded-button px-2.5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-ring',
         isActive
           ? 'bg-sidebar-accent font-medium text-accent-foreground'
           : 'text-foreground hover:bg-sidebar-accent hover:text-accent-foreground',
@@ -220,11 +201,11 @@ function ViewListItem({view}: ViewListItemProps) {
       aria-current={isActive ? 'page' : undefined}
     >
       <DashboardIcon name={view.icon as DashboardIconName} size="xs" />
-      <span className="text-overflow-ellipsis mr-3 block min-w-0 flex-auto overflow-hidden whitespace-nowrap">
+      <span className="block min-w-0 flex-1 truncate">
         <Trans message={view.name} />
       </span>
       {view.count ? (
-        <div className="ml-auto text-[11px] text-muted">
+        <div className="ms-auto shrink-0 text-xs text-muted-foreground">
           <FormattedNumber value={view.count} />
         </div>
       ) : null}
