@@ -22,3 +22,34 @@ test('the map info trigger has an accessible name (axe button-name)', async () =
   });
   expect(button).toBeTruthy();
 });
+
+
+test('unresolved locations stay in the list without rendering a misleading map', () => {
+  render(
+    <GeoChart
+      data={[{label: 'Unknown location', value: 8, percentage: 100, code: ''}]}
+      datasetLabel="Clicks"
+    />,
+  );
+
+  expect(screen.getByText('Location data unavailable')).toBeTruthy();
+  expect(screen.getByText('Unknown location')).toBeTruthy();
+  expect(screen.queryByRole('img', {name: 'Country locations map'})).toBeNull();
+});
+
+test('known countries render a map and selectable country list', () => {
+  render(
+    <GeoChart
+      data={[
+        {label: 'Ethiopia', value: 6, percentage: 75, code: 'et'},
+        {label: 'Unknown location', value: 2, percentage: 25, code: ''},
+      ]}
+      onCountrySelected={() => {}}
+      datasetLabel="Clicks"
+    />,
+  );
+
+  expect(screen.getByRole('img', {name: 'Country locations map'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: /Ethiopia/})).toBeTruthy();
+  expect(screen.getByText(/Visits without a known country/)).toBeTruthy();
+});
