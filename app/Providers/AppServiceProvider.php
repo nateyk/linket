@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Actions\AppBootstrapData;
+use App\Auth\Listeners\SendWelcomeEmail;
 use App\Contacts\Models\PageVisit;
 use App\Conversations\Models\Conversation;
 use App\Files\Listeners\ConvertUploadedLinkImageToWebp;
@@ -309,6 +310,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class, AttachWorkspaceToUser::class);
         Event::listen(Login::class, \App\Courses\Listeners\ClaimCourseEnrollmentsOnLogin::class);
         Event::listen(Registered::class, AttachWorkspaceToUser::class);
+        Event::listen(Registered::class, SendWelcomeEmail::class);
         Event::listen(\Illuminate\Auth\Events\Verified::class, \App\Courses\Listeners\ClaimCourseEnrollmentsOnVerified::class);
 
         Event::listen(UserCreated::class, function (UserCreated $e) {

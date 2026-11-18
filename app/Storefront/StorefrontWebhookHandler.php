@@ -5,6 +5,7 @@ namespace App\Storefront;
 use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Jobs\SendStorefrontReceipt;
+use App\Storefront\Notifications\ChapaCreatorSaleNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -72,6 +73,10 @@ class StorefrontWebhookHandler
             Log::warning('store.course.enrollment_failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
         }
         SendStorefrontReceipt::dispatch($order->id)->afterCommit();
+        if (($order->payment_gateway ?? '') === 'chapa') {
+            $order->loadMissing('creator');
+            $order->creator?->notify(new ChapaCreatorSaleNotification($order->id));
+        }
         });
     }
 }

@@ -9,6 +9,7 @@ use App\Storefront\ChapaPayoutService;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Notifications\ChapaPayoutStatusNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -127,6 +128,7 @@ final class StorefrontPayoutProcessingService
                 ]);
 
                 $payout = $intent->payoutRequest()->lockForUpdate()->firstOrFail();
+                $alreadyPaid = $payout->status === 'paid';
                 $payout->update([
                     'status' => 'paid',
                     'paid_at' => now(),
@@ -134,6 +136,9 @@ final class StorefrontPayoutProcessingService
                 ]);
 
                 $this->ledger()->disbursePayout($payout);
+                if (! $alreadyPaid) {
+                    ChapaPayoutStatusNotification::notifyCreator($payout, 'sent');
+                }
 
                 return $intent->fresh();
             });
@@ -160,6 +165,7 @@ final class StorefrontPayoutProcessingService
                 'verified_at' => now(),
                 'verification_data' => $verified->raw,
             ]);
+            $alreadyRejected = $payout->status === 'rejected';
             $payout->update([
                 'status' => 'rejected',
                 'rejected_at' => now(),
@@ -167,6 +173,9 @@ final class StorefrontPayoutProcessingService
             ]);
 
             $this->ledger()->releasePayoutReservation($payout);
+            if (! $alreadyRejected) {
+                ChapaPayoutStatusNotification::notifyCreator($payout, 'failed');
+            }
 
             return $intent->fresh();
         });

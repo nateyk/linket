@@ -1,7 +1,9 @@
 <?php namespace App\Conversations\Email\Mailables;
 
 use App\Conversations\Email\EmailStore;
+use App\Conversations\Email\TicketEmailCopy;
 use App\Conversations\Email\TicketReferenceHash;
+use App\Mail\ReactEmailRenderer;
 use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationItem;
 use Common\Files\FileEntry;
@@ -31,16 +33,44 @@ class TicketReplyMailable extends Mailable implements ShouldQueue
 
     public function build(): static
     {
-        $this->conversation->load('user', 'latestMessages.user');
+        $this->conversation->loadMissing('user', 'latestMessages.user');
         $this->includeHistory = settings('tickets.include_history') ?? false;
 
         $this->setMessageIdForPreviousEmail();
 
         // make sure to get secondary email, if primary not available
+        $subject = "RE: {$this->conversation->subject}";
+        $lines = array_values(array_filter([
+            TicketEmailCopy::plain($this->reply->body),
+        ]));
+        if ($this->includeHistory) {
+            foreach ($this->conversation->latestMessages as $message) {
+                if ($message->id === $this->reply->id) {
+                    continue;
+                }
+                $text = TicketEmailCopy::plain($message->body);
+                if ($text === '') {
+                    continue;
+                }
+                $who = $message->user?->name ?: config('app.name');
+                $lines[] = $who.': '.$text;
+            }
+        }
+
+        $rendered = app(ReactEmailRenderer::class)->render('message', [
+            'preview' => $subject,
+            'heading' => $subject,
+            'lines' => $lines,
+            'actionLabel' => __('View ticket'),
+            'actionUrl' => url('/hc/tickets/'.$this->conversation->id),
+            'note' => $this->reference,
+        ]);
+
         $this->to($this->conversation->user->routeNotificationForMail())
-            ->subject("RE: {$this->conversation->subject}")
-            ->view('tickets.ticket-reply.ticket-reply')
-            ->text('tickets.ticket-reply.ticket-reply-plain');
+            ->subject($subject)
+            ->html($rendered['html'])
+            ->text('emails.react-email-plain')
+            ->with(['body' => $rendered['text']]);
 
         return $this;
     }

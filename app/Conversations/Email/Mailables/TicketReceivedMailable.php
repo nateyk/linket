@@ -2,7 +2,9 @@
 
 namespace App\Conversations\Email\Mailables;
 
+use App\Conversations\Email\TicketEmailCopy;
 use App\Conversations\Email\TicketReferenceHash;
+use App\Mail\ReactEmailRenderer;
 use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationItem;
 use Illuminate\Bus\Queueable;
@@ -54,9 +56,26 @@ class TicketReceivedMailable extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
+        $subject = __('We’ve received your enquiry: #:ticketId', [
+            'ticketId' => $this->conversation->id,
+        ]);
+        $body = TicketEmailCopy::plain($this->reply->body);
+        $rendered = app(ReactEmailRenderer::class)->render('message', [
+            'preview' => $subject,
+            'heading' => $subject,
+            'lines' => array_values(array_filter([
+                __('Subject: :subject', ['subject' => $this->conversation->subject]),
+                $body,
+            ])),
+            'actionLabel' => __('View ticket'),
+            'actionUrl' => url('/hc/tickets/'.$this->conversation->id),
+            'note' => $this->reference,
+        ]);
+
         return new Content(
-            html: 'tickets.request-received.request-received',
-            text: 'tickets.request-received.request-received-plain',
+            htmlString: $rendered['html'],
+            text: 'emails.react-email-plain',
+            with: ['body' => $rendered['text']],
         );
     }
 }

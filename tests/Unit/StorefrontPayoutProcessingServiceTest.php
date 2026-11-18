@@ -7,11 +7,14 @@ namespace Tests\Unit;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\ChapaPayoutService;
 use App\Storefront\Ledger\CreatorLedgerService;
+use App\Models\User;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Notifications\ChapaPayoutStatusNotification;
 use App\Storefront\Services\StorefrontPaymentReferenceGenerator;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Nateyk\Chapa\ChapaClient;
 use Nateyk\Chapa\Http\RawResponse;
@@ -39,6 +42,13 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', ':memory:');
 
+        Schema::create('users', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name')->nullable();
+            $table->string('email')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('payout_requests', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('workspace_id')->default(1);
@@ -61,6 +71,7 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
     {
         Schema::dropIfExists('storefront_payout_intents');
         Schema::dropIfExists('payout_requests');
+        Schema::dropIfExists('users');
         parent::tearDown();
     }
 
@@ -206,6 +217,95 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
 
         $payout->refresh();
         $this->assertSame($case->expectedPayoutStatus, $payout->status);
+    }
+
+    public function testSuccessfulSettlementEmailsTheCreator(): void
+    {
+        Notification::fake();
+        $creatorId = $this->creatorId();
+        $manager = $this->createMock(LinketChapaManager::class);
+        $manager->method('platformClient')->willReturn($this->mockChapaClient(verifyStatus: 'SUCCESS'));
+        $ledger = $this->createMock(CreatorLedgerService::class);
+        $ledger->expects($this->once())->method('disbursePayout');
+        $payout = PayoutRequest::query()->create([
+            'workspace_id' => 1,
+            'creator_id' => $creatorId,
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+            'payout_destination' => 'CBE:100012345678',
+            'status' => 'processing',
+        ]);
+        $intent = StorefrontPayoutIntent::query()->create([
+            'payout_request_id' => $payout->id,
+            'merchant_reference' => 'lk-po-TEST-REF-01',
+            'idempotency_key' => 'c1d2e3f4-a5b6-7890-abcd-ef1234567890',
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+            'provider' => 'chapa',
+            'withdrawal_code' => 'bank_transfer',
+            'destination_snapshot' => 'CBE:100012345678',
+            'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+        ]);
+
+        (new StorefrontPayoutProcessingService(chapaManager: $manager, creatorLedger: $ledger))
+            ->verifyPayout($intent);
+
+        Notification::assertSentTo(
+            User::query()->findOrFail($creatorId),
+            ChapaPayoutStatusNotification::class,
+            fn (ChapaPayoutStatusNotification $notification): bool => $notification->event === 'sent'
+                && $notification->amountLabel === '500.00 ETB'
+                && $notification->reference === 'lk-po-TEST-REF-01',
+        );
+    }
+
+    public function testFailedSettlementEmailsTheCreator(): void
+    {
+        Notification::fake();
+        $creatorId = $this->creatorId();
+        $manager = $this->createMock(LinketChapaManager::class);
+        $manager->method('platformClient')->willReturn($this->mockChapaClient(verifyStatus: 'FAILED'));
+        $ledger = $this->createMock(CreatorLedgerService::class);
+        $ledger->expects($this->once())->method('releasePayoutReservation');
+        $payout = PayoutRequest::query()->create([
+            'workspace_id' => 1,
+            'creator_id' => $creatorId,
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+            'payout_destination' => 'CBE:100012345678',
+            'status' => 'processing',
+        ]);
+        $intent = StorefrontPayoutIntent::query()->create([
+            'payout_request_id' => $payout->id,
+            'merchant_reference' => 'lk-po-TEST-REF-01',
+            'idempotency_key' => 'c1d2e3f4-a5b6-7890-abcd-ef1234567890',
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+            'provider' => 'chapa',
+            'withdrawal_code' => 'bank_transfer',
+            'destination_snapshot' => 'CBE:100012345678',
+            'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+        ]);
+
+        (new StorefrontPayoutProcessingService(chapaManager: $manager, creatorLedger: $ledger))
+            ->verifyPayout($intent);
+
+        Notification::assertSentTo(
+            User::query()->findOrFail($creatorId),
+            ChapaPayoutStatusNotification::class,
+            fn (ChapaPayoutStatusNotification $notification): bool => $notification->event === 'failed'
+                && $notification->reason === 'Transfer failed at Chapa settlement.',
+        );
+    }
+
+    private function creatorId(): int
+    {
+        return (int) User::query()->insertGetId([
+            'name' => 'Ada',
+            'email' => 'ada@example.test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     public function testReversalOfSettledPayoutRequiresReviewBeforeChangingLedger(): void
