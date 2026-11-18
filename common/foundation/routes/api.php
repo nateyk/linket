@@ -465,9 +465,16 @@ Route::group(['prefix' => 'v1'], function () {
     // the Chapa hosted checkout and the separate customer purchase portal.
     // These hard 404s also prevent Laravel's SPA fallback from returning HTTP 200
     // for old buyer URLs. No legacy payment handler or queue can be invoked.
-    Route::match(['get', 'post'], 'public/direct-orders/{order}', static fn () => abort(404));
+    $retiredPaymentMiddleware = [
+        EnsureFrontendRequestsAreStateful::class,
+        VerifyCsrfToken::class,
+        VerifyApiAccessMiddleware::class,
+    ];
+    Route::match(['get', 'post'], 'public/direct-orders/{order}', static fn () => abort(404))
+        ->withoutMiddleware($retiredPaymentMiddleware);
     Route::match(['get', 'post'], 'public/direct-orders/{order}/{action}', static fn () => abort(404))
-        ->where('action', 'payment-instructions|recheck|cancel|reference|select-account');
+        ->where('action', 'payment-instructions|recheck|cancel|reference|select-account')
+        ->withoutMiddleware($retiredPaymentMiddleware);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
