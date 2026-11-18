@@ -3,39 +3,61 @@
 namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
+use App\Storefront\ChapaPayoutService;
+use RuntimeException;
 use App\Storefront\Resources\DigitalProductWithdrawalMethodResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class DigitalProductWithdrawalMethodsController extends Controller
 {
     public function index()
     {
-        return DigitalProductWithdrawalMethodResource::collection(DigitalProductWithdrawalMethod::query()->active()->orderBy('position')->get());
+        // Other historical method rows remain in the database but are not
+        // payout choices for the current Chapa v1 integration.
+        return DigitalProductWithdrawalMethodResource::collection(
+            DigitalProductWithdrawalMethod::query()->active()
+                ->whereIn('code', ['bank_transfer', ...ChapaPayoutService::WALLET_CODES])
+                ->orderBy('position')->get()
+        );
+    }
+
+    public function banks(): JsonResponse
+    {
+        try {
+            return response()->json(['data' => app(ChapaPayoutService::class)->availableBankOptions()]);
+        } catch (RuntimeException $exception) {
+            // Do not show unverified bank options or disclose merchant secrets
+            // when Chapa's directory is unavailable.
+            return response()->json(['message' => __('Chapa payout destinations are temporarily unavailable.')], 503);
+        }
     }
 
     public function adminIndex()
     {
         Gate::authorize('admin.access');
-        return DigitalProductWithdrawalMethodResource::collection(DigitalProductWithdrawalMethod::query()->orderBy('position')->get());
+        return DigitalProductWithdrawalMethodResource::collection(DigitalProductWithdrawalMethod::query()
+            ->whereIn('code', ['bank_transfer', ...ChapaPayoutService::WALLET_CODES])
+            ->orderBy('position')->get());
     }
 
     public function store(Request $request): DigitalProductWithdrawalMethodResource
     {
         Gate::authorize('admin.access');
-        $data = $this->validated($request);
-        $this->assertCoherentLimits($data);
-        $method = DigitalProductWithdrawalMethod::create($data + ['code' => Str::slug($request->string('name'))]);
-        return new DigitalProductWithdrawalMethodResource($method);
+        // Provider catalog is fixed to the Chapa v1 supported destinations.
+        // Administrators may configure existing providers, not add fake ones.
+        throw ValidationException::withMessages(['name' => __('Payout destinations are synchronized from Chapa and cannot be added manually.')]);
     }
 
     public function update(Request $request, DigitalProductWithdrawalMethod $withdrawalMethod): DigitalProductWithdrawalMethodResource
     {
         Gate::authorize('admin.access');
+        if (!in_array($withdrawalMethod->code, ['bank_transfer', ...ChapaPayoutService::WALLET_CODES], true)) {
+            throw ValidationException::withMessages(['is_active' => __('This legacy payout provider cannot be enabled.')]);
+        }
         $data = $this->validated($request, false);
         $this->assertCoherentLimits($data, $withdrawalMethod);
         $withdrawalMethod->update($data);
