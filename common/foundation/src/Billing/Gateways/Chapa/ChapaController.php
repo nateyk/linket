@@ -88,7 +88,7 @@ class ChapaController extends Controller
 
     private function assertCurrentProMonthlyPrice(Product $product, Price $price): void
     {
-        if ($product->system_key !== 'pro' || $price->interval !== 'month' || $price->interval_count !== 1) {
+        if ($product->system_key !== 'pro') {
             return;
         }
 
