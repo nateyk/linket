@@ -21,7 +21,7 @@ class LogTrackedEvent
     {
         $referrer = request()->server('HTTP_REFERER');
         $agent = app(Agent::class);
-        $geo = static::getGeoData();
+        $geo = ResolveVisitorLocation::resolve();
         $isRobot = $agent->isRobot();
 
         $eventType = $linkeable instanceof QrCode ? 'scan' : 'click';
@@ -102,7 +102,7 @@ class LogTrackedEvent
 
     public static function getLocation(): string
     {
-        return strtolower(static::getGeoData()['iso_code']);
+        return strtolower(ResolveVisitorLocation::resolve()['iso_code'] ?? '');
     }
 
     public static function getPlatform(): string
@@ -113,35 +113,6 @@ class LogTrackedEvent
 
     private static function getIp(): ?string
     {
-        foreach (
-            [
-                'HTTP_CF_CONNECTING_IP',
-                'HTTP_CLIENT_IP',
-                'HTTP_X_FORWARDED_FOR',
-                'HTTP_X_FORWARDED',
-                'HTTP_X_CLUSTER_CLIENT_IP',
-                'HTTP_FORWARDED_FOR',
-                'HTTP_FORWARDED',
-                'REMOTE_ADDR',
-            ]
-            as $key
-        ) {
-            if (array_key_exists($key, $_SERVER) === true) {
-                foreach (explode(',', $_SERVER[$key]) as $ip) {
-                    $ip = trim($ip); // just to be safe
-                    if (
-                        filter_var(
-                            $ip,
-                            FILTER_VALIDATE_IP,
-                            FILTER_FLAG_NO_PRIV_RANGE |
-                                FILTER_FLAG_NO_RES_RANGE,
-                        ) !== false
-                    ) {
-                        return $ip;
-                    }
-                }
-            }
-        }
-        return request()->ip();
+        return ResolveVisitorLocation::publicIp();
     }
 }
