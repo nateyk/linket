@@ -38,6 +38,9 @@ class PayoutRequestService
                 : $accountQuery->orderByDesc('is_default')->latest('id')->lockForUpdate()->first();
 
             $method = $account?->withdrawalMethod;
+            if ($account && ChapaPayoutService::canonicalBankCode((string) $account->bank_code) === null) {
+                throw ValidationException::withMessages(['withdrawal_method' => __('This bank is no longer supported by Chapa. Choose another approved payout account.')]);
+            }
             if (!$account || !$method?->is_active) {
                 throw ValidationException::withMessages(['withdrawal_method' => __('Choose an active withdrawal method before requesting a payout.')]);
             }
