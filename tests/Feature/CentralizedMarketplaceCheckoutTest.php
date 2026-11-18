@@ -46,8 +46,8 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
             ->assertJsonPath('data.can_buy', true)
             ->assertJsonPath('data.payment_mode', 'direct')
             ->assertJsonPath('data.checkout_blocker', null)
-            ->assertJsonPath('data.verification_quota_exhausted', false)
-            ->assertJsonPath('data.receiving_accounts', []);
+            ->assertJsonMissingPath('data.verification_quota_exhausted')
+            ->assertJsonMissingPath('data.receiving_accounts');
     }
 
     public function testPublicCheckoutCreatesPlatformChapaOrderAndInitiatesSession(): void
@@ -195,7 +195,7 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
         $this->assertNull($order->creator_payment_method_id);
         $this->getJson("/api/v1/public/biolinks/{$store->id}/digital-products/{$product->id}")
             ->assertOk()
-            ->assertJsonPath('data.receiving_accounts', []);
+            ->assertJsonMissingPath('data.receiving_accounts');
     }
 
     private function createApprovedProduct(User $creator, $workspace, int $priceCents): DigitalProduct
