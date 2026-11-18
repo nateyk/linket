@@ -47,7 +47,9 @@ export function GeoChart({
       data.filter(location =>
         country
           ? !!location.label &&
-            location.label.trim().toLowerCase() !== 'unknown'
+            !['unknown', 'unknown location'].includes(
+              location.label.trim().toLowerCase(),
+            )
           : !!location.code && /^[a-z]{2}$/i.test(location.code),
       ),
     [data, country],
@@ -56,6 +58,7 @@ export function GeoChart({
   useGoogleGeoChart({
     placeholderRef,
     data: mapData,
+    enabled: !isLoading && mapData.length > 0,
     country,
     onCountrySelected: canSelectCountry ? onCountrySelected : undefined,
     datasetLabel,
