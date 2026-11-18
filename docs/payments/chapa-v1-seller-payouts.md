@@ -124,3 +124,28 @@ For provider behavior and current specifications, refer to:
 - https://developer.chapa.co/transfer/list-banks
 - https://developer.chapa.co/transfer/balance
 - https://developer.chapa.co/integrations/test-mode-vs-live-mode
+
+## Chapa v1 payout destination catalog (2026-11-18)
+
+Linket's **payout** selection is intentionally limited to these five Chapa v1
+destinations, distinct from buyer checkout methods: **CBEBirr**, **Commercial
+Bank of Ethiopia (CBE)**, **M-Pesa**, **telebirr**, and **YaYaWallet**.
+Awash, Bank of Abyssinia, Dashen, other banks, PayPal and manual methods
+must not be advertised as Linket creator payout choices.
+
+- `GET /api/v1/items/payout-banks` provides seller options from the platform's
+  authenticated Chapa v1 `GET /v1/banks` directory, intersected with methods
+  enabled in Admin → Finance → Payout methods. If Chapa is unavailable,
+  the seller selector **fails closed**; no synthetic fallback banks are shown.
+- The returned public code is a stable Linket code (`cbe`, `cbebirr`,
+  `mpesa`, `telebirr`, `yaya`). The numeric `bank_code` used by
+  `POST /v1/transfers` is resolved from the **current** authenticated
+  Chapa directory when dispatching a reviewed payout.
+- Unsupported legacy method definitions are **disabled**, never deleted.
+  Existing receiving-account, withdrawal and ledger records are retained
+  for audit/reconciliation. Previously approved unsupported accounts cannot
+  be used for new withdrawal requests; outstanding historical transfers must
+  still be reconciled through their existing references.
+- Wallet destination data still requires admin review. Provider availability
+  and merchant configuration must be verified in Chapa TEST before any payout
+  mode is enabled; no live transfer is executed by this change.
