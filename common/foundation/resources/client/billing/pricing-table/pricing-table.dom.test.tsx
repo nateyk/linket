@@ -30,7 +30,7 @@ const makePlan = (overrides: Partial<Product>): Product => ({
   ...overrides,
 });
 
-test('public pricing displays the saved Free quota and Pro allowance summary', () => {
+test('public pricing displays the Chapa checkout summary without obsolete verification quotas', () => {
   render(
     <PricingTable
       selectedCycle="monthly"
@@ -58,6 +58,6 @@ test('public pricing displays the saved Free quota and Pro allowance summary', (
     />,
   );
 
-  expect(screen.getByText('Free forever · 15 lifetime verified sales · No commission')).toBeTruthy();
-  expect(screen.getByText('Unlimited eligible verified sales while subscribed · No commission')).toBeTruthy();
+  expect(screen.getAllByText('Secure digital product payments via Chapa.')).toHaveLength(2);
+  expect(screen.queryByText(/lifetime verified sales/i)).toBeNull();
 });
