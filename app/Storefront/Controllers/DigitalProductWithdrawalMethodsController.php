@@ -4,7 +4,6 @@ namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\ChapaPayoutService;
-use RuntimeException;
 use App\Storefront\Resources\DigitalProductWithdrawalMethodResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +28,7 @@ class DigitalProductWithdrawalMethodsController extends Controller
     {
         try {
             return response()->json(['data' => app(ChapaPayoutService::class)->availableBankOptions()]);
-        } catch (RuntimeException $exception) {
+        } catch (\Throwable $exception) {
             // Do not show unverified bank options or disclose merchant secrets
             // when Chapa's directory is unavailable.
             return response()->json(['message' => __('Chapa payout destinations are temporarily unavailable.')], 503);
