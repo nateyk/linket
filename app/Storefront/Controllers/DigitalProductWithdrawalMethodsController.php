@@ -46,8 +46,10 @@ class DigitalProductWithdrawalMethodsController extends Controller
     public function store(Request $request): DigitalProductWithdrawalMethodResource
     {
         Gate::authorize('admin.access');
-        // Provider catalog is fixed to the Chapa v1 supported destinations.
-        // Administrators may configure existing providers, not add fake ones.
+        // Preserve limit validation for malformed requests, then fail closed:
+        // administrators may configure existing providers, not add fake ones.
+        $data = $this->validated($request);
+        $this->assertCoherentLimits($data);
         throw ValidationException::withMessages(['name' => __('Payout destinations are synchronized from Chapa and cannot be added manually.')]);
     }
 
