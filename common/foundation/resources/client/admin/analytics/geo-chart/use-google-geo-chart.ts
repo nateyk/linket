@@ -89,7 +89,7 @@ export function useGoogleGeoChart({
     // translated country name shown in the adjacent accessible list.
     const rows = data.map(location => [
       country ? location.label : (location.code?.toUpperCase() || location.label),
-      location.value,
+      Number(location.value) || 0,
     ]);
     const header = [
       country ? trans(message('City')) : trans(message('Country')),
