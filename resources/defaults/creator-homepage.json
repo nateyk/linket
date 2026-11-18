@@ -51,7 +51,7 @@
         {
           "icon": "insights",
           "title": "Run your business",
-          "description": "Follow your orders, verified sales, and audience activity from one dashboard."
+          "description": "Follow your orders, completed sales, and audience activity from one dashboard."
         }
       ]
     },
@@ -120,7 +120,7 @@
     {
       "name": "feature-with-screenshot",
       "title": "Your sales. Your customers. Your money.",
-      "description": "Customers pay your approved receiving account directly. Linket uses Verify.et to check eligible payments before paid digital products become available. Linket does not hold your funds.",
+      "description": "Buyers pay for eligible digital products through Chapa checkout. Access is granted after payment confirmation. Creators can request withdrawals of eligible earnings.",
       "badge": "Payments built for Ethiopian creators",
       "presentation": "creator",
       "forceDarkMode": true,
@@ -135,13 +135,13 @@
       "features": [
         {
           "icon": "settings",
-          "title": "Direct payments",
-          "description": "Give customers instructions for your approved receiving account."
+          "title": "Chapa checkout",
+          "description": "Offer a hosted payment experience for eligible paid digital products."
         },
         {
           "icon": "insights",
-          "title": "Verified before delivery",
-          "description": "Paid digital downloads unlock only after successful verification."
+          "title": "Payment confirmation",
+          "description": "Paid digital downloads unlock after successful payment confirmation."
         },
         {
           "icon": "stores",
@@ -175,8 +175,8 @@
         },
         {
           "icon": "settings",
-          "title": "Receiving accounts",
-          "description": "Manage the accounts your customers use to pay you directly."
+          "title": "Payout accounts",
+          "description": "Manage saved accounts for eligible creator withdrawals."
         },
         {
           "icon": "date",
@@ -193,7 +193,7 @@
     {
       "name": "pricing",
       "title": "Start free. Grow at your own pace.",
-      "description": "Free includes one storefront link and 10 lifetime eligible verified sales. Pro offers unlimited eligible verified sales while active. Linket takes 0% commission on new creator sales; the displayed plan price comes from current billing settings."
+      "description": "Compare Free and Pro features, publishing limits, and current subscription prices. Eligible paid digital products use Chapa checkout."
     },
     {
       "name": "faq",
@@ -207,15 +207,15 @@
         },
         {
           "question": "How do customers pay me?",
-          "answer": "Customers pay your approved receiving account directly through supported Ethiopian payment methods. Linket verifies eligible payments before allowing paid digital content to be accessed."
+          "answer": "Customers use Chapa checkout for eligible paid digital products. Access is provided after payment confirmation."
         },
         {
           "question": "Can I start for free?",
-          "answer": "Yes. Free includes one storefront link and 10 lifetime eligible verified sales. Active Pro offers unlimited eligible verified sales."
+          "answer": "Yes. The Free plan lets you begin publishing. Current product and storefront limits are shown in the pricing comparison."
         },
         {
           "question": "Does Linket take a commission?",
-          "answer": "Linket's commission on new creator sales is 0%. Any fees charged by an external payment provider are separate."
+          "answer": "Fees and commissions depend on the applicable plan and payment terms. Review current fees before selling."
         }
       ]
     },

@@ -120,11 +120,6 @@ class ProductResource extends JsonResource
             ? 'Unlimited workspaces'
             : "$workspaces workspaces";
 
-        $features[] = 'No commission on new sales';
-            $features[] = $this->free
-            ? ((int) ($benefits['free_verified_sales'] ?? config('storefront.free_verified_sales_default', 10))) . ' lifetime verified sales'
-            : 'Unlimited eligible verified sales while subscribed';
-
         if (!empty($benefits['tracking_pixels_enabled'])) {
             $features[] = 'Tracking pixels';
         }
