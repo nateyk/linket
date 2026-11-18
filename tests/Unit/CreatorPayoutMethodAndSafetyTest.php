@@ -117,7 +117,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->assertSame('telebirr', $account->bank_code);
         $this->assertSame('Abebe Bikila', $account->account_holder);
         $this->assertSame('+251911223344', $account->destination);
-        $this->assertSame('Telebirr Wallet', $account->bank_name);
+        $this->assertSame('telebirr', $account->bank_name);
         $this->assertSame(DigitalProductPayoutMethod::STATUS_PENDING, $account->status);
     }
 
