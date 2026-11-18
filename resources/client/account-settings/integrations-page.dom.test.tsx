@@ -94,7 +94,7 @@ it('shows the connected Telegram integration and notification preferences', asyn
   expect(screen.getByLabelText('Product moderation').getAttribute('aria-checked')).toBe('true');
   expect(screen.getByLabelText('Payment disputes').getAttribute('aria-checked')).toBe('true');
   expect(screen.getByLabelText('Pro billing reminders').getAttribute('aria-checked')).toBe('true');
-  expect(screen.getByLabelText('Free sales allowance').getAttribute('aria-checked')).toBe('true');
+  expect(screen.queryByLabelText('Free sales allowance')).toBeNull();
   expect(screen.getByLabelText('Payment review').getAttribute('aria-checked')).toBe('true');
 
 });
@@ -108,7 +108,7 @@ it('saves an event preference without disconnecting Telegram', async () => {
       '/api/v1/integrations/telegram',
       expect.objectContaining({
         notifications_enabled: true,
-        preferences: expect.objectContaining({verified_sales: false}),
+        preferences: expect.objectContaining({verified_sales: false, free_sales_quota: true}),
       }),
     ),
   );
