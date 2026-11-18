@@ -219,6 +219,12 @@ test.describe('isolated Help Center + support', () => {
       .toHaveAttribute('aria-current', 'page');
     await expect(page.locator('[data-menu-id="agent-dashboard-sidebar"]'))
       .toHaveCount(0);
+    await expect(page.locator('.inbox-views-sidebar')).toBeVisible();
+    await expect(page.locator('.inbox-views-sidebar')).toHaveCSS('width', '224px');
+    await expect(page.getByRole('link', {name: 'Overview'}))
+      .toHaveAttribute('href', '/admin/support');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(1280);
 
     // The All conversations route may asynchronously select its first chat.
     // Test mobile pointer navigation from the stable search route so a late
