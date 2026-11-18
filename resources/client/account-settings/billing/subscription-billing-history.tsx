@@ -3,9 +3,8 @@ import {apiClient} from '@common/http/query-client';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
-import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
-import {useQuery, useQueryClient} from '@tanstack/react-query';
+import {useQuery} from '@tanstack/react-query';
 import {formatMoney} from '@ui/i18n/format-money';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
@@ -26,7 +25,7 @@ type ProPayment = {
 };
 
 type BillingHistory = {
-  subscription_gateway?: 'verify_et' | 'chapa';
+  subscription_gateway?: 'chapa';
   pro_plan?: {monthly_price_cents: number | null; currency: string; product_id?: number; price_id?: number};
   pro_subscription?: {
     status: string;
@@ -40,16 +39,11 @@ type BillingHistory = {
     } | null;
     payments?: ProPayment[];
   };
-  corporate_account?: {provider: string; account_number: string | null};
 };
 
 export function SubscriptionBillingHistory() {
-  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string>();
-  const [startedAmountCents, setStartedAmountCents] = useState<number>();
-  const [startedPaymentId, setStartedPaymentId] = useState<string>();
-  const [proReference, setProReference] = useState('');
 
   const query = useQuery({
     queryKey: ['creator-direct-billing-history'],
@@ -60,21 +54,11 @@ export function SubscriptionBillingHistory() {
   const startRenewal = async () => {
     setBusy(true);
     try {
-      if (query.data?.subscription_gateway === 'chapa') {
-        const response = await apiClient.post('/api/v1/billing/chapa/checkout', {
-          product_id: query.data.pro_plan?.product_id,
-          price_id: query.data.pro_plan?.price_id,
-        });
-        window.location.assign(response.data.checkout_url);
-        return;
-      }
-      const response = await apiClient.post('/api/v1/billing/direct/pro');
-      setStartedAmountCents(response.data.amount_cents);
-      setStartedPaymentId(response.data.payment_id);
-      setActionError(undefined);
-      await queryClient.invalidateQueries({
-        queryKey: ['creator-direct-billing-history'],
+      const response = await apiClient.post('/api/v1/billing/chapa/checkout', {
+        product_id: query.data?.pro_plan?.product_id,
+        price_id: query.data?.pro_plan?.price_id,
       });
+      window.location.assign(response.data.checkout_url);
     } catch (reason) {
       setActionError(getApiErrorMessage(reason));
     } finally {
@@ -82,38 +66,7 @@ export function SubscriptionBillingHistory() {
     }
   };
 
-  const submitProReference = async () => {
-    if (!pendingPaymentId || !proReference.trim()) return;
-
-    setBusy(true);
-    try {
-      await apiClient.post(
-        `/api/v1/billing/direct/pro/${pendingPaymentId}/reference`,
-        {reference: proReference.trim()},
-      );
-      setActionError(undefined);
-      setProReference('');
-      await queryClient.invalidateQueries({
-        queryKey: ['creator-direct-billing-history'],
-      });
-    } catch (reason) {
-      setActionError(getApiErrorMessage(reason));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const pendingPaymentId =
-    query.data?.pro_subscription?.pending_payment?.payment_id ??
-    startedPaymentId ??
-    query.data?.pro_subscription?.payments?.find(
-      payment => payment.status === 'pending_payment',
-    )?.payment_id;
-
-  const renewalPriceCents =
-    query.data?.pro_subscription?.pending_payment?.amount_cents ??
-    query.data?.pro_plan?.monthly_price_cents ??
-    startedAmountCents;
+  const renewalPriceCents = query.data?.pro_plan?.monthly_price_cents;
   const currency = query.data?.pro_plan?.currency ?? 'ETB';
   const canRenew = query.data?.pro_subscription?.can_renew !== false;
   const subscriptionStatus =
@@ -123,7 +76,6 @@ export function SubscriptionBillingHistory() {
     subscriptionStatus === 'inactive' ||
     subscriptionStatus === 'expired' ||
     subscriptionStatus === 'cancelled';
-  const usesChapa = query.data?.subscription_gateway === 'chapa';
 
   return (
     <Card.Root size="sm" className="rounded-card-sm">
@@ -132,11 +84,7 @@ export function SubscriptionBillingHistory() {
           <Trans message="Pro subscription" />
         </Card.Title>
         <Card.Description>
-          {usesChapa ? (
-            <Trans message="Upgrade or renew Pro with Chapa." />
-          ) : (
-            <Trans message="Upgrade or renew Pro with a verified direct payment." />
-          )}
+          <Trans message="Upgrade or renew Pro with Chapa." />
         </Card.Description>
         <Card.Action>
           <Link
@@ -238,17 +186,6 @@ export function SubscriptionBillingHistory() {
               </p>
             )}
 
-            {startedAmountCents != null && (
-              <p role="status" className="text-sm">
-                <Trans
-                  message="Pro payment created for :amount. Enter your transfer reference below."
-                  values={{
-                    amount: formatMoney(startedAmountCents, currency),
-                  }}
-                />
-              </p>
-            )}
-
             <div className="flex flex-wrap items-center gap-2">
               {canRenew && (
                 <Button
@@ -268,44 +205,6 @@ export function SubscriptionBillingHistory() {
                 <Trans message="Compare plan benefits" />
               </Link>
             </div>
-
-            {query.data?.corporate_account?.account_number && !usesChapa && (
-              <div className="border-t pt-4 text-sm">
-                <p className="font-medium">
-                  <Trans message="Payment instructions" />
-                </p>
-                <p className="mt-1 text-muted-foreground">
-                  <Trans
-                    message="Send the Pro payment to :provider account :account."
-                    values={{
-                      provider:
-                        query.data.corporate_account.provider.toUpperCase(),
-                      account: query.data.corporate_account.account_number,
-                    }}
-                  />
-                </p>
-              </div>
-            )}
-
-            {pendingPaymentId && !usesChapa && (
-              <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end">
-                <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
-                  <Trans message="Pro payment reference" />
-                  <Input
-                    bindToHookForm={false}
-                    value={proReference}
-                    onChange={event => setProReference(event.target.value)}
-                    placeholder="Transaction reference"
-                  />
-                </label>
-                <Button
-                  disabled={busy || !proReference.trim()}
-                  onClick={() => void submitProReference()}
-                >
-                  <Trans message="Verify Pro payment" />
-                </Button>
-              </div>
-            )}
 
             <section aria-labelledby="pro-payment-history-title" className="border-t pt-5">
               <div className="mb-2">

@@ -55,16 +55,14 @@ class CreatorChapaGatewayController extends Controller
     {
         $workspace = $this->workspace();
         $data = $request->validate([
-            'collector' => ['required', 'string', Rule::in(['verify_et', 'chapa'])],
+            'collector' => ['required', 'string', Rule::in(['chapa'])],
         ]);
-        if ($data['collector'] === 'chapa') {
-            abort_unless(app(CreatorVerificationAllowance::class)->isPro($request->user()), 403, __('Chapa is available on Pro.'));
-            abort_unless(
-                CreatorChapaGateway::query()->where('workspace_id', $workspace->id)->exists(),
-                422,
-                __('Connect Chapa before selecting it.'),
-            );
-        }
+        abort_unless(app(CreatorVerificationAllowance::class)->isPro($request->user()), 403, __('Chapa is available on Pro.'));
+        abort_unless(
+            CreatorChapaGateway::query()->where('workspace_id', $workspace->id)->exists(),
+            422,
+            __('Connect Chapa before selecting it.'),
+        );
 
         $workspace->update(['active_payment_collector' => $data['collector']]);
 
@@ -87,7 +85,7 @@ class CreatorChapaGatewayController extends Controller
         $pro = app(CreatorVerificationAllowance::class)->isPro(request()->user());
 
         return [
-            'collector' => $workspace->active_payment_collector ?: 'verify_et',
+            'collector' => $workspace->active_payment_collector === 'chapa' ? 'chapa' : 'unavailable',
             'has_secret' => $gateway !== null,
             'public_key_masked' => $gateway?->maskedPublicKey(),
             'chapa_checkout_available' => $pro && $gateway !== null && $workspace->active_payment_collector === 'chapa',

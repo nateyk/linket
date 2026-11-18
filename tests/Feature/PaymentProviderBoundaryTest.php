@@ -66,7 +66,7 @@ class PaymentProviderBoundaryTest extends TestCase
             app(StorefrontCheckout::class)->create($product->fresh()->load('creator'), null, ['email' => 'buyer@example.test']);
             $this->fail('Checkout accepted a product without an eligible account.');
         } catch (HttpException $exception) {
-            $this->assertSame(422, $exception->getStatusCode());
+            $this->assertSame(503, $exception->getStatusCode());
         }
         $this->assertSame(0, StorefrontOrder::query()->where('digital_product_id', $product->id)->count());
     }
@@ -91,7 +91,7 @@ class PaymentProviderBoundaryTest extends TestCase
         ]);
         $payload = (new PublicDigitalProductResource($product->fresh()->load('creator')))->resolve(request());
         $this->assertFalse($payload['can_buy']);
-        $this->assertSame('no_eligible_receiving_account', $payload['checkout_blocker']);
+        $this->assertSame('verification_unavailable', $payload['checkout_blocker']);
         $this->assertEmpty($payload['receiving_accounts']);
     }
 

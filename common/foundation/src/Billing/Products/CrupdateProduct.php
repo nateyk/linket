@@ -167,7 +167,7 @@ class CrupdateProduct
             $proPrice = $versionedProPriceId
                 ? $product->prices()->find($versionedProPriceId)
                 : $product->prices()->where('currency', 'ETB')->where('interval', 'month')->where('interval_count', 1)
-                    ->orderByDesc('default')->orderByDesc('id')->first();
+                    ->reorder('default', 'desc')->orderByDesc('id')->first();
             if ($proPrice) {
                 $product->prices()->where('id', '!=', $proPrice->id)->update(['default' => false]);
                 $proPrice->update(['default' => true]);

@@ -114,10 +114,10 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
         $this->assertSame(StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA, $order->collection_owner);
     }
 
-    public function testCheckoutBlockedWhenBothChapaAndVerifyEtAreDisabled(): void
+    public function testCheckoutBlockedWhenChapaUnavailableEvenIfOldProviderIsConfigured(): void
     {
         config(['services.chapa.secret' => '']);
-        config(['services.verify_et.enabled' => false]);
+        config(['services.verify_et.enabled' => true]);
 
         $creator = User::factory()->create();
         $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
@@ -135,6 +135,9 @@ class CentralizedMarketplaceCheckoutTest extends TestCase
             'buyer_name' => 'Blocked Buyer',
             'buyer_email' => 'blocked@example.test',
         ])->assertStatus(503);
+
+        $this->assertSame(0, StorefrontOrder::query()
+            ->where('digital_product_id', $product->id)->count());
     }
 
     public function testExplicitLegacyReceivingAccountCannotOverridePlatformChapa(): void

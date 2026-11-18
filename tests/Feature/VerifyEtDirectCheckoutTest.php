@@ -16,7 +16,6 @@ use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductEarningsLedger;
 use App\Storefront\Services\DirectStorefrontCheckout;
-use App\Storefront\StorefrontCheckout;
 use Common\Billing\Models\Product;
 use Common\Files\FileEntry;
 use Common\Workspaces\Actions\CreateWorkspace;
@@ -70,7 +69,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
             'status' => 'approved', 'provider_registration_status' => 'registered', 'is_active' => true,
         ]);
 
-        $order = app(StorefrontCheckout::class)->create($product, null, ['name' => 'Buyer', 'email' => 'buyer@example.test']);
+        $order = app(DirectStorefrontCheckout::class)->create($product, null, ['name' => 'Buyer', 'email' => 'buyer@example.test']);
         $this->assertSame($olderAccount->id, $order->creator_payment_method_id);
         $this->assertSame($olderAccount->account_number, $order->payment_account_snapshot);
         $this->assertNotSame($newerAccount->id, $order->creator_payment_method_id);
@@ -88,7 +87,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $unavailable->save();
         $before = \App\Storefront\Models\StorefrontOrder::query()->count();
         try {
-            app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $unavailable->id);
+            app(DirectStorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $unavailable->id);
             $this->fail('An explicitly unavailable recipient was accepted.');
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
             $this->assertSame(422, $exception->getStatusCode());
@@ -103,7 +102,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $product = DigitalProduct::query()->findOrFail($seedOrder->digital_product_id)->load('creator');
         $before = \App\Storefront\Models\StorefrontOrder::query()->count();
         try {
-            app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], 0);
+            app(DirectStorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], 0);
             $this->fail('Checkout accepted an invalid recipient ID.');
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
             $this->assertSame(422, $exception->getStatusCode());
@@ -126,7 +125,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
             $foreign->save();
             $before = \App\Storefront\Models\StorefrontOrder::query()->count();
             try {
-                app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $foreign->id);
+                app(DirectStorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $foreign->id);
                 $this->fail('Checkout accepted a recipient from another scope.');
             } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
                 $this->assertSame(422, $exception->getStatusCode());
@@ -147,13 +146,14 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $payload = (new \App\Storefront\Resources\PublicDigitalProductResource($product))->resolve(request());
         $this->assertSame($ordersBeforeRead, \App\Storefront\Models\StorefrontOrder::query()->count());
         $this->assertSame($reservationsBeforeRead, DB::table('creator_verification_allowances')->count());
-        $this->assertTrue($payload['can_buy']);
+        $this->assertFalse($payload['can_buy']);
+        $this->assertSame('verification_unavailable', $payload['checkout_blocker']);
         $this->assertStringNotContainsString($account->account_number, json_encode($payload));
         $before = \App\Storefront\Models\StorefrontOrder::query()->count();
         foreach ([['is_suspended' => true], ['is_active' => false], ['provider_registration_status' => 'pending']] as $change) {
             $account->update(['is_suspended' => false, 'is_active' => true, 'provider_registration_status' => 'registered', ...$change]);
             try {
-                app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $account->id);
+                app(DirectStorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $account->id);
                 $this->fail('Checkout accepted an unavailable recipient.');
             } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
                 $this->assertSame(422, $exception->getStatusCode());
@@ -163,7 +163,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $account->update(['provider_registration_status' => 'registered']);
         \App\Storefront\Models\DirectPaymentMethod::query()->where('code', $account->provider)->update(['checkout_enabled' => false]);
         try {
-            app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $account->id);
+            app(DirectStorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $account->id);
             $this->fail('Checkout accepted a disabled bank.');
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
             $this->assertSame(422, $exception->getStatusCode());
@@ -285,10 +285,11 @@ class VerifyEtDirectCheckoutTest extends TestCase
         \Common\Workspaces\ActiveWorkspace::clearCache();
         $this->actingAs($creator)->postJson('/api/v1/storefront/payment-methods/'.$methodId.'/activate')->assertOk();
         $this->getJson('/api/v1/storefront/payment-methods')
-            ->assertOk()->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => true]);
-        $checkout = $this->postJson('/api/v1/storefront/products/'.$seedOrder->digital_product_id.'/checkout', [
-            'buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $methodId,
-        ])->assertOk();
+            ->assertOk()->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => false, 'account_ready' => true]);
+        // Legacy order fixture: production storefront routes no longer start this flow.
+        $checkout = app(DirectStorefrontCheckout::class)->create(
+            $seedOrder->product->load('creator'), null, ['name' => 'Buyer', 'email' => 'buyer@example.test'], $methodId,
+        );
         $reference = 'SYNTHETIC123456';
         \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify?*' => \Illuminate\Support\Facades\Http::response([
             'requestId' => 'synthetic-request', 'verification' => ['processingStatus' => 'completed'], 'data' => [[
@@ -299,7 +300,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $transport = \Mockery::mock(\App\Payments\VerifyEt\VerifyEtHttp::class);
         $transport->shouldReceive('factory')->andReturn(\Illuminate\Support\Facades\Http::getFacadeRoot());
         app()->instance(\App\Payments\VerifyEt\VerifyEtHttp::class, $transport);
-        $this->withHeader('X-Order-Access-Token', $checkout->json('access_token'))->postJson($checkout->json('reference_endpoint'), ['reference' => $reference])->assertOk()->assertJsonPath('status', 'paid');
+        $this->withHeader('X-Order-Access-Token', $checkout->getAttribute('paymentAccessToken'))->postJson('/api/v1/public/direct-orders/'.$checkout->uuid.'/reference', ['reference' => $reference])->assertOk()->assertJsonPath('status', 'paid');
         $this->assertSame(1, app(\App\Storefront\Services\CreatorVerificationAllowance::class)->usage($creator)['consumed']);
         $this->assertSame(0, CommissionAccrual::query()->where('creator_id', $creator->id)->count());
         \Illuminate\Support\Facades\Http::assertSent(fn ($request): bool => $request['bank'] === 'telebirr' && $request['transactionNumber'] === $reference && $request['settlementAccount'] === '0912345678');
@@ -331,14 +332,17 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $transport->shouldReceive('factory')->andReturn(\Illuminate\Support\Facades\Http::getFacadeRoot());
         app()->instance(\App\Payments\VerifyEt\VerifyEtHttp::class, $transport);
         foreach (['recipient', 'amount', 'currency', 'duplicate'] as $case) {
-            $checkout = $this->postJson('/api/v1/storefront/products/'.$seedOrder->digital_product_id.'/checkout', ['buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $seedOrder->creator_payment_method_id])->assertOk();
+            $checkout = app(DirectStorefrontCheckout::class)->create(
+                $seedOrder->product->load('creator'), null, ['name' => 'Buyer', 'email' => 'buyer@example.test'],
+                $seedOrder->creator_payment_method_id,
+            );
             $reference = $case === 'duplicate' ? $existing->reference : 'SYNTHETIC'.strtoupper(Str::random(12));
             $item = ['bank' => 'cbe', 'status' => 'success', 'verified' => true, 'amount' => $case === 'amount' ? 101 : 100, 'currency' => 'ETB', 'receiptNumber' => $reference, 'settlementAccountMatch' => ['matched' => true, 'ambiguous' => false, 'matchConfidence' => 'high', 'candidateCount' => 1, 'matchedSettlementAccount' => $case === 'recipient' ? '9999999999999' : '1000123456789']];
             if ($case === 'currency') { unset($item['currency']); }
             \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify?*' => \Illuminate\Support\Facades\Http::response(['requestId' => 'synthetic-'.$case, 'verification' => ['processingStatus' => 'completed'], 'data' => [$item]], 200)]);
-            $response = $this->withHeader('X-Order-Access-Token', $checkout->json('access_token'))->postJson($checkout->json('reference_endpoint'), ['reference' => $reference, ...($case === 'duplicate' ? ['account_suffix' => '01234567'] : [])]);
+            $response = $this->withHeader('X-Order-Access-Token', $checkout->getAttribute('paymentAccessToken'))->postJson('/api/v1/public/direct-orders/'.$checkout->uuid.'/reference', ['reference' => $reference, ...($case === 'duplicate' ? ['account_suffix' => '01234567'] : [])]);
             $response->assertUnprocessable();
-            $this->assertNotSame('paid', \App\Storefront\Models\StorefrontOrder::query()->where('uuid', $checkout->json('order_id'))->value('status'), $case);
+            $this->assertNotSame('paid', \App\Storefront\Models\StorefrontOrder::query()->where('uuid', $checkout->uuid)->value('status'), $case);
         }
     }
 
@@ -347,7 +351,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         [$order] = $this->orderAndVerification();
         $this->withSession(['_token' => 'test-token'])->withHeader('Referer', config('app.url'))->withHeader('X-CSRF-TOKEN', 'test-token')->actingAs($order->creator);
         \App\Storefront\Models\DirectPaymentMethod::query()->where('code', 'cbe')->update(['checkout_enabled' => false]);
-        $this->postJson('/api/v1/storefront/products/'.$order->digital_product_id.'/checkout', ['buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $order->creator_payment_method_id])->assertUnprocessable();
+        $this->postJson('/api/v1/storefront/products/'.$order->digital_product_id.'/checkout', ['buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $order->creator_payment_method_id])->assertStatus(503);
     }
 
     public function testAdminSuspensionControlsCreatorSetupAndBuyerCheckout(): void
@@ -365,10 +369,10 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $this->actingAs($creator)->getJson('/api/v1/storefront/payment-methods')->assertOk()->assertJsonMissing(['code' => 'telebirr']);
         $this->postJson('/api/v1/storefront/payment-methods', ['provider' => 'telebirr', 'account_number' => '0912345679', 'account_name' => 'Test Recipient', 'proof' => \Illuminate\Http\UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf')])->assertUnprocessable();
         $checkout = ['buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $method->id];
-        $this->postJson('/api/v1/storefront/products/'.$seed->digital_product_id.'/checkout', $checkout)->assertUnprocessable();
+        $this->postJson('/api/v1/storefront/products/'.$seed->digital_product_id.'/checkout', $checkout)->assertStatus(503);
         $this->actingAs($admin)->patchJson('/api/v1/admin/storefront/payment-method-catalog/'.$catalog->id, ['operationally_suspended' => false])->assertOk();
         \Common\Workspaces\ActiveWorkspace::clearCache();
-        $this->actingAs($creator)->postJson('/api/v1/storefront/products/'.$seed->digital_product_id.'/checkout', $checkout)->assertOk();
+        $this->actingAs($creator)->postJson('/api/v1/storefront/products/'.$seed->digital_product_id.'/checkout', $checkout)->assertStatus(503);
         $this->assertSame('1000123456789', $seed->fresh()->payment_account_snapshot);
     }
 
@@ -383,7 +387,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         ])->assertOk();
         $this->postJson('/api/v1/storefront/products/'.$order->digital_product_id.'/checkout', [
             'buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $order->creator_payment_method_id,
-        ])->assertUnprocessable();
+        ])->assertStatus(503);
         $this->assertSame('1000123456789', $order->fresh()->payment_account_snapshot);
     }
 
@@ -435,7 +439,9 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $this->postJson('/api/v1/admin/storefront/payment-methods/'.$methodId.'/provider-registration')->assertOk();
         \Common\Workspaces\ActiveWorkspace::clearCache();
         $this->actingAs($creator)->postJson('/api/v1/storefront/payment-methods/'.$methodId.'/activate')->assertOk();
-        $checkout = $this->postJson('/api/v1/storefront/products/'.$seedOrder->digital_product_id.'/checkout', ['buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $methodId])->assertOk();
+        $checkout = app(DirectStorefrontCheckout::class)->create(
+            $seedOrder->product->load('creator'), null, ['name' => 'Buyer', 'email' => 'buyer@example.test'], $methodId,
+        );
         $reference = $bank === 'cbe' ? 'FT2600001234' : ($bank === 'telebirr' ? 'DET8FJGUJ4' : 'BOA123456789');
         $field = match ($bank) { 'cbe' => 'reference', 'telebirr' => 'transactionNumber', default => 'referenceNumber' };
         $input = match ($bank) { 'cbe' => ['account_suffix' => '01234567'], 'boa' => ['account_suffix' => '01234'], default => [] };
@@ -445,7 +451,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $transport = \Mockery::mock(\App\Payments\VerifyEt\VerifyEtHttp::class);
         $transport->shouldReceive('factory')->andReturn(\Illuminate\Support\Facades\Http::getFacadeRoot());
         app()->instance(\App\Payments\VerifyEt\VerifyEtHttp::class, $transport);
-        $this->withHeader('X-Order-Access-Token', $checkout->json('access_token'))->postJson($checkout->json('reference_endpoint'), ['reference' => $reference, ...$input])->assertOk()->assertJsonPath('status', 'paid');
+        $this->withHeader('X-Order-Access-Token', $checkout->getAttribute('paymentAccessToken'))->postJson('/api/v1/public/direct-orders/'.$checkout->uuid.'/reference', ['reference' => $reference, ...$input])->assertOk()->assertJsonPath('status', 'paid');
         \Illuminate\Support\Facades\Http::assertSent(fn ($request): bool => $request['bank'] === $bank && $request[$field] === $reference && $request['settlementAccount'] === $account && ($bank !== 'boa' || $request['accountSuffix'] === '01234') && ($bank !== 'cbe' || $request['accountSuffix'] === '01234567'));
     }
 
@@ -813,7 +819,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
             'operationally_suspended' => false,
         ]);
 
-        $order = app(StorefrontCheckout::class)->create($existingOrder->product, null, [
+        $order = app(DirectStorefrontCheckout::class)->create($existingOrder->product, null, [
             'name' => 'Buyer', 'email' => 'other-buyer@example.test',
         ], $secondMethod->id);
 
@@ -909,7 +915,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         }
         $this->assertSame(['consumed' => 10, 'reserved' => 0, 'remaining' => 0], $allowance->usage($first->creator));
         $this->withSession(['_token' => 'test-token'])->withHeader('Referer', config('app.url'))->withHeader('X-CSRF-TOKEN', 'test-token')->actingAs($first->creator);
-        $this->postJson('/api/v1/storefront/products/'.$first->digital_product_id.'/checkout', ['buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $first->creator_payment_method_id])->assertUnprocessable();
+        $this->postJson('/api/v1/storefront/products/'.$first->digital_product_id.'/checkout', ['buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $first->creator_payment_method_id])->assertStatus(503);
     }
 
     public function testPendingAndRejectedEvidenceNeverConsumesAnAllowance(): void

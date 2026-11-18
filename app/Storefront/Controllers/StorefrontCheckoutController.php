@@ -38,11 +38,11 @@ class StorefrontCheckoutController extends Controller
         ], isset($buyer['creator_payment_method_id']) ? (int) $buyer['creator_payment_method_id'] : null);
         return response()->json([
             'order_id' => $order->uuid,
-            'checkout_url' => $order->payment_gateway === 'verify_et' ? null : $order->chapaCheckoutUrl,
-            'instructions_endpoint' => $order->payment_gateway === 'verify_et' ? "/api/v1/public/direct-orders/{$order->uuid}/payment-instructions" : null,
+            'checkout_url' => $order->chapaCheckoutUrl,
+            'instructions_endpoint' => null,
             'access_token' => $order->paymentAccessToken,
-            'status_endpoint' => $order->payment_gateway === 'verify_et' ? "/api/v1/public/direct-orders/{$order->uuid}" : null,
-            'reference_endpoint' => $order->payment_gateway === 'verify_et' ? "/api/v1/public/direct-orders/{$order->uuid}/reference" : null,
+            'status_endpoint' => null,
+            'reference_endpoint' => null,
             'status' => $order->status,
         ])->header('Cache-Control', 'no-store, private');
     }

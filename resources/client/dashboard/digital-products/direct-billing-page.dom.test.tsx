@@ -323,17 +323,15 @@ it('shows summary and orders, and sends status, search and page filters to the s
   expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
   expect(screen.getByText('Chapa orders and payment status. Only paid orders count as sales.')).toBeTruthy();
 
-  fireEvent.change(screen.getByLabelText('Payment source'), {
-    target: {value: 'all'},
-  });
+  expect(screen.queryByLabelText('Payment source')).toBeNull();
   fireEvent.change(screen.getByLabelText('Status'), {
-    target: {value: 'manual_review'},
+    target: {value: 'paid'},
   });
   await waitFor(() =>
     expect(api.get).toHaveBeenCalledWith(
       '/api/v1/storefront/direct-orders',
       expect.objectContaining({
-        params: expect.objectContaining({status: 'manual_review'}),
+        params: expect.objectContaining({status: 'paid', gateway: 'chapa'}),
       }),
     ),
   );
@@ -546,37 +544,20 @@ for (const [status, label] of [
   });
 }
 
-it('switches to the historical source without recreating Verify.et transaction or manual-review tabs', async () => {
-  mockApi({orders: [{...baseOrder, uuid: 'legacy-review', payment_gateway: 'verify_et', status: 'manual_review'}]});
+it('keeps Orders Chapa-only even for bookmarked legacy gateway filters', async () => {
+  window.history.replaceState({}, '', '/dashboard/orders?gateway=verify_et&status=manual_review');
+  mockApi({orders: [baseOrder]});
   render(<Component />);
   await screen.findAllByText('Workbook');
   expect(api.get).toHaveBeenCalledWith(
     '/api/v1/storefront/direct-orders',
     expect.objectContaining({params: expect.objectContaining({gateway: 'chapa'})}),
   );
-
-  fireEvent.change(screen.getByLabelText('Payment source'), {
-    target: {value: 'verify_et'},
-  });
-  await waitFor(() =>
-    expect(api.get).toHaveBeenCalledWith(
-      '/api/v1/storefront/direct-orders',
-      expect.objectContaining({params: expect.objectContaining({gateway: 'verify_et'})}),
-    ),
-  );
-  expect(screen.getByText('Historical Verify.et orders · lifetime')).toBeTruthy();
+  expect(screen.queryByLabelText('Payment source')).toBeNull();
+  expect(screen.getByText('Chapa payments only · lifetime')).toBeTruthy();
+  expect((screen.getByLabelText('Status') as HTMLSelectElement).value).toBe('all');
   expect(screen.queryByRole('tab', {name: 'Transactions'})).toBeNull();
-  expect(screen.queryByRole('tab', {name: /Manual review/})).toBeNull();
   expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/direct-orders/transactions', expect.anything());
-  fireEvent.change(screen.getByLabelText('Status'), {
-    target: {value: 'manual_review'},
-  });
-  await waitFor(() =>
-    expect(api.get).toHaveBeenCalledWith(
-      '/api/v1/storefront/direct-orders',
-      expect.objectContaining({params: expect.objectContaining({gateway: 'verify_et', status: 'manual_review'})}),
-    ),
-  );
 });
 
 it('keeps Chapa details provider-specific without inventing Verify.et evidence', async () => {

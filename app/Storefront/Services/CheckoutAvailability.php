@@ -3,29 +3,34 @@
 namespace App\Storefront\Services;
 
 use App\Payments\Chapa\LinketChapaManager;
-use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Models\User;
+use App\Storefront\Models\CreatorChapaGateway;
+use Common\Workspaces\Models\Workspace;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DirectPaymentMethod;
 use Illuminate\Support\Collection;
 
 final class CheckoutAvailability
 {
-    public function creatorBlocker(User $creator): ?string
+    public function creatorBlocker(User $creator, ?int $workspaceId = null): ?string
     {
         $chapaEnabled = app(LinketChapaManager::class)->isEnabled();
 
-        if (! VerifyEtSettings::get('enabled') && ! $chapaEnabled) {
-            return 'verification_unavailable';
-        }
-        if (! app(AccountMonetizationStatus::class)->canSell($creator)) {
-            return 'creator_restricted';
-        }
-        if (! $chapaEnabled && ! app(CreatorVerificationAllowance::class)->summary($creator)['can_start_checkout']) {
-            return 'verification_quota_exhausted';
+        if (!$chapaEnabled && $workspaceId !== null) {
+            $chapaEnabled = app(CreatorVerificationAllowance::class)->isPro($creator)
+                && Workspace::query()->whereKey($workspaceId)
+                    ->where('active_payment_collector', 'chapa')->exists()
+                && CreatorChapaGateway::query()->where('workspace_id', $workspaceId)
+                    ->where('user_id', $creator->id)->exists();
         }
 
-        return null;
+        if (!$chapaEnabled) {
+            return 'verification_unavailable';
+        }
+
+        return app(AccountMonetizationStatus::class)->canSell($creator)
+            ? null
+            : 'creator_restricted';
     }
 
     public function accountIsReady(CreatorPaymentMethod $method, ?DirectPaymentMethod $catalog): bool

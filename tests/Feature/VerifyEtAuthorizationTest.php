@@ -88,7 +88,7 @@ class VerifyEtAuthorizationTest extends TestCase
 
     }
 
-    public function testAccountListReflectsCheckoutEligibilityAndCatalogSwitches(): void
+    public function testArchivedAccountListReflectsReadinessButNeverEnablesCheckout(): void
     {
         config()->set('services.verify_et.enabled', true);
         $owner = $this->createUser();
@@ -97,7 +97,11 @@ class VerifyEtAuthorizationTest extends TestCase
         $catalog = \App\Storefront\Models\DirectPaymentMethod::query()->where('code', 'cbe')->firstOrFail();
         $catalog->update(['checkout_enabled' => true, 'automated_verification_supported' => true, 'recipient_matching_supported' => true, 'operationally_suspended' => false]);
         ActiveWorkspace::clearCache();
-        $this->stateful()->actingAs($owner, 'sanctum')->getJson('/api/v1/storefront/payment-methods')->assertOk()->assertJsonPath('data.0.checkout_eligible', true);
+        config()->set('services.chapa.secret', 'CHASECK_TEST-synthetic-readiness');
+        $this->stateful()->actingAs($owner, 'sanctum')->getJson('/api/v1/storefront/payment-methods')->assertOk()
+            ->assertJsonPath('data.0.checkout_eligible', false)
+            ->assertJsonPath('data.0.account_ready', true)
+            ->assertJsonPath('data.0.checkout_blocker', 'verification_unavailable');
         $catalog->update(['checkout_enabled' => false]);
         $this->getJson('/api/v1/storefront/payment-methods')->assertOk()
             ->assertJsonPath('data.0.checkout_eligible', false)
@@ -161,7 +165,7 @@ class VerifyEtAuthorizationTest extends TestCase
         $this->stateful()->actingAs($owner, 'sanctum')->getJson('/api/v1/storefront/payment-methods')
             ->assertOk()->assertJsonPath('data.0.checkout_eligible', false)
             ->assertJsonPath('data.0.account_configured', true)
-            ->assertJsonPath('data.0.checkout_blocker', 'verification_quota_exhausted');
+            ->assertJsonPath('data.0.checkout_blocker', 'verification_unavailable');
         $this->assertSame('approved', $account->fresh()->status);
         $this->assertTrue($account->fresh()->is_active);
     }
