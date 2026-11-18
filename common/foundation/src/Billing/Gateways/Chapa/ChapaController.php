@@ -93,7 +93,7 @@ class ChapaController extends Controller
         }
 
         $current = $product->prices()->where('currency', 'ETB')->where('interval', 'month')
-            ->where('interval_count', 1)->orderByDesc('default')->orderByDesc('id')->firstOrFail();
+            ->where('interval_count', 1)->reorder('default', 'desc')->orderByDesc('id')->firstOrFail();
         abort_unless($price->id === $current->id, 409, __('The plan price has changed. Refresh and try again.'));
     }
 

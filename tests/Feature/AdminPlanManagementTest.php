@@ -96,7 +96,7 @@ class AdminPlanManagementTest extends TestCase
         // The admin versions only the price being edited. Select the canonical
         // monthly Pro price rather than an arbitrary historical/annual row.
         $price = $pro->prices()->where('currency', 'ETB')->where('interval', 'month')
-            ->where('interval_count', 1)->orderByDesc('default')->orderByDesc('id')->firstOrFail();
+            ->where('interval_count', 1)->reorder('default', 'desc')->orderByDesc('id')->firstOrFail();
         $pro->prices()->update(['default' => false]);
         $price->update(['amount' => 500, 'default' => true]);
         $this->stateful()->actingAs($creator);
