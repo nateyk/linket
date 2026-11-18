@@ -294,8 +294,8 @@ it('sets a destination as default via POST /api/v1/items/payout-methods/:id/defa
   const account = {
     id: 8,
     type: 'bank_transfer',
-    bank_code: 'boa',
-    bank_name: 'Bank of Abyssinia (BOA)',
+    bank_code: 'cbe',
+    bank_name: 'Commercial Bank of Ethiopia (CBE)',
     account_holder: 'Abebe Bikila',
     account_number_last_four: '8899',
     masked_account_number: '•••• 8899',
@@ -311,7 +311,7 @@ it('sets a destination as default via POST /api/v1/items/payout-methods/:id/defa
 
   render(<Component />);
 
-  expect(await screen.findByText('Bank of Abyssinia (BOA)')).toBeTruthy();
+  expect(await screen.findByText('Commercial Bank of Ethiopia (CBE)')).toBeTruthy();
 
   fireEvent.click(screen.getByRole('button', {name: 'Account actions'}));
   fireEvent.click(await screen.findByRole('menuitem', {name: 'Set as default'}));
