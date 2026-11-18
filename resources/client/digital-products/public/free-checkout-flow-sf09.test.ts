@@ -16,24 +16,24 @@ const pricing = fs.readFileSync(
 );
 
 describe('SF-09 free checkout recovery and paid-flow isolation', () => {
-  test('handles a successful free checkout before legacy direct payment tokens', () => {
+  test('fulfills free checkout before hosted Chapa redirect and never opens legacy payment UI', () => {
     const responseIndex = page.indexOf('const payload = response.data;');
     const freeIndex = page.indexOf(
       "if (data.product.payment_mode === 'free') {",
       responseIndex,
     );
-    const paidInstructionsIndex = page.indexOf(
-      'if (payload?.reference_endpoint && payload?.access_token)',
-      responseIndex,
-    );
+    const hostedCheckoutIndex = page.indexOf('window.location.assign(checkoutUrl)', responseIndex);
 
     expect(responseIndex).toBeGreaterThan(0);
     expect(freeIndex).toBeGreaterThan(responseIndex);
-    expect(paidInstructionsIndex).toBeGreaterThan(freeIndex);
+    expect(hostedCheckoutIndex).toBeGreaterThan(freeIndex);
     expect(page).toContain('isSuccessfulFreeCheckoutResponse');
     expect(page).toContain('setFreeCheckoutComplete(true)');
     expect(page).toContain('setBuyerDialogOpen(false)');
-    expect(page).toContain('setDirectCheckout(payload as DirectCheckout)');
+    expect(page).not.toContain('DirectPaymentModal');
+    expect(page).not.toContain('reference_endpoint');
+    expect(page).not.toContain('creator_payment_method_id');
+    expect(page).not.toContain('Payment destination');
   });
 
   test('provides a safe portal route after free checkout without leaking the order token', () => {
@@ -55,7 +55,7 @@ describe('SF-09 free checkout recovery and paid-flow isolation', () => {
   });
 
   test('keeps paid checkout details and distinguishes free buyer copy by payment mode', () => {
-    expect(page).toContain("product.payment_mode === 'direct'");
+    expect(page).toContain("data.product.payment_mode === 'unavailable'");
     expect(page).toContain('No payment details are needed for this free product.');
     expect(page).toContain('Continue for free');
     expect(page).toContain('Show payment details');
