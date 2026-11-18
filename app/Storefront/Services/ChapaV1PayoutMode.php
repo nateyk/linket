@@ -22,7 +22,11 @@ final class ChapaV1PayoutMode
             return 'unconfigured';
         }
 
-        return str_starts_with($secret, 'CHASECK_TEST-') ? 'test' : 'live';
+        if (str_starts_with($secret, 'CHASECK_TEST-')) {
+            return 'test';
+        }
+
+        return str_starts_with($secret, 'CHASECK-') ? 'live' : 'unconfigured';
     }
 
     public function enabled(): bool

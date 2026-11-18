@@ -73,6 +73,7 @@ export type Payout = {
     display_label?: string | null;
   } | null;
   latest_payout_intent?: PayoutIntent | null;
+  admin_step_up_required?: boolean;
   payout_mode?: {
     mode: 'test' | 'live' | 'unconfigured';
     enabled: boolean;
@@ -129,8 +130,10 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
       const msg = await fn();
       setSuccess(msg);
       await load();
+      return true;
     } catch (e: unknown) {
       setError(getApiErrorMessage(e));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -142,9 +145,17 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
       return 'Withdrawal approved and moved to processing.';
     });
 
-  const handleSubmitTransfer = () =>
+  const handleSubmitTransfer = (adminPassword?: string) =>
     mutate(async () => {
-      const res = await apiClient.post(`/api/v1/admin/withdrawals/${payout!.id}/submit-transfer`);
+      const url = `/api/v1/admin/withdrawals/${payout!.id}/submit-transfer`;
+      const body = adminPassword === undefined ? undefined : {
+        admin_password: adminPassword,
+        confirmation_id: payout!.id,
+        confirmation_amount_cents: payout!.amount_cents,
+        confirmation_currency: payout!.currency,
+        confirmation_destination_label: payout!.payout_method_label ?? '',
+      };
+      const res = body ? await apiClient.post(url, body) : await apiClient.post(url);
       return res.data.message || 'Payout transfer submitted to Chapa.';
     });
 
@@ -195,6 +206,7 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
 export function Component() {
   const {withdrawalId} = useParams();
   const state = useAdminWithdrawalReview(withdrawalId);
+  const [stepUpOpen, setStepUpOpen] = useState(false);
 
   if (state.loading) {
     return (
@@ -268,7 +280,7 @@ export function Component() {
             payout={state.payout}
             saving={state.saving}
             onApprove={() => void state.handleApprove()}
-            onSubmitTransfer={() => void state.handleSubmitTransfer()}
+            onSubmitTransfer={() => state.payout?.admin_step_up_required ? setStepUpOpen(true) : void state.handleSubmitTransfer()}
             onVerifySettlement={() => void state.handleVerifySettlement()}
             onOpenReject={() => state.setRejectOpen(true)}
             onManualPaid={(ref, note) => void state.handleManualPaid(ref, note)}
@@ -279,8 +291,15 @@ export function Component() {
           <RejectWithdrawalDialog
             open={state.rejectOpen}
             onOpenChange={state.setRejectOpen}
-            onConfirm={state.handleRejectConfirm}
+            onConfirm={async (reason, note) => { await state.handleRejectConfirm(reason, note); }}
             saving={state.saving}
+          />
+          <TransferStepUpDialog
+            open={stepUpOpen}
+            onOpenChange={setStepUpOpen}
+            payout={state.payout}
+            saving={state.saving}
+            onConfirm={state.handleSubmitTransfer}
           />
         </div>
       </DashboardLayout.SectionContent>
@@ -593,6 +612,59 @@ function Stage3Section({
         </div>
       )}
     </div>
+  );
+}
+
+function TransferStepUpDialog({
+  open, onOpenChange, payout, saving, onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  payout: Payout;
+  saving: boolean;
+  onConfirm: (password: string) => Promise<boolean>;
+}) {
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) return;
+    if (await onConfirm(password)) {
+      setPassword('');
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Backdrop />
+        <Dialog.Content className="gap-4 rounded-card-sm sm:max-w-md">
+          <Dialog.Header>
+            <Dialog.Title><Trans message="Confirm Chapa transfer" /></Dialog.Title>
+            <Dialog.Description>
+              <Trans message="Verify the exact withdrawal and enter your Linket admin password. Never enter a Chapa secret here." />
+            </Dialog.Description>
+          </Dialog.Header>
+          <p className="text-sm font-medium">#{payout.id} · {formatMoney(payout.amount_cents, payout.currency)} · {payout.payout_method_label}</p>
+          <form id="chapa-step-up-form" onSubmit={handleSubmit}>
+            <Field.Root>
+              <Field.Label htmlFor="admin-payout-step-up-password"><Trans message="Linket admin password" /></Field.Label>
+              <Input id="admin-payout-step-up-password" type="password" autoComplete="current-password" value={password}
+                onChange={e => setPassword(e.target.value)} required />
+            </Field.Root>
+          </form>
+          <Dialog.Footer className="mt-2 flex justify-end gap-2">
+            <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
+              <Trans message="Cancel" />
+            </Button>
+            <Button type="submit" form="chapa-step-up-form" disabled={saving || !password}>
+              <Trans message="Confirm and submit transfer" />
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 

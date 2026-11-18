@@ -126,6 +126,29 @@ describe('AdminWithdrawalReviewPage', () => {
     });
   });
 
+  it('requires Linket admin password for configured step-up before sending the exact transfer', async () => {
+    mockApiClient.get.mockResolvedValue({data: {data: {
+      ...basePayout,
+      status: 'processing',
+      admin_step_up_required: true,
+    }}});
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', {name: /Submit transfer to Chapa/i}));
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+    expect(await screen.findByText('Confirm Chapa transfer')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Linket admin password'), {target: {value: 'correct-admin-password'}});
+    fireEvent.click(screen.getByRole('button', {name: /Confirm and submit transfer/i}));
+    await waitFor(() => {
+      expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/admin/withdrawals/123/submit-transfer', {
+        admin_password: 'correct-admin-password',
+        confirmation_id: 123,
+        confirmation_amount_cents: 50000,
+        confirmation_currency: 'ETB',
+        confirmation_destination_label: 'Telebirr (•••• 4321)',
+      });
+    });
+  });
+
   it('blocks test transfer until the approval secret is configured', async () => {
     mockApiClient.get.mockResolvedValue({
       data: {data: {
