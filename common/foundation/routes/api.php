@@ -225,6 +225,11 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/chapa/checkout', [ChapaController::class, 'checkout'])->middleware('throttle:10,1');
         Route::get('billing/direct', [DirectBillingController::class, 'index'])->middleware('auth:sanctum');
         Route::get('billing/direct/pro/{payment}/receipt', [DirectBillingController::class, 'downloadProReceipt'])->middleware('auth:sanctum');
+        // Explicit 404 tombstones: removing these POST routes otherwise lets the
+        // API respond with 405 because the billing read endpoints still exist.
+        Route::post('billing/direct/pro', static fn () => abort(404));
+        Route::post('billing/direct/pro/{payment}/reference', static fn () => abort(404));
+        Route::post('billing/direct/invoices/{invoice}/reference', static fn () => abort(404));
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
         // CREATOR AI: deny by default, independently authorized per service.
@@ -458,6 +463,11 @@ Route::group(['prefix' => 'v1'], function () {
         ]);
     // Verify.et buyer reference/instructions routes were retired. New purchases use
     // the Chapa hosted checkout and the separate customer purchase portal.
+    // These hard 404s also prevent Laravel's SPA fallback from returning HTTP 200
+    // for old buyer URLs. No legacy payment handler or queue can be invoked.
+    Route::match(['get', 'post'], 'public/direct-orders/{order}', static fn () => abort(404));
+    Route::match(['get', 'post'], 'public/direct-orders/{order}/{action}', static fn () => abort(404))
+        ->where('action', 'payment-instructions|recheck|cancel|reference|select-account');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
