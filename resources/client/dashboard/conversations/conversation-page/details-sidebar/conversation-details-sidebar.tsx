@@ -44,6 +44,7 @@ export function ConversationDetailsSidebar({data}: Props) {
       <InboxSectionHeader>
         <Trans message="Details" />
         <IconButton
+          aria-label="Hide conversation details"
           className="ml-auto"
           size="xs"
           onClick={() => toggleRightSidebar()}

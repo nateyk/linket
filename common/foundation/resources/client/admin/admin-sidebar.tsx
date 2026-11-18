@@ -67,6 +67,10 @@ export function AdminSidebar() {
             <Sidebar.MenuFromConfig
               position="admin-sidebar"
               defaultIcons={AdminSidebarIcons}
+              activeOverride={item =>
+                pathname.startsWith('/agent/') &&
+                item.action === '/admin/support'
+              }
               end={item =>
                 shouldEndMatchSidebarItem(item, pathname, visibleMenuItems)
               }

@@ -254,6 +254,18 @@ test.describe('isolated Help Center product acceptance', () => {
     }
   });
 
+  test('agent-only staff keep their own navigation, without admin links', async ({page}) => {
+    const {agent} = fixture();
+    await loginToHc(page, agent);
+    await page.goto('/agent/conversations?viewId=mine');
+    await expect(page.locator('[data-menu-id="agent-dashboard-sidebar"]'))
+      .toBeVisible({timeout: 30_000});
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveCount(0);
+    await expect(page.getByRole('link', {name: 'Conversations'}).first())
+      .toBeVisible();
+    await expect(page.getByRole('link', {name: 'Admin dashboard'})).toHaveCount(0);
+  });
+
   test('an agent can manage content without switching into the admin shell; buyer cannot edit', async ({page, browser}) => {
     test.setTimeout(120_000);
     const {agent, buyer, draft_article: draft} = fixture();

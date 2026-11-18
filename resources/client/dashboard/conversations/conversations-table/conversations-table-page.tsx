@@ -10,6 +10,7 @@ import {useNavigateToConversationPage} from '@app/dashboard/conversations/utils/
 import {helpdeskQueries} from '@app/dashboard/helpdesk-queries';
 import {InboxViewsPanel} from '@app/dashboard/inbox/inbox-views-panel';
 import {InboxViewsSidebar} from '@app/dashboard/inbox/inbox-views-sidebar';
+import {useAuth} from '@common/auth/use-auth';
 import {GlobalLoadingProgress} from '@common/core/global-loading-progress';
 import {DataTablePaginationFooter} from '@common/datatable/data-table-pagination-footer';
 import {DatatablePageHeaderBar} from '@common/datatable/page/datatable-page-with-header-layout';
@@ -22,12 +23,12 @@ import {Trans} from '@ui/i18n/trans';
 import {MessagesSquareIcon} from '@ui/icons/lucide/messages-square-icon';
 import {DashboardIcon} from '@ui/icons/material/Dashboard';
 import {ToggleLeftSidebarIcon} from '@ui/icons/toggle-left-sidebar-icon';
-import {IllustratedMessage} from '@ui/images/illustrated-message';
 import {Dialog} from '@ui/overlays/dialog/dialog';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 import {Tooltip} from '@ui/tooltip/tooltip';
 import clsx from 'clsx';
 import {Fragment, useContext, useState} from 'react';
+import {Link} from 'react-router';
 import {useActiveColumns} from './columns/use-active-columns';
 
 export function Component() {
@@ -122,6 +123,7 @@ function ConversationsDesktopView() {
 }
 
 function ConversationsMobileView() {
+  const {hasPermission} = useAuth();
   const {query, items, isEmpty, mergeIntoSearchParams} =
     useActiveViewConversations();
 
@@ -130,7 +132,7 @@ function ConversationsMobileView() {
       <GlobalLoadingProgress query={query} />
       <DatatablePageHeaderBar
         title={<ViewName />}
-        showSidebarToggleButton
+        showSidebarToggleButton={!hasPermission('admin.access')}
         padding="p-3"
         rightContent={<ViewsTriggerButton />}
       />
@@ -175,13 +177,22 @@ function ViewsTriggerButton() {
 
 function EmptyStateMessage() {
   return (
-    <IllustratedMessage
-      size="sm"
-      image={<MessagesSquareIcon size="xl" />}
-      imageMargin="mb-12"
-      imageHeight="h-auto"
-      title={<Trans message="There are no conversations in this view" />}
-    />
+    <div className="mx-auto flex max-w-sm flex-col items-center gap-3 px-5 py-10 text-center">
+      <div className="flex size-12 items-center justify-center rounded-card border bg-muted/40 text-muted-foreground">
+        <MessagesSquareIcon size="lg" aria-hidden="true" />
+      </div>
+      <div className="space-y-1">
+        <h2 className="text-base font-medium">
+          <Trans message="There are no conversations in this view" />
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Tickets and chats matching this view will appear here." />
+        </p>
+      </div>
+      <Button variant="outline" size="xs" elementType={Link} to="/agent/conversations/search">
+        <Trans message="Search conversations" />
+      </Button>
+    </div>
   );
 }
 

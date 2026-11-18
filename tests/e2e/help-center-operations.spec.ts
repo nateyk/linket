@@ -107,6 +107,10 @@ async function assignTicket(admin: Page, ticketId: number): Promise<void> {
   const detail = admin.locator('div.flex.overflow-hidden').filter({
     has: admin.getByText('Assignee', {exact: true}),
   }).first();
+  if (!(await detail.isVisible())) {
+    await admin.getByRole('button', {name: 'Show conversation details'}).click();
+  }
+  await expect(detail).toBeVisible();
   await detail.getByRole('button').click();
   const transfer = admin.getByRole('dialog', {name: /transfer conversation/i});
   await expect(transfer).toBeVisible();
@@ -124,6 +128,10 @@ async function assignTicket(admin: Page, ticketId: number): Promise<void> {
   await transfer.getByRole('button', {name: 'Transfer', exact: true}).click();
   await response;
   await expect(admin.getByText(/^e2e-hc-agent-/).first()).toBeVisible();
+  const hideDetails = admin.getByRole('button', {name: 'Hide conversation details'});
+  if (await hideDetails.isVisible()) {
+    await hideDetails.click();
+  }
 }
 
 async function postAgentMessage(

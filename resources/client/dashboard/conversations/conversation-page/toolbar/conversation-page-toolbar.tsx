@@ -71,7 +71,7 @@ export function ToggleRightSidebarButton() {
     useAgentInboxLayout();
   if (rightSidenavOpen) return null;
   return (
-    <IconButton onClick={() => toggleRightSidebar()} size="xs">
+    <IconButton aria-label="Show conversation details" onClick={() => toggleRightSidebar()} size="xs">
       <ToggleRightSidebarIcon />
     </IconButton>
   );

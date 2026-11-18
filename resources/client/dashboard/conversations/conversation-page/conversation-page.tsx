@@ -9,14 +9,19 @@ import {useAgentInboxLayout} from '@app/dashboard/conversations/conversation-pag
 import {useCustomerName} from '@app/dashboard/conversations/customer-name';
 import {helpdeskQueries} from '@app/dashboard/helpdesk-queries';
 import {InboxViewsSidebar} from '@app/dashboard/inbox/inbox-views-sidebar';
+import {useAuth} from '@common/auth/use-auth';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardSidenav} from '@common/ui/dashboard-layout/dashboard-sidenav';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
+import {useMediaQuery} from '@ui/utils/hooks/use-media-query';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Fragment} from 'react';
 
 export function Component() {
+  const {hasPermission} = useAuth();
+  const constrainedWidth = useMediaQuery('(max-width: 1536px)');
+  const overlayDetails = hasPermission('admin.access') && constrainedWidth;
   const {conversationId} = useRequiredParams(['conversationId']);
   const query = useSuspenseQuery(
     helpdeskQueries.conversations.get(conversationId),
@@ -31,7 +36,12 @@ export function Component() {
       <InboxViewsSidebar location="conversationPage" />
       <ConversationsListSidebar />
       <ConversationColumn />
-      <DashboardSidenav position="right" size="w-[300px]">
+      <DashboardSidenav
+        position="right"
+        size="w-[300px]"
+        mode={overlayDetails ? 'overlay' : undefined}
+        overlayPosition="absolute"
+      >
         <ConversationDetailsSidebar data={query.data} />
       </DashboardSidenav>
     </Fragment>
