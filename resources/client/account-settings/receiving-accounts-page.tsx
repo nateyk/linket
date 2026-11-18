@@ -260,7 +260,9 @@ export function Component() {
 
       // Fail closed if Chapa is unavailable or returns no verified ETB providers.
       setAvailableBanks(ETHIOPIAN_BANKS.filter(bank =>
-        methods.some((method: BankOption) => method.code === bank.code)
+        methods.some((method: BankOption & {is_active?: boolean}) =>
+          method.code === bank.code && method.is_active !== false
+        )
       ));
       setAccounts(destinations);
       setLoadError(false);
