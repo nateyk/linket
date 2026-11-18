@@ -87,7 +87,7 @@ export function useGoogleGeoChart({
     // ISO code resolves consistently in Google's map, regardless of the
     // translated country name shown in the adjacent accessible list.
     const rows = data.map(location => [
-      country ? location.label : location.code?.toUpperCase(),
+      country ? location.label : (location.code?.toUpperCase() || location.label),
       location.value,
     ]);
     const header = [
