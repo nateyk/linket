@@ -37,13 +37,13 @@ function DesktopInboxViews() {
   return (
     <m.aside
       initial={{width: 0, opacity: 0}}
-      animate={{width: '', opacity: 1}}
+      animate={{width: 224, opacity: 1}}
       exit={{width: 0, opacity: 0}}
       transition={{duration: 0.15}}
-      className="inbox-views-sidebar dashboard-grid-sidenav-left-2 dashboard-rounded-panel relative z-10 flex h-full min-h-0 min-w-0 flex-shrink-0 flex-col border-e border-border/70"
+      className="inbox-views-sidebar dashboard-grid-sidenav-left-2 dashboard-rounded-panel relative z-10 flex h-full w-56 min-h-0 min-w-0 flex-shrink-0 flex-col border-e border-border/70"
     >
       <InboxViewsPanel />
-      <div className="mt-auto border-t p-3">
+      <div className="mt-auto border-t px-3 py-2.5">
         <Button
           size="xs"
           elementType={Link}
