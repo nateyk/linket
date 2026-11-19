@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Storefront\Controllers;
 
 use App\Storefront\Services\ChapaV1PayoutMode;
+use App\Payments\Chapa\LinketChapaManager;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
@@ -20,6 +21,7 @@ final class ChapaPayoutReadinessController extends Controller
             ...$mode->status(),
             'approval_url' => rtrim((string) config('app.url'), '/').'/api/v1/chapa/transfer-approval',
             'admin_step_up_required' => (bool) config('services.chapa.admin_payout_step_up_required', false),
+            'webhook_configured' => filled(app(LinketChapaManager::class)->webhookSecret()),
         ]];
     }
 }
