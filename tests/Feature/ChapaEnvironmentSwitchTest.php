@@ -23,7 +23,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
     private function admin(): User
     {
         $admin = User::factory()->create(['password' => Hash::make('unit-admin-password')]);
-        foreach (['admin.access', 'settings.update'] as $permission) {
+        foreach (['admin.access', 'settings.update', 'api.access'] as $permission) {
             $admin->permissions()->attach(Permission::query()->firstOrCreate(['name' => $permission]));
         }
 
@@ -51,6 +51,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
         $this->actingAs($admin, 'sanctum');
         $this->assertTrue($admin->hasPermission('admin.access'));
         $this->assertTrue($admin->hasPermission('settings.update'));
+        $this->assertTrue($admin->hasPermission('api.access'));
 
         return $admin;
     }
