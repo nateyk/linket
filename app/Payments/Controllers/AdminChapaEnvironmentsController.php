@@ -26,12 +26,12 @@ final class AdminChapaEnvironmentsController extends Controller
             'active_mode' => $mode,
             'api_version' => 'v1',
             'checkout_enabled' => (bool) settings()->get('billing.chapa.enable', true)
-                && $profiles->active('secret_key') !== '',
+                && $profiles->active(\App\Payments\Chapa\ChapaProfileField::SecretKey) !== '',
             'live_switch_allowed' => (bool) config('services.chapa.live_mode_switch_allowed', false),
             'live_payouts_enabled' => (bool) config('services.chapa.payouts_enabled', false),
             'profiles' => [
-                'test' => $profiles->summary('test'),
-                'live' => $profiles->summary('live'),
+                'test' => $profiles->summary(\App\Payments\Chapa\ChapaProfileMode::Test),
+                'live' => $profiles->summary(\App\Payments\Chapa\ChapaProfileMode::Live),
             ],
             'in_flight' => $guard->counts(),
             'webhook_url' => url('/billing/chapa/webhook'),
@@ -74,7 +74,7 @@ final class AdminChapaEnvironmentsController extends Controller
         $policy->assertLiveAllowed($mode);
         $guard->assertNoInFlight();
         $policy->assertReady($mode, $profiles);
-        app(ChapaProfileSettingsWriter::class)->validateProviderSecret($profiles->credential($mode, 'secret_key'));
+        app(ChapaProfileSettingsWriter::class)->validateProviderSecret($profiles->credential(\App\Payments\Chapa\ChapaProfileMode::from($mode), \App\Payments\Chapa\ChapaProfileField::SecretKey));
 
         // Fail closed: switching always PAUSES checkout. A separate confirmation
         // is required to allow paid orders in the selected environment.
@@ -99,7 +99,7 @@ final class AdminChapaEnvironmentsController extends Controller
         $policy->assertConfirmation($request, $data, $mode, 'ENABLE ');
         $policy->assertLiveAllowed($mode);
         $policy->assertReady($mode, $profiles);
-        app(ChapaProfileSettingsWriter::class)->validateProviderSecret($profiles->active('secret_key'));
+        app(ChapaProfileSettingsWriter::class)->validateProviderSecret($profiles->active(\App\Payments\Chapa\ChapaProfileField::SecretKey));
         settings()->save(['billing.chapa.enable' => 'true']);
         Log::info('chapa.checkout.enabled', ['admin_id' => $request->user()->id, 'mode' => $mode]);
 
