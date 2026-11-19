@@ -67,6 +67,46 @@ describe('Admin Chapa environment controls', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
+
+  it('saves only entered LIVE credentials and clears secret inputs after success', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('button', {name: 'LIVE'}));
+    fireEvent.change(screen.getByLabelText('Public key'), {target: {value: 'CHAPUBK-fixture-live'}});
+    fireEvent.change(screen.getByLabelText('Merchant secret key'), {target: {value: 'CHASECK-fixture-live'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Save LIVE configuration'}));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      '/api/v1/admin/billing/chapa/environments/live',
+      {public_key: 'CHAPUBK-fixture-live', secret_key: 'CHASECK-fixture-live'},
+    ));
+    expect(await screen.findByText(/credentials stored securely/)).toBeTruthy();
+    expect((screen.getByLabelText('Merchant secret key') as HTMLInputElement).value).toBe('');
+  });
+
+  it('pauses enabled checkout without changing merchant environment', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('button', {name: 'Pause checkout'}));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/v1/admin/billing/chapa/pause'));
+    expect(await screen.findByText(/Existing orders and payouts were not modified/)).toBeTruthy();
+  });
+
+  it('does not switch merchant mode until password and typed phrase match', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('button', {name: 'LIVE'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Switch to LIVE'}));
+    fireEvent.change(screen.getByLabelText('Confirmation phrase'), {target: {value: 'SWITCH TO LIVE'}});
+    expect(screen.getByRole('button', {name: 'Confirm'}).hasAttribute('disabled')).toBe(true);
+    fireEvent.change(screen.getByLabelText('Administrator password'), {target: {value: 'unit-admin-password'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Confirm'}));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      '/api/v1/admin/billing/chapa/activate',
+      {mode: 'live', confirmation: 'SWITCH TO LIVE', admin_password: 'unit-admin-password'},
+    ));
+    expect(await screen.findByText(/Checkout is paused until separately enabled/)).toBeTruthy();
+  });
+
   it('preserves the financial reconciliation panel', async () => {
     view();
     await screen.findByText('Platform Chapa environments');
