@@ -228,6 +228,33 @@ class PayoutSystemTest extends TestCase
         }
     }
 
+    public function testPlatformWideMinimumOverridesAWeakerWithdrawalMethodMinimum(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 10000);
+        $this->createPayoutMethod($creator, $workspaceId, minimum: 100);
+
+        settings()->set('marketplace.minimum_payout_cents', 5000);
+        try {
+            app(PayoutRequestService::class)->create($creator->id, $workspaceId, 4000);
+            $this->fail('Expected validation against the platform payout minimum.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 6000);
+        $this->assertSame(6000, $payout->amount_cents);
+
+        settings()->set('marketplace.minimum_payout_cents', 7000);
+        try {
+            app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+            $this->fail('A raised policy minimum must also block old pending withdrawals.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+    }
+
     /**
      * A zero-valued administrator minimum cannot create a payout Chapa v1
      * would refuse to transfer (minimum 1.00 ETB).

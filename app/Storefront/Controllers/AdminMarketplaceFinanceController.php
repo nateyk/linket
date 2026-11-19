@@ -44,7 +44,8 @@ class AdminMarketplaceFinanceController extends Controller
 
         $maturedEscrowOrdersCount = StorefrontOrder::query()
             ->where('status', 'paid')
-            ->where('monetization_policy', 'marketplace_v2')
+            ->where('collection_owner', StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA)
+            ->where('creator_earnings_cents', '>', 0)
             ->where('paid_at', '<=', $escrowCutoff)
             ->whereDoesntHave('journalEntries', fn ($q) => $q->where('event_type', 'funds_available'))
             ->count();
