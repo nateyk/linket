@@ -42,6 +42,7 @@ export type PayoutAccount = {
   is_active: boolean;
   is_default: boolean;
   status: string;
+  approved_at?: string | null;
   created_at?: string;
 };
 
@@ -157,6 +158,7 @@ function PayoutAccountCard({
   );
   const displayName = account.bank_name || bankOption?.name || account.display_label || 'Bank Account';
   const isSupported = !!bankOption;
+  const isApproved = isSupported && account.is_active && account.status === 'active' && !!account.approved_at;
   const maskedNumber = account.masked_account_number || (account.account_number_last_four ? `•••• ${account.account_number_last_four}` : '••••');
 
   return (
@@ -171,9 +173,17 @@ function PayoutAccountCard({
                   {displayName}
                 </h2>
                 {!isSupported && <Badge variant="outline" className="text-xs">Unsupported for payouts</Badge>}
-                {isSupported && account.status !== 'active' && (
+                {isSupported && !isApproved && (
                   <Badge variant="outline" className="text-xs">
-                    {account.status === 'pending_verification' ? 'Awaiting approval' : 'Needs review'}
+                    {account.status === 'pending_verification'
+                      ? 'Awaiting approval'
+                      : account.status === 'active' ? 'Admin approval required' : 'Needs review'}
+                  </Badge>
+                )}
+                {isApproved && (
+                  <Badge variant="outline" className="text-xs">
+                    <CheckIcon className="size-3" />
+                    <Trans message="Approved" />
                   </Badge>
                 )}
                 {account.is_default && (

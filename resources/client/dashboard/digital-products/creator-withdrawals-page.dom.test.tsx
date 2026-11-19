@@ -138,8 +138,8 @@ describe('CreatorWithdrawalsPage', () => {
     expect(await screen.findByText('Available Balance')).toBeTruthy();
     expect(screen.getByText('500.00 ETB')).toBeTruthy();
 
-    expect(screen.queryByText('Held earnings')).toBeNull();
-    expect(screen.queryByText('200.00 ETB')).toBeNull();
+    expect(screen.getByText('Held earnings')).toBeTruthy();
+    expect(screen.getByText('200.00 ETB')).toBeTruthy();
 
     expect(screen.getByText('Pending withdrawals')).toBeTruthy();
     expect(screen.getByText('100.00 ETB')).toBeTruthy();
@@ -168,7 +168,64 @@ describe('CreatorWithdrawalsPage', () => {
     renderPage();
     expect(await screen.findByText(/Some historical earnings or pending withdrawals still need ledger reconciliation/)).toBeTruthy();
     expect(screen.getByText('0.00 ETB')).toBeTruthy();
-    expect(screen.getByRole('button', {name: /Request withdrawal/i})).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', {name: /Request withdrawal/i})).toHaveProperty('disabled', false);
+  });
+
+  it('explains held earnings and permits inspecting withdrawal readiness without submitting zero funds', async () => {
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') {
+        return Promise.resolve({data: {summary: {
+          ...mockSummary,
+          available_for_payout_cents: 0,
+          held_earnings_cents: 90000,
+        }}});
+      }
+      if (url.startsWith('/api/v1/items/payout-requests')) {
+        return Promise.resolve({data: {data: []}});
+      }
+      if (url === '/api/v1/items/payout-methods') {
+        return Promise.resolve({data: {data: mockDestinations}});
+      }
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+
+    renderPage();
+    expect(await screen.findByText('Held earnings')).toBeTruthy();
+    expect(screen.getByText('900.00 ETB')).toBeTruthy();
+    expect(screen.getByText(/Your verified earnings are currently held/)).toBeTruthy();
+    expect(screen.getByRole('link', {name: 'Review Orders & Sales'}).getAttribute('href'))
+      .toBe('/dashboard/orders');
+
+    fireEvent.click(screen.getByRole('button', {name: /Request withdrawal/i}));
+    expect(await screen.findByText('No withdrawable balance')).toBeTruthy();
+    expect(screen.getByRole('button', {name: /Confirm withdrawal/i})).toHaveProperty('disabled', true);
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+  });
+
+  it('explains that a default Telebirr account still needs administrator approval', async () => {
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') {
+        return Promise.resolve({data: {summary: mockSummary}});
+      }
+      if (url.startsWith('/api/v1/items/payout-requests')) {
+        return Promise.resolve({data: {data: []}});
+      }
+      if (url === '/api/v1/items/payout-methods') {
+        return Promise.resolve({data: {data: [{
+          ...mockDestinations[0],
+          status: 'pending_verification',
+          approved_at: null,
+        }]}});
+      }
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+
+    renderPage();
+    expect(await screen.findByText(/Default does not mean approved/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', {name: /Request withdrawal/i}));
+    expect(await screen.findByText('No approved payout account')).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /Confirm withdrawal/i})).toBeNull();
+    expect(mockApiClient.post).not.toHaveBeenCalled();
   });
 
   it('renders withdrawal history with status badges and destination labels', async () => {
