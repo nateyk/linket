@@ -27,6 +27,10 @@ final class ChapaEnvironmentSwitchTest extends TestCase
             $admin->permissions()->attach(Permission::query()->firstOrCreate(['name' => $permission]));
         }
 
+        // Refresh Linket's aggregated permissions after attaching the test grants.
+        // The user model caches its permissions relation on first access.
+        $admin->loadPermissions(true);
+
         return $admin;
     }
 
@@ -45,6 +49,8 @@ final class ChapaEnvironmentSwitchTest extends TestCase
         $this->setupMerchant();
         $admin = $this->admin();
         $this->actingAs($admin, 'sanctum');
+        $this->assertTrue($admin->hasPermission('admin.access'));
+        $this->assertTrue($admin->hasPermission('settings.update'));
 
         return $admin;
     }
@@ -53,6 +59,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
     {
         return ProSubscriptionPayment::query()->create([
             'uuid' => (string) Str::uuid(), 'creator_id' => $creator->id,
+            'product_id' => 1,
             'amount_cents' => 100, 'status' => 'pending_payment',
         ]);
     }
