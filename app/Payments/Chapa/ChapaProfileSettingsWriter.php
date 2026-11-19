@@ -99,6 +99,12 @@ final class ChapaProfileSettingsWriter
                 $updates[ChapaMerchantProfiles::key($mode, $field)] = $values[$field];
             }
         }
+        $this->saveApprovalSecret($mode, $values, $updates);
+    }
+
+    /** @param array<string, string> $values @param array<string, string> $updates */
+    private function saveApprovalSecret(string $mode, array $values, array $updates): void
+    {
         if (($values['transfer_approval_secret'] ?? '') !== '') {
             $updates[ChapaTransferApprovalSecret::settingKey($mode)] = $values['transfer_approval_secret'];
         }
