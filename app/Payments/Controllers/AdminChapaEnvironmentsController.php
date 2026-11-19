@@ -105,7 +105,7 @@ final class AdminChapaEnvironmentsController extends Controller
         // Fail closed: switching always PAUSES checkout. A separate confirmation
         // is required to allow paid orders in the selected environment.
         settings()->save([
-            'billing.chapa.enable' => false,
+            'billing.chapa.enable' => 'false',
             'billing.chapa.active_mode' => $mode,
         ]);
         Log::info('chapa.checkout.mode_changed', ['admin_id' => $request->user()->id, 'mode' => $mode]);
@@ -127,7 +127,7 @@ final class AdminChapaEnvironmentsController extends Controller
         }
         $this->assertReady($mode, $profiles);
         $this->validateMerchantKey($profiles->active('secret_key'));
-        settings()->save(['billing.chapa.enable' => true]);
+        settings()->save(['billing.chapa.enable' => 'true']);
         Log::info('chapa.checkout.enabled', ['admin_id' => $request->user()->id, 'mode' => $mode]);
 
         return $this->index($profiles, $guard);
@@ -136,7 +136,7 @@ final class AdminChapaEnvironmentsController extends Controller
     public function pause(Request $request, ChapaMerchantProfiles $profiles, ChapaModeSwitchGuard $guard): array
     {
         $this->authorizeSettings();
-        settings()->save(['billing.chapa.enable' => false]);
+        settings()->save(['billing.chapa.enable' => 'false']);
         Log::warning('chapa.checkout.paused', ['admin_id' => $request->user()->id]);
 
         return $this->index($profiles, $guard);
