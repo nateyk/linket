@@ -26,6 +26,20 @@ test('a failed upload-backend seeder stops deployment before creator seed, cache
         ->and($commands)->not->toContain('route:list');
 });
 
+test('production deployment does not provision a ChatGPT test account when its optional email is configured', function () {
+    $fixture = $this->deployment;
+    $fixture->environment("LINKET_TEST_PRO_EMAIL=existing@example.test\nLINKET_TEST_PRO_PASSWORD=not-a-real-secret-test-value\n");
+
+    $result = $fixture->deploy();
+    $commands = array_column($fixture->commands(), 'command');
+
+    expect($result->getExitCode())->toBe(0, $result->getOutput().$result->getErrorOutput())
+        ->and($commands)->toContain('migrate')
+        ->and($commands)->toContain('db:seed')
+        ->and($commands)->not->toContain('creator-ai:seed-test-pro')
+        ->and(readlink($fixture->root.'/current'))->toContain('20261104-120000-aaaaaaa');
+});
+
 test('a long route list is consumed before shortening its displayed output', function () {
     $fixture = $this->deployment;
     $result = $fixture->deploy(environment: ['LONG_ROUTE_LIST' => '1']);
