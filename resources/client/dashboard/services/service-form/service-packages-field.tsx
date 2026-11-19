@@ -232,6 +232,10 @@ export function ServicePackagesField({
 
   return (
     <div className="min-w-0 space-y-4">
+      <p className="text-xs font-medium tabular-nums text-muted-foreground">
+        <Trans message=":count of 3 enabled" values={{count: enabledCount}} />
+      </p>
+
       <div className="grid min-w-0 grid-cols-3 gap-2" role="group" aria-label={trans({message: 'Package tiers'})}>
         {TIERS.map((tier, index) => {
           const slot = slots[index];
