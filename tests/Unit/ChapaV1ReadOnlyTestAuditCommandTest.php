@@ -134,6 +134,30 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
     }
 
+    public function testPendingCheckoutDoesNotPassSettlementAcceptance(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        $this->fakeReadOnlyEndpoints();
+        Http::fake([
+            'https://api.chapa.co/v1/transaction/verify/*' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'pending',
+                    'tx_ref' => 'lk-checkout-TEST123',
+                    'currency' => 'ETB',
+                    'amount' => '12.34',
+                ],
+            ]),
+        ]);
+
+        $this->assertSame(1, Artisan::call('chapa:v1:audit-test', [
+            '--payment-reference' => 'lk-checkout-TEST123',
+            '--payment-amount-cents' => '1234',
+        ]));
+        $this->assertStringContainsString('pending', Artisan::output());
+        Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+    }
+
     public function testPaymentRequiresReferenceAndAmountBeforeAnyNetworkCall(): void
     {
         $this->withSecret('CHASECK_TEST-fixture');
