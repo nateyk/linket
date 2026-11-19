@@ -38,7 +38,7 @@ class PayoutSystemTest extends TestCase
         Storage::fake('local');
         Notification::fake();
         // Payouts are gated by the storefront currency + hold days config.
-        config()->set('storefront.payout_hold_days', 0);
+        config()->set('store.payout_hold_days', 0);
         config()->set('storefront.currency', 'ETB');
     }
 

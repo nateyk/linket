@@ -56,7 +56,7 @@ class MarketplaceReconciliationService
      */
     public function releaseMaturedEscrow(): int
     {
-        $holdDays = (int) config('store.payout_hold_days', 7);
+        $holdDays = app(MarketplacePayoutPolicy::class)->holdDays();
         $threshold = Carbon::now()->subDays($holdDays);
 
         return $this->processUnjournaledOrders(

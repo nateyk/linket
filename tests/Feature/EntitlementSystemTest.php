@@ -26,7 +26,7 @@ class EntitlementSystemTest extends TestCase
         parent::setUp();
         $this->seed(RolesTableSeeder::class);
         config()->set('storefront.currency', 'ETB');
-        config()->set('storefront.payout_hold_days', 0);
+        config()->set('store.payout_hold_days', 0);
         settings()->save(['billing.enable' => true]);
 
         if (!Product::where('is_default', true)->exists()) {

@@ -12,6 +12,7 @@ use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontPayoutIntent;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
+use App\Storefront\Services\MarketplacePayoutPolicy;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -47,7 +48,7 @@ class PayoutRequestService
 
             // Chapa v1 transfers require at least 1.00 ETB, even if Finance
             // configures a lower provider minimum.
-            $effectiveMinimumCents = max(100, (int) $method->minimum_amount_cents);
+            $effectiveMinimumCents = max(app(MarketplacePayoutPolicy::class)->minimumWithdrawalCents(), (int) $method->minimum_amount_cents);
             if ($amountCents < $effectiveMinimumCents
                 || ($method->maximum_amount_cents && $amountCents > $method->maximum_amount_cents)) {
                 throw ValidationException::withMessages(['amount_cents' => __('This amount is outside the selected withdrawal method limits.')]);
@@ -254,7 +255,7 @@ class PayoutRequestService
     private function isWithinCurrentMethodLimits(PayoutRequest $payout): bool
     {
         $method = $payout->withdrawalMethod;
-        $minimum = max(100, (int) ($method?->minimum_amount_cents ?? 0));
+        $minimum = max(app(MarketplacePayoutPolicy::class)->minimumWithdrawalCents(), (int) ($method?->minimum_amount_cents ?? 0));
         $maximum = (int) ($method?->maximum_amount_cents ?? 0);
         $amount = (int) $payout->amount_cents;
 
