@@ -6,6 +6,7 @@ namespace App\Storefront\Controllers;
 
 use App\Storefront\ChapaPayoutService;
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Services\ChapaTransferApprovalSecret;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -22,7 +23,7 @@ final class ChapaV1TransferApprovalController extends Controller
         if (!app(\App\Storefront\Services\ChapaV1PayoutMode::class)->enabled()) {
             return response()->json(['message' => 'Transfer not approved'], 400);
         }
-        $secret = (string) config('services.chapa.transfer_approval_secret', '');
+        $secret = app(ChapaTransferApprovalSecret::class)->current();
         $signature = (string) $request->header('Chapa-Signature', '');
 
         if (!$this->isValidSignature($secret, $signature)) {
