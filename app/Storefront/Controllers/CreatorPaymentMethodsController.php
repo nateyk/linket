@@ -3,7 +3,7 @@
 namespace App\Storefront\Controllers;
 
 use App\Models\User;
-use App\Payments\VerifyEt\EthiopianNameNormalizer;
+use App\Storefront\Support\EthiopianNameNormalizer;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DirectPaymentMethod;
 use Common\Workspaces\ActiveWorkspace;

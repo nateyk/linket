@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Payments\VerifyEt;
+namespace App\Storefront\Support;
 
 final class EthiopianNameNormalizer
 {
