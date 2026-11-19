@@ -19,8 +19,7 @@ final class ChapaMerchantProfiles
     public const SECRET_KEY = 'secret_key';
     public const WEBHOOK_SECRET = 'webhook_secret';
     public const MODES = [self::TEST, self::LIVE];
-    private const FIELDS = [self::PUBLIC_KEY, self::SECRET_KEY, self::WEBHOOK_SECRET];
-
+    
     public function __construct(private readonly ?Settings $settings = null) {}
 
     private function setting(string $key, mixed $default = null): mixed
@@ -37,9 +36,9 @@ final class ChapaMerchantProfiles
         return str_starts_with($key, 'CHASECK-') ? self::LIVE : self::UNCONFIGURED;
     }
 
-    public static function key(string $mode, string $field): string
+    public static function key(ChapaProfileMode $mode, ChapaProfileField $field): string
     {
-        return 'billing.chapa.profile.'.$mode.'.'.$field;
+        return 'billing.chapa.profile.'.$mode->value.'.'.$field->value;
     }
 
     public function activeMode(): string
@@ -52,15 +51,8 @@ final class ChapaMerchantProfiles
         return self::modeForSecret($this->legacySecret());
     }
 
-    public function credential(string $mode, string $field): string
+    public function credential(ChapaProfileMode $mode, ChapaProfileField $field): string
     {
-        if (!in_array($mode, self::MODES, true)) {
-            return '';
-        }
-        if (!in_array($field, self::FIELDS, true)) {
-            return '';
-        }
-
         $stored = $this->setting(self::key($mode, $field));
         if (is_string($stored) && $stored !== '') {
             return $stored;
@@ -69,9 +61,9 @@ final class ChapaMerchantProfiles
         return $this->legacyCredential($mode, $field);
     }
 
-    private function legacyCredential(string $mode, string $field): string
+    private function legacyCredential(ChapaProfileMode $mode, ChapaProfileField $field): string
     {
-        if (self::modeForSecret($this->legacySecret()) !== $mode) {
+        if (self::modeForSecret($this->legacySecret()) !== $mode->value) {
             return '';
         }
         if ($this->rotatedMerchant($mode)) {
@@ -79,16 +71,16 @@ final class ChapaMerchantProfiles
         }
 
         return match ($field) {
-            self::SECRET_KEY => $this->legacySecret(),
-            self::PUBLIC_KEY => (string) $this->setting('billing.chapa.public_key', ''),
-            self::WEBHOOK_SECRET => (string) ($this->setting('billing.chapa.webhook_secret')
+            ChapaProfileField::SecretKey => $this->legacySecret(),
+            ChapaProfileField::PublicKey => (string) $this->setting('billing.chapa.public_key', ''),
+            ChapaProfileField::WebhookSecret => (string) ($this->setting('billing.chapa.webhook_secret')
                 ?: config('services.chapa.webhook_secret', '')),
         };
     }
 
-    private function rotatedMerchant(string $mode): bool
+    private function rotatedMerchant(ChapaProfileMode $mode): bool
     {
-        $saved = $this->setting(self::key($mode, self::SECRET_KEY));
+        $saved = $this->setting(self::key($mode, ChapaProfileField::SecretKey));
         if (!is_string($saved) || $saved === '') {
             return false;
         }
@@ -96,21 +88,23 @@ final class ChapaMerchantProfiles
         return !hash_equals($this->legacySecret(), $saved);
     }
 
-    public function active(string $field): string
+    public function active(ChapaProfileField $field): string
     {
-        return $this->credential($this->activeMode(), $field);
+        $mode = ChapaProfileMode::tryFrom($this->activeMode());
+
+        return $mode ? $this->credential($mode, $field) : '';
     }
 
     /** @return array{mode: string, configured: bool, webhook_configured: bool, approval_configured: bool, public_key_masked: ?string} */
-    public function summary(string $mode): array
+    public function summary(ChapaProfileMode $mode): array
     {
-        $key = $this->credential($mode, self::SECRET_KEY);
-        $publicKey = $this->credential($mode, self::PUBLIC_KEY);
+        $key = $this->credential($mode, ChapaProfileField::SecretKey);
+        $publicKey = $this->credential($mode, ChapaProfileField::PublicKey);
 
         return [
-            'mode' => $mode,
-            'configured' => self::modeForSecret($key) === $mode && $publicKey !== '',
-            'webhook_configured' => $this->credential($mode, self::WEBHOOK_SECRET) !== '',
+            'mode' => $mode->value,
+            'configured' => self::modeForSecret($key) === $mode->value && $publicKey !== '',
+            'webhook_configured' => $this->credential($mode, ChapaProfileField::WebhookSecret) !== '',
             'approval_configured' => app(\App\Storefront\Services\ChapaTransferApprovalSecret::class)->forMode($mode) !== '',
             'public_key_masked' => $publicKey === '' ? null : '••••'.substr($publicKey, -4),
         ];
