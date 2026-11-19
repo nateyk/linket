@@ -39,10 +39,11 @@ final class AdminChapaEnvironmentsController extends Controller
         ]];
     }
 
-    public function save(Request $request, string $mode, ChapaMerchantProfiles $profiles): array
+    public function save(Request $request, string $mode): array
     {
         $this->authorizeSettings();
         $this->assertMode($mode);
+        $profiles = app(ChapaMerchantProfiles::class);
         $data = $request->validate([
             'public_key' => ['sometimes', 'nullable', 'string', 'max:255'],
             'secret_key' => ['sometimes', 'nullable', 'string', 'max:255'],
