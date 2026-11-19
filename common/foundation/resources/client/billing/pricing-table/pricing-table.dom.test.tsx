@@ -5,6 +5,7 @@ import {Product} from '@app/gen/schemas/product';
 import {render, screen} from '@testing-library/react';
 import {expect, test, vi} from 'vitest';
 import {PricingTable} from './pricing-table';
+import {findBestPrice} from './find-best-price';
 import {UpsellLabel} from './upsell-label';
 
 vi.mock('@common/auth/use-auth', () => ({
@@ -135,4 +136,23 @@ test('annual savings compares equivalent monthly costs', () => {
   );
 
   expect(screen.getByText('Save up to 17%')).toBeTruthy();
+});
+
+
+test('monthly pricing prefers a one-month price even if annual comes first', () => {
+  const plans = [
+    {
+      id: 9, amount: 6000, currency: 'ETB',
+      interval: 'month', interval_count: 12,
+      subscriptions_count: null, stripe_id: null, paypal_id: null,
+    },
+    {
+      id: 8, amount: 700, currency: 'ETB',
+      interval: 'month', interval_count: 1,
+      subscriptions_count: null, stripe_id: null, paypal_id: null,
+    },
+  ];
+
+  expect(findBestPrice('monthly', plans)?.id).toBe(8);
+  expect(findBestPrice('yearly', plans)?.id).toBe(9);
 });
