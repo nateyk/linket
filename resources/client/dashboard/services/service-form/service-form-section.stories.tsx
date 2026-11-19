@@ -1,4 +1,3 @@
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Input} from '@shadcn/forms/input/input';
 import preview from '@storybook/preview';
 import {Trans} from '@ui/i18n/trans';
@@ -28,17 +27,9 @@ const meta = preview.meta({
 
 export default meta;
 
-/**
- * `ServiceFormSection` is an `Accordion.Item`, so every story has to supply
- * the `Accordion.Root` it belongs to — open by default, otherwise the story
- * shows a collapsed header and nothing else.
- */
+/** Render the same quiet panel used by the guided service editor. */
 function SectionStory(props: ComponentProps<typeof ServiceFormSection>) {
-  return (
-    <Accordion.Root variant="bordered" defaultValue={[props.id]}>
-      <ServiceFormSection {...props} />
-    </Accordion.Root>
-  );
+  return <ServiceFormSection {...props} />;
 }
 
 function SectionBody() {
@@ -137,6 +128,7 @@ export const Optional = meta.story({
     return (
       <SectionStory
         id="faq"
+        collapsible
         icon={CircleHelpIcon}
         title={trans({message: 'FAQ'})}
         description={trans({
@@ -157,6 +149,7 @@ export const WithError = meta.story({
     return (
       <SectionStory
         id="contact"
+        collapsible
         icon={MessageSquareQuoteIcon}
         title={trans({message: 'Contact buttons'})}
         description={trans({

@@ -100,7 +100,7 @@ export function ServiceFaqsField({
         type="button"
         variant="outline"
         size="sm"
-        className="self-start"
+        className="min-h-11 self-start"
         disabled={atLimit}
         onClick={() => {
           if (faqs.length >= SERVICE_FAQS_MAX) return;
