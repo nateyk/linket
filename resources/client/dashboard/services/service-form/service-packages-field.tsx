@@ -107,9 +107,12 @@ export function ServicePackagesField({
   const cache = draftCache?.current ?? localCache.current;
   const [newFeature, setNewFeature] = useState('');
   const [featureError, setFeatureError] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [descriptionOpen, setDescriptionOpen] = useState<number | null>(null);
   const {slots, legacy} = assignPackages(packages);
+  const [selectedIndex, setSelectedIndex] = useState(() => {
+    const firstOffered = slots.findIndex(Boolean);
+    return firstOffered === -1 ? 0 : firstOffered;
+  });
+  const [descriptionOpen, setDescriptionOpen] = useState<number | null>(null);
   const enabledCount = slots.filter(Boolean).length;
   const featureLists = slots.map(slot => slot ? lines(slot.item.features) : []);
   const featureRows = Array.from(new Map(
