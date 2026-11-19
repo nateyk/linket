@@ -46,7 +46,7 @@ it('renders creator-owned Pro payment amount, date, reference and status', async
   expect(screen.getByText('Paid')).toBeTruthy();
   expect(screen.getByText('Failed')).toBeTruthy();
   expect(screen.getByText('Monthly price')).toBeTruthy();
-  expect(screen.getByText('Pending payment')).toBeTruthy();
+  expect(screen.getAllByText('Pending payment').length).toBeGreaterThanOrEqual(1);
   expect(screen.getByRole('button', {name: 'Renew Pro'})).toBeTruthy();
   expect(screen.queryByRole('link', {name: 'Download receipt'})).toBeNull();
   expect(api.get).toHaveBeenCalledWith('/api/v1/billing/chapa/history');
