@@ -224,7 +224,7 @@ describe('CreatorWithdrawalsPage', () => {
     expect(await screen.findByText(/Default does not mean approved/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', {name: /Request withdrawal/i}));
     expect(await screen.findByText('No approved payout account')).toBeTruthy();
-    expect(screen.getByRole('button', {name: /Confirm withdrawal/i})).toHaveProperty('disabled', true);
+    expect(screen.queryByRole('button', {name: /Confirm withdrawal/i})).toBeNull();
     expect(mockApiClient.post).not.toHaveBeenCalled();
   });
 
