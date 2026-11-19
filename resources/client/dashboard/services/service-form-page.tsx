@@ -1089,10 +1089,11 @@ function ServiceFormPage() {
                     variant="outline"
                     size="sm"
                     className="ms-auto min-h-11"
+                    aria-label={trans({message: 'Preview before publishing'})}
                     onClick={() => setPreviewOpen(true)}
                   >
                     <EyeIcon className="size-4" aria-hidden="true" />
-                    <Trans message="Preview service" />
+                    <Trans message="Preview" />
                   </Button>
                 )}
               </div>
