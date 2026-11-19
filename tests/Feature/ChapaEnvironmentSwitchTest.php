@@ -103,7 +103,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
             ->assertJsonPath('data.profiles.live.configured', true);
         $this->assertStringNotContainsString('CHASECK-fixture-live', $response->getContent());
 
-        $name = ChapaMerchantProfiles::key('live', 'secret_key');
+        $name = ChapaMerchantProfiles::key(\App\Payments\Chapa\ChapaProfileMode::Live, \App\Payments\Chapa\ChapaProfileField::SecretKey);
         $raw = DB::table('settings')->where('name', $name)->value('value');
         $this->assertNotSame('CHASECK-fixture-live', $raw);
         $this->assertSame('CHASECK-fixture-live', decrypt($raw));
@@ -184,7 +184,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
             'secret_key' => 'CHASECK-fixture-live',
         ])->assertUnprocessable();
         $this->assertDatabaseMissing('settings', [
-            'name' => ChapaMerchantProfiles::key('live', 'secret_key'),
+            'name' => ChapaMerchantProfiles::key(\App\Payments\Chapa\ChapaProfileMode::Live, \App\Payments\Chapa\ChapaProfileField::SecretKey),
         ]);
     }
 
@@ -246,7 +246,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
         ]);
         $profiles = app(ChapaMerchantProfiles::class);
         $this->assertSame('live', $profiles->activeMode());
-        $this->assertSame('', $profiles->active('secret_key'));
+        $this->assertSame('', $profiles->active(\App\Payments\Chapa\ChapaProfileField::SecretKey));
         $this->assertSame('', app(\App\Payments\Chapa\LinketChapaManager::class)->platformSecret());
     }
 
@@ -259,9 +259,9 @@ final class ChapaEnvironmentSwitchTest extends TestCase
             'secret_key' => 'CHASECK_TEST-rotated-merchant',
         ])->assertOk();
         $profiles = app(ChapaMerchantProfiles::class);
-        $this->assertSame('CHASECK_TEST-rotated-merchant', $profiles->active('secret_key'));
-        $this->assertFalse($profiles->summary('test')['webhook_configured']);
-        $this->assertFalse($profiles->summary('test')['approval_configured']);
+        $this->assertSame('CHASECK_TEST-rotated-merchant', $profiles->active(\App\Payments\Chapa\ChapaProfileField::SecretKey));
+        $this->assertFalse($profiles->summary(\App\Payments\Chapa\ChapaProfileMode::Test)['webhook_configured']);
+        $this->assertFalse($profiles->summary(\App\Payments\Chapa\ChapaProfileMode::Test)['approval_configured']);
     }
 
 }
