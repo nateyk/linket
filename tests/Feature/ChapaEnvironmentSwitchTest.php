@@ -13,12 +13,22 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class ChapaEnvironmentSwitchTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Exercise the environment switch behavior without cross-test route
+        // throttling. Throttle middleware remains active in production.
+        $this->withoutMiddleware(ThrottleRequests::class);
+    }
 
     private function admin(): User
     {
