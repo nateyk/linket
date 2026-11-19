@@ -37,10 +37,15 @@ class VisitorAttributes
      */
     public static function ipHash(): ?string
     {
-        $ip = ResolveVisitorLocation::publicIp();
-        if (!$ip) {
+        // View deduplication uses Laravel's trusted-proxy-resolved client IP.
+        // A valid private/loopback IP can still identify a local test visit or
+        // a request arriving through a private ingress proxy. It must not be
+        // used to invent a geographic location.
+        $ip = request()->ip();
+        if (!is_string($ip) || !filter_var($ip, FILTER_VALIDATE_IP)) {
             return null;
         }
+
         return hash('sha256', $ip);
     }
 
