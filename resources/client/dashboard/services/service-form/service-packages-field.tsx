@@ -231,17 +231,8 @@ export function ServicePackagesField({
   };
 
   return (
-    <div className="min-w-0 space-y-4 sm:space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          <Trans message="Enable only the packages you offer. Leave them off to invite quotes." />
-        </p>
-        <p className="text-xs font-medium tabular-nums text-muted-foreground">
-          <Trans message=":count of 3 enabled" values={{count: enabledCount}} />
-        </p>
-      </div>
-
-      <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-3" role="group" aria-label={trans({message: 'Package tiers'})}>
+    <div className="min-w-0 space-y-4">
+      <div className="grid min-w-0 grid-cols-3 gap-2" role="group" aria-label={trans({message: 'Package tiers'})}>
         {TIERS.map((tier, index) => {
           const slot = slots[index];
           const tierName = trans(tier.label);
@@ -255,8 +246,8 @@ export function ServicePackagesField({
               key={tier.key}
               aria-label={tier.name + ' package'}
               className={cn(
-                'min-w-0 rounded-card-xs border border-border/70 px-2 py-2.5 transition-colors motion-reduce:transition-none sm:px-3',
-                selectedIndex === index && 'border-foreground/40 bg-muted/40',
+                'min-w-0 rounded-input border border-border px-2 py-2.5 transition-colors motion-reduce:transition-none sm:px-3',
+                selectedIndex === index && 'border-primary/50 bg-primary/5',
                 tierHasError && 'border-destructive',
               )}
             >
@@ -265,7 +256,7 @@ export function ServicePackagesField({
                 aria-pressed={selectedIndex === index}
                 aria-label={trans({message: 'Edit :name package', values: {name: tierName}})}
                 onClick={() => setSelectedIndex(index)}
-                className="flex min-h-12 w-full min-w-0 flex-col justify-start gap-1 rounded-card-xs text-start outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="flex min-h-10 w-full min-w-0 flex-col justify-start gap-1 rounded-input text-start outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 <span className={cn('text-sm font-semibold', !item ? 'text-muted-foreground' : 'text-foreground', selectedIndex === index && 'text-foreground')}>
                   {tierName}
@@ -276,10 +267,7 @@ export function ServicePackagesField({
                     formatMoney(priceCents, 'ETB')}
                 </span>
               </button>
-              <div className="mt-2 flex min-h-11 items-center justify-between gap-1">
-                <span className="text-xs text-muted-foreground">
-                  {item ? <Trans message="On" /> : <Trans message="Off" />}
-                </span>
+              <div className="mt-1 flex min-h-10 items-center justify-end">
                 <Switch
                   size="default"
                   className="focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -297,7 +285,7 @@ export function ServicePackagesField({
         aria-label={trans({message: ':name package details', values: {name: trans(selectedTier.label)}})}
         className="min-w-0 space-y-4"
       >
-        <header className="flex items-center justify-between gap-3 border-b pb-3">
+        {selectedItem && <header className="flex items-center justify-between gap-3 border-b pb-3">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold">
               <Trans message=":name details" values={{name: trans(selectedTier.label)}} />
@@ -313,7 +301,7 @@ export function ServicePackagesField({
               <Trans message="Editing" />
             </p>
           )}
-        </header>
+        </header>}
         {selectedItem ? (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -410,13 +398,10 @@ export function ServicePackagesField({
         )}
       </section>
 
-      <section aria-label={trans({message: 'Included features'})} className="min-w-0 border-t pt-5">
+      {enabledCount > 0 && <section aria-label={trans({message: 'Included features'})} className="min-w-0 border-t pt-4">
         <div className="flex items-center justify-between gap-3 pb-4">
           <div>
             <h3 className="text-sm font-semibold"><Trans message="Included features" /></h3>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              <Trans message="Select which packages include each feature." />
-            </p>
           </div>
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {featureRows.length === 1
@@ -473,10 +458,10 @@ export function ServicePackagesField({
           <label htmlFor="service-new-package-feature" className="mb-2 block text-sm font-medium">
             <Trans message="Add an included feature" />
           </label>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex min-w-0 items-center gap-2">
             <Input
               id="service-new-package-feature"
-              className="min-w-0 w-full sm:flex-1"
+              className="min-w-0 flex-1"
               value={newFeature}
               maxLength={200}
               disabled={!enabledCount}
@@ -497,7 +482,7 @@ export function ServicePackagesField({
               type="button"
               variant="outline"
               size="sm"
-              className="w-full sm:w-auto"
+              className="shrink-0"
               disabled={!enabledCount || !newFeature.trim()}
               onClick={addFeature}
             >
@@ -525,7 +510,7 @@ export function ServicePackagesField({
             );
           })}
         </div>
-      </section>
+      </section>}
 
       {legacy.length > 0 && (
         <section className="border-t pt-5" aria-label={trans({message: 'Older packages'})}>
