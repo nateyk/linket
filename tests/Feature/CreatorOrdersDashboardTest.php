@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\User;
-use App\Payments\Models\DirectPaymentVerification;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\DownloadEntitlement;
@@ -341,7 +340,7 @@ test('empty sales safely produce zero average order and zero margin', function (
         ->assertJsonPath('summary.gross_profit_margin_percent', 0);
 });
 
-test('creator can inspect an owned order with masked account evidence and delivery state', function () {
+test('creator can inspect an owned order without provider account evidence and with delivery state', function () {
     [$creator, , $product] = creatorOrdersDashboardFixture();
     [$otherCreator] = creatorOrdersDashboardFixture('Other product');
 
@@ -374,31 +373,15 @@ test('creator can inspect an owned order with masked account evidence and delive
         'download_limit' => 10,
         'expires_at' => now()->addDays(30),
     ]);
-    $verification = DirectPaymentVerification::query()->create([
-        'reference' => 'DETAIL-REFERENCE-1',
-        'payable_type' => $order::class,
-        'payable_id' => $order->id,
-        'bank_code' => 'cbe',
-        'settlement_account' => '1000123456789',
-        'amount_cents' => 10000,
-        'currency' => 'ETB',
-        'status' => 'success',
-        'verified_at' => now(),
-        'attempt' => 1,
-        'provider_input' => ['accountSuffix' => '6789'],
-        'provider_result' => ['sensitive' => 'provider payload'],
-    ]);
-
     creatorOrdersDashboardActAs($this, $creator);
 
     $this->getJson('/api/v1/storefront/direct-orders/'.$order->uuid)
         ->assertOk()
         ->assertJsonPath('data.uuid', $order->uuid)
         ->assertJsonPath('data.transaction_reference', 'DETAIL-REFERENCE-1')
-        ->assertJsonPath('data.account_ending', '6789')
-        ->assertJsonPath('data.payment_method', 'cbe')
-        ->assertJsonPath('data.verification.status', 'success')
-        ->assertJsonPath('data.verification.attempts', 1)
+        ->assertJsonPath('data.payment_method', $order->payment_gateway)
+        ->assertJsonMissingPath('data.verification')
+        ->assertJsonMissingPath('data.account_ending')
         ->assertJsonPath('data.delivery.status', 'downloaded')
         ->assertJsonPath('data.delivery.entitlements_count', 1)
         ->assertJsonPath('data.delivery.downloaded_count', 1)
@@ -435,60 +418,3 @@ test('delivery status reflects entitlement and download evidence rather than pay
     }
 });
 
-test('creator transaction history is scoped and never exposes provider evidence', function () {
-    [$creator, , $product] = creatorOrdersDashboardFixture();
-    [$otherCreator, , $otherProduct] = creatorOrdersDashboardFixture('Other product');
-
-    $ownedOrder = creatorOrdersDashboardOrder($creator, $product, [
-        'status' => 'paid',
-        'payment_reference' => 'OWNED-TRANSACTION-1',
-        'payment_provider_snapshot' => 'cbe',
-        'payment_account_snapshot' => '1000123456789',
-    ]);
-    $otherOrder = creatorOrdersDashboardOrder($otherCreator, $otherProduct, [
-        'status' => 'paid',
-        'payment_reference' => 'OTHER-TRANSACTION-1',
-    ]);
-
-    $ownedVerification = DirectPaymentVerification::query()->create([
-        'reference' => 'OWNED-TRANSACTION-1',
-        'payable_type' => $ownedOrder::class,
-        'payable_id' => $ownedOrder->id,
-        'bank_code' => 'cbe',
-        'settlement_account' => '1000123456789',
-        'amount_cents' => 10000,
-        'currency' => 'ETB',
-        'status' => 'success',
-        'verified_at' => now(),
-        'attempt' => 1,
-        'provider_result' => ['sensitive' => 'provider payload'],
-    ]);
-    DirectPaymentVerification::query()->create([
-        'reference' => 'OTHER-TRANSACTION-1',
-        'payable_type' => $otherOrder::class,
-        'payable_id' => $otherOrder->id,
-        'bank_code' => 'cbe',
-        'settlement_account' => '9999999999999',
-        'amount_cents' => 90000,
-        'currency' => 'ETB',
-        'status' => 'success',
-        'verified_at' => now(),
-        'attempt' => 1,
-    ]);
-
-    creatorOrdersDashboardActAs($this, $creator);
-
-    $this->getJson('/api/v1/storefront/direct-orders/transactions')
-        ->assertOk()
-        ->assertJsonPath('data.total', 1)
-        ->assertJsonFragment([
-            'reference' => 'OWNED-TRANSACTION-1',
-            'status' => 'success',
-            'order_uuid' => $ownedOrder->uuid,
-            'order_status' => 'paid',
-        ])
-        ->assertJsonMissing(['reference' => 'OTHER-TRANSACTION-1'])
-        ->assertDontSee('1000123456789')
-        ->assertDontSee('9999999999999')
-        ->assertDontSee('provider payload');
-});
