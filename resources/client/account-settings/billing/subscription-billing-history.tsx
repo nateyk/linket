@@ -46,9 +46,9 @@ export function SubscriptionBillingHistory() {
   const [actionError, setActionError] = useState<string>();
 
   const query = useQuery({
-    queryKey: ['creator-direct-billing-history'],
+    queryKey: ['creator-chapa-billing-history'],
     queryFn: async () =>
-      (await apiClient.get<BillingHistory>('/api/v1/billing/direct')).data,
+      (await apiClient.get<BillingHistory>('/api/v1/billing/chapa/history')).data,
   });
 
   const startRenewal = async () => {
@@ -319,9 +319,9 @@ function billingPaymentStatus(status: string): ReactNode {
   const labels: Record<string, ReactNode> = {
     paid: <Trans message="Paid" />,
     pending_payment: <Trans message="Pending payment" />,
-    pending_verification: <Trans message="Pending verification" />,
-    manual_review: <Trans message="Manual review" />,
-    rejected: <Trans message="Rejected" />,
+    pending: <Trans message="Pending payment" />,
+    failed: <Trans message="Failed" />,
+    cancelled: <Trans message="Canceled" />,
     expired: <Trans message="Expired" />,
   };
 
@@ -332,7 +332,6 @@ function billingPaymentBadgeVariant(
   status: string,
 ): 'positive' | 'destructive' | 'secondary' | 'outline' {
   if (status === 'paid') return 'positive';
-  if (status === 'rejected' || status === 'expired') return 'destructive';
-  if (status === 'manual_review') return 'outline';
+  if (status === 'failed' || status === 'cancelled' || status === 'expired') return 'destructive';
   return 'secondary';
 }

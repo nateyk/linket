@@ -65,7 +65,7 @@ use App\Storefront\Controllers\StorefrontCheckoutController;
 use App\Storefront\Controllers\CreatorPaymentMethodsController;
 use App\Storefront\Controllers\CreatorOrdersController;
 use App\Storefront\Controllers\AdminDirectOrdersController;
-use App\Payments\Controllers\DirectBillingController;
+use App\Payments\Controllers\ChapaBillingHistoryController;
 use App\Payments\Controllers\AdminPlanManagementController;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
 use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
@@ -223,13 +223,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/stripe/store-subscription-details-locally', [StripeController::class, 'storeSubscriptionDetailsLocally']);
         Route::post('billing/paypal/store-subscription-details-locally', [PaypalController::class, 'storeSubscriptionDetailsLocally']);
         Route::post('billing/chapa/checkout', [ChapaController::class, 'checkout'])->middleware('throttle:10,1');
-        Route::get('billing/direct', [DirectBillingController::class, 'index'])->middleware('auth:sanctum');
-        Route::get('billing/direct/pro/{payment}/receipt', [DirectBillingController::class, 'downloadProReceipt'])->middleware('auth:sanctum');
-        // Explicit 404 tombstones: removing these POST routes otherwise lets the
-        // API respond with 405 because the billing read endpoints still exist.
-        Route::post('billing/direct/pro', static fn () => abort(404));
-        Route::post('billing/direct/pro/{payment}/reference', static fn () => abort(404));
-        Route::post('billing/direct/invoices/{invoice}/reference', static fn () => abort(404));
+        Route::get('billing/chapa/history', [ChapaBillingHistoryController::class, 'index'])->middleware('auth:sanctum');
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
         // CREATOR AI: deny by default, independently authorized per service.
