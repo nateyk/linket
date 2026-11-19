@@ -39,7 +39,7 @@ final class AdminChapaEnvironmentsController extends Controller
         ]];
     }
 
-    public function save(Request $request, string $mode, ChapaMerchantProfiles $profiles, ChapaModeSwitchGuard $guard, ChapaProfileSettingsWriter $writer): array
+    public function save(Request $request, string $mode, ChapaMerchantProfiles $profiles): array
     {
         $this->authorizeSettings();
         $this->assertMode($mode);
@@ -50,15 +50,16 @@ final class AdminChapaEnvironmentsController extends Controller
             'transfer_approval_secret' => ['sometimes', 'nullable', 'string', 'min:16', 'max:255'],
         ]);
         $values = array_map(static fn ($value) => (string) ($value ?? ''), $data);
+        $guard = app(ChapaModeSwitchGuard::class);
         if ($mode === $profiles->activeMode() && $values !== []) {
             $guard->assertNoInFlight();
         }
-        $writer->save($mode, $values);
+        app(ChapaProfileSettingsWriter::class)->save($mode, $values);
 
         return $this->index($profiles, $guard);
     }
 
-    public function switch(Request $request, ChapaMerchantProfiles $profiles, ChapaModeSwitchGuard $guard, ChapaAdminModePolicy $policy, ChapaProfileSettingsWriter $writer): array
+    public function switch(Request $request, ChapaMerchantProfiles $profiles, ChapaModeSwitchGuard $guard): array
     {
         $this->authorizeSettings();
         $data = $request->validate([
@@ -67,11 +68,12 @@ final class AdminChapaEnvironmentsController extends Controller
             'admin_password' => ['required', 'string', 'max:255'],
         ]);
         $mode = $data['mode'];
+        $policy = app(ChapaAdminModePolicy::class);
         $policy->assertConfirmation($request, $data, $mode, 'SWITCH TO ');
         $policy->assertLiveAllowed($mode);
         $guard->assertNoInFlight();
         $policy->assertReady($mode, $profiles);
-        $writer->validateProviderSecret($profiles->credential($mode, 'secret_key'));
+        app(ChapaProfileSettingsWriter::class)->validateProviderSecret($profiles->credential($mode, 'secret_key'));
 
         // Fail closed: switching always PAUSES checkout. A separate confirmation
         // is required to allow paid orders in the selected environment.
@@ -84,7 +86,7 @@ final class AdminChapaEnvironmentsController extends Controller
         return $this->index($profiles, $guard);
     }
 
-    public function enable(Request $request, ChapaMerchantProfiles $profiles, ChapaModeSwitchGuard $guard, ChapaAdminModePolicy $policy, ChapaProfileSettingsWriter $writer): array
+    public function enable(Request $request, ChapaMerchantProfiles $profiles, ChapaModeSwitchGuard $guard): array
     {
         $this->authorizeSettings();
         $mode = $profiles->activeMode();
@@ -92,10 +94,11 @@ final class AdminChapaEnvironmentsController extends Controller
             'confirmation' => ['required', 'string'],
             'admin_password' => ['required', 'string', 'max:255'],
         ]);
+        $policy = app(ChapaAdminModePolicy::class);
         $policy->assertConfirmation($request, $data, $mode, 'ENABLE ');
         $policy->assertLiveAllowed($mode);
         $policy->assertReady($mode, $profiles);
-        $writer->validateProviderSecret($profiles->active('secret_key'));
+        app(ChapaProfileSettingsWriter::class)->validateProviderSecret($profiles->active('secret_key'));
         settings()->save(['billing.chapa.enable' => 'true']);
         Log::info('chapa.checkout.enabled', ['admin_id' => $request->user()->id, 'mode' => $mode]);
 

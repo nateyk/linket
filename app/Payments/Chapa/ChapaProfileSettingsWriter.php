@@ -54,7 +54,12 @@ final class ChapaProfileSettingsWriter
     private function assertCleanValues(array $values): void
     {
         foreach ($values as $field => $value) {
-            if ($value !== '' && (trim($value) !== $value || preg_match('/[\\x00-\\x1F\\x7F]/', $value))) {
+            if ($value === '') {
+                continue;
+            }
+            $invalid = trim($value) !== $value;
+            $controlCharacters = preg_match('/[\\x00-\\x1F\\x7F]/', $value) === 1;
+            if ($invalid || $controlCharacters) {
                 throw ValidationException::withMessages([
                     $field => __('Chapa configuration contains invalid whitespace or control characters.'),
                 ]);
