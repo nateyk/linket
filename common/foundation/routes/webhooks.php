@@ -26,10 +26,6 @@ Route::post('billing/chapa/webhook', [
     ChapaWebhookController::class,
     'handle',
 ]);
-// The retired provider has no active webhook receiver. Keep a hard 404 rather than
-// allowing any legacy request to reach payment or fulfillment code.
-Route::post('billing/verify-et/webhook', static fn () => abort(404));
-Route::post('billing/verify-et/experiment-webhook', static fn () => abort(404));
 
 Route::post('integrations/telegram/webhook', [TelegramWebhookController::class, 'handle']);
 Route::match(['get', 'post'], 'billing/chapa/callback/{txRef}', [

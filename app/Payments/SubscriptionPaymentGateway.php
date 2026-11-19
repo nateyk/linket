@@ -8,7 +8,6 @@ final class SubscriptionPaymentGateway
 
     public static function current(): string
     {
-        // A historical setting must never reactivate the retired payment provider.
         return 'chapa';
     }
 }

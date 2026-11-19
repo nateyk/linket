@@ -40,7 +40,7 @@ final class ChapaV1PayoutMode
 
     public function approvalConfigured(): bool
     {
-        return filled(config('services.chapa.transfer_approval_secret'));
+        return app(ChapaTransferApprovalSecret::class)->current($this->mode()) !== '';
     }
 
     public function assertDispatchReady(): void

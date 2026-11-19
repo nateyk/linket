@@ -93,34 +93,11 @@ type Order = {
   } | null;
 };
 
-type VerificationSummary = {
-  status: string;
-  provider?: string | null;
-  amount_cents: number;
-  currency: string;
-  attempts: number;
-  verified_at?: string | null;
-  created_at?: string | null;
-  error_code?: string | null;
-  history?: Array<{
-    reference?: string | null;
-    status: string;
-    provider?: string | null;
-    amount_cents: number;
-    currency?: string;
-    attempt: number;
-    verified_at?: string | null;
-    created_at?: string | null;
-    error_code?: string | null;
-  }>;
-};
-
 type OrderDetail = Order & {
   buyer_email?: string | null;
   buyer_country?: string | null;
   platform_fee_cents?: number;
   creator_earnings_cents?: number;
-  verification?: VerificationSummary | null;
   delivery?: {
     status: string;
     entitlements_count: number;
@@ -769,7 +746,6 @@ function OrderDetailDialog({
 
 function OrderDetailContent({order}: {order: OrderDetail}) {
   const currency = order.currency ?? 'ETB';
-  const accountEnding = order.account_ending;
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -827,12 +803,6 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
             label={<Trans message="Payment gateway" />}
             value={paymentMethodLabel(order)}
           />
-          {order.payment_gateway === 'verify_et' && (
-            <DetailRow
-              label={<Trans message="Historical receiving account" />}
-              value={accountEnding ? <span className="font-mono">•••• {accountEnding}</span> : '—'}
-            />
-          )}
           {(order.platform_fee_cents ?? 0) > 0 && (
             <DetailRow
               label={<Trans message="Platform fee" />}
@@ -856,7 +826,7 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
           />
         </DetailSection>
 
-        {order.payment_gateway === 'chapa' ? (
+        {order.payment_gateway === 'chapa' && (
           <DetailSection title={<Trans message="Chapa payment status" />}>
             <DetailRow label={<Trans message="Status" />} value={<OrderStatusBadge status={order.status} />} />
             {order.paid_at && (
@@ -869,113 +839,8 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
               <Trans message="Payment status reflects Linket's recorded Chapa confirmation. Refunds and payouts are tracked separately." />
             </p>
           </DetailSection>
-        ) : (
-        <DetailSection title={<Trans message="Historical verification evidence" />}>
-          {order.verification ? (
-            <>
-              <DetailRow
-                label={<Trans message="Status" />}
-                value={
-                  <TransactionStatusBadge status={order.verification.status} />
-                }
-              />
-              <DetailRow
-                label={<Trans message="Provider" />}
-                value={
-                  order.verification.provider ? (
-                    <span className="uppercase">
-                      {order.verification.provider}
-                    </span>
-                  ) : (
-                    '—'
-                  )
-                }
-              />
-              <DetailRow
-                label={<Trans message="Attempts" />}
-                value={order.verification.attempts}
-              />
-              <DetailRow
-                label={
-                  order.verification.verified_at &&
-                  ['success', 'manual_approved'].includes(order.verification.status) ? (
-                    <Trans message="Verified at" />
-                  ) : (
-                    <Trans message="Submitted at" />
-                  )
-                }
-                value={
-                  <FormattedDate
-                    preset="timestamp"
-                    date={
-                      order.verification.verified_at &&
-                      ['success', 'manual_approved'].includes(order.verification.status)
-                        ? order.verification.verified_at
-                        : order.verification.created_at
-                    }
-                  />
-                }
-              />
-              {order.verification.error_code && (
-                <DetailRow
-                  label={<Trans message="Reason" />}
-                  value={verificationReasonLabel(order.verification.error_code)}
-                />
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              <Trans message="No provider verification has been recorded for this order." />
-            </p>
-          )}
-        </DetailSection>
         )}
       </div>
-
-      {order.payment_gateway === 'verify_et' && !!order.verification?.history?.length && (
-        <DetailSection title={<Trans message="Verification history" />}>
-          <ul className="flex min-w-0 flex-col gap-2 sm:hidden" aria-label="Verification attempts">
-            {order.verification.history.map((entry, index) => (
-              <li key={[entry.reference, entry.attempt, index].join('-')} className="min-w-0 rounded-card-sm border border-border p-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    <Trans message="Attempt :number" values={{number: entry.attempt}} />
-                  </span>
-                  <TransactionStatusBadge status={entry.status} />
-                </div>
-                <p className="mt-2 break-all font-mono text-xs">{entry.reference ?? '—'}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  <FormattedDate preset="short" date={entry.verified_at ?? entry.created_at} />
-                </p>
-              </li>
-            ))}
-          </ul>
-          <div className="hidden min-w-0 overflow-x-auto sm:block">
-            <Table.Root>
-              <Table.Header>
-                <Table.Row>
-                  <Table.Head><Trans message="Reference" /></Table.Head>
-                  <Table.Head><Trans message="Status" /></Table.Head>
-                  <Table.Head><Trans message="Attempt" /></Table.Head>
-                  <Table.Head><Trans message="Date" /></Table.Head>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {order.verification.history.map((entry, index) => (
-                  <Table.Row key={[entry.reference, entry.attempt, index].join('-')}>
-                    <Table.Cell className="max-w-40 break-all font-mono text-xs">{entry.reference ?? '—'}</Table.Cell>
-                    <Table.Cell><TransactionStatusBadge status={entry.status} /></Table.Cell>
-                    <Table.Cell>{entry.attempt}</Table.Cell>
-                    <Table.Cell className="text-muted-foreground">
-                      <FormattedDate preset="short" date={entry.verified_at ?? entry.created_at} />
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Root>
-          </div>
-        </DetailSection>
-      )}
 
       <DetailSection title={<Trans message="Delivery" />}>
         <div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
@@ -1024,11 +889,6 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
           <p className="mt-1 text-muted-foreground">
             <Trans message="Linket support must resolve this payment. You cannot mark this order paid or release buyer downloads." />
           </p>
-          {order.manual_review.reason_code === 'recipient_evidence_missing' && (
-            <p className="mt-2 text-muted-foreground">
-              <Trans message="Verify.et did not provide enough evidence to confirm the intended receiving account. Do not ask the buyer to pay again until support reviews the payment." />
-            </p>
-          )}
           <a href="/help" className="mt-2 inline-flex min-h-9 items-center text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <Trans message="Open Help Center" />
           </a>
@@ -1260,21 +1120,6 @@ function OrderStatusShortLabel({status}: {status: string}) {
   }
 }
 
-function TransactionStatusBadge({status}: {status: string}) {
-  const label = transactionStatusLabel(status);
-  if (!label) return <span className="text-muted-foreground">—</span>;
-  return (
-    <Badge
-      variant={statusBadgeVariant(status)}
-      className={
-        status === 'manual_review' ? 'bg-warning/10 text-warning' : undefined
-      }
-    >
-      {label}
-    </Badge>
-  );
-}
-
 function Pagination({
   page,
   lastPage,
@@ -1462,7 +1307,6 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 
 function paymentMethodLabel(order: Order): string {
   if (order.payment_gateway === 'chapa') return 'Chapa';
-  if (order.payment_gateway === 'verify_et') return 'Verify.et (historical)';
   const method = order.payment_method || order.payment_gateway;
   switch (method) {
     case 'cbe':
@@ -1475,31 +1319,8 @@ function paymentMethodLabel(order: Order): string {
       return 'Telebirr';
     case 'chapa':
       return 'Chapa';
-    case 'verify_et':
-      return 'Verify.et';
     default:
       return method ? method.toUpperCase() : '—';
-  }
-}
-
-function transactionStatusLabel(status: string): ReactNode {
-  switch (status) {
-    case 'pending':
-      return <Trans message="Pending" />;
-    case 'verifying':
-      return <Trans message="Verifying" />;
-    case 'success':
-      return <Trans message="Verified" />;
-    case 'manual_approved':
-      return <Trans message="Manually approved" />;
-    case 'manual_review':
-      return <Trans message="Manual review" />;
-    case 'mismatch':
-      return <Trans message="Mismatch" />;
-    case 'failed':
-      return <Trans message="Failed" />;
-    default:
-      return null;
   }
 }
 
@@ -1522,21 +1343,6 @@ function statusBadgeVariant(
       return 'outline';
     default:
       return 'secondary';
-  }
-}
-
-function verificationReasonLabel(code: string): ReactNode {
-  switch (code) {
-    case 'recipient_evidence_missing':
-      return <Trans message="Receiving account could not be confirmed" />;
-    case 'confirmation_history_review':
-      return <Trans message="Transaction confirmation needs review" />;
-    case 'free_allowance_exhausted':
-      return <Trans message="Free verified-sales allowance exhausted" />;
-    case 'verification_evidence_mismatch':
-      return <Trans message="Payment details did not match" />;
-    default:
-      return <Trans message="Additional verification needed" />;
   }
 }
 

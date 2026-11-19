@@ -19,8 +19,8 @@ This document never authorizes a transfer by itself. Keep `CHAPA_V1_PAYOUTS_ENAB
 ## B. Safe TEST workflow
 
 1. Configure matching `CHASECK_TEST-` / public TEST credentials under **Admin → Financial settings → Platform Chapa**. Keep Chapa webhook and transfer-approval secrets independent.
-2. Register `https://linket.agrigebeya.com/api/v1/chapa/transfer-approval` in the correct Chapa **TEST** account. Configure `CHAPA_TRANSFER_APPROVAL_SECRET` securely on the server. Verify read-only **Chapa transfer approval** readiness status in Admin Finance.
-3. Keep `CHAPA_V1_PAYOUTS_ENABLED=false`; TEST switch `CHAPA_V1_TEST_PAYOUTS_ENABLED=true` must have no effect with live keys. Configure `CHAPA_ADMIN_PAYOUT_STEP_UP_REQUIRED=true` only when the admin has a local Linket password and the updated interface is deployed.
+2. Register `https://linket.agrigebeya.com/api/v1/chapa/transfer-approval` in the correct Chapa **TEST** account. Under **Admin → Financial settings → Platform Chapa → Chapa transfer approval**, save the same TEST approval secret in the dedicated password field. It is encrypted in the settings database, separate from the merchant API key and payment webhook secret, and is not shown again. Existing installations may continue using the server-only `CHAPA_TRANSFER_APPROVAL_SECRET` environment fallback. Confirm **Transfer approval secret: Configured** and **Merchant mode: TEST**. Do not paste this secret into the checkout form or admin withdrawal confirmation.
+3. Register the separate **payment webhook URL** displayed on the same screen in the Chapa merchant dashboard, set the correct webhook signing secret, and check its configured status. Keep `CHAPA_V1_PAYOUTS_ENABLED=false`; TEST switch `CHAPA_V1_TEST_PAYOUTS_ENABLED=true` must have no effect with live keys. Configure `CHAPA_ADMIN_PAYOUT_STEP_UP_REQUIRED=true` only when the admin has a local Linket password and the updated interface is deployed.
 4. Use one nonproduction creator and a separate buyer account. Publish an inexpensive ETB digital item. Complete **genuine Chapa TEST checkout**, capture the merchant reference, verify exact amount/currency/ownership and confirm fulfillment/commission recorded **once**.
 5. Reconcile provider payment and settled cash evidence. Let the approved hold/settlement state mature normally—do not create synthetic sales, backdate paid timestamps or force available balances.
 6. Creator saves a supported TEST wallet/bank receiving account. Administrator approves the payout account **separately** from the later withdrawal request. Confirm provider limit and destination snapshot.
@@ -28,6 +28,14 @@ This document never authorizes a transfer by itself. Keep `CHAPA_V1_PAYOUTS_ENAB
 8. Observe Chapa's real server-to-server approval callback on the configured URL. Confirm a valid signature and exact approved transfer details return HTTP 200, and missing/invalid/mismatched callbacks fail closed. Do not reveal the secret.
 9. PENDING stays Processing and Reserved. Query the immutable transfer reference until a terminal status is independently verified. Success disburses liability once; failure releases reservation once; reversal/unknown cases require reconciliation.
 10. Reconcile orders, financial journal, available/held/reserved/deficit balances and provider statements. Save redacted provider/test evidence with timestamps and IDs.
+
+### Administrative readiness and mobile QA
+
+- On a mobile viewport around 390px, the finance title must remain in the header without covering tabs, the tabs should scroll horizontally, and the withdrawal shortcut must remain keyboard- and screen-reader-accessible.
+- A saved Chapa key means credentials are configured, **not** that provider webhooks or payouts have been verified. The Transfer Approval status is configuration-only and cannot prove a genuine signed callback.
+- A missing payment webhook signing secret prevents trusted webhook processing; a missing transfer approval secret prevents server-approved payout dispatch. Both statuses should be visible to the administrator but neither secret should be displayed.
+- Changing from TEST to LIVE credentials requires configuring the approval secret for that merchant environment separately. Live payout dispatch stays disabled under its independent server-side flag.
+- The existing read-only `php artisan chapa:v1:audit-test` command can confirm available wallet codes and TEST merchant balance without sending a transfer. If available balance is `0.00 ETB`, do not assume the provider will settle a test payout; obtain supported sandbox funding or status-simulation guidance from Chapa, and record any simulated results as simulated rather than bank settlement.
 
 ## C. One controlled small-value LIVE acceptance, **only after all A/B gates pass**
 

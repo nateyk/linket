@@ -64,8 +64,7 @@ use App\Storefront\Controllers\StorefrontSalesController;
 use App\Storefront\Controllers\StorefrontCheckoutController;
 use App\Storefront\Controllers\CreatorPaymentMethodsController;
 use App\Storefront\Controllers\CreatorOrdersController;
-use App\Storefront\Controllers\AdminDirectOrdersController;
-use App\Payments\Controllers\DirectBillingController;
+use App\Payments\Controllers\ChapaBillingHistoryController;
 use App\Payments\Controllers\AdminPlanManagementController;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
 use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
@@ -223,13 +222,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/stripe/store-subscription-details-locally', [StripeController::class, 'storeSubscriptionDetailsLocally']);
         Route::post('billing/paypal/store-subscription-details-locally', [PaypalController::class, 'storeSubscriptionDetailsLocally']);
         Route::post('billing/chapa/checkout', [ChapaController::class, 'checkout'])->middleware('throttle:10,1');
-        Route::get('billing/direct', [DirectBillingController::class, 'index'])->middleware('auth:sanctum');
-        Route::get('billing/direct/pro/{payment}/receipt', [DirectBillingController::class, 'downloadProReceipt'])->middleware('auth:sanctum');
-        // Explicit 404 tombstones: removing these POST routes otherwise lets the
-        // API respond with 405 because the billing read endpoints still exist.
-        Route::post('billing/direct/pro', static fn () => abort(404));
-        Route::post('billing/direct/pro/{payment}/reference', static fn () => abort(404));
-        Route::post('billing/direct/invoices/{invoice}/reference', static fn () => abort(404));
+        Route::get('billing/chapa/history', [ChapaBillingHistoryController::class, 'index'])->middleware('auth:sanctum');
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
         // CREATOR AI: deny by default, independently authorized per service.
@@ -291,13 +284,9 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('storefront/payment-methods/{method}/activate', [CreatorPaymentMethodsController::class, 'activate'])->middleware('auth:sanctum');
         Route::post('storefront/payment-methods/{method}/alias', [CreatorPaymentMethodsController::class, 'requestAlias'])->middleware('auth:sanctum');
         Route::get('storefront/direct-orders', [CreatorOrdersController::class, 'index'])->middleware('auth:sanctum');
-        Route::get('storefront/direct-orders/transactions', [CreatorOrdersController::class, 'transactions'])->middleware('auth:sanctum');
         Route::get('storefront/direct-orders/{order}', [CreatorOrdersController::class, 'show'])->middleware('auth:sanctum');
         Route::get('storefront/direct-orders/{order}/disputes', [PaymentDisputeController::class, 'creatorIndex'])->middleware('auth:sanctum');
         Route::patch('storefront/direct-orders/{order}/disputes/{dispute}', [PaymentDisputeController::class, 'creatorUpdate'])->middleware('auth:sanctum');
-        Route::post('storefront/direct-orders/{order}/manual-approve', [CreatorOrdersController::class, 'manualApprove'])->middleware('auth:sanctum');
-        Route::get('admin/storefront/direct-orders', [AdminDirectOrdersController::class, 'index'])->middleware('auth:sanctum');
-        Route::post('admin/storefront/direct-orders/{order}/approve', [AdminDirectOrdersController::class, 'approve'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-disputes', [PaymentDisputeController::class, 'adminIndex'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-disputes/{dispute}', [PaymentDisputeController::class, 'adminShow'])->middleware('auth:sanctum');
         Route::patch('admin/storefront/payment-disputes/{dispute}', [PaymentDisputeController::class, 'adminUpdate'])->middleware('auth:sanctum');
@@ -307,8 +296,12 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('admin/storefront/creators/{user}', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'show'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods', [CreatorPaymentMethodsController::class, 'adminIndex'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods/{method}', [CreatorPaymentMethodsController::class, 'adminShow'])->middleware('auth:sanctum');
-        // Return an actual 404 rather than the SPA shell for retired provider configuration.
-        Route::match(['get', 'patch'], 'admin/storefront/verify-et-settings', static fn () => abort(404));
+        // Distinct TEST/LIVE Chapa v1 merchant profiles. Activation pauses checkout.
+        Route::get('admin/billing/chapa/environments', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'index'])->middleware('auth:sanctum');
+        Route::put('admin/billing/chapa/environments/{mode}', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'save'])->middleware(['auth:sanctum', 'throttle:10,1']);
+        Route::post('admin/billing/chapa/activate', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'switch'])->middleware(['auth:sanctum', 'throttle:3,1']);
+        Route::post('admin/billing/chapa/enable', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'enable'])->middleware(['auth:sanctum', 'throttle:3,1']);
+        Route::post('admin/billing/chapa/pause', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'pause'])->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('admin/billing/subscription-gateway', [\App\Payments\Controllers\AdminSubscriptionGatewayController::class, 'show'])->middleware('auth:sanctum');
         Route::put('admin/billing/subscription-gateway', [\App\Payments\Controllers\AdminSubscriptionGatewayController::class, 'update'])->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('admin/storefront/payment-method-catalog', [CreatorPaymentMethodsController::class, 'catalog'])->middleware('auth:sanctum');

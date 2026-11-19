@@ -46,7 +46,7 @@ export function ServiceGalleryField({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-5">
       <ServiceFormField
         name="cover_file_entry_id"
         label={trans({message: 'Cover image'})}
@@ -60,7 +60,7 @@ export function ServiceGalleryField({
           label={trans({message: 'Cover image'})}
           placeholderVariant="text"
           showHint={false}
-          className="aspect-video w-full"
+          className="aspect-video w-full max-w-sm"
         />
       </ServiceFormField>
 
@@ -131,7 +131,7 @@ export function ServiceGalleryField({
               ariaLabel={trans({message: 'Add images'})}
               onUploaded={addImage}
               hint={trans({
-                message: 'PNG, JPG or WebP. Drag files here or browse.',
+                message: 'PNG, JPG or WebP',
               })}
             />
           )}

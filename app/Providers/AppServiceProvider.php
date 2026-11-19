@@ -96,8 +96,6 @@ class AppServiceProvider extends ServiceProvider
         $this->app->booted(function (): void {
             if (app()->bound('clockwork')) {
                 app('clockwork')->shouldCollect()->except([
-                    '/billing/verify-et/webhook',
-                    '/api/v1/admin/storefront/verify-et-settings',
                     '/api/v1/storefront/payment-methods(?:/.*)?',
                     '/api/v1/public/direct-orders/[^/]+(?:/.*)?',
                     '/api/v1/billing/direct(?:/.*)?',
@@ -294,7 +292,6 @@ class AppServiceProvider extends ServiceProvider
             ArchiveExpiredLinkeables::class,
             DisableExpiredLeapLinks::class,
             \App\Payments\Commands\ReconcilePendingVerifications::class,
-            \App\Payments\Commands\AuditVerifyEtRetirement::class,
             \App\Payments\Commands\ProcessDirectSubscriptionRenewals::class,
             \App\Storefront\Commands\GenerateCommissionInvoices::class,
             \App\Storefront\Commands\EnforceCommissionRestrictions::class,

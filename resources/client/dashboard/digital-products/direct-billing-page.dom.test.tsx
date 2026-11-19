@@ -445,107 +445,6 @@ it('offers direct page navigation while keeping previous and next controls', asy
   expect(screen.getByRole('button', {name: 'Next'})).toBeTruthy();
 });
 
-it('opens the read-only order detail with masked account and delivery state', async () => {
-  mockApi({
-    orders: [{...baseOrder, payment_gateway: 'verify_et', payment_method: 'cbe', account_ending: '6789', status: 'manual_review'}],
-    detail: {
-      ...baseOrder,
-      payment_gateway: 'verify_et',
-      payment_method: 'cbe',
-      account_ending: '6789',
-      status: 'manual_review',
-      buyer_email: 'buyer@example.test',
-      platform_fee_cents: 500,
-      creator_earnings_cents: 9500,
-      verification: {
-        status: 'manual_review',
-        provider: 'cbe',
-        amount_cents: 10000,
-        currency: 'ETB',
-        attempts: 2,
-        error_code: 'receipt_mismatch',
-        history: [
-          {
-            reference: 'REF-ONE',
-            status: 'manual_review',
-            attempt: 2,
-            created_at: '2026-10-29T10:00:00Z',
-          },
-        ],
-      },
-      delivery: {
-        status: 'pending',
-        entitlements_count: 1,
-        downloaded_count: 0,
-        download_limit: 10,
-        files: [
-          {
-            name: 'workbook.pdf',
-            download_count: 0,
-            download_limit: 10,
-          },
-        ],
-      },
-      manual_review: {
-        reason_code: 'receipt_mismatch',
-        submitted_at: '2026-10-29T10:00:00Z',
-      },
-    },
-  });
-  render(<Component />);
-
-  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
-
-  expect(await screen.findByText('Order details')).toBeTruthy();
-  expect(screen.getByText('Payment information')).toBeTruthy();
-  expect(screen.getByText('Historical verification evidence')).toBeTruthy();
-  expect(screen.getByText('Historical receiving account')).toBeTruthy();
-  expect(screen.getAllByText('REF-ONE').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('•••• 6789')).toHaveLength(1);
-  expect(screen.getByText('buyer@example.test', {exact: false})).toBeTruthy();
-  expect(screen.getByText('Payment needs support review')).toBeTruthy();
-  expect(screen.getByText('On hold — payment review')).toBeTruthy();
-  expect(screen.getByText('Buyer downloads remain locked until the payment is verified.')).toBeTruthy();
-  expect(screen.getByText('Submitted at')).toBeTruthy();
-  expect(screen.getByRole('button', {name: 'Refresh status'})).toBeTruthy();
-  expect(screen.getByText('workbook.pdf')).toBeTruthy();
-  expect(screen.queryByRole('button', {name: /mark.*paid/i})).toBeNull();
-  expect(api.get).toHaveBeenCalledWith(
-    '/api/v1/storefront/direct-orders/order-1',
-  );
-});
-
-it('explains missing recipient evidence without suggesting payment is verified', async () => {
-  mockApi({
-    orders: [{...baseOrder, payment_gateway: 'verify_et', status: 'manual_review'}],
-    detail: {
-      ...baseOrder,
-      payment_gateway: 'verify_et',
-      status: 'manual_review',
-      verification: {
-        status: 'manual_review', provider: 'dashen', attempts: 1,
-        error_code: 'recipient_evidence_missing',
-        created_at: '2026-11-02T15:02:33Z',
-        history: [{reference: '247WDTS26292000E', status: 'manual_review', attempt: 1}],
-      },
-      manual_review: {reason_code: 'recipient_evidence_missing'},
-      delivery: {status: 'unknown', entitlements_count: 0, downloaded_count: 0, download_limit: 0, files: []},
-    },
-  });
-  render(<Component />);
-  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
-  expect(await screen.findByText('Receiving account could not be confirmed')).toBeTruthy();
-  expect(screen.getByText('On hold — payment review')).toBeTruthy();
-  expect(screen.getByText(/Verify.et did not provide enough evidence/)).toBeTruthy();
-  expect(screen.getByText('Buyer downloads remain locked until the payment is verified.')).toBeTruthy();
-  expect(screen.queryByText('0 of 0 downloads used across 0 files')).toBeNull();
-  expect(screen.getByRole('list', {name: 'Verification attempts'})).toBeTruthy();
-  expect(screen.getAllByText('247WDTS26292000E').length).toBeGreaterThan(0);
-  expect(screen.getByText('Submitted at')).toBeTruthy();
-  expect(screen.queryByText('Verified at')).toBeNull();
-  expect(screen.queryByRole('button', {name: /mark.*paid/i})).toBeNull();
-});
-
 it('refreshes read-only order status without submitting a verification', async () => {
   mockApi({orders: [baseOrder], detail: {...baseOrder}});
   render(<Component />);
@@ -576,7 +475,7 @@ for (const [status, label] of [
   });
 }
 
-it('keeps Orders Chapa-only even for bookmarked legacy gateway filters', async () => {
+it('keeps Orders Chapa-only even for bookmarked retired gateway filters', async () => {
   window.history.replaceState({}, '', '/dashboard/orders?gateway=verify_et&status=manual_review');
   mockApi({orders: [baseOrder]});
   render(<Component />);
@@ -592,7 +491,7 @@ it('keeps Orders Chapa-only even for bookmarked legacy gateway filters', async (
   expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/direct-orders/transactions', expect.anything());
 });
 
-it('keeps Chapa details provider-specific without inventing Verify.et evidence', async () => {
+it('shows Chapa status without obsolete provider verification panels', async () => {
   mockApi({
     orders: [baseOrder],
     detail: {
@@ -608,6 +507,8 @@ it('keeps Chapa details provider-specific without inventing Verify.et evidence',
   fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
   expect(await screen.findByText('Chapa payment status')).toBeTruthy();
   expect(screen.getByText('Paid at')).toBeTruthy();
+  expect(screen.getByText('Payment gateway')).toBeTruthy();
+  expect(screen.queryByText('Verification history')).toBeNull();
   expect(screen.queryByText('Historical verification evidence')).toBeNull();
   expect(screen.queryByText('Historical receiving account')).toBeNull();
   expect(screen.queryByText('No provider verification has been recorded for this order.')).toBeNull();

@@ -212,6 +212,11 @@ jobs:
           bash scripts/tests/test-release-gates.sh
           bash scripts/tests/test-chatgpt-staging-preflight.sh
 
+      - name: Chapa environment switch acceptance regression
+        run: |
+          set -euo pipefail
+          php artisan test --compact --filter=ChapaEnvironmentSwitchTest
+
       - name: PHP tests - zero failures required
         run: |
           set -euo pipefail

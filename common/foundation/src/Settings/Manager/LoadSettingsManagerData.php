@@ -44,6 +44,9 @@ class LoadSettingsManagerData
         $envSettings['newAppUrl'] = app(AppUrl::class)->newAppUrl;
         // This value is encrypted in the settings table and should never be returned to the browser.
         $envSettings['chapa_webhook_secret'] = '';
+        $envSettings['chapa_secret_key'] = '';
+        $envSettings['chapa_transfer_approval_secret'] = '';
+        $envSettings['chapa_live_mode_switch_allowed'] = '';
         $envSettings[
             'connectedGmailAccount'
         ] = ConnectGmailAccountController::getConnectedEmail();

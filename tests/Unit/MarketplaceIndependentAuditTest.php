@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Models\User;
-use App\Payments\VerifyEt\VerifyEtRetirementAudit;
 use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\JournalEntryData;
@@ -45,7 +44,7 @@ class MarketplaceIndependentAuditTest extends TestCase
         $this->createStorefrontTables();
         $this->createLedgerTables();
         Schema::table('storefront_orders', fn (Blueprint $table) => $table->string('delivery_status')->nullable());
-        $this->createLegacyAuditTables();
+        $this->createAuditDisputeTable();
 
         $this->ledger = new CreatorLedgerService(new JournalPostingService());
     }
@@ -55,10 +54,7 @@ class MarketplaceIndependentAuditTest extends TestCase
         foreach ($this->temporaryFiles as $path) {
             @unlink($path);
         }
-        foreach (['storefront_payment_disputes', 'pro_subscription_payments', 'subscriptions',
-            'verify_et_webhook_deliveries', 'direct_payment_verifications'] as $table) {
-            Schema::dropIfExists($table);
-        }
+        Schema::dropIfExists('storefront_payment_disputes');
         $this->dropAllTables();
         parent::tearDown();
     }
@@ -184,39 +180,6 @@ class MarketplaceIndependentAuditTest extends TestCase
         $this->assertFalse($report['candidate_for_manual_review']);
     }
 
-    public function testHistoricalVerifyEtOrderMustNotCreatePlatformLiability(): void
-    {
-        $creator = $this->seedUser(new User(['id' => 706, 'name' => 'Historical', 'email' => 'legacy-audit@test.com']));
-        $order = StorefrontOrder::query()->create([
-            'uuid' => (string) Str::uuid(),
-            'creator_id' => $creator->id,
-            'digital_product_id' => 1,
-            'collection_owner' => 'verify_et_creator',
-            'payment_gateway' => 'verify_et',
-            'status' => 'paid',
-            'delivery_status' => 'delivered',
-            'currency' => 'ETB',
-            'gross_amount_cents' => 10000,
-            'creator_earnings_cents' => 10000,
-        ]);
-        DB::table('direct_payment_verifications')->insert([
-            'reference' => 'historical-verification-1', 'status' => 'success',
-            'amount_cents' => 10000, 'currency' => 'ETB',
-        ]);
-
-        $report = $this->audit()->audit($this->evidence([
-            'verify_et_verifications' => [[
-                'reference' => 'historical-verification-1', 'amount_cents' => 10000,
-                'currency' => 'ETB', 'status' => 'success',
-            ]],
-        ]));
-
-        $this->assertSame(1, $report['counts']['legacy_orders']);
-        $this->assertSame(1, $report['counts']['legacy_verifications']);
-        $this->assertSame(0, $report['issue_count']);
-        $this->assertFalse($this->ledger->recordPlatformSale($order) !== null);
-    }
-
     public function testUnmatchedProviderRecordBlocksEvenWhenAllLocalOrdersMatch(): void
     {
         $order = $this->sale();
@@ -230,24 +193,6 @@ class MarketplaceIndependentAuditTest extends TestCase
 
         $this->assertFalse($report['candidate_for_manual_review']);
         $this->assertContains('provider_records_without_local_match', array_column($report['issues'], 'code'));
-    }
-
-    public function testPendingVerifyEtVerificationBlocksRetirementDespiteMatchingExport(): void
-    {
-        DB::table('direct_payment_verifications')->insert([
-            'reference' => 'verification-awaiting-review', 'status' => 'manual_review',
-            'amount_cents' => 10000, 'currency' => 'ETB',
-        ]);
-        $report = $this->audit()->audit($this->evidence([
-            'verify_et_verifications' => [[
-                'reference' => 'verification-awaiting-review',
-                'amount_cents' => 10000, 'currency' => 'ETB', 'status' => 'manual_review',
-            ]],
-        ]));
-
-        $this->assertFalse($report['candidate_for_manual_review']);
-        $this->assertSame(1, $report['verify_et_retirement']['blockers']['unresolved_verifications']);
-        $this->assertContains('verify_et_retirement_blocked', array_column($report['issues'], 'code'));
     }
 
     public function testAuditCommandReportsBlockedStatusWithoutChangingJournal(): void
@@ -302,7 +247,6 @@ class MarketplaceIndependentAuditTest extends TestCase
         return new MarketplaceIndependentAudit(
             new MarketplaceEvidenceJournal(),
             new MarketplaceReconciliationService(creatorLedger: $this->ledger),
-            new VerifyEtRetirementAudit(),
         );
     }
 
@@ -326,33 +270,12 @@ class MarketplaceIndependentAuditTest extends TestCase
             'chapa_payments' => [],
             'chapa_refunds' => [],
             'chapa_payouts' => [],
-            'verify_et_verifications' => [],
         ], $overrides), JSON_THROW_ON_ERROR));
         return MarketplaceProviderEvidence::fromPath($path);
     }
 
-    private function createLegacyAuditTables(): void
+    private function createAuditDisputeTable(): void
     {
-        Schema::create('direct_payment_verifications', function (Blueprint $table): void {
-            $table->id();
-            $table->string('reference');
-            $table->string('status');
-            $table->unsignedBigInteger('amount_cents');
-            $table->string('currency', 12);
-        });
-        Schema::create('verify_et_webhook_deliveries', function (Blueprint $table): void {
-            $table->id();
-            $table->string('status');
-        });
-        Schema::create('subscriptions', function (Blueprint $table): void {
-            $table->id();
-            $table->string('gateway_name')->nullable();
-            $table->timestamp('ends_at')->nullable();
-        });
-        Schema::create('pro_subscription_payments', function (Blueprint $table): void {
-            $table->id();
-            $table->string('status');
-        });
         Schema::create('storefront_payment_disputes', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('storefront_order_id');

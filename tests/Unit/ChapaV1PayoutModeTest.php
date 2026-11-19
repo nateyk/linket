@@ -24,6 +24,7 @@ class ChapaV1PayoutModeTest extends TestCase
     {
         config()->set('services.chapa.test_payouts_enabled', true);
         config()->set('services.chapa.payouts_enabled', false);
+        config()->set('services.chapa.secret', 'CHASECK_TEST-local-fixture');
         config()->set('services.chapa.transfer_approval_secret', 'fake-test-approval-secret');
 
         $mode = $this->gate('CHASECK_TEST-local-fixture');
