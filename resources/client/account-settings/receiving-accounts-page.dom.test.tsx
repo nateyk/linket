@@ -145,6 +145,32 @@ it('lists payout accounts with default badges and masked account numbers', async
   expect(screen.getByText('Default')).toBeTruthy();
 });
 
+it('distinguishes default Telebirr from an administrator-approved account', async () => {
+  const base = {
+    type: 'telebirr',
+    bank_code: 'telebirr',
+    bank_name: 'Telebirr (Ethio Telecom)',
+    account_holder: 'Creator Example',
+    account_number_last_four: '3344',
+    masked_account_number: '•••• 3344',
+    is_active: true,
+    status: 'active',
+  };
+  api.get.mockImplementation((url: string) =>
+    url === '/api/v1/items/payout-banks'
+      ? Promise.resolve({data: {data: [{code: 'telebirr'}]}})
+      : Promise.resolve({data: {data: [
+        {...base, id: 1, is_default: true, approved_at: null},
+        {...base, id: 2, is_default: false, approved_at: '2026-11-19T12:00:00Z'},
+      ]}}),
+  );
+
+  render(<Component />);
+  expect(await screen.findByText('Default')).toBeTruthy();
+  expect(screen.getByText('Admin approval required')).toBeTruthy();
+  expect(screen.getByText('Approved')).toBeTruthy();
+});
+
 it('shows only admin-enabled Chapa v1 banks and wallets in seller dropdown', async () => {
   api.get.mockImplementation((url: string) => {
     if (url === '/api/v1/items/payout-banks') {
