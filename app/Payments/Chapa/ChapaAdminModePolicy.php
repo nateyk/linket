@@ -30,7 +30,7 @@ final class ChapaAdminModePolicy
 
     public function assertReady(string $mode, ChapaMerchantProfiles $profiles): void
     {
-        $status = $profiles->summary($mode);
+        $status = $profiles->summary(\App\Payments\Chapa\ChapaProfileMode::from($mode));
         if (in_array(false, [
             $status['configured'],
             $status['webhook_configured'],
