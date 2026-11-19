@@ -18,7 +18,6 @@ import {
   ArrowRightIcon,
   ChevronLeftIcon,
   CircleAlertIcon,
-  CircleHelpIcon,
   EyeIcon,
   GlobeIcon,
   ImagesIcon,
@@ -459,13 +458,13 @@ function ServiceFormPage() {
       <h1 className="sr-only">
         {isEditing ? <Trans message="Edit service" /> : <Trans message="Create a service" />}
       </h1>
-      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-0 max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">
-        <Breadcrumb.Item>
+      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-auto max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">
+        <Breadcrumb.Item className="max-sm:hidden">
           <Breadcrumb.Link to="/dashboard/services">
             <Trans message="My Services" />
           </Breadcrumb.Link>
         </Breadcrumb.Item>
-        <Breadcrumb.Separator />
+        <Breadcrumb.Separator className="max-sm:hidden" />
         <Breadcrumb.Item className="max-sm:min-w-0">
           <Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">
             {isEditing ? <Trans message="Edit service" /> : <Trans message="Create a service" />}
@@ -711,9 +710,6 @@ function ServiceFormPage() {
                     <ServiceFormField
                       name="store_id"
                       label={trans({message: 'Storefront'})}
-                      description={trans({
-                        message: 'Where this service is published.',
-                      })}
                       error={fieldErrors.store_id}
                     >
                       <Select.Root
@@ -746,10 +742,6 @@ function ServiceFormPage() {
                       name="title"
                       label={trans({message: 'Title'})}
                       required
-                      description={trans({
-                        message: 'A clear name, for example Logo design.',
-                      })}
-                      counter={{current: form.title.length, max: 160}}
                       error={fieldErrors.title}
                     >
                       <Input
@@ -767,14 +759,6 @@ function ServiceFormPage() {
                     <ServiceFormField
                       name="short_description"
                       label={trans({message: 'Short description'})}
-                      description={trans({
-                        message:
-                          'Shown on the service card and in search results. One or two lines.',
-                      })}
-                      counter={{
-                        current: form.short_description.length,
-                        max: 240,
-                      }}
                       error={fieldErrors.short_description}
                     >
                       <Input
@@ -894,9 +878,6 @@ function ServiceFormPage() {
                     <ServiceFormField
                       name="skills"
                       label={trans({message: 'Skills'})}
-                      description={trans({
-                        message: 'Separate skills with commas.',
-                      })}
                       error={fieldErrors.skills}
                     >
                       <Input
@@ -915,10 +896,6 @@ function ServiceFormPage() {
                     <ServiceFormField
                       name="description"
                       label={trans({message: 'Description'})}
-                      description={trans({
-                        message:
-                          'The full story of the service: your process, what you need from the customer, and what they get.',
-                      })}
                       error={fieldErrors.description}
                     >
                       <div id="description">
@@ -960,9 +937,6 @@ function ServiceFormPage() {
                       <ServiceFormField
                         name="video_url"
                         label={trans({message: 'Video preview'})}
-                        description={trans({
-                          message: 'A YouTube or Vimeo link.',
-                        })}
                         error={fieldErrors.video_url}
                       >
                         <Input
@@ -980,9 +954,6 @@ function ServiceFormPage() {
                       <ServiceFormField
                         name="live_demo_url"
                         label={trans({message: 'Live demo'})}
-                        description={trans({
-                          message: 'A link to work you can show.',
-                        })}
                         error={fieldErrors.live_demo_url}
                       >
                         <Input
@@ -1032,6 +1003,7 @@ function ServiceFormPage() {
                       'Answer what you would otherwise answer by DM.',
                   })}
                   optional
+                  collapsible
                   count={form.faqs.length}
                   hasError={sectionError('faq')}
                 >
@@ -1048,6 +1020,7 @@ function ServiceFormPage() {
                   title={trans({message: 'Questions for buyers'})}
                   description={trans({message: 'Optional. Ask up to three short questions with each service inquiry.'})}
                   optional
+                  collapsible
                   count={form.buyer_questions.length}
                   hasError={sectionError('buyer-questions')}
                 >
@@ -1067,6 +1040,7 @@ function ServiceFormPage() {
                       'Let people reach you without sending a form.',
                   })}
                   optional
+                  collapsible
                   count={form.contact_channels.length}
                   hasError={sectionError('contact')}
                 >
@@ -1078,16 +1052,13 @@ function ServiceFormPage() {
                     }
                   />
                   </ServiceFormSection>
-                  <div className="flex items-start gap-2 rounded-card border border-note bg-note px-4 py-3 text-sm text-muted-foreground">
-                    <CircleHelpIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                    <p>
-                      <Trans message="Customers request a quote and agree contracts directly with you. Linket never receives service payments." />
-                    </p>
-                  </div>
+                  <p className="px-1 text-xs leading-5 text-muted-foreground">
+                    <Trans message="Customers request a quote and agree contracts directly with you. Linket never receives service payments." />
+                  </p>
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 sm:pt-5">
+              <div className="flex flex-nowrap items-center justify-between gap-2 border-t pt-4 sm:pt-5">
                 {previousStep ? (
                   <Button
                     type="button"
@@ -1097,12 +1068,10 @@ function ServiceFormPage() {
                     onClick={() => changeStep(previousStep)}
                   >
                     <ChevronLeftIcon className="size-4" aria-hidden="true" />
-                    <Trans message="Previous step" />
+                    <Trans message="Back" />
                   </Button>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
-                    <Trans message="Your changes are saved when you select Save draft or Publish service." />
-                  </p>
+                  <span aria-hidden="true" />
                 )}
                 {nextStep ? (
                   <Button
@@ -1120,10 +1089,11 @@ function ServiceFormPage() {
                     variant="outline"
                     size="sm"
                     className="ms-auto min-h-11"
+                    aria-label={trans({message: 'Preview before publishing'})}
                     onClick={() => setPreviewOpen(true)}
                   >
                     <EyeIcon className="size-4" aria-hidden="true" />
-                    <Trans message="Preview before publishing" />
+                    <Trans message="Preview" />
                   </Button>
                 )}
               </div>

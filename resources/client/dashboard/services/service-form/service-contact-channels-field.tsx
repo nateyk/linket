@@ -169,7 +169,7 @@ export function ServiceContactChannelsField({
           type="button"
           variant="outline"
           size="sm"
-          className="self-start"
+          className="min-h-11 self-start"
           disabled={atLimit}
           onClick={() => {
             if (channels.length >= SERVICE_CONTACT_CHANNELS_MAX) return;
@@ -186,11 +186,7 @@ export function ServiceContactChannelsField({
               values={{count: SERVICE_CONTACT_CHANNELS_MAX}}
             />
           </p>
-        ) : !channels.length ? (
-          <p className="text-xs leading-5 text-muted-foreground">
-            <Trans message="No contact buttons yet. Visitors can always send an inquiry instead." />
-          </p>
-        ) : null}
+) : null}
       </div>
     </div>
   );
