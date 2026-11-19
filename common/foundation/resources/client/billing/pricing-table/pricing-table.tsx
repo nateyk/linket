@@ -87,9 +87,9 @@ function PlanList({plans, selectedPeriod}: PlanListProps) {
           >
             <Card.Header className="gap-0 px-6 pt-7 pb-0 sm:px-8 sm:pt-8">
               <div className="flex min-h-6 items-center justify-between gap-3">
-                <Card.Title className="text-lg font-semibold text-foreground">
+                <h2 className="text-lg font-semibold text-foreground">
                   <Trans message={plan.name} />
-                </Card.Title>
+                </h2>
                 {plan.recommended ? (
                   <Badge variant="secondary">
                     <Trans message="Most popular" />
@@ -156,8 +156,11 @@ type SubscribeButtonLabelProps = {
 };
 
 function SubscribeButtonLabel({plan}: SubscribeButtonLabelProps) {
-  const {isLoggedIn} = useAuth();
+  const {isLoggedIn, isSubscribed} = useAuth();
   if (plan.free) {
+    if (isSubscribed) {
+      return <Trans message="Free plan" />;
+    }
     return <Trans message={isLoggedIn ? 'Current plan' : 'Get started'} />;
   }
   if (!isLoggedIn) {
