@@ -825,8 +825,9 @@ describe('saving', () => {
     await user.click(screen.getByRole('button', {name: 'Publish service'}));
 
     expect(screen.getByText('A title is required.')).toBeTruthy();
-    // Errors should not hide the guidance required to correct the field.
-    expect(screen.getByText('A clear name, for example Logo design.')).toBeTruthy();
+    // The concise title example stays in the field itself, next to the error.
+    expect(titleInput().getAttribute('placeholder')).toBe('Logo design');
+    expect(titleInput().getAttribute('aria-invalid')).toBe('true');
     expect(api.post).not.toHaveBeenCalled();
   });
 });
