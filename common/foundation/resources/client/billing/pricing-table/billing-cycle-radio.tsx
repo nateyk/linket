@@ -1,46 +1,41 @@
 import {Product} from '@app/gen/schemas/product';
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@shadcn/forms/radio-group/radio-group';
+import {SegmentedRadio} from '@ui/forms/segmented-radio-group/segmented-radio';
+import {SegmentedRadioGroup} from '@ui/forms/segmented-radio-group/segmented-radio-group';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
-import {ComponentProps} from 'react';
 import {UpsellBillingCycle} from './find-best-price';
 import {UpsellLabel} from './upsell-label';
 
-interface BillingCycleRadioProps extends Omit<
-  ComponentProps<typeof RadioGroup>,
-  'children' | 'onChange'
-> {
+interface BillingCycleRadioProps {
   selectedCycle: UpsellBillingCycle;
   onChange: (value: UpsellBillingCycle) => void;
   products?: Product[];
+  className?: string;
 }
+
 export function BillingCycleRadio({
   selectedCycle,
   onChange,
   products,
   className,
-  ...radioGroupProps
 }: BillingCycleRadioProps) {
   return (
-    <RadioGroup
-      orientation="horizontal"
-      value={selectedCycle}
-      onValueChange={value => onChange(value)}
-      className={cn('text-lg', className)}
-      {...radioGroupProps}
-    >
-      <label className="flex items-center gap-2">
-        <RadioGroupItem value="yearly" className="after:-inset-3.5" />
-        <Trans message="Annual" />
+    <div className={cn('flex flex-col items-center gap-3', className)}>
+      <SegmentedRadioGroup
+        value={selectedCycle}
+        onChange={value => onChange(value as UpsellBillingCycle)}
+        variant="outline"
+      >
+        <SegmentedRadio value="monthly">
+          <Trans message="Monthly" />
+        </SegmentedRadio>
+        <SegmentedRadio value="yearly">
+          <Trans message="Annual" />
+        </SegmentedRadio>
+      </SegmentedRadioGroup>
+      <div className="text-sm">
         <UpsellLabel products={products} />
-      </label>
-      <label className="flex items-center gap-2">
-        <RadioGroupItem value="monthly" className="after:-inset-3.5" />
-        <Trans message="Monthly" />
-      </label>
-    </RadioGroup>
+      </div>
+    </div>
   );
 }
