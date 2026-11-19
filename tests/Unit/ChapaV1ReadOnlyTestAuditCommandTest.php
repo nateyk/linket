@@ -92,9 +92,11 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         $this->fakeReadOnlyEndpoints();
 
         $this->assertSame(0, Artisan::call('chapa:v1:audit-test'));
-        $this->assertStringContainsString('telebirr', Artisan::output());
-        $this->assertStringContainsString('Awash Bank', Artisan::output());
-        $this->assertStringNotContainsString('Hibret Bank', Artisan::output());
+        // Artisan::output() drains the console output buffer; read it once.
+        $output = Artisan::output();
+        $this->assertStringContainsString('telebirr', $output);
+        $this->assertStringContainsString('Awash Bank', $output);
+        $this->assertStringNotContainsString('Hibret Bank', $output);
         Http::assertSent(fn ($request) => $request->url() === 'https://api.chapa.co/v1/balances');
         Http::assertSentCount(2);
         Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
