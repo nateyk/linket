@@ -89,7 +89,7 @@ describe('AdminFinancialSettingsPage', () => {
     mockApiClient.get.mockImplementation((url: string) => {
       if (url === '/api/v1/admin/financial/chapa-payout-readiness') {
         return Promise.resolve({data: {data: {
-          mode: 'test', enabled: true, approval_configured: true, test_only: true,
+          mode: 'test', enabled: true, approval_configured: true, webhook_configured: true, test_only: true,
           approval_url: 'https://linket.test/api/v1/chapa/transfer-approval',
           admin_step_up_required: true,
         }}});
@@ -152,13 +152,29 @@ describe('AdminFinancialSettingsPage', () => {
       expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
     });
 
-    expect(screen.getByText('Connected')).toBeTruthy();
+    expect(screen.getByText('Keys configured')).toBeTruthy();
     expect(await screen.findByText('Chapa transfer approval')).toBeTruthy();
     expect(screen.getByText('https://linket.test/api/v1/chapa/transfer-approval')).toBeTruthy();
     expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/admin/billing/subscription-gateway');
     expect(
       screen.getByDisplayValue('https://linket.test/api/v1/billing/gateways/chapa/webhook'),
     ).toBeTruthy();
+  });
+
+  it('saves approval secret independently of merchant keys', async () => {
+    renderComponent();
+    await screen.findByText('Chapa transfer approval');
+    const secret = screen.getByLabelText('Set or rotate transfer approval secret');
+    fireEvent.change(secret, {target: {value: 'test-approval-only-secret-123'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Save transfer approval secret'}));
+    await waitFor(() => {
+      expect(mockApiClient.put).toHaveBeenCalledWith(
+        '/api/v1/admin/billing/subscription-gateway',
+        {transfer_approval_secret: 'test-approval-only-secret-123'},
+      );
+    });
+    expect(await screen.findByText('Transfer approval secret saved securely for the active merchant environment.')).toBeTruthy();
+    expect((secret as HTMLInputElement).value).toBe('');
   });
 
   it('submits updated Chapa credentials and displays success alert', async () => {
