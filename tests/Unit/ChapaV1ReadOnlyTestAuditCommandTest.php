@@ -19,7 +19,7 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         $this->app->instance(LinketChapaManager::class, $manager);
     }
 
-    private function fakeReadOnlyEndpoints(): void
+    private function fakeReadOnlyEndpoints(string $paymentStatus = 'success'): void
     {
         Http::fake([
             'https://api.chapa.co/v1/banks' => Http::response([
@@ -36,7 +36,7 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
             'https://api.chapa.co/v1/transaction/verify/*' => Http::response([
                 'status' => 'success',
                 'data' => [
-                    'status' => 'success',
+                    'status' => $paymentStatus,
                     'tx_ref' => 'lk-checkout-TEST123',
                     'currency' => 'ETB',
                     'amount' => '12.34',
@@ -137,18 +137,7 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
     public function testPendingCheckoutDoesNotPassSettlementAcceptance(): void
     {
         $this->withSecret('CHASECK_TEST-fixture');
-        $this->fakeReadOnlyEndpoints();
-        Http::fake([
-            'https://api.chapa.co/v1/transaction/verify/*' => Http::response([
-                'status' => 'success',
-                'data' => [
-                    'status' => 'pending',
-                    'tx_ref' => 'lk-checkout-TEST123',
-                    'currency' => 'ETB',
-                    'amount' => '12.34',
-                ],
-            ]),
-        ]);
+        $this->fakeReadOnlyEndpoints('pending');
 
         $this->assertSame(1, Artisan::call('chapa:v1:audit-test', [
             '--payment-reference' => 'lk-checkout-TEST123',
