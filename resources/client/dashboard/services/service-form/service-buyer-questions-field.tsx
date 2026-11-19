@@ -25,10 +25,7 @@ export function ServiceBuyerQuestionsField({
   const atLimit = questions.length >= SERVICE_BUYER_QUESTIONS_MAX;
 
   return (
-    <div className="min-w-0 space-y-4">
-      <p className="text-sm leading-5 text-muted-foreground">
-        <Trans message="Buyers can answer these optional questions when asking for a quote. Your questions appear only on this service." />
-      </p>
+    <div className="min-w-0 space-y-3">
       {questions.map((question, index) => {
         const id = `buyer_questions.${index}`;
         return (
