@@ -2,6 +2,7 @@
 import {cleanup, render, screen} from '@testing-library/react';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {MemoryRouter} from 'react-router';
+import type {ComponentProps} from 'react';
 import {UpgradeButton} from './upgrade-button';
 
 const auth = vi.hoisted(() => ({isSubscribed: false}));
@@ -14,7 +15,7 @@ vi.mock('@ui/i18n/trans', () => ({
 }));
 
 function renderUpgradeButton(
-  props: Partial<React.ComponentProps<typeof UpgradeButton>> = {},
+  props: Partial<ComponentProps<typeof UpgradeButton>> = {},
 ) {
   return render(
     <MemoryRouter>
