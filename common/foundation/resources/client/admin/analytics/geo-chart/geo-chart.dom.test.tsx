@@ -51,7 +51,8 @@ test('known countries render a map and selectable country list', () => {
 
   expect(screen.getByRole('img', {name: 'Country locations map'})).toBeTruthy();
   expect(screen.getByRole('button', {name: /Ethiopia/})).toBeTruthy();
-  expect(screen.getByText(/Visits without a known country/)).toBeTruthy();
+  expect(screen.getByText(/Locations without a mappable country are included in the list but not shown on the map/)).toBeTruthy();
+  expect(screen.getByText('Unknown location')).toBeTruthy();
 });
 
 
