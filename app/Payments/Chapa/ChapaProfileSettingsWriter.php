@@ -98,7 +98,7 @@ final class ChapaProfileSettingsWriter
         $values = $profile->values;
         foreach (['public_key', 'secret_key', 'webhook_secret'] as $field) {
             if (($values[$field] ?? '') !== '') {
-                $updates[ChapaMerchantProfiles::key($mode, $field)] = $values[$field];
+                $updates[ChapaMerchantProfiles::key(\App\Payments\Chapa\ChapaProfileMode::from($mode), \App\Payments\Chapa\ChapaProfileField::from($field))] = $values[$field];
             }
         }
         $this->saveApprovalSecret($profile, $updates);
