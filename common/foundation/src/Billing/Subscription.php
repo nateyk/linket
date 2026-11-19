@@ -5,7 +5,6 @@ namespace Common\Billing;
 use App\Models\User;
 use Common\Billing\Gateways\Contracts\CommonSubscriptionGatewayActions;
 use Common\Billing\Gateways\Chapa\Chapa;
-use App\Payments\VerifyEt\VerifyEtSubscriptionGateway;
 use Common\Billing\Gateways\Paypal\Paypal;
 use Common\Billing\Gateways\Stripe\Stripe;
 use Common\Billing\Invoices\Invoice;
@@ -174,8 +173,13 @@ class Subscription extends BaseModel
 
     public function cancel(bool $atPeriodEnd = true): self
     {
-        if ($this->gateway_name !== 'none') {
-            $this->gateway()->cancelSubscription($this, $atPeriodEnd);
+        // Retired Verify.et subscriptions keep local cancel/resume behavior.
+        if (!in_array($this->gateway_name, ['none', 'verify_et'], true)) {
+            $gateway = $this->gateway();
+            if (!$gateway) {
+                throw new LogicException('Subscription gateway is unavailable.');
+            }
+            $gateway->cancelSubscription($this, $atPeriodEnd);
         }
 
         // If the user was on trial, we will set the grace period to end when the trial
@@ -242,10 +246,12 @@ class Subscription extends BaseModel
         // To resume the subscription we need to set the plan parameter on the Stripe
         // subscription object. This will force Stripe to resume this subscription
         // where we left off. Then, we'll set the proper trial ending timestamp.
-        if ($this->gateway_name !== 'none') {
-            $this->gateway()->resumeSubscription($this, [
-                'trial_end' => $trialEnd,
-            ]);
+        if (!in_array($this->gateway_name, ['none', 'verify_et'], true)) {
+            $gateway = $this->gateway();
+            if (!$gateway) {
+                throw new LogicException('Subscription gateway is unavailable.');
+            }
+            $gateway->resumeSubscription($this, ['trial_end' => $trialEnd]);
         }
 
         // Finally, we will remove the ending timestamp from the user's record in the
@@ -269,8 +275,6 @@ class Subscription extends BaseModel
             return app(Paypal::class);
         } elseif ($this->gateway_name === 'chapa') {
             return app(Chapa::class);
-        } elseif ($this->gateway_name === 'verify_et') {
-            return app(VerifyEtSubscriptionGateway::class);
         }
 
         return null;
