@@ -24,6 +24,7 @@ import {
   EyeIcon,
   InboxIcon,
   LandmarkIcon,
+  LockKeyholeIcon,
   RefreshCwIcon,
   TriangleAlertIcon,
   BanIcon,
@@ -93,6 +94,11 @@ export type PayoutDestination = {
   } | null;
 };
 
+const isApprovedDestination = (destination: PayoutDestination): boolean =>
+  destination.is_active && destination.status === 'active' && !!destination.approved_at &&
+  destination.withdrawal_method?.is_active === true &&
+  ['cbebirr', 'cbe', 'mpesa', 'telebirr', 'yaya'].includes((destination.bank_code ?? '').toLowerCase());
+
 const statusLabels: Record<PayoutStatus, string> = {
   requested: 'Requested',
   processing: 'Processing Settlement',
@@ -139,6 +145,7 @@ export function Component() {
 
   const currency = summary?.currency ?? 'ETB';
   const available = summary?.available_for_payout_cents ?? 0;
+  const hasApprovedDestination = destinations.some(isApprovedDestination);
 
   const handleCancel = async (payout: Payout) => {
     setError(undefined);
@@ -164,7 +171,7 @@ export function Component() {
             <Trans message="Refresh" />
           </span>
         </Button>
-        <Button disabled={loading || available <= 0} onClick={() => setWithdrawOpen(true)}>
+        <Button disabled={loading || !summary} onClick={() => setWithdrawOpen(true)}>
           <BanknoteArrowUpIcon />
           <Trans message="Request withdrawal" />
         </Button>
@@ -178,6 +185,14 @@ export function Component() {
             </p>
           )}
           <WithdrawalStatCards summary={summary} available={available} currency={currency} loading={loading} />
+          {!loading && summary && (
+            <WithdrawalReadinessNotice
+              available={available}
+              held={summary.held_earnings_cents}
+              hasApprovedDestination={hasApprovedDestination}
+              hasPayoutAccounts={destinations.length > 0}
+            />
+          )}
           <WithdrawalHistoryTable
             payouts={payouts}
             loading={loading}
@@ -248,6 +263,48 @@ function WithdrawalsAlert({message, onRetry}: {message: string; onRetry: () => v
   );
 }
 
+function WithdrawalReadinessNotice({
+  available,
+  held,
+  hasApprovedDestination,
+  hasPayoutAccounts,
+}: {
+  available: number;
+  held: number;
+  hasApprovedDestination: boolean;
+  hasPayoutAccounts: boolean;
+}) {
+  if (available > 0 && hasApprovedDestination) return null;
+
+  return (
+    <div role="status" className="flex items-start gap-3 rounded-card-sm border border-border px-4 py-3 text-sm">
+      <CircleHelpIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <div className="min-w-0 space-y-1 text-muted-foreground">
+        {available <= 0 && (
+          <p>
+            <Trans message={held > 0
+              ? 'Your verified earnings are currently held. They can be withdrawn only after the payout hold period and ledger reconciliation.'
+              : 'There are no cleared earnings available yet. Check that your Chapa order is paid and belongs to this creator account.'} />{' '}
+            <Link to="/dashboard/orders" className="font-medium text-primary underline underline-offset-2">
+              <Trans message="Review Orders & Sales" />
+            </Link>
+          </p>
+        )}
+        {!hasApprovedDestination && (
+          <p>
+            <Trans message={hasPayoutAccounts
+              ? 'Your payout account must be approved by an administrator and its provider enabled. Default does not mean approved.'
+              : 'Add a receiving account and obtain administrator approval before requesting a withdrawal.'} />{' '}
+            <Link to="/account-settings/receiving-accounts" className="font-medium text-primary underline underline-offset-2">
+              <Trans message="Review payout accounts" />
+            </Link>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function WithdrawalStatCards({
   summary,
   available,
@@ -260,11 +317,18 @@ function WithdrawalStatCards({
   loading: boolean;
 }) {
   return (
-    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <WithdrawalMetricCard
         icon={LandmarkIcon}
         label="Available Balance"
         valueInCents={available}
+        currency={currency}
+        loading={loading}
+      />
+      <WithdrawalMetricCard
+        icon={LockKeyholeIcon}
+        label="Held earnings"
+        valueInCents={summary?.held_earnings_cents ?? 0}
         currency={currency}
         loading={loading}
       />
@@ -477,10 +541,7 @@ function RequestWithdrawalModal({
   destinations: PayoutDestination[];
   onSuccess: () => Promise<void>;
 }) {
-  const approvedDestinations = destinations.filter(d =>
-    d.is_active && d.status === 'active' && !!d.approved_at && d.withdrawal_method?.is_active === true &&
-    ['cbebirr', 'cbe', 'mpesa', 'telebirr', 'yaya'].includes((d.bank_code ?? '').toLowerCase())
-  );
+  const approvedDestinations = destinations.filter(isApprovedDestination);
   const defaultDest = approvedDestinations.find(d => d.is_default) ?? approvedDestinations[0];
   const [selectedDestId, setSelectedDestId] = useState<number | null>(null);
   const [amountStr, setAmountStr] = useState<string>('');
@@ -552,6 +613,16 @@ function RequestWithdrawalModal({
                   render={<Link to="/account-settings/receiving-accounts" />}
                 >
                   <Trans message="Configure payout accounts" />
+                </Button>
+              </div>
+            ) : available <= 0 ? (
+              <div role="status" className="space-y-3 rounded-card-sm border border-border p-4 text-sm">
+                <p className="font-semibold"><Trans message="No withdrawable balance" /></p>
+                <p className="text-muted-foreground">
+                  <Trans message="Your verified sales may still be held for the payout hold period. Funds must be cleared before a withdrawal can be requested." />
+                </p>
+                <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/dashboard/orders" />}>
+                  <Trans message="Review Orders & Sales" />
                 </Button>
               </div>
             ) : (
