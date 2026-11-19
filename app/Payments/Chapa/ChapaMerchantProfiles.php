@@ -105,7 +105,7 @@ final class ChapaMerchantProfiles
             'mode' => $mode->value,
             'configured' => self::modeForSecret($key) === $mode->value && $publicKey !== '',
             'webhook_configured' => $this->credential($mode, ChapaProfileField::WebhookSecret) !== '',
-            'approval_configured' => app(\App\Storefront\Services\ChapaTransferApprovalSecret::class)->forMode($mode) !== '',
+            'approval_configured' => app(\App\Storefront\Services\ChapaTransferApprovalSecret::class)->forMode($mode->value) !== '',
             'public_key_masked' => $publicKey === '' ? null : '••••'.substr($publicKey, -4),
         ];
     }
