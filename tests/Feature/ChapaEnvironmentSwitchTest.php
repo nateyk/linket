@@ -140,4 +140,102 @@ final class ChapaEnvironmentSwitchTest extends TestCase
         ])->assertUnprocessable();
         Http::assertNothingSent();
     }
+    public function testProfileUpdateRejectsMixedEnvironmentKeyPair(): void
+    {
+        $this->setupMerchant();
+        $this->actingAs($this->admin(), 'sanctum');
+        $this->putJson('/api/v1/admin/billing/chapa/environments/live', [
+            'public_key' => 'CHAPUBK_TEST-wrong-environment',
+            'secret_key' => 'CHASECK-fixture-live',
+        ])->assertUnprocessable();
+        Http::assertNothingSent();
+    }
+
+    public function testPartialKeyPairCannotBeStored(): void
+    {
+        $this->setupMerchant();
+        $this->actingAs($this->admin(), 'sanctum');
+        $this->putJson('/api/v1/admin/billing/chapa/environments/live', [
+            'secret_key' => 'CHASECK-fixture-live',
+        ])->assertUnprocessable();
+        $this->assertDatabaseMissing('settings', [
+            'name' => ChapaMerchantProfiles::key('live', 'secret_key'),
+        ]);
+    }
+
+    public function testInactiveProfileCanBeConfiguredDuringExistingPendingSubscription(): void
+    {
+        $this->setupMerchant();
+        $admin = $this->admin();
+        $this->actingAs($admin, 'sanctum');
+        $payment = ProSubscriptionPayment::query()->create([
+            'uuid' => (string) Str::uuid(), 'creator_id' => $admin->id,
+            'amount_cents' => 100, 'status' => 'pending_payment',
+        ]);
+        $this->saveLive();
+        $this->assertSame('test', app(ChapaMerchantProfiles::class)->activeMode());
+        $payment->delete();
+    }
+
+    public function testActiveProfileCannotRotateWithPendingProviderTransactions(): void
+    {
+        $this->setupMerchant();
+        $admin = $this->admin();
+        $this->actingAs($admin, 'sanctum');
+        $payment = ProSubscriptionPayment::query()->create([
+            'uuid' => (string) Str::uuid(), 'creator_id' => $admin->id,
+            'amount_cents' => 100, 'status' => 'pending_payment',
+        ]);
+        $this->putJson('/api/v1/admin/billing/chapa/environments/test', [
+            'webhook_secret' => 'rotated-webhook-secret-123',
+        ])->assertUnprocessable();
+        $payment->delete();
+    }
+
+    public function testSwitchDoesNotEnableCheckoutIfProfileIsIncomplete(): void
+    {
+        $this->setupMerchant();
+        $this->actingAs($this->admin(), 'sanctum');
+        $this->putJson('/api/v1/admin/billing/chapa/environments/live', [
+            'public_key' => 'CHAPUBK-fixture-live',
+            'secret_key' => 'CHASECK-fixture-live',
+        ])->assertOk();
+        $this->switchLive()->assertUnprocessable();
+        $this->assertNotSame('live', app(ChapaMerchantProfiles::class)->activeMode());
+    }
+
+    public function testLivePayoutFlagPreventsAccidentalCheckoutCutover(): void
+    {
+        $this->setupMerchant();
+        $this->actingAs($this->admin(), 'sanctum');
+        $this->saveLive();
+        config()->set('services.chapa.payouts_enabled', true);
+        $this->switchLive()->assertUnprocessable();
+        $this->assertSame('test', app(ChapaMerchantProfiles::class)->activeMode());
+    }
+
+    public function testEmergencyPausePersistsWithoutChangingMerchantKeys(): void
+    {
+        $this->setupMerchant();
+        $this->actingAs($this->admin(), 'sanctum');
+        $this->postJson('/api/v1/admin/billing/chapa/pause')
+            ->assertOk()->assertJsonPath('data.checkout_enabled', false);
+        $this->assertSame('CHASECK_TEST-legacy-fixture',
+            app(\App\Payments\Chapa\LinketChapaManager::class)->platformSecret());
+        $this->assertFalse((bool) settings()->get('billing.chapa.enable', true));
+    }
+
+    public function testLiveModeCannotUseLegacyTestSecretIfLiveProfileIsAbsent(): void
+    {
+        $this->setupMerchant();
+        settings()->save([
+            'billing.chapa.active_mode' => 'live',
+            'billing.chapa.enable' => 'false',
+        ]);
+        $profiles = app(ChapaMerchantProfiles::class);
+        $this->assertSame('live', $profiles->activeMode());
+        $this->assertSame('', $profiles->active('secret_key'));
+        $this->assertSame('', app(\App\Payments\Chapa\LinketChapaManager::class)->platformSecret());
+    }
+
 }
