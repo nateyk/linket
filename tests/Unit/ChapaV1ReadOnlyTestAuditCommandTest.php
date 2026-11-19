@@ -19,8 +19,23 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         $this->app->instance(LinketChapaManager::class, $manager);
     }
 
-    private function fakeReadOnlyEndpoints(string $paymentStatus = 'success', string $transferStatus = 'pending'): void
-    {
+    private function fakeReadOnlyEndpoints(
+        string $paymentStatus = 'success',
+        string $transferStatus = 'pending',
+        bool $asList = false,
+        bool $missingIdentity = false,
+    ): void {
+        $transferData = [
+            'status' => $transferStatus,
+            'reference' => 'lk-po-TEST123',
+            'currency' => 'ETB',
+            'amount' => '20.00',
+            'account_number' => '251911223344',
+        ];
+        if ($missingIdentity) {
+            unset($transferData['reference'], $transferData['currency'], $transferData['amount']);
+        }
+
         Http::fake([
             'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'success',
@@ -47,13 +62,7 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
             ]),
             'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
                 'status' => 'success',
-                'data' => [
-                    'status' => $transferStatus,
-                    'reference' => 'lk-po-TEST123',
-                    'currency' => 'ETB',
-                    'amount' => '20.00',
-                    'account_number' => '251911223344',
-                ],
+                'data' => $asList ? [$transferData] : $transferData,
             ]),
         ]);
     }
@@ -192,19 +201,7 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
     public function testOneRecordDataArrayVerifiesExistingTestTransferExactly(): void
     {
         $this->withSecret('CHASECK_TEST-fixture');
-        $this->fakeReadOnlyEndpoints();
-        Http::fake([
-            'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
-                'status' => 'success',
-                'data' => [[
-                    'status' => 'success',
-                    'reference' => 'lk-po-TEST123',
-                    'currency' => 'ETB',
-                    'amount' => '20.00',
-                    'account_number' => '251911223344',
-                ]],
-            ]),
-        ]);
+        $this->fakeReadOnlyEndpoints('success', 'success', asList: true);
 
         $this->assertSame(0, Artisan::call('chapa:v1:audit-test', [
             '--reference' => 'lk-po-TEST123',
@@ -220,13 +217,7 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
     public function testListResponseWithoutIdentityDoesNotClaimSettlement(): void
     {
         $this->withSecret('CHASECK_TEST-fixture');
-        $this->fakeReadOnlyEndpoints();
-        Http::fake([
-            'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
-                'status' => 'success',
-                'data' => [['status' => 'success']],
-            ]),
-        ]);
+        $this->fakeReadOnlyEndpoints('success', 'success', asList: true, missingIdentity: true);
 
         $this->assertSame(1, Artisan::call('chapa:v1:audit-test', [
             '--reference' => 'lk-po-TEST123',
