@@ -87,25 +87,26 @@ export function Component() {
 
   return (
     <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader>
+      <DashboardLayout.SectionHeader className="max-sm:h-14 max-sm:gap-2 max-sm:px-3">
         <DashboardLayout.SidebarToggle />
         <div className="flex-1 min-w-0">
           <DashboardLayout.SectionTitle>
-            <Trans message="Financial settings & operations" />
+            <span className="sm:hidden"><Trans message="Financial settings" /></span>
+            <span className="hidden sm:inline"><Trans message="Financial settings & operations" /></span>
           </DashboardLayout.SectionTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p className="mt-0.5 hidden text-sm text-muted-foreground lg:block">
             <Trans message="Manage platform payments, currency formatting, withdrawal rules, commission policies, and ledger reconciliation." />
           </p>
         </div>
-        <Button variant="outline" nativeButton={false} render={<Link to="/admin/withdrawals" />}>
+        <Button variant="outline" className="shrink-0 max-sm:size-9 max-sm:p-0" nativeButton={false} render={<Link to="/admin/withdrawals" aria-label="Withdrawals dashboard" />}>
           <CreditCardIcon />
-          <Trans message="Withdrawals dashboard" />
+          <span className="max-sm:hidden"><Trans message="Withdrawals dashboard" /></span>
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-5">
+        <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 px-3 py-4 sm:px-4 sm:py-5">
           <Tabs.Root value={tab} onValueChange={v => setTab(v as Tab)} className="gap-6">
-            <div className="min-w-0 overflow-x-auto border-b border-border">
+            <div className="max-w-full min-w-0 overflow-x-auto border-b border-border">
               <Tabs.List variant="line" className="w-max justify-start">
                 <Tabs.Tab value="chapa" className="flex-none">
                   <CreditCardIcon className="size-4" />
@@ -161,6 +162,7 @@ function ChapaPlatformGatewayTab() {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{type: 'error' | 'success'; text: string}>();
+  const [readinessRevision, setReadinessRevision] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -199,6 +201,7 @@ function ChapaPlatformGatewayTab() {
       setSecretKey('');
       setWebhookSecret('');
       setStatusMsg({type: 'success', text: 'Chapa credentials validated and saved.'});
+      setReadinessRevision(v => v + 1);
     } catch (reason) {
       setStatusMsg({type: 'error', text: getApiErrorMessage(reason)});
     } finally {
@@ -216,17 +219,17 @@ function ChapaPlatformGatewayTab() {
   if (loading) return <TabLoadingSpinner />;
 
   return (
-    <Card.Root>
+    <Card.Root className="min-w-0">
       <Card.Header>
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <Card.Title><Trans message="Platform Chapa Merchant Gateway" /></Card.Title>
             <Card.Description>
               <Trans message="All buyer orders and subscriptions flow into this platform merchant account. Individual creators do not need Chapa keys." />
             </Card.Description>
           </div>
           <Badge variant={config?.secret_configured ? 'positive' : 'destructive'}>
-            {config?.secret_configured ? <Trans message="Connected" /> : <Trans message="Not configured" />}
+            {config?.secret_configured ? <Trans message="Keys configured" /> : <Trans message="Not configured" />}
           </Badge>
         </div>
       </Card.Header>
@@ -281,9 +284,9 @@ function ChapaPlatformGatewayTab() {
 
           <Field.Root>
             <Field.Label><Trans message="Webhook callback URL" /></Field.Label>
-            <div className="flex gap-2">
-              <Input readOnly value={config?.webhook_url ?? ''} className="font-mono text-xs" />
-              <Button type="button" variant="outline" onClick={copyWebhookUrl}>
+            <div className="flex min-w-0 gap-2">
+              <Input readOnly value={config?.webhook_url ?? ''} className="min-w-0 flex-1 font-mono text-xs" />
+              <Button type="button" className="shrink-0" variant="outline" onClick={copyWebhookUrl}>
                 <CopyIcon />
                 {copied ? <Trans message="Copied" /> : <Trans message="Copy" />}
               </Button>
@@ -301,7 +304,7 @@ function ChapaPlatformGatewayTab() {
             {saving ? <Trans message="Saving & validating..." /> : <Trans message="Save Chapa credentials" />}
           </Button>
         </form>
-        <ChapaPayoutReadinessCard />
+        <ChapaPayoutReadinessCard key={readinessRevision} />
       </Card.Content>
     </Card.Root>
   );
