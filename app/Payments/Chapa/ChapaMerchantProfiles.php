@@ -12,7 +12,14 @@ use Common\Settings\Settings;
  */
 final class ChapaMerchantProfiles
 {
-    public const MODES = ['test', 'live'];
+    public const TEST = 'test';
+    public const LIVE = 'live';
+    public const UNCONFIGURED = 'unconfigured';
+    public const PUBLIC_KEY = 'public_key';
+    public const SECRET_KEY = 'secret_key';
+    public const WEBHOOK_SECRET = 'webhook_secret';
+    public const MODES = [self::TEST, self::LIVE];
+    private const FIELDS = [self::PUBLIC_KEY, self::SECRET_KEY, self::WEBHOOK_SECRET];
 
     public function __construct(private readonly ?Settings $settings = null) {}
 
@@ -24,10 +31,10 @@ final class ChapaMerchantProfiles
     public static function modeForSecret(string $key): string
     {
         if (str_starts_with($key, 'CHASECK_TEST-')) {
-            return 'test';
+            return self::TEST;
         }
 
-        return str_starts_with($key, 'CHASECK-') ? 'live' : 'unconfigured';
+        return str_starts_with($key, 'CHASECK-') ? self::LIVE : self::UNCONFIGURED;
     }
 
     public static function key(string $mode, string $field): string
@@ -50,7 +57,7 @@ final class ChapaMerchantProfiles
         if (!in_array($mode, self::MODES, true)) {
             return '';
         }
-        if (!in_array($field, ['public_key', 'secret_key', 'webhook_secret'], true)) {
+        if (!in_array($field, self::FIELDS, true)) {
             return '';
         }
 
@@ -72,16 +79,16 @@ final class ChapaMerchantProfiles
         }
 
         return match ($field) {
-            'secret_key' => $this->legacySecret(),
-            'public_key' => (string) $this->setting('billing.chapa.public_key', ''),
-            'webhook_secret' => (string) ($this->setting('billing.chapa.webhook_secret')
+            self::SECRET_KEY => $this->legacySecret(),
+            self::PUBLIC_KEY => (string) $this->setting('billing.chapa.public_key', ''),
+            self::WEBHOOK_SECRET => (string) ($this->setting('billing.chapa.webhook_secret')
                 ?: config('services.chapa.webhook_secret', '')),
         };
     }
 
     private function rotatedMerchant(string $mode): bool
     {
-        $saved = $this->setting(self::key($mode, 'secret_key'));
+        $saved = $this->setting(self::key($mode, self::SECRET_KEY));
         if (!is_string($saved) || $saved === '') {
             return false;
         }
@@ -97,13 +104,13 @@ final class ChapaMerchantProfiles
     /** @return array{mode: string, configured: bool, webhook_configured: bool, approval_configured: bool, public_key_masked: ?string} */
     public function summary(string $mode): array
     {
-        $key = $this->credential($mode, 'secret_key');
-        $publicKey = $this->credential($mode, 'public_key');
+        $key = $this->credential($mode, self::SECRET_KEY);
+        $publicKey = $this->credential($mode, self::PUBLIC_KEY);
 
         return [
             'mode' => $mode,
             'configured' => self::modeForSecret($key) === $mode && $publicKey !== '',
-            'webhook_configured' => $this->credential($mode, 'webhook_secret') !== '',
+            'webhook_configured' => $this->credential($mode, self::WEBHOOK_SECRET) !== '',
             'approval_configured' => app(\App\Storefront\Services\ChapaTransferApprovalSecret::class)->forMode($mode) !== '',
             'public_key_masked' => $publicKey === '' ? null : '••••'.substr($publicKey, -4),
         ];
