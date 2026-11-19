@@ -42,7 +42,9 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     private function actingAdmin(): User
     {
-        $admin = $this->actingAdmin();
+        $this->setupMerchant();
+        $admin = $this->admin();
+        $this->actingAs($admin, 'sanctum');
 
         return $admin;
     }
