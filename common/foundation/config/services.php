@@ -64,6 +64,7 @@ return [
         'test_payouts_enabled' => (bool) env('CHAPA_V1_TEST_PAYOUTS_ENABLED', true),
         'test_transfer_status' => env('CHAPA_V1_TEST_TRANSFER_STATUS', ''),
         'admin_payout_step_up_required' => (bool) env('CHAPA_ADMIN_PAYOUT_STEP_UP_REQUIRED', false),
+        'live_mode_switch_allowed' => (bool) env('CHAPA_LIVE_MODE_SWITCH_ALLOWED', false),
     ],
 
     'verify_et' => [

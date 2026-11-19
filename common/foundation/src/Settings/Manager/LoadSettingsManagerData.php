@@ -46,6 +46,7 @@ class LoadSettingsManagerData
         $envSettings['chapa_webhook_secret'] = '';
         $envSettings['chapa_secret_key'] = '';
         $envSettings['chapa_transfer_approval_secret'] = '';
+        $envSettings['chapa_live_mode_switch_allowed'] = '';
         $envSettings[
             'connectedGmailAccount'
         ] = ConnectGmailAccountController::getConnectedEmail();
