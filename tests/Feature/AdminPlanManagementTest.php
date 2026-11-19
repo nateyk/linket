@@ -135,7 +135,7 @@ class AdminPlanManagementTest extends TestCase
         $this->assertFalse($price->fresh()->default);
         $this->assertDatabaseHas('prices', ['product_id' => $pro->id, 'amount' => 700, 'default' => true]);
         $this->stateful()->actingAs($creator);
-        $this->postJson('/api/v1/billing/direct/pro')->assertNotFound();
+        $this->postJson('/api/v1/billing/direct/pro')->assertStatus(405);
         config()->set('services.chapa.secret', 'CHASECK_TEST-plan-price-fixture');
         \Illuminate\Support\Facades\Http::preventStrayRequests();
         \Illuminate\Support\Facades\Http::fake([

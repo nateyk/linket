@@ -84,4 +84,11 @@ final class ChapaBillingHistoryTest extends TestCase
             'verified_at' => $status === 'paid' ? now() : null,
         ]);
     }
+    private function stateful(): static
+    {
+        return $this->withSession(['_token' => 'chapa-history-csrf'])
+            ->withHeader('Referer', config('app.url'))
+            ->withHeader('X-CSRF-TOKEN', 'chapa-history-csrf');
+    }
+
 }
