@@ -41,6 +41,8 @@ export type Summary = {
   paid_out_cents: number;
   lifetime_earnings_cents: number;
   balance_reconciliation_required?: boolean;
+  minimum_withdrawal_cents?: number;
+  payout_hold_days?: number;
   currency: string;
 };
 
@@ -146,6 +148,7 @@ export function Component() {
   const currency = summary?.currency ?? 'ETB';
   const available = summary?.available_for_payout_cents ?? 0;
   const hasApprovedDestination = destinations.some(isApprovedDestination);
+  const minimumWithdrawalCents = summary?.minimum_withdrawal_cents ?? 100;
 
   const handleCancel = async (payout: Payout) => {
     setError(undefined);
@@ -191,6 +194,8 @@ export function Component() {
               held={summary.held_earnings_cents}
               hasApprovedDestination={hasApprovedDestination}
               hasPayoutAccounts={destinations.length > 0}
+              minimumWithdrawalCents={minimumWithdrawalCents}
+              currency={currency}
             />
           )}
           <WithdrawalHistoryTable
@@ -208,6 +213,7 @@ export function Component() {
         onOpenChange={setWithdrawOpen}
         available={available}
         currency={currency}
+        minimumWithdrawalCents={minimumWithdrawalCents}
         destinations={destinations}
         onSuccess={async () => {
           setWithdrawOpen(false);
@@ -268,13 +274,17 @@ function WithdrawalReadinessNotice({
   held,
   hasApprovedDestination,
   hasPayoutAccounts,
+  minimumWithdrawalCents,
+  currency,
 }: {
   available: number;
   held: number;
   hasApprovedDestination: boolean;
   hasPayoutAccounts: boolean;
+  minimumWithdrawalCents: number;
+  currency: string;
 }) {
-  if (available > 0 && hasApprovedDestination) return null;
+  if (available >= minimumWithdrawalCents && hasApprovedDestination) return null;
 
   return (
     <div role="status" className="flex items-start gap-3 rounded-card-sm border border-border px-4 py-3 text-sm">
@@ -290,6 +300,12 @@ function WithdrawalReadinessNotice({
             <Link to="/dashboard/orders" className="font-medium text-primary underline underline-offset-2">
               <Trans message="Review Orders & Sales" />
             </Link>
+          </p>
+        )}
+        {available > 0 && available < minimumWithdrawalCents && (
+          <p>
+            <Trans message="Your available earnings are below the platform minimum withdrawal of" />{' '}
+            <FormattedCurrency value={minimumWithdrawalCents / 100} currency={currency} />.
           </p>
         )}
         {!hasApprovedDestination && (
@@ -537,6 +553,7 @@ function RequestWithdrawalModal({
   currency,
   destinations,
   onSuccess,
+  minimumWithdrawalCents,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -544,6 +561,7 @@ function RequestWithdrawalModal({
   currency: string;
   destinations: PayoutDestination[];
   onSuccess: () => Promise<void>;
+  minimumWithdrawalCents: number;
 }) {
   const approvedDestinations = destinations.filter(isApprovedDestination);
   const defaultDest = approvedDestinations.find(d => d.is_default) ?? approvedDestinations[0];
@@ -565,7 +583,7 @@ function RequestWithdrawalModal({
   const selectedDest = approvedDestinations.find(d => d.id === selectedDestId);
   const methodMinCents = selectedDest?.withdrawal_method?.minimum_amount_cents ?? 0;
   const methodMaxCents = selectedDest?.withdrawal_method?.maximum_amount_cents;
-  const minimumCents = Math.max(100, methodMinCents);
+  const minimumCents = Math.max(100, minimumWithdrawalCents, methodMinCents);
   const maximumCents = Math.min(available, methodMaxCents || available);
   const amountCents = Math.round((parseFloat(amountStr) || 0) * 100);
   const isValidAmount = !!selectedDest && amountCents >= minimumCents &&
@@ -689,7 +707,7 @@ function RequestWithdrawalModal({
 
                 {maximumCents < minimumCents && (
                   <p role="status" className="text-xs text-muted-foreground">
-                    <Trans message="The available balance is below the selected payout method minimum." />
+                    <Trans message="The available balance is below the required minimum withdrawal." />
                   </p>
                 )}
 

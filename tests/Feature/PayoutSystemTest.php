@@ -38,7 +38,7 @@ class PayoutSystemTest extends TestCase
         Storage::fake('local');
         Notification::fake();
         // Payouts are gated by the storefront currency + hold days config.
-        config()->set('storefront.payout_hold_days', 0);
+        config()->set('store.payout_hold_days', 0);
         config()->set('storefront.currency', 'ETB');
     }
 
@@ -225,6 +225,33 @@ class PayoutSystemTest extends TestCase
             $this->fail('Expected validation exception for amount below minimum.');
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('amount_cents', $e->errors());
+        }
+    }
+
+    public function testPlatformWideMinimumOverridesAWeakerWithdrawalMethodMinimum(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 10000);
+        $this->createPayoutMethod($creator, $workspaceId, minimum: 100);
+
+        settings()->set('marketplace.minimum_payout_cents', 5000);
+        try {
+            app(PayoutRequestService::class)->create($creator->id, $workspaceId, 4000);
+            $this->fail('Expected validation against the platform payout minimum.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 6000);
+        $this->assertSame(6000, $payout->amount_cents);
+
+        settings()->set('marketplace.minimum_payout_cents', 7000);
+        try {
+            app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+            $this->fail('A raised policy minimum must also block old pending withdrawals.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
         }
     }
 
@@ -530,6 +557,33 @@ class PayoutSystemTest extends TestCase
         ])->assertStatus(422);
         $this->assertSame('processing', $payout->fresh()->status);
         $this->assertNull($payout->fresh()->paid_at);
+    }
+
+    public function testAdminCanSavePayoutPolicyAndValidationRejectsUnsafeMinimum(): void
+    {
+        $admin = $this->createAdmin();
+        $admin->permissions()->attach(Permission::query()->firstOrCreate(['name' => 'settings.update']));
+
+        $this->stateful()->actingAs($admin);
+        $this->getJson('/api/v1/admin/marketplace/payout-policy')
+            ->assertOk()
+            ->assertJsonPath('data.payout_hold_days', 0)
+            ->assertJsonPath('data.minimum_payout_cents', 100);
+
+        $this->putJson('/api/v1/admin/marketplace/payout-policy', [
+            'payout_hold_days' => 2,
+            'minimum_payout_cents' => 5000,
+        ])->assertOk()
+            ->assertJsonPath('data.payout_hold_days', 2)
+            ->assertJsonPath('data.minimum_payout_cents', 5000);
+
+        $this->assertSame(2, app(\App\Storefront\Services\MarketplacePayoutPolicy::class)->holdDays());
+        $this->assertSame(5000, app(\App\Storefront\Services\MarketplacePayoutPolicy::class)->minimumWithdrawalCents());
+
+        $this->putJson('/api/v1/admin/marketplace/payout-policy', [
+            'payout_hold_days' => -1,
+            'minimum_payout_cents' => 0,
+        ])->assertUnprocessable();
     }
 
     public function testNonAdminCannotAccessAdminPayoutRoutes(): void

@@ -148,6 +148,24 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $this->assertSame(0, $service->releaseMaturedEscrow());
     }
 
+    public function testAdminZeroDayPolicyReleasesAnAlreadyVerifiedSaleWithoutSevenDayWait(): void
+    {
+        $creator = new User(['id' => 109, 'name' => 'Creator 109', 'email' => 'creator109@test.com']);
+        $this->seedCreator($creator);
+        $ledger = new CreatorLedgerService(new JournalPostingService());
+        $order = $this->seedPlatformOrder($creator, 100000, Carbon::now()->subMinutes(1));
+        $ledger->recordPlatformSale($order);
+
+        settings()->set('marketplace.payout_hold_days', 0);
+        $service = new MarketplaceReconciliationService(creatorLedger: $ledger);
+
+        $this->assertSame(1, $service->releaseMaturedEscrow());
+        $balances = $ledger->getBalances(BalanceQuery::for((int) $creator->id, 'ETB'));
+        $this->assertSame(90000, $balances['available']);
+        $this->assertSame(0, $balances['held']);
+        $this->assertSame(0, $service->releaseMaturedEscrow());
+    }
+
     public function testReconcilePendingPaymentAttemptsFulfillsVerifiedOrders(): void
     {
         $creator = new User(['id' => 102, 'name' => 'Creator 102', 'email' => 'creator102@test.com']);

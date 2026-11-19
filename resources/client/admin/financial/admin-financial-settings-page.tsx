@@ -39,6 +39,7 @@ type WithdrawalMethod = {
 
 const financialSummaryUrl = '/api/v1/admin/marketplace/financial-summary';
 const reconcileUrl = '/api/v1/admin/marketplace/reconcile';
+const payoutPolicyUrl = '/api/v1/admin/marketplace/payout-policy';
 
 type ReconciliationData = {
   ledger_audit: {
@@ -236,42 +237,106 @@ function PayoutMethodsTab() {
 }
 
 function CommissionPoliciesTab() {
+  const [holdDays, setHoldDays] = useState('');
+  const [minimumEtb, setMinimumEtb] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string>();
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.get(payoutPolicyUrl)
+      .then(response => {
+        if (!active) return;
+        const policy = response.data.data as {payout_hold_days: number; minimum_payout_cents: number};
+        setHoldDays(String(policy.payout_hold_days));
+        setMinimumEtb((policy.minimum_payout_cents / 100).toFixed(2));
+      })
+      .catch(reason => { if (active) setError(getApiErrorMessage(reason)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const save = async () => {
+    const days = Number(holdDays);
+    const cents = Math.round(Number(minimumEtb) * 100);
+    if (!Number.isInteger(days) || days < 0 || days > 30 ||
+        !Number.isFinite(cents) || cents < 100 || cents > 100000000) {
+      setError('Enter a hold between 0 and 30 days and a minimum of at least 1.00 ETB.');
+      return;
+    }
+
+    setSaving(true);
+    setSaved(false);
+    setError(undefined);
+    try {
+      const response = await apiClient.put(payoutPolicyUrl, {
+        payout_hold_days: days,
+        minimum_payout_cents: cents,
+      });
+      const policy = response.data.data as {payout_hold_days: number; minimum_payout_cents: number};
+      setHoldDays(String(policy.payout_hold_days));
+      setMinimumEtb((policy.minimum_payout_cents / 100).toFixed(2));
+      setSaved(true);
+    } catch (reason) {
+      setError(getApiErrorMessage(reason));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Card.Root>
       <Card.Header>
         <Card.Title><Trans message="Marketplace commission & settlement policy" /></Card.Title>
         <Card.Description>
-          <Trans message="Platform monetization, escrow hold periods, and withdrawal rules." />
+          <Trans message="Configure when verified earnings become withdrawable and the minimum payout request." />
         </Card.Description>
       </Card.Header>
-      <Card.Content className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-input border p-4 space-y-1">
-            <p className="text-xs text-muted-foreground"><Trans message="Escrow hold period" /></p>
-            <p className="text-xl font-bold">7 <span className="text-sm font-normal text-muted-foreground"><Trans message="days" /></span></p>
-            <p className="text-xs text-muted-foreground"><Trans message="Sales clear hold before becoming available for withdrawal." /></p>
-          </div>
-          <div className="rounded-input border p-4 space-y-1">
-            <p className="text-xs text-muted-foreground"><Trans message="Minimum withdrawal" /></p>
-            <p className="text-xl font-bold">100.00 <span className="text-sm font-normal text-muted-foreground">ETB</span></p>
-            <p className="text-xs text-muted-foreground"><Trans message="Minimum balance required to submit a withdrawal request." /></p>
-          </div>
-          <div className="rounded-input border p-4 space-y-1">
-            <p className="text-xs text-muted-foreground"><Trans message="Monetization model" /></p>
-            <p className="text-xl font-bold"><Trans message="Platform Chapa" /></p>
-            <p className="text-xs text-muted-foreground"><Trans message="Buyers pay Linket merchant; platform disburses net earnings." /></p>
-          </div>
-        </div>
-
-        <div className="rounded-input border bg-muted/20 p-4 space-y-2 text-sm">
-          <p className="font-semibold"><Trans message="Single-Profile Marketplace Principles" /></p>
-          <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
-            <li><Trans message="Zero seller gateway keys: creators never provide personal Chapa API secrets." /></li>
-            <li><Trans message="Double-entry ledger: every buyer sale, fee deduction, and withdrawal is recorded in immutable journal entries." /></li>
-            <li><Trans message="Three-stage payout operations: admin approval, automated transfer dispatch, and verified settlement." /></li>
-            <li><Trans message="Single-profile UX: creator finance is personal and never exposes workspaces or workspace switchers." /></li>
-          </ul>
-        </div>
+      <Card.Content className="space-y-5">
+        {loading ? <TabLoadingSpinner /> : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <label htmlFor="payout-hold-days" className="text-sm font-medium">
+                  <Trans message="Earnings hold (days)" />
+                </label>
+                <input id="payout-hold-days" type="number" min="0" max="30" step="1"
+                  value={holdDays} onChange={event => { setHoldDays(event.target.value); setSaved(false); }}
+                  className="h-10 w-full rounded-input border border-border bg-background px-3 text-sm" />
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="0 means verified sales are released immediately. Existing held sales follow the updated policy during reconciliation." />
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="minimum-withdrawal-etb" className="text-sm font-medium">
+                  <Trans message="Minimum withdrawal (ETB)" />
+                </label>
+                <input id="minimum-withdrawal-etb" type="number" min="1" max="1000000" step="0.01"
+                  value={minimumEtb} onChange={event => { setMinimumEtb(event.target.value); setSaved(false); }}
+                  className="h-10 w-full rounded-input border border-border bg-background px-3 text-sm" />
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="The selected payout provider can require a higher minimum." />
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium"><Trans message="Collection model" /></p>
+                <p className="font-semibold"><Trans message="Platform Chapa" /></p>
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="Only verified platform-collected sales fund withdrawals. Admin approval is still required." />
+                </p>
+              </div>
+            </div>
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            {saved && <p role="status" className="text-sm text-positive"><Trans message="Payout policy saved." /></p>}
+            <div className="flex justify-end">
+              <Button color="primary" disabled={saving} onClick={() => void save()}>
+                {saving ? <Trans message="Saving…" /> : <Trans message="Save payout policy" />}
+              </Button>
+            </div>
+          </>
+        )}
       </Card.Content>
     </Card.Root>
   );

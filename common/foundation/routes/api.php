@@ -371,6 +371,8 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('admin/payment-transactions/{paymentTransaction}/refunds', [AdminDigitalProductRefundsController::class, 'store']);
         Route::post('admin/storefront-orders/{order}/refunds', [AdminDigitalProductRefundsController::class, 'storePlatformOrder']);
         Route::get('admin/marketplace/financial-summary', [AdminMarketplaceFinanceController::class, 'summary']);
+        Route::get('admin/marketplace/payout-policy', [AdminMarketplaceFinanceController::class, 'payoutPolicy']);
+        Route::put('admin/marketplace/payout-policy', [AdminMarketplaceFinanceController::class, 'updatePayoutPolicy']);
         Route::post('admin/marketplace/reconcile', [AdminMarketplaceFinanceController::class, 'reconcile']);
         Route::get('admin/payment-health', [AdminPaymentHealthController::class, 'index']);
         Route::post('admin/payment-health/test-email', [AdminPaymentHealthController::class, 'sendTestEmail']);
