@@ -230,4 +230,18 @@ final class ChapaEnvironmentSwitchTest extends TestCase
         $this->assertSame('', app(\App\Payments\Chapa\LinketChapaManager::class)->platformSecret());
     }
 
+    public function testRotatedTestMerchantMustConfigureItsOwnWebhookAndApprovalSecret(): void
+    {
+        $this->actingAdmin();
+        config()->set('services.chapa.transfer_approval_secret', 'old-approval-secret-fixture-123');
+        $this->putJson('/api/v1/admin/billing/chapa/environments/test', [
+            'public_key' => 'CHAPUBK_TEST-rotated-public',
+            'secret_key' => 'CHASECK_TEST-rotated-merchant',
+        ])->assertOk();
+        $profiles = app(ChapaMerchantProfiles::class);
+        $this->assertSame('CHASECK_TEST-rotated-merchant', $profiles->active('secret_key'));
+        $this->assertFalse($profiles->summary('test')['webhook_configured']);
+        $this->assertFalse($profiles->summary('test')['approval_configured']);
+    }
+
 }

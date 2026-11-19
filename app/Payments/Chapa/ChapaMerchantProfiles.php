@@ -57,7 +57,13 @@ final class ChapaMerchantProfiles
         }
 
         // One-time backward compatibility for the former single-credential setup.
-        if (self::modeForSecret($this->legacySecret()) !== $mode) {
+        $legacy = $this->legacySecret();
+        if (self::modeForSecret($legacy) !== $mode) {
+            return '';
+        }
+        $savedSecret = $this->setting(self::key($mode, 'secret_key'));
+        // A rotated merchant must not inherit the previous merchant's webhook.
+        if (is_string($savedSecret) && $savedSecret !== '' && !hash_equals($legacy, $savedSecret)) {
             return '';
         }
         return match ($field) {

@@ -38,6 +38,10 @@ final class ChapaTransferApprovalSecret
         if (\App\Payments\Chapa\ChapaMerchantProfiles::modeForSecret($legacyKey) !== $mode) {
             return '';
         }
+        $profileKey = app(Settings::class)->get(\App\Payments\Chapa\ChapaMerchantProfiles::key($mode, 'secret_key'));
+        if (is_string($profileKey) && $profileKey !== '' && !hash_equals($legacyKey, $profileKey)) {
+            return '';
+        }
 
         return (string) config('services.chapa.transfer_approval_secret', '');
     }
