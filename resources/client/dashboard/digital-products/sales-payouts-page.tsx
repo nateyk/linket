@@ -221,22 +221,13 @@ export function Component() {
             </div>
           )}
 
-          <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard
               icon={LandmarkIcon}
               tone="text-amber-600 bg-amber-500/10 dark:text-amber-400"
               label="Available balance"
               scope="Ready to withdraw"
               valueInCents={available}
-              currency={currency}
-              loading={loading}
-            />
-            <StatCard
-              icon={Clock3Icon}
-              tone="text-blue-600 bg-blue-500/10 dark:text-blue-400"
-              label="Settling funds"
-              scope="Clearing period"
-              valueInCents={summary?.held_earnings_cents ?? 0}
               currency={currency}
               loading={loading}
             />
