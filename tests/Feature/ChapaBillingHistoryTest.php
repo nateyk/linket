@@ -30,7 +30,7 @@ final class ChapaBillingHistoryTest extends TestCase
         $this->payment($ownSubscription, 'paid', 'lk-my-chapa-payment-1');
         $this->payment($otherSubscription, 'paid', 'lk-other-chapa-payment-1');
 
-        $this->actingAs($creator, 'sanctum')
+        $this->stateful()->actingAs($creator, 'sanctum')
             ->getJson('/api/v1/billing/chapa/history')
             ->assertOk()
             ->assertJsonPath('subscription_gateway', 'chapa')
@@ -50,7 +50,7 @@ final class ChapaBillingHistoryTest extends TestCase
         $subscription = $this->subscription($creator, $plan, $price);
         $this->payment($subscription, 'pending', 'lk-pending-chapa-payment-1');
 
-        $this->actingAs($creator, 'sanctum')
+        $this->stateful()->actingAs($creator, 'sanctum')
             ->getJson('/api/v1/billing/chapa/history')
             ->assertOk()
             ->assertJsonPath('pro_subscription.payments.0.status', 'pending_payment')

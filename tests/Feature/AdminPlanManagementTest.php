@@ -107,7 +107,7 @@ class AdminPlanManagementTest extends TestCase
             'product_id' => $pro->id, 'price_id' => $price->id,
             'amount_cents' => 50000, 'status' => 'pending_payment',
         ]);
-        $this->postJson('/api/v1/billing/direct/pro')->assertNotFound();
+        $this->postJson('/api/v1/billing/direct/pro')->assertStatus(405);
         $this->stateful()->actingAs($this->createAdmin())->putJson("/api/v1/billing/products/{$pro->id}", [
             'name' => $pro->name,
             'free' => false,
