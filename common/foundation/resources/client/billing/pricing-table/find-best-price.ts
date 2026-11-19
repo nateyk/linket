@@ -33,6 +33,13 @@ function findYearlyPrice(prices: Price[]) {
 }
 
 function findMonthlyPrice(prices: Price[]) {
+  // Prefer the actual one-month price even when the annual record is
+  // returned first (annual prices can also use interval="month").
+  const oneMonth = prices.find(
+    price => price.interval === 'month' && price.interval_count === 1,
+  );
+  if (oneMonth) return oneMonth;
+
   return prices.find(price => {
     if (price.interval === 'day' && price.interval_count >= 30) {
       return price;
