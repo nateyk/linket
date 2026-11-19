@@ -7,6 +7,7 @@ namespace App\Storefront\Commands;
 use App\Payments\Chapa\ChapaV1TransferClient;
 use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Chapa\LinketChapaManager;
+use App\Storefront\Support\EtbMajorAmount;
 use Illuminate\Console\Command;
 use RuntimeException;
 use Throwable;
@@ -19,6 +20,7 @@ final class AuditChapaV1TestModeCommand extends Command
 {
     protected $signature = 'chapa:v1:audit-test
                             {--reference= : An existing test transfer reference to inspect}
+                            {--transfer-amount-cents= : Expected ETB cents for strict TEST transfer settlement check}
                             {--payment-reference= : An existing Chapa TEST checkout reference to verify}
                             {--payment-amount-cents= : Expected ETB cents for that existing test payment}';
 
@@ -37,6 +39,12 @@ final class AuditChapaV1TestModeCommand extends Command
             $this->error('Invalid test transfer reference. No provider request was sent.');
             return self::FAILURE;
         }
+        $transferAmount = (string) ($this->option('transfer-amount-cents') ?? '');
+        if ($transferAmount !== '' && ($reference === ''
+            || preg_match('/^[1-9][0-9]{0,11}$/', $transferAmount) !== 1)) {
+            $this->error('Transfer settlement amount requires a valid existing test transfer reference.');
+            return self::FAILURE;
+        }
         $paymentRef = (string) ($this->option('payment-reference') ?? '');
         $amountOption = (string) ($this->option('payment-amount-cents') ?? '');
         if (($paymentRef === '') !== ($amountOption === '')
@@ -50,7 +58,10 @@ final class AuditChapaV1TestModeCommand extends Command
             $this->showWallets($client->banks($secret));
             $this->showBalance($client->balance($secret));
             if ($reference !== '') {
-                $this->showVerification($client->verify($secret, $reference), $reference);
+                $this->showVerification(
+                    $client->verify($secret, $reference), $reference,
+                    $transferAmount === '' ? null : (int) $transferAmount,
+                );
             }
             if ($paymentRef !== '') {
                 $this->showPaymentVerification(
@@ -146,7 +157,7 @@ final class AuditChapaV1TestModeCommand extends Command
     }
 
     /** @param array<string, mixed> $response */
-    private function showVerification(array $response, string $expectedReference): void
+    private function showVerification(array $response, string $expectedReference, ?int $expectedCents): void
     {
         $payload = $response['data'] ?? null;
         if (!is_array($payload)) {
@@ -164,6 +175,15 @@ final class AuditChapaV1TestModeCommand extends Command
 
         if (!hash_equals($expectedReference, $reference)) {
             throw new RuntimeException('Chapa verification reference mismatch.');
+        }
+        if ($expectedCents !== null) {
+            $amount = EtbMajorAmount::cents($payload['amount'] ?? null);
+            $currency = strtoupper((string) ($payload['currency'] ?? ''));
+            $status = strtolower((string) ($payload['status'] ?? ''));
+            if ($amount !== $expectedCents || $currency !== 'ETB' || $status !== 'success') {
+                throw new RuntimeException('Chapa test transfer has not passed settlement verification.');
+            }
+            $this->line('TEST transfer settlement verified by reference, ETB amount and success status.');
         }
     }
 }
