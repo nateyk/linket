@@ -33,6 +33,16 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
                 'status' => 'success',
                 'data' => [['currency' => 'ETB', 'available_balance' => 100, 'ledger_balance' => 120]],
             ]),
+            'https://api.chapa.co/v1/transaction/verify/*' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'success',
+                    'tx_ref' => 'lk-checkout-TEST123',
+                    'currency' => 'ETB',
+                    'amount' => '12.34',
+                    'email' => 'private-buyer@example.test',
+                ],
+            ]),
             'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
                 'status' => 'success',
                 'data' => [
@@ -92,6 +102,47 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         $this->assertStringNotContainsString('CHASECK_TEST-fake', $output);
         Http::assertSentCount(3);
         Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+    }
+
+    public function testItVerifiesExistingChapaTestCheckoutWithoutDisclosingBuyerDataOrWriting(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        $this->fakeReadOnlyEndpoints();
+
+        $this->assertSame(0, Artisan::call('chapa:v1:audit-test', [
+            '--payment-reference' => 'lk-checkout-TEST123',
+            '--payment-amount-cents' => '1234',
+        ]));
+        $output = Artisan::output();
+        $this->assertStringContainsString('ETB amount matches', $output);
+        $this->assertStringNotContainsString('private-buyer@example.test', $output);
+        $this->assertStringNotContainsString('CHASECK_TEST-fixture', $output);
+        Http::assertSentCount(3);
+        Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+    }
+
+    public function testWrongPaymentAmountFailsClosedWithGetOnlyProviderCalls(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        $this->fakeReadOnlyEndpoints();
+
+        $this->assertSame(1, Artisan::call('chapa:v1:audit-test', [
+            '--payment-reference' => 'lk-checkout-TEST123',
+            '--payment-amount-cents' => '1235',
+        ]));
+        Http::assertSentCount(3);
+        Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+    }
+
+    public function testPaymentRequiresReferenceAndAmountBeforeAnyNetworkCall(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        Http::fake();
+
+        $this->assertSame(1, Artisan::call('chapa:v1:audit-test', [
+            '--payment-reference' => 'lk-checkout-TEST123',
+        ]));
+        Http::assertNothingSent();
     }
 
     public function testUnexpectedProviderShapeFailsWithoutTransferSubmission(): void

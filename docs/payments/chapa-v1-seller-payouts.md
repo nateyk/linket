@@ -89,11 +89,12 @@ With a properly configured **Chapa TEST key** in Linket's platform settings, run
 ```bash
 php artisan chapa:v1:audit-test
 php artisan chapa:v1:audit-test --reference=EXISTING_TEST_REFERENCE
+php artisan chapa:v1:audit-test --payment-reference=EXISTING_TEST_CHECKOUT_REF --payment-amount-cents=1234
 ```
 
 This command:
 - refuses non-`CHASECK_TEST-` credentials before any request;
-- makes **GET-only** calls for the v1 bank list, ETB available/ledger balance and optionally an existing transfer verification;
+- makes **GET-only** calls for the v1 bank list, ETB available/ledger balance, optionally an existing transfer verification, and optionally a real TEST checkout verification with exact ETB amount and reference matching;
 - displays matching wallet slugs/IDs, status and provider verification *field names* without printing recipient account numbers or API credentials;
 - never creates transfers, changes payout states, retries submissions or touches the ledger.
 
