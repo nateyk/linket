@@ -47,7 +47,10 @@ final class ChapaMerchantProfiles
 
     public function credential(string $mode, string $field): string
     {
-        if (!in_array($mode, self::MODES, true) || !in_array($field, ['public_key', 'secret_key', 'webhook_secret'], true)) {
+        if (!in_array($mode, self::MODES, true)) {
+            return '';
+        }
+        if (!in_array($field, ['public_key', 'secret_key', 'webhook_secret'], true)) {
             return '';
         }
 
@@ -56,22 +59,34 @@ final class ChapaMerchantProfiles
             return $stored;
         }
 
-        // One-time backward compatibility for the former single-credential setup.
-        $legacy = $this->legacySecret();
-        if (self::modeForSecret($legacy) !== $mode) {
+        return $this->legacyCredential($mode, $field);
+    }
+
+    private function legacyCredential(string $mode, string $field): string
+    {
+        if (self::modeForSecret($this->legacySecret()) !== $mode) {
             return '';
         }
-        $savedSecret = $this->setting(self::key($mode, 'secret_key'));
-        // A rotated merchant must not inherit the previous merchant's webhook.
-        if (is_string($savedSecret) && $savedSecret !== '' && !hash_equals($legacy, $savedSecret)) {
+        if ($this->rotatedMerchant($mode)) {
             return '';
         }
+
         return match ($field) {
             'secret_key' => $this->legacySecret(),
             'public_key' => (string) $this->setting('billing.chapa.public_key', ''),
             'webhook_secret' => (string) ($this->setting('billing.chapa.webhook_secret')
                 ?: config('services.chapa.webhook_secret', '')),
         };
+    }
+
+    private function rotatedMerchant(string $mode): bool
+    {
+        $saved = $this->setting(self::key($mode, 'secret_key'));
+        if (!is_string($saved) || $saved === '') {
+            return false;
+        }
+
+        return !hash_equals($this->legacySecret(), $saved);
     }
 
     public function active(string $field): string
