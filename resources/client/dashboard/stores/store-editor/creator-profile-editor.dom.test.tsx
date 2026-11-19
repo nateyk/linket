@@ -373,12 +373,37 @@ test('opening the About tab on a pristine form keeps it clean (rebase vs mount r
   );
 });
 
-test('content sections use separated rows with clear card boundaries', () => {
+test('content sections use compact, theme-aware collapsible cards', () => {
   renderProfileEditor();
-  const root = document.querySelector('[data-slot="accordion"]');
-  // Separated rows keep each editing area scannable against the raised work
-  // surface, especially in dark mode.
-  expect(root?.getAttribute('data-variant')).toBe('separated');
+  const sections = document.querySelectorAll('[data-slot="collapsible"]');
+  expect(sections).toHaveLength(4);
+  for (const section of sections) {
+    expect(section.classList.contains('rounded-card-sm')).toBe(true);
+    expect(section.classList.contains('border-border')).toBe(true);
+    expect(section.classList.contains('bg-card')).toBe(true);
+  }
+});
+
+test('opening a new section closes the previous section', () => {
+  renderProfileEditor();
+  fireEvent.click(triggerByName('Profile'));
+  expect(triggerByName('Profile').getAttribute('aria-expanded')).toBe('true');
+  fireEvent.click(triggerByName('Actions'));
+  expect(triggerByName('Profile').getAttribute('aria-expanded')).toBe('false');
+  expect(triggerByName('Actions').getAttribute('aria-expanded')).toBe('true');
+});
+
+test('content collapsible controls can close without changing saved profile data', async () => {
+  renderProfileEditor();
+  for (const name of ['Profile', 'Social links', 'Actions', 'Products']) {
+    const button = await screen.findByRole('button', {name});
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(preview()).toContain('|clean');
+  }
 });
 
 test('content sections start collapsed (nothing open by default)', () => {

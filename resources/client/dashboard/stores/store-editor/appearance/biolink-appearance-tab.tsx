@@ -4,7 +4,11 @@ import {ButtonStyle} from '@app/dashboard/stores/store-editor/appearance/button-
 import {appearanceHeaderClassnames} from '@app/dashboard/stores/store-editor/appearance/header-classnames';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
-import {SectionAccordionTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
+import {
+  BuilderCollapsible,
+  BuilderCollapsibleContent,
+} from '@app/dashboard/stores/store-editor/builder-collapsible';
+import {SectionCollapsibleTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
 import {SectionHeading} from '@app/dashboard/stores/store-editor/section-heading';
 import {useAuth} from '@common/auth/use-auth';
 import {NoFeaturePermissionPopover} from '@common/billing/upgrade/no-permission-button';
@@ -12,7 +16,6 @@ import {
   FontSelector as CommonFontSelector,
   FontDisplayName,
 } from '@common/ui/font-selector/font-selector';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {ColorField} from '@ui/color-picker/color-field';
@@ -34,8 +37,7 @@ import {useState} from 'react';
 
 export function Component() {
   const {biolink} = useSettings();
-  // Single-open like the Content tab: one section at a time, all closed on
-  // load — the shared section-accordion contract.
+  // Match Content: one compact collapsible section open at a time.
   const [openSection, setOpenSection] = useState<string | null>(null);
 
   return (
@@ -47,13 +49,12 @@ export function Component() {
         }
       />
       <StorefrontAiAppearancePreview />
-      <Accordion.Root
-        variant="separated"
-        value={openSection ? [openSection] : []}
-        onValueChange={value => setOpenSection((value[0] as string) ?? null)}
-      >
-        <Accordion.Item value="background">
-          <SectionAccordionTrigger>
+      <div className="flex w-full flex-col gap-3">
+        <BuilderCollapsible
+          open={openSection === 'background'}
+          onOpenChange={open => setOpenSection(open ? 'background' : null)}
+        >
+          <SectionCollapsibleTrigger>
             <BuilderSectionHeader
               icon={ImageIcon}
               title={<Trans message="Background" />}
@@ -61,14 +62,17 @@ export function Component() {
                 <Trans message="Choose a color, gradient, pattern, or image." />
               }
             />
-          </SectionAccordionTrigger>
-          <Accordion.Content className="border-t pt-4">
+          </SectionCollapsibleTrigger>
+          <BuilderCollapsibleContent>
             <BackgroundStyle />
-          </Accordion.Content>
-        </Accordion.Item>
+          </BuilderCollapsibleContent>
+        </BuilderCollapsible>
 
-        <Accordion.Item value="buttons">
-          <SectionAccordionTrigger>
+        <BuilderCollapsible
+          open={openSection === 'buttons'}
+          onOpenChange={open => setOpenSection(open ? 'buttons' : null)}
+        >
+          <SectionCollapsibleTrigger>
             <BuilderSectionHeader
               icon={MousePointerClickIcon}
               title={<Trans message="Buttons" />}
@@ -76,14 +80,17 @@ export function Component() {
                 <Trans message="Style storefront buttons and customer actions." />
               }
             />
-          </SectionAccordionTrigger>
-          <Accordion.Content className="border-t pt-4">
+          </SectionCollapsibleTrigger>
+          <BuilderCollapsibleContent>
             <ButtonStyle />
-          </Accordion.Content>
-        </Accordion.Item>
+          </BuilderCollapsibleContent>
+        </BuilderCollapsible>
 
-        <Accordion.Item value="text">
-          <SectionAccordionTrigger>
+        <BuilderCollapsible
+          open={openSection === 'text'}
+          onOpenChange={open => setOpenSection(open ? 'text' : null)}
+        >
+          <SectionCollapsibleTrigger>
             <BuilderSectionHeader
               icon={TypeIcon}
               title={<Trans message="Text" />}
@@ -91,15 +98,18 @@ export function Component() {
                 <Trans message="Choose the storefront font and text color." />
               }
             />
-          </SectionAccordionTrigger>
-          <Accordion.Content className="border-t pt-4">
+          </SectionCollapsibleTrigger>
+          <BuilderCollapsibleContent>
             <TextStyle />
-          </Accordion.Content>
-        </Accordion.Item>
+          </BuilderCollapsibleContent>
+        </BuilderCollapsible>
 
         {biolink?.show_branding ? (
-          <Accordion.Item value="branding">
-            <SectionAccordionTrigger>
+          <BuilderCollapsible
+            open={openSection === 'branding'}
+            onOpenChange={open => setOpenSection(open ? 'branding' : null)}
+          >
+            <SectionCollapsibleTrigger>
               <BuilderSectionHeader
                 icon={BadgeIcon}
                 title={<Trans message="Branding" />}
@@ -107,13 +117,13 @@ export function Component() {
                   <Trans message="Control whether the Linket logo is shown." />
                 }
               />
-            </SectionAccordionTrigger>
-            <Accordion.Content className="border-t pt-4">
+            </SectionCollapsibleTrigger>
+            <BuilderCollapsibleContent>
               <BrandingStyle />
-            </Accordion.Content>
-          </Accordion.Item>
+            </BuilderCollapsibleContent>
+          </BuilderCollapsible>
         ) : null}
-      </Accordion.Root>
+      </div>
     </div>
   );
 }

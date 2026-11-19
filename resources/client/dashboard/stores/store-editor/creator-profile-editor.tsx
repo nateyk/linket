@@ -7,7 +7,11 @@ import {
 } from '@app/dashboard/stores/store-editor/skills-chips-field';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
-import {SectionAccordionTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
+import {
+  BuilderCollapsible,
+  BuilderCollapsibleContent,
+} from '@app/dashboard/stores/store-editor/builder-collapsible';
+import {SectionCollapsibleTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
 import {SectionHeading} from '@app/dashboard/stores/store-editor/section-heading';
 import {
   BIO_MAX_LENGTH,
@@ -15,10 +19,7 @@ import {
   CreatorProfileForm,
   rebaseAboutFormOnEditorReady,
 } from '@app/dashboard/stores/store-editor/creator-profile-form-values';
-import {
-  CreatorProfileConfig,
-  CreatorProfileSection,
-} from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {CreatorProfileConfig} from '@app/dashboard/stores/store-editor/creator-profile-types';
 import {
   SocialsList,
   SocialsType,
@@ -31,7 +32,6 @@ import {
 } from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Badge} from '@shadcn/badge/badge';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Combobox} from '@shadcn/forms/combobox/combobox';
@@ -392,17 +392,12 @@ export function CreatorProfileEditor({
               </Field.Root>
             </section>
           ) : (
-            <Accordion.Root
-              variant="separated"
-              value={openSection ? [openSection] : []}
-              onValueChange={value =>
-                setOpenSection(
-                  (value[0] as CreatorProfileSection | undefined) ?? null,
-                )
-              }
-            >
-              <Accordion.Item value="profile">
-                <SectionAccordionTrigger>
+            <div className="flex w-full flex-col gap-3">
+              <BuilderCollapsible
+                open={openSection === 'profile'}
+                onOpenChange={open => setOpenSection(open ? 'profile' : null)}
+              >
+                <SectionCollapsibleTrigger>
                   <BuilderSectionHeader
                     icon={UserRoundIcon}
                     title={<Trans message="Profile" />}
@@ -410,8 +405,8 @@ export function CreatorProfileEditor({
                       <Trans message="Name, photo, bio, and skills." />
                     }
                   />
-                </SectionAccordionTrigger>
-                <Accordion.Content className="border-t pt-4">
+                </SectionCollapsibleTrigger>
+                <BuilderCollapsibleContent>
                   <Field.Group className="max-w-2xl gap-5">
                     <section className="flex flex-col gap-3">
                       <div className="flex items-center gap-1">
@@ -581,11 +576,14 @@ export function CreatorProfileEditor({
                       </Field.Root>
                     </HookForm.Field>
                   </Field.Group>
-                </Accordion.Content>
-              </Accordion.Item>
+                </BuilderCollapsibleContent>
+              </BuilderCollapsible>
 
-              <Accordion.Item value="socials">
-                <SectionAccordionTrigger>
+              <BuilderCollapsible
+                open={openSection === 'socials'}
+                onOpenChange={open => setOpenSection(open ? 'socials' : null)}
+              >
+                <SectionCollapsibleTrigger>
                   <BuilderSectionHeader
                     icon={AtSignIcon}
                     title={<Trans message="Social links" />}
@@ -593,8 +591,8 @@ export function CreatorProfileEditor({
                       <Trans message="Instagram, X, TikTok, and more." />
                     }
                   />
-                </SectionAccordionTrigger>
-                <Accordion.Content className="border-t pt-4">
+                </SectionCollapsibleTrigger>
+                <BuilderCollapsibleContent>
                   <Field.Group className="max-w-2xl gap-3">
                     {visibleSocials.map(type => {
                       const social = SocialsList[type];
@@ -634,18 +632,21 @@ export function CreatorProfileEditor({
                         </Button>
                       )}
                   </Field.Group>
-                </Accordion.Content>
-              </Accordion.Item>
+                </BuilderCollapsibleContent>
+              </BuilderCollapsible>
 
-              <Accordion.Item value="actions">
-                <SectionAccordionTrigger>
+              <BuilderCollapsible
+                open={openSection === 'actions'}
+                onOpenChange={open => setOpenSection(open ? 'actions' : null)}
+              >
+                <SectionCollapsibleTrigger>
                   <BuilderSectionHeader
                     icon={LinkIcon}
                     title={<Trans message="Actions" />}
                     description={<Trans message="Message button settings." />}
                   />
-                </SectionAccordionTrigger>
-                <Accordion.Content className="border-t pt-4">
+                </SectionCollapsibleTrigger>
+                <BuilderCollapsibleContent>
                   <Field.Group className="max-w-2xl gap-3">
                     <Field.Root
                       orientation="horizontal"
@@ -700,11 +701,14 @@ export function CreatorProfileEditor({
                       </HookForm.Field>
                     )}
                   </Field.Group>
-                </Accordion.Content>
-              </Accordion.Item>
+                </BuilderCollapsibleContent>
+              </BuilderCollapsible>
 
-              <Accordion.Item value="products">
-                <SectionAccordionTrigger
+              <BuilderCollapsible
+                open={openSection === 'products'}
+                onOpenChange={open => setOpenSection(open ? 'products' : null)}
+              >
+                <SectionCollapsibleTrigger
                   descriptionPhrase={trans(
                     message(':selected of :total products featured', {
                       values: {
@@ -729,8 +733,8 @@ export function CreatorProfileEditor({
                       </Badge>
                     }
                   />
-                </SectionAccordionTrigger>
-                <Accordion.Content className="border-t pt-4">
+                </SectionCollapsibleTrigger>
+                <BuilderCollapsibleContent>
                   <div className="flex max-w-2xl flex-col gap-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-muted-foreground">
@@ -828,9 +832,9 @@ export function CreatorProfileEditor({
                       </Empty.Root>
                     )}
                   </div>
-                </Accordion.Content>
-              </Accordion.Item>
-            </Accordion.Root>
+                </BuilderCollapsibleContent>
+              </BuilderCollapsible>
+            </div>
           )}
         </div>
       </HookForm.Root>
