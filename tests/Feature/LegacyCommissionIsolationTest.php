@@ -185,7 +185,8 @@ class LegacyCommissionIsolationTest extends TestCase
         $this->assertSame('paid', $invoice->fresh()->status);
         $this->assertSame(2500, (int) CommissionAccrual::query()
             ->where('creator_id', $order->creator_id)
-            ->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->where('paid_at', '>=', CarbonImmutable::now('Africa/Nairobi')->startOfMonth()->utc())
+            ->where('paid_at', '<', CarbonImmutable::now('Africa/Nairobi')->addMonth()->startOfMonth()->utc())
             ->whereHas('order', fn ($query) => $query->whereNull('monetization_policy'))
             ->sum('fee_cents'));
 
@@ -202,7 +203,8 @@ class LegacyCommissionIsolationTest extends TestCase
         $this->travelTo(CarbonImmutable::parse('2026-11-01 00:01:00', 'Africa/Nairobi'));
         $this->assertSame(0, (int) CommissionAccrual::query()
             ->where('creator_id', $order->creator_id)
-            ->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->where('paid_at', '>=', CarbonImmutable::now('Africa/Nairobi')->startOfMonth()->utc())
+            ->where('paid_at', '<', CarbonImmutable::now('Africa/Nairobi')->addMonth()->startOfMonth()->utc())
             ->whereHas('order', fn ($query) => $query->whereNull('monetization_policy'))
             ->sum('fee_cents'));
         $this->travelBack();
