@@ -48,7 +48,7 @@ describe('AdminFinancialSettingsPage', () => {
     {
       id: 1,
       name: 'Commercial Bank of Ethiopia (CBE)',
-      code: 'cbe',
+      code: 'bank_transfer',
       destination_label: 'Account Number',
       minimum_amount_cents: 10000,
       maximum_amount_cents: 50000000,

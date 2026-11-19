@@ -485,7 +485,8 @@ function RequestWithdrawalModal({
   onSuccess: () => Promise<void>;
 }) {
   const approvedDestinations = destinations.filter(d =>
-    d.is_active && d.status === 'active' && !!d.approved_at && d.withdrawal_method?.is_active === true
+    d.is_active && d.status === 'active' && !!d.approved_at && d.withdrawal_method?.is_active === true &&
+    ['cbebirr', 'cbe', 'mpesa', 'telebirr', 'yaya'].includes((d.bank_code ?? '').toLowerCase())
   );
   const defaultDest = approvedDestinations.find(d => d.is_default) ?? approvedDestinations[0];
   const [selectedDestId, setSelectedDestId] = useState<number | null>(null);

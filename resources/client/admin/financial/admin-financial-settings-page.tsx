@@ -317,7 +317,9 @@ function PayoutMethodsTab() {
     setLoading(true);
     try {
       const methodRes = await apiClient.get('/api/v1/admin/financial/withdrawal-methods');
-      setMethods(methodRes.data.data ?? []);
+      setMethods((methodRes.data.data ?? []).filter((method: WithdrawalMethod) =>
+        ['bank_transfer', 'cbebirr', 'mpesa', 'telebirr', 'yaya'].includes(method.code)
+      ));
       setError(undefined);
     } catch (e: unknown) {
       setError(getApiErrorMessage(e));
@@ -349,7 +351,7 @@ function PayoutMethodsTab() {
         <Card.Header>
           <Card.Title><Trans message="Withdrawal providers" /></Card.Title>
           <Card.Description>
-            <Trans message="Enabled Chapa v1 ETB banks and wallets appear in seller payout account setup. PayPal and manual payouts are legacy methods and are not available as Chapa receiving accounts." />
+            <Trans message="Only CBE Birr, Commercial Bank of Ethiopia, M-Pesa, telebirr and YaYaWallet can be offered. Sellers see a provider only if it is enabled here and active in the Chapa v1 bank list." />
           </Card.Description>
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <p className="text-xs text-muted-foreground">
@@ -387,7 +389,7 @@ function PayoutMethodsTab() {
                 </Table.Row>
               ))}
               {methods.length === 0 && (
-                <Table.Row><Table.Cell colSpan={4}><Trans message="No withdrawal methods available." /></Table.Cell></Table.Row>
+                <Table.Row><Table.Cell colSpan={4}><Trans message="No supported Chapa payout methods available." /></Table.Cell></Table.Row>
               )}
             </Table.Body>
           </Table.Root>

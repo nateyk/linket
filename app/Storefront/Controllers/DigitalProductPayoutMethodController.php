@@ -7,6 +7,7 @@ namespace App\Storefront\Controllers;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\Resources\DigitalProductPayoutMethodResource;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Http\JsonResponse;
@@ -249,6 +250,13 @@ class DigitalProductPayoutMethodController extends Controller
         }
 
         $code = $data['bank_code'];
+        if (!array_key_exists($code, ChapaPayoutService::PAYOUT_BANK_OPTIONS)) {
+            throw ValidationException::withMessages([
+                'bank_code' => __('Select a supported Chapa v1 bank or wallet.'),
+            ]);
+        }
+        // Labels come from our curated Chapa mapping, not arbitrary seller input.
+        $data['bank_name'] = ChapaPayoutService::PAYOUT_BANK_OPTIONS[$code]['name'];
         $number = preg_replace('/[\s-]/', '', (string) $data['destination']);
         $valid = match ($code) {
             'telebirr', 'cbebirr', 'mpesa' => (bool) preg_match('/^(?:0[79]\d{8}|(?:\+?251)[79]\d{8})$/', $number),
@@ -269,12 +277,12 @@ class DigitalProductPayoutMethodController extends Controller
 
     private function resolveWithdrawalMethod(?int $withdrawalMethodId, ?string $type, ?string $bankCode): DigitalProductWithdrawalMethod
     {
-        $wallets = ['telebirr', 'mpesa', 'yaya', 'cbebirr'];
         $bankCode = strtolower(trim((string) $bankCode));
-        $code = in_array($bankCode, $wallets, true) ? $bankCode : 'bank_transfer';
-        if ($code === 'bank_transfer' && ($bankCode === '' || $bankCode === 'other')) {
-            throw ValidationException::withMessages(['bank_code' => __('Select a supported bank or wallet.')]);
+        $option = ChapaPayoutService::PAYOUT_BANK_OPTIONS[$bankCode] ?? null;
+        if (!$option) {
+            throw ValidationException::withMessages(['bank_code' => __('Select a supported Chapa v1 bank or wallet.')]);
         }
+        $code = $option['method'];
 
         $query = DigitalProductWithdrawalMethod::query()->active()->where('code', $code);
         $method = $query->first();
@@ -308,6 +316,7 @@ class DigitalProductPayoutMethodController extends Controller
         abort_unless($payoutMethod->is_active, 422, __('Inactive account cannot be approved.'));
         $this->assertNoPendingWithdrawals($payoutMethod);
         abort_unless($payoutMethod->withdrawalMethod?->is_active, 422, __('This withdrawal provider is disabled.'));
+        abort_unless(ChapaPayoutService::canonicalBankCode((string) $payoutMethod->bank_code) !== null, 422, __('This legacy bank is not a Chapa payout destination.'));
         abort_unless($payoutMethod->status !== DigitalProductPayoutMethod::STATUS_DEACTIVATED, 422);
 
         $approved = $data['decision'] === 'approve';

@@ -16,7 +16,6 @@ import {
   EditIcon,
   EllipsisVerticalIcon,
   InboxIcon,
-  PlusIcon,
   BanIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
@@ -101,22 +100,13 @@ export function Component() {
             <ArrowLeftIcon />
             <Trans message="Withdrawals" />
           </Button>
-          <Button
-            color="primary"
-            size="sm"
-            render={<Link to="/admin/financial/withdrawal-methods/create" />}
-          >
-            <PlusIcon />
-            <span className="hidden xs:inline sm:inline">
-              <Trans message="New method" />
-            </span>
-          </Button>
+
         </div>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="min-w-0 overflow-x-hidden overflow-y-auto">
         <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-6 sm:px-0">
           <p className="mb-5 text-sm text-muted-foreground">
-            <Trans message="These legacy payout destinations are for creator withdrawals and historical Chapa records. Creator receiving-account reviews live under Receiving accounts." />
+            <Trans message="Configure limits for the five Chapa v1 payout providers. Unsupported legacy destinations are retained for historical records but cannot be enabled." />
           </p>
           <div className="mb-4 flex flex-wrap gap-2 sm:hidden">
             <Button
@@ -146,7 +136,7 @@ export function Component() {
                 <Trans message="Withdrawal destinations" />
               </Card.Title>
               <Card.Description>
-                <Trans message="Hidden from the direct-payment checkout experience. Keep this list for authorized withdrawal operations only." />
+                <Trans message="Only Chapa v1 payout destinations can be enabled. Available seller options also depend on Chapa's active ETB bank list." />
               </Card.Description>
             </Card.Header>
             <Card.Content className="min-w-0">
@@ -166,7 +156,7 @@ export function Component() {
                     <Trans message="No withdrawal methods" />
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    <Trans message="Create a method so creators can request payouts." />
+                    <Trans message="No supported Chapa v1 payout methods were found." />
                   </p>
                 </div>
               ) : (

@@ -70,6 +70,24 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         parent::tearDown();
     }
 
+    public function testCreatorCannotCreateUnrelatedBankAccountEvenWhenGenericBankMethodIsEnabled(): void
+    {
+        $controller = new DigitalProductPayoutMethodController();
+
+        try {
+            $controller->store($this->makePayoutRequest([
+                'bank_code' => 'awash',
+                'bank_name' => 'Awash Bank',
+                'destination' => '1234567890123',
+            ]));
+            $this->fail('Unsupported bank must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_code', $exception->errors());
+        }
+
+        $this->assertSame(0, DigitalProductPayoutMethod::query()->count());
+    }
+
     public function testCreatorCanSaveMultipleDestinationsAndFirstIsDefault(): void
     {
         $controller = new DigitalProductPayoutMethodController();
@@ -117,7 +135,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->assertSame('telebirr', $account->bank_code);
         $this->assertSame('Abebe Bikila', $account->account_holder);
         $this->assertSame('+251911223344', $account->destination);
-        $this->assertSame('Telebirr Wallet', $account->bank_name);
+        $this->assertSame('telebirr', $account->bank_name);
         $this->assertSame(DigitalProductPayoutMethod::STATUS_PENDING, $account->status);
     }
 
