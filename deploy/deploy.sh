@@ -273,15 +273,11 @@ if [[ $MIGRATE_RC -eq 0 ]]; then
   UPLOAD_SEED_RC=$?
   if [[ $UPLOAD_SEED_RC -ne 0 ]]; then
     MIGRATE_RC=$UPLOAD_SEED_RC
-  else
-    log "Ensuring the ChatGPT verified Pro test creator when configured"
-    (cd "$RELEASE_DIR" && "$PHP_BIN" artisan creator-ai:seed-test-pro --no-interaction)
-    SEED_RC=$?
-    if [[ $SEED_RC -ne 0 ]]; then
-      MIGRATE_RC=$SEED_RC
-    fi
   fi
-  # Clear settings cache again after seeder updates settings
+  # Never provision optional test creators or synthetic Pro payment records
+  # during production deployment. These are separate, explicit test-only
+  # operations; an existing test-account email must not block a safe release.
+  # Clear settings cache again after deployment seeders update settings
   (cd "$RELEASE_DIR" && $PHP_BIN artisan cache:forget settings.public 2>&1 | tail -n 3 || true)
 fi
 set -e
