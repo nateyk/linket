@@ -138,8 +138,8 @@ describe('CreatorWithdrawalsPage', () => {
     expect(await screen.findByText('Available Balance')).toBeTruthy();
     expect(screen.getByText('500.00 ETB')).toBeTruthy();
 
-    expect(screen.getByText('Held earnings')).toBeTruthy();
-    expect(screen.getByText('200.00 ETB')).toBeTruthy();
+    expect(screen.queryByText('Held earnings')).toBeNull();
+    expect(screen.queryByText('200.00 ETB')).toBeNull();
 
     expect(screen.getByText('Pending withdrawals')).toBeTruthy();
     expect(screen.getByText('100.00 ETB')).toBeTruthy();

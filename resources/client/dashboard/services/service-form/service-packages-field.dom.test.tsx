@@ -95,7 +95,7 @@ describe('Service Creation fixed package tiers', () => {
     expect(screen.queryByRole('region', {name: 'Standard package details'})).toBeNull();
     expect(screen.getByRole('button', {name: 'Edit Basic package'}).getAttribute('aria-pressed')).toBe('true');
     const basicTier = screen.getByRole('region', {name: 'Basic package'});
-    expect(basicTier.className).toContain('border-foreground/40');
+    expect(basicTier.className).toContain('border-primary/50');
     expect(basicTier.className).not.toContain('ring-primary');
     expect(within(basicTier).getByRole('switch', {name: 'Enable Basic package'})
       .getAttribute('data-size')).toBe('default');
@@ -106,8 +106,8 @@ describe('Service Creation fixed package tiers', () => {
     expect(screen.getByRole('region', {name: 'Premium package details'})).toBeTruthy();
     expect(screen.queryByRole('region', {name: 'Basic package details'})).toBeNull();
     expect(screen.getByRole('button', {name: 'Edit Premium package'}).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByRole('region', {name: 'Premium package'}).className).toContain('border-foreground/40');
-    expect(screen.getByRole('region', {name: 'Basic package'}).className).not.toContain('border-foreground/40');
+    expect(screen.getByRole('region', {name: 'Premium package'}).className).toContain('border-primary/50');
+    expect(screen.getByRole('region', {name: 'Basic package'}).className).not.toContain('border-primary/50');
     expect(screen.getAllByRole('textbox', {name: 'Price'})).toHaveLength(1);
   });
 
@@ -120,6 +120,12 @@ describe('Service Creation fixed package tiers', () => {
     await user.click(screen.getByRole('button', {name: 'Edit Standard package'}));
     await user.click(screen.getByRole('button', {name: 'Edit Basic package'}));
     expect(screen.getByRole('textbox', {name: 'Package description'})).toHaveProperty('value', 'Includes source files');
+  });
+
+  it('opens the first offered package instead of an empty Basic editor', () => {
+    renderField([pkg({name: 'Standard', price: '450'})]);
+    expect(screen.getByRole('region', {name: 'Standard package details'})).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'Edit Standard package'}).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('enables Standard directly with its fixed name, without adding Basic', async () => {
@@ -205,9 +211,12 @@ describe('Service Creation fixed package tiers', () => {
     expect(screen.queryByRole('button', {name: 'Remove feature Source files'})).toBeNull();
   });
 
-  it('requires an enabled tier before adding included features', () => {
+  it('hides feature editing until at least one tier is enabled', async () => {
     renderField([]);
-    expect(screen.getByRole('textbox', {name: 'Add an included feature'}).hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByRole('region', {name: 'Included features'})).toBeNull();
+    expect(screen.queryByRole('button', {name: 'Add feature'})).toBeNull();
+    await userEvent.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
+    expect(screen.getByRole('region', {name: 'Included features'})).toBeTruthy();
     expect(screen.getByRole('button', {name: 'Add feature'}).hasAttribute('disabled')).toBe(true);
   });
 
