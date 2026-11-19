@@ -260,18 +260,11 @@ function WithdrawalStatCards({
   loading: boolean;
 }) {
   return (
-    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <WithdrawalMetricCard
         icon={LandmarkIcon}
         label="Available Balance"
         valueInCents={available}
-        currency={currency}
-        loading={loading}
-      />
-      <WithdrawalMetricCard
-        icon={Clock3Icon}
-        label="Held earnings"
-        valueInCents={summary?.held_earnings_cents ?? 0}
         currency={currency}
         loading={loading}
       />

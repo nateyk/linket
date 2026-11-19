@@ -180,7 +180,7 @@ test('renders balance cards and settlement payout statuses', async () => {
   renderPage();
 
   expect(await screen.findByText('Available balance')).toBeTruthy();
-  expect(screen.getByText('Settling funds')).toBeTruthy();
+  expect(screen.queryByText('Settling funds')).toBeNull();
   expect(screen.getByText('Pending withdrawals')).toBeTruthy();
   expect(screen.getByText('Total withdrawn')).toBeTruthy();
   expect(await screen.findByText('Processing Settlement')).toBeTruthy();
