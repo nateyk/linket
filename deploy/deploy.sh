@@ -80,13 +80,17 @@ log "PHP $PHP_VER ($PHP_BIN)"
 if ! $PHP_BIN -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);' 2>&1; then
   fail "PHP $PHP_VER < 8.2 required"
 fi
+# Read the complete module listing before matching individual extensions.
+# With pipefail enabled, piping php -m to grep -q can report SIGPIPE when
+# grep exits on the first match, falsely rejecting a healthy PHP install.
+if ! PHP_MODULES="$("$PHP_BIN" -m 2>&1)"; then
+  fail "Unable to inspect PHP extensions ($PHP_BIN -m)"
+fi
 for ext in pdo_mysql mbstring openssl fileinfo curl zip bcmath intl; do
-  if ! $PHP_BIN -m 2>&1 | grep -qi "^${ext}\|^${ext} "; then
-    # case-insensitive fallback for gd naming
+  if ! grep -Eqi "^${ext}([[:space:]]|$)" <<< "$PHP_MODULES"; then
+    # Preserve the existing fileinfo compatibility exception.
     if [[ "$ext" == "fileinfo" ]]; then continue; fi
-    if ! $PHP_BIN -m 2>&1 | grep -qi "$ext"; then
-      fail "PHP extension missing: $ext (php -m)"
-    fi
+    fail "PHP extension missing: $ext (php -m)"
   fi
 done
 
