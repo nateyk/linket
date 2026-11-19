@@ -31,6 +31,7 @@ describe('Admin Chapa environment controls', () => {
         approval_url: merchant.transfer_approval_url, admin_step_up_required: false,
       }}});
       if (url.endsWith('/withdrawal-methods')) return Promise.resolve({data: {data: []}});
+      if (url.endsWith('/payout-policy')) return Promise.resolve({data: {data: {payout_hold_days: 0, minimum_payout_cents: 100}}});
       if (url.endsWith('/financial-summary')) return Promise.resolve({data: {data: {
         ledger_audit: {is_balanced: true, total_debits_cents: 0, total_credits_cents: 0,
           clearing_balance_cents: 0, total_creator_liabilities_cents: 0,
@@ -41,7 +42,7 @@ describe('Admin Chapa environment controls', () => {
       }}});
       throw Error('Unexpected request ' + url);
     });
-    api.put.mockResolvedValue({data: {data: merchant}});
+    api.put.mockImplementation((url: string, payload: unknown) => Promise.resolve({data: {data: url.endsWith('/payout-policy') ? payload : merchant}}));
     api.post.mockResolvedValue({data: {data: merchant}});
   });
 
@@ -105,6 +106,22 @@ describe('Admin Chapa environment controls', () => {
       {mode: 'live', confirmation: 'SWITCH TO LIVE', admin_password: 'unit-admin-password'},
     ));
     expect(await screen.findByText(/Checkout is paused until separately enabled/)).toBeTruthy();
+  });
+
+  it('loads and saves actual payout hold days and minimum withdrawal amount', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('tab', {name: /Commissions & policy/}));
+    const hold = await screen.findByLabelText('Earnings hold (days)') as HTMLInputElement;
+    const minimum = screen.getByLabelText('Minimum withdrawal (ETB)') as HTMLInputElement;
+    expect(hold.value).toBe('0');
+    expect(minimum.value).toBe('1.00');
+    fireEvent.change(hold, {target: {value: '2'}});
+    fireEvent.change(minimum, {target: {value: '50'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Save payout policy'}));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      '/api/v1/admin/marketplace/payout-policy', {payout_hold_days: 2, minimum_payout_cents: 5000},
+    ));
   });
 
   it('preserves the financial reconciliation panel', async () => {

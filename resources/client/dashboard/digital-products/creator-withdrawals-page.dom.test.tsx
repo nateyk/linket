@@ -40,6 +40,8 @@ describe('CreatorWithdrawalsPage', () => {
     reserved_payout_cents: 10000,
     paid_out_cents: 15000,
     lifetime_earnings_cents: 90000,
+    minimum_withdrawal_cents: 100,
+    payout_hold_days: 0,
     currency: 'ETB',
   };
 
@@ -226,6 +228,20 @@ describe('CreatorWithdrawalsPage', () => {
     expect(await screen.findByText('No approved payout account')).toBeTruthy();
     expect(screen.queryByRole('button', {name: /Confirm withdrawal/i})).toBeNull();
     expect(mockApiClient.post).not.toHaveBeenCalled();
+  });
+
+  it('honors the configured platform minimum even when a method allows less', async () => {
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') return Promise.resolve({data: {summary: {...mockSummary, available_for_payout_cents: 3000, minimum_withdrawal_cents: 5000}}});
+      if (url.includes('/api/v1/items/payout-requests')) return Promise.resolve({data: {data: []}});
+      if (url === '/api/v1/items/payout-methods') return Promise.resolve({data: {data: mockDestinations}});
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+    renderPage();
+    expect(await screen.findByText(/below the platform minimum withdrawal/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', {name: /Request withdrawal/i}));
+    expect((screen.getByLabelText(/Withdrawal amount/i) as HTMLInputElement).min).toBe('50');
+    expect(screen.getByRole('button', {name: /Confirm withdrawal/i})).toHaveProperty('disabled', true);
   });
 
   it('renders withdrawal history with status badges and destination labels', async () => {
