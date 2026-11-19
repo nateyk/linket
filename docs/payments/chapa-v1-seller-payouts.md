@@ -89,12 +89,15 @@ With a properly configured **Chapa TEST key** in Linket's platform settings, run
 ```bash
 php artisan chapa:v1:audit-test
 php artisan chapa:v1:audit-test --reference=EXISTING_TEST_REFERENCE
+php artisan chapa:v1:audit-test --reference=EXISTING_TEST_REFERENCE --transfer-amount-cents=2000
+php artisan chapa:v1:audit-test --payment-reference=EXISTING_TEST_CHECKOUT_REF --payment-amount-cents=1234
 ```
 
 This command:
 - refuses non-`CHASECK_TEST-` credentials before any request;
-- makes **GET-only** calls for the v1 bank list, ETB available/ledger balance and optionally an existing transfer verification;
+- makes **GET-only** calls for the v1 bank list, ETB available/ledger balance, optionally an existing transfer verification, and optionally a real TEST checkout verification with exact ETB amount and reference matching;
 - displays matching wallet slugs/IDs, status and provider verification *field names* without printing recipient account numbers or API credentials;
+- when `--transfer-amount-cents` is supplied, requires the existing TEST payout reference, exact ETB amount and final `success` status. A pending or failed transfer cannot pass strict settlement acceptance;
 - never creates transfers, changes payout states, retries submissions or touches the ledger.
 
 The command does **not** prove the actual Chapa approval callback signature derivation or enable live disbursements. Confirm callback details using genuine Chapa test-mode delivery and separately review redacted provider responses before go-live.
