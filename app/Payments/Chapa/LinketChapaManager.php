@@ -30,17 +30,16 @@ class LinketChapaManager
     public function platformSecret(): string
     {
         $settings = $this->settings ?? app(Settings::class);
-        $stored = $settings->get('billing.chapa.secret_key');
-
-        return filled($stored) ? (string) $stored : (string) config('services.chapa.secret', '');
+        return app(ChapaMerchantProfiles::class)->active('secret_key');
     }
 
     public function webhookSecret(): ?string
     {
         $settings = $this->settings ?? app(Settings::class);
 
-        return $settings->get('billing.chapa.webhook_secret')
-            ?: config('services.chapa.webhook_secret');
+        $selected = app(ChapaMerchantProfiles::class)->active('webhook_secret');
+
+        return $selected !== '' ? $selected : null;
     }
 
     public function platformClient(): ChapaClient

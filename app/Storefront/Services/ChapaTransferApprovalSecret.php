@@ -17,12 +17,12 @@ final class ChapaTransferApprovalSecret
 
     public function current(?string $mode = null): string
     {
-        if ($mode === null) {
-            $key = app(LinketChapaManager::class)->platformSecret();
-            $mode = str_starts_with($key, 'CHASECK_TEST-')
-                ? 'test'
-                : (str_starts_with($key, 'CHASECK-') ? 'live' : 'unconfigured');
-        }
+        $profiles = app(\App\Payments\Chapa\ChapaMerchantProfiles::class);
+        return $this->forMode($mode ?? $profiles->activeMode());
+    }
+
+    public function forMode(string $mode): string
+    {
         if (!in_array($mode, ['test', 'live'], true)) {
             return '';
         }
@@ -32,7 +32,13 @@ final class ChapaTransferApprovalSecret
             return $stored;
         }
 
-        // Preserve existing cPanel installations using an environment-only secret.
+        // Legacy environment fallback applies only to its original merchant mode.
+        $legacyKey = (string) (app(Settings::class)->get('billing.chapa.secret_key')
+            ?: config('services.chapa.secret', ''));
+        if (\App\Payments\Chapa\ChapaMerchantProfiles::modeForSecret($legacyKey) !== $mode) {
+            return '';
+        }
+
         return (string) config('services.chapa.transfer_approval_secret', '');
     }
 }

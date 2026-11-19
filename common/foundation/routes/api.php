@@ -307,6 +307,12 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('admin/storefront/creators/{user}', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'show'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods', [CreatorPaymentMethodsController::class, 'adminIndex'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods/{method}', [CreatorPaymentMethodsController::class, 'adminShow'])->middleware('auth:sanctum');
+        // Distinct TEST/LIVE Chapa v1 merchant profiles. Activation pauses checkout.
+        Route::get('admin/billing/chapa/environments', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'index'])->middleware('auth:sanctum');
+        Route::put('admin/billing/chapa/environments/{mode}', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'save'])->middleware(['auth:sanctum', 'throttle:10,1']);
+        Route::post('admin/billing/chapa/activate', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'switch'])->middleware(['auth:sanctum', 'throttle:3,1']);
+        Route::post('admin/billing/chapa/enable', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'enable'])->middleware(['auth:sanctum', 'throttle:3,1']);
+        Route::post('admin/billing/chapa/pause', [\App\Payments\Controllers\AdminChapaEnvironmentsController::class, 'pause'])->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('admin/billing/subscription-gateway', [\App\Payments\Controllers\AdminSubscriptionGatewayController::class, 'show'])->middleware('auth:sanctum');
         Route::put('admin/billing/subscription-gateway', [\App\Payments\Controllers\AdminSubscriptionGatewayController::class, 'update'])->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('admin/storefront/payment-method-catalog', [CreatorPaymentMethodsController::class, 'catalog'])->middleware('auth:sanctum');
