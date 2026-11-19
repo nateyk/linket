@@ -57,14 +57,21 @@ final class ChapaProfileSettingsWriter
             if ($value === '') {
                 continue;
             }
-            $invalid = trim($value) !== $value;
-            $controlCharacters = preg_match('/[\\x00-\\x1F\\x7F]/', $value) === 1;
-            if ($invalid || $controlCharacters) {
+            if ($this->containsInvalidCharacters($value)) {
                 throw ValidationException::withMessages([
                     $field => __('Chapa configuration contains invalid whitespace or control characters.'),
                 ]);
             }
         }
+    }
+
+    private function containsInvalidCharacters(string $value): bool
+    {
+        if (trim($value) !== $value) {
+            return true;
+        }
+
+        return preg_match('/[\\x00-\\x1F\\x7F]/', $value) === 1;
     }
 
     public function validateProviderSecret(string $secret): void
