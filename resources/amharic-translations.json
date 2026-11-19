@@ -10,6 +10,7 @@
   "[one :count chapter|other :count chapters]": "[one :count ምዕራፍ|other :count ምዕራፎች]",
   "[one :count file included|other :count files included]": "[one :count ፋይል ተካትቷል|other :count ፋይሎች ተካትተዋል]",
   "[one :count lesson|other :count lessons]": "[one :count ትምህርት|other :count ትምህርቶች]",
+  "Back": "ተመለስ",
   "A clear name, for example Logo design.": "ግልጽ ስም፣ ለምሳሌ የአርማ ዲዛይን።",
   "A custom logo and identity built for your brand.": "ለንግድ ምልክትዎ የሚስማማ ልዩ አርማና የምርት መለያ።",
   "A link to work you can show.": "ሊያሳዩት የሚችሉት ሥራ አገናኝ።",
