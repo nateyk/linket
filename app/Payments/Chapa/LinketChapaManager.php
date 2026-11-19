@@ -31,7 +31,7 @@ class LinketChapaManager
     {
         $settings = $this->settings ?? app(Settings::class);
         $profiles = new ChapaMerchantProfiles($this->settings);
-        $selected = $profiles->active('secret_key');
+        $selected = $profiles->active(\App\Payments\Chapa\ChapaProfileField::SecretKey);
         if ($selected !== '' || $profiles->activeMode() !== 'unconfigured') {
             return $selected;
         }
@@ -47,7 +47,7 @@ class LinketChapaManager
         $settings = $this->settings ?? app(Settings::class);
 
         $profiles = new ChapaMerchantProfiles($this->settings);
-        $selected = $profiles->active('webhook_secret');
+        $selected = $profiles->active(\App\Payments\Chapa\ChapaProfileField::WebhookSecret);
         if ($selected !== '' || $profiles->activeMode() !== 'unconfigured') {
             return $selected !== '' ? $selected : null;
         }
