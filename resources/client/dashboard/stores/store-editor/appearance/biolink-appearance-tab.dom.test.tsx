@@ -70,6 +70,18 @@ test('opening one appearance section closes the one already open', () => {
   expect(trigger('Buttons').getAttribute('aria-expanded')).toBe('true');
 });
 
+test('appearance collapsible controls can each open and close on repeated activation', () => {
+  renderAppearanceTab();
+  for (const name of ['Background', 'Buttons', 'Text']) {
+    const button = trigger(name);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+  }
+});
+
 test('appearance row titles use the shared section label (truncating title)', () => {
   renderAppearanceTab();
   const backgroundTrigger = trigger('Background');
