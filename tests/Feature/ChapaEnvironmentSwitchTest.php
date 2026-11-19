@@ -40,6 +40,21 @@ final class ChapaEnvironmentSwitchTest extends TestCase
         Http::fake(['https://api.chapa.co/v1/banks' => Http::response(['status' => 'success', 'data' => []])]);
     }
 
+    private function actingAdmin(): User
+    {
+        $admin = $this->actingAdmin();
+
+        return $admin;
+    }
+
+    private function pendingPayment(User $creator): ProSubscriptionPayment
+    {
+        return ProSubscriptionPayment::query()->create([
+            'uuid' => (string) Str::uuid(), 'creator_id' => $creator->id,
+            'amount_cents' => 100, 'status' => 'pending_payment',
+        ]);
+    }
+
     private function saveLive(): void
     {
         $this->putJson('/api/v1/admin/billing/chapa/environments/live', [
@@ -60,8 +75,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testLiveProfileIsEncryptedAndInactiveUntilExplicitSwitch(): void
     {
-        $this->setupMerchant();
-        $this->actingAs($this->admin(), 'sanctum');
+        $this->actingAdmin();
         $this->saveLive();
 
         $response = $this->getJson('/api/v1/admin/billing/chapa/environments')
@@ -78,19 +92,14 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testSwitchRequiresPasswordReleaseGateAndNoPendingPayments(): void
     {
-        $this->setupMerchant();
-        $admin = $this->admin();
-        $this->actingAs($admin, 'sanctum');
+        $admin = $this->actingAdmin();
         $this->saveLive();
 
         config()->set('services.chapa.live_mode_switch_allowed', false);
         $this->switchLive()->assertUnprocessable();
         config()->set('services.chapa.live_mode_switch_allowed', true);
 
-        $payment = ProSubscriptionPayment::query()->create([
-            'uuid' => (string) Str::uuid(), 'creator_id' => $admin->id,
-            'amount_cents' => 100, 'status' => 'pending_payment',
-        ]);
+        $payment = $this->pendingPayment($admin);
         $this->switchLive()->assertUnprocessable();
         $payment->delete();
 
@@ -106,8 +115,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testLiveCheckoutRequiresSecondConfirmationToEnable(): void
     {
-        $this->setupMerchant();
-        $this->actingAs($this->admin(), 'sanctum');
+        $this->actingAdmin();
         $this->saveLive();
         $this->switchLive()->assertOk();
 
@@ -133,8 +141,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testV2CredentialsCannotAccidentallyActivateTheV1Adapter(): void
     {
-        $this->setupMerchant();
-        $this->actingAs($this->admin(), 'sanctum');
+        $this->actingAdmin();
         $this->putJson('/api/v1/admin/billing/chapa/environments/test', [
             'public_key' => 'CHAPUBK_TEST-example', 'secret_key' => 'CHAPA_TEST-example',
         ])->assertUnprocessable();
@@ -142,8 +149,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
     }
     public function testProfileUpdateRejectsMixedEnvironmentKeyPair(): void
     {
-        $this->setupMerchant();
-        $this->actingAs($this->admin(), 'sanctum');
+        $this->actingAdmin();
         $this->putJson('/api/v1/admin/billing/chapa/environments/live', [
             'public_key' => 'CHAPUBK_TEST-wrong-environment',
             'secret_key' => 'CHASECK-fixture-live',
@@ -153,8 +159,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testPartialKeyPairCannotBeStored(): void
     {
-        $this->setupMerchant();
-        $this->actingAs($this->admin(), 'sanctum');
+        $this->actingAdmin();
         $this->putJson('/api/v1/admin/billing/chapa/environments/live', [
             'secret_key' => 'CHASECK-fixture-live',
         ])->assertUnprocessable();
@@ -165,13 +170,8 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testInactiveProfileCanBeConfiguredDuringExistingPendingSubscription(): void
     {
-        $this->setupMerchant();
-        $admin = $this->admin();
-        $this->actingAs($admin, 'sanctum');
-        $payment = ProSubscriptionPayment::query()->create([
-            'uuid' => (string) Str::uuid(), 'creator_id' => $admin->id,
-            'amount_cents' => 100, 'status' => 'pending_payment',
-        ]);
+        $admin = $this->actingAdmin();
+        $payment = $this->pendingPayment($admin);
         $this->saveLive();
         $this->assertSame('test', app(ChapaMerchantProfiles::class)->activeMode());
         $payment->delete();
@@ -179,13 +179,8 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testActiveProfileCannotRotateWithPendingProviderTransactions(): void
     {
-        $this->setupMerchant();
-        $admin = $this->admin();
-        $this->actingAs($admin, 'sanctum');
-        $payment = ProSubscriptionPayment::query()->create([
-            'uuid' => (string) Str::uuid(), 'creator_id' => $admin->id,
-            'amount_cents' => 100, 'status' => 'pending_payment',
-        ]);
+        $admin = $this->actingAdmin();
+        $payment = $this->pendingPayment($admin);
         $this->putJson('/api/v1/admin/billing/chapa/environments/test', [
             'webhook_secret' => 'rotated-webhook-secret-123',
         ])->assertUnprocessable();
@@ -194,8 +189,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testSwitchDoesNotEnableCheckoutIfProfileIsIncomplete(): void
     {
-        $this->setupMerchant();
-        $this->actingAs($this->admin(), 'sanctum');
+        $this->actingAdmin();
         $this->putJson('/api/v1/admin/billing/chapa/environments/live', [
             'public_key' => 'CHAPUBK-fixture-live',
             'secret_key' => 'CHASECK-fixture-live',
@@ -206,8 +200,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testLivePayoutFlagPreventsAccidentalCheckoutCutover(): void
     {
-        $this->setupMerchant();
-        $this->actingAs($this->admin(), 'sanctum');
+        $this->actingAdmin();
         $this->saveLive();
         config()->set('services.chapa.payouts_enabled', true);
         $this->switchLive()->assertUnprocessable();
@@ -216,8 +209,7 @@ final class ChapaEnvironmentSwitchTest extends TestCase
 
     public function testEmergencyPausePersistsWithoutChangingMerchantKeys(): void
     {
-        $this->setupMerchant();
-        $this->actingAs($this->admin(), 'sanctum');
+        $this->actingAdmin();
         $this->postJson('/api/v1/admin/billing/chapa/pause')
             ->assertOk()->assertJsonPath('data.checkout_enabled', false);
         $this->assertSame('CHASECK_TEST-legacy-fixture',
