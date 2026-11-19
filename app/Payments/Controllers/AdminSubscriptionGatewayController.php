@@ -52,6 +52,11 @@ final class AdminSubscriptionGatewayController extends Controller
             settings()->save([SubscriptionPaymentGateway::KEY => $data['gateway']]);
         }
         if ($webhookSecret !== '') {
+            if (in_array(settings()->get('billing.chapa.active_mode'), ['test', 'live'], true)) {
+                throw ValidationException::withMessages([
+                    'webhook_secret' => __('Use the environment-specific Chapa settings to rotate the webhook secret.'),
+                ]);
+            }
             settings()->save(['billing.chapa.webhook_secret' => $webhookSecret]);
         }
         if ($approvalSecret !== '') {
@@ -98,6 +103,11 @@ final class AdminSubscriptionGatewayController extends Controller
         if ($publicKey === '' && $secretKey === '') {
             return;
         }
+        if (in_array(settings()->get('billing.chapa.active_mode'), ['test', 'live'], true)) {
+            throw ValidationException::withMessages([
+                'secret_key' => __('Use Admin Finance environment profiles to rotate merchant credentials.'),
+            ]);
+        }
         if ($publicKey === '' || $secretKey === '') {
             throw ValidationException::withMessages([
                 'public_key' => __('Enter the public key and the secret key.'),
@@ -134,7 +144,13 @@ final class AdminSubscriptionGatewayController extends Controller
     /** @return array<string, mixed> */
     private function payload(): array
     {
-        $publicKey = settings()->get('billing.chapa.public_key');
+        $profiles = app(\App\Payments\Chapa\ChapaMerchantProfiles::class);
+        $publicKey = $profiles->active(\App\Payments\Chapa\ChapaProfileField::PublicKey);
+        // Before an explicit TEST/LIVE selection, preserve the legacy settings
+        // form's public-key display. Never cross modes once a profile is selected.
+        if ($profiles->activeMode() === 'unconfigured') {
+            $publicKey = (string) settings()->get('billing.chapa.public_key', '');
+        }
 
         return [
             'gateway' => SubscriptionPaymentGateway::current(),

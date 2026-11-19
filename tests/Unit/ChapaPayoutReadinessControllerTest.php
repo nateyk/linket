@@ -19,6 +19,7 @@ class ChapaPayoutReadinessControllerTest extends TestCase
         Gate::shouldReceive('authorize')->once()->with('admin.access');
         config()->set('app.url', 'https://linket.example.test');
         config()->set('services.chapa.test_payouts_enabled', true);
+        config()->set('services.chapa.secret', 'CHASECK_TEST-fixture-key-never-returned');
         config()->set('services.chapa.transfer_approval_secret', 'fixture-secret-never-returned');
         config()->set('services.chapa.admin_payout_step_up_required', true);
 

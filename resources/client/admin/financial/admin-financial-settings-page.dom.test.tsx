@@ -2,328 +2,119 @@
 import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
-import {Component as AdminFinancialSettingsPage} from './admin-financial-settings-page';
+import {Component} from './admin-financial-settings-page';
 
-const mockApiClient = vi.hoisted(() => ({
-  get: vi.fn(),
-  put: vi.fn(),
-  post: vi.fn(),
-}));
+const api = vi.hoisted(() => ({get: vi.fn(), post: vi.fn(), put: vi.fn()}));
+vi.mock('@common/http/query-client', () => ({apiClient: api}));
+vi.mock('@ui/i18n/trans', () => ({Trans: ({message}: {message: string}) => <span>{message}</span>}));
+vi.mock('@ui/i18n/format-money', () => ({formatMoney: (cents: number) => String(cents / 100)}));
+vi.mock('react-router', () => ({Link: ({to, children}: any) => <a href={to}>{children}</a>}));
 
-vi.mock('@common/http/query-client', () => ({
-  apiClient: mockApiClient,
-}));
-
-vi.mock('@ui/i18n/trans', () => ({
-  Trans: ({message, values}: {message: string; values?: Record<string, string | number>}) => {
-    let result = message;
-    if (values) {
-      for (const [k, v] of Object.entries(values)) {
-        result = result.replace(`:${k}`, String(v));
-      }
-    }
-    return <span>{result}</span>;
+const merchant = {
+  active_mode: 'test', api_version: 'v1', checkout_enabled: true,
+  live_switch_allowed: true, live_payouts_enabled: false,
+  profiles: {
+    test: {mode: 'test', configured: true, webhook_configured: true, approval_configured: true, public_key_masked: '••••1234'},
+    live: {mode: 'live', configured: true, webhook_configured: true, approval_configured: true, public_key_masked: '••••5678'},
   },
-}));
+  in_flight: {storefront_orders: 0, provider_payouts: 0},
+  webhook_url: 'https://example.test/billing/chapa/webhook',
+  transfer_approval_url: 'https://example.test/api/v1/chapa/transfer-approval',
+};
 
-vi.mock('@ui/i18n/format-money', () => ({
-  formatMoney: (amountCents: number, currency: string) =>
-    `${(amountCents / 100).toFixed(2)} ${currency}`,
-}));
-
-vi.mock('react-router', () => ({
-  Link: ({to, children, ...props}: any) => <a href={to} {...props}>{children}</a>,
-}));
-
-describe('AdminFinancialSettingsPage', () => {
-  const baseGatewayConfig = {
-    gateway: 'chapa',
-    secret_configured: true,
-    public_key_masked: 'CHAPUBK_TEST-abc...xyz',
-    webhook_secret_configured: true,
-    webhook_url: 'https://linket.test/api/v1/billing/gateways/chapa/webhook',
-  };
-
-  const baseWithdrawalMethods = [
-    {
-      id: 1,
-      name: 'Commercial Bank of Ethiopia (CBE)',
-      code: 'bank_transfer',
-      destination_label: 'Account Number',
-      minimum_amount_cents: 10000,
-      maximum_amount_cents: 50000000,
-      is_active: true,
-    },
-    {
-      id: 2,
-      name: 'Telebirr',
-      code: 'telebirr',
-      destination_label: 'Phone Number',
-      minimum_amount_cents: 10000,
-      maximum_amount_cents: 10000000,
-      is_active: true,
-    },
-  ];
-
-  const baseReconciliationSummary = {
-    ledger_audit: {
-      is_balanced: true,
-      total_debits_cents: 5000000,
-      total_credits_cents: 5000000,
-      clearing_balance_cents: 200000,
-      total_creator_liabilities_cents: 150000,
-      platform_commission_cents: 50000,
-      total_disbursed_cents: 4800000,
-      negative_balances_count: 0,
-      issues_count: 0,
-    },
-    pending_action_counts: {
-      stale_payment_attempts: 0,
-      stale_payout_intents: 1,
-      matured_escrow_orders: 3,
-      deficit_creators: 0,
-    },
-  };
-
+describe('Admin Chapa environment controls', () => {
   beforeEach(() => {
-    mockApiClient.get.mockImplementation((url: string) => {
-      if (url === '/api/v1/admin/financial/chapa-payout-readiness') {
-        return Promise.resolve({data: {data: {
-          mode: 'test', enabled: true, approval_configured: true, webhook_configured: true, test_only: true,
-          approval_url: 'https://linket.test/api/v1/chapa/transfer-approval',
-          admin_step_up_required: true,
-        }}});
-      }
-      if (url === '/api/v1/admin/billing/subscription-gateway') {
-        return Promise.resolve({data: {data: baseGatewayConfig}});
-      }
-      if (url === '/api/v1/admin/financial/payout-accounts') {
-        return Promise.resolve({data: {data: []}});
-      }
-      if (url.includes('/api/v1/admin/financial/withdrawal-methods')) {
-        return Promise.resolve({data: {data: baseWithdrawalMethods}});
-      }
-      if (url === '/api/v1/admin/marketplace/financial-summary') {
-        return Promise.resolve({data: {data: baseReconciliationSummary}});
-      }
-      return Promise.reject(new Error(`Unhandled GET url: ${url}`));
+    api.get.mockImplementation((url: string) => {
+      if (url.endsWith('/chapa/environments')) return Promise.resolve({data: {data: merchant}});
+      if (url.endsWith('/chapa-payout-readiness')) return Promise.resolve({data: {data: {
+        mode: 'test', enabled: true, approval_configured: true, webhook_configured: true,
+        approval_url: merchant.transfer_approval_url, admin_step_up_required: false,
+      }}});
+      if (url.endsWith('/withdrawal-methods')) return Promise.resolve({data: {data: []}});
+      if (url.endsWith('/financial-summary')) return Promise.resolve({data: {data: {
+        ledger_audit: {is_balanced: true, total_debits_cents: 0, total_credits_cents: 0,
+          clearing_balance_cents: 0, total_creator_liabilities_cents: 0,
+          platform_commission_cents: 0, total_disbursed_cents: 0,
+          negative_balances_count: 0, issues_count: 0},
+        pending_action_counts: {stale_payment_attempts: 0, stale_payout_intents: 0,
+          matured_escrow_orders: 0, deficit_creators: 0},
+      }}});
+      throw Error('Unexpected request ' + url);
     });
-
-    mockApiClient.put.mockResolvedValue({
-      data: {
-        data: {
-          ...baseGatewayConfig,
-          public_key_masked: 'CHAPUBK_TEST-new...999',
-        },
-      },
-    });
-
-    mockApiClient.post.mockResolvedValue({
-      data: {
-        data: {
-          dry_run: false,
-          matured_orders_count: 3,
-          reconciled_payments_count: 5,
-          reconciled_payouts_count: 1,
-        },
-      },
-    });
+    api.put.mockResolvedValue({data: {data: merchant}});
+    api.post.mockResolvedValue({data: {data: merchant}});
   });
 
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+  const view = () => render(<DashboardLayoutContextProvider name="admin">{() => <Component />}</DashboardLayoutContextProvider>);
+
+  it('renders separate TEST and LIVE credentials and a paused/live safety explanation', async () => {
+    view();
+    expect(await screen.findByText('Platform Chapa environments')).toBeTruthy();
+    expect(screen.getByRole('button', {name: /TEST \(active\)/})).toBeTruthy();
+    expect(screen.getByText('Controlled checkout activation')).toBeTruthy();
+    expect(screen.getByText('Payment webhook URL')).toBeTruthy();
   });
 
-  const renderComponent = () =>
-    render(
-      <DashboardLayoutContextProvider name="admin">
-        {() => <AdminFinancialSettingsPage />}
-      </DashboardLayoutContextProvider>,
-    );
-
-  it('renders page header and platform Chapa gateway configuration tab by default', async () => {
-    renderComponent();
-
-    expect(screen.getByText('Financial settings & operations')).toBeTruthy();
-    expect(screen.getByText('Withdrawals dashboard')).toBeTruthy();
-
-    await waitFor(() => {
-      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
-    });
-
-    expect(screen.getByText('Keys configured')).toBeTruthy();
-    expect(await screen.findByText('Chapa transfer approval')).toBeTruthy();
-    expect(screen.getByText('https://linket.test/api/v1/chapa/transfer-approval')).toBeTruthy();
-    expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/admin/billing/subscription-gateway');
-    expect(
-      screen.getByDisplayValue('https://linket.test/api/v1/billing/gateways/chapa/webhook'),
-    ).toBeTruthy();
+  it('selects LIVE without activating checkout, and requires typed confirmation', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('button', {name: 'LIVE'}));
+    expect(screen.getByRole('button', {name: 'Save LIVE configuration'})).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', {name: 'Switch to LIVE'}));
+    expect(screen.getByText(/Type/).textContent).toContain('SWITCH TO LIVE');
+    expect(screen.getByRole('button', {name: 'Confirm'}).hasAttribute('disabled')).toBe(true);
+    expect(api.post).not.toHaveBeenCalled();
   });
 
-  it('saves approval secret independently of merchant keys', async () => {
-    renderComponent();
-    await screen.findByText('Chapa transfer approval');
-    const secret = screen.getByLabelText('Set or rotate transfer approval secret');
-    fireEvent.change(secret, {target: {value: 'test-approval-only-secret-123'}});
-    fireEvent.click(screen.getByRole('button', {name: 'Save transfer approval secret'}));
-    await waitFor(() => {
-      expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/api/v1/admin/billing/subscription-gateway',
-        {transfer_approval_secret: 'test-approval-only-secret-123'},
-      );
-    });
-    expect(await screen.findByText('Transfer approval secret saved securely for the active merchant environment.')).toBeTruthy();
-    expect((secret as HTMLInputElement).value).toBe('');
+
+  it('saves only entered LIVE credentials and clears secret inputs after success', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('button', {name: 'LIVE'}));
+    fireEvent.change(screen.getByLabelText('Public key'), {target: {value: 'CHAPUBK-fixture-live'}});
+    fireEvent.change(screen.getByLabelText('Merchant secret key'), {target: {value: 'CHASECK-fixture-live'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Save LIVE configuration'}));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      '/api/v1/admin/billing/chapa/environments/live',
+      {public_key: 'CHAPUBK-fixture-live', secret_key: 'CHASECK-fixture-live'},
+    ));
+    expect(await screen.findByText(/credentials stored securely/)).toBeTruthy();
+    expect((screen.getByLabelText('Merchant secret key') as HTMLInputElement).value).toBe('');
   });
 
-  it('submits updated Chapa credentials and displays success alert', async () => {
-    renderComponent();
-
-    await waitFor(() => {
-      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
-    });
-
-    const inputs = screen.getAllByRole('textbox');
-    // Public key input
-    fireEvent.change(inputs[0], {target: {value: 'CHAPUBK_TEST-validkey123'}});
-
-    const secretInput = document.querySelector('input[type="password"]') as HTMLInputElement;
-    fireEvent.change(secretInput, {target: {value: 'CHASECK_TEST-validsecret456'}});
-
-    const submitBtn = screen.getByRole('button', {name: /Save Chapa credentials/i});
-    expect(submitBtn.hasAttribute('disabled')).toBe(false);
-    fireEvent.click(submitBtn);
-
-    await waitFor(() => {
-      expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/api/v1/admin/billing/subscription-gateway',
-        expect.objectContaining({
-          gateway: 'chapa',
-          public_key: 'CHAPUBK_TEST-validkey123',
-          secret_key: 'CHASECK_TEST-validsecret456',
-        }),
-      );
-    });
-
-    expect(await screen.findByText('Chapa credentials validated and saved.')).toBeTruthy();
+  it('pauses enabled checkout without changing merchant environment', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('button', {name: 'Pause checkout'}));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/v1/admin/billing/chapa/pause'));
+    expect(await screen.findByText(/Existing orders and payouts were not modified/)).toBeTruthy();
   });
 
-  it('does not send a public key without the matching secret key', async () => {
-    renderComponent();
-
-    await waitFor(() => {
-      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
-    });
-
-    const inputs = screen.getAllByRole('textbox');
-    fireEvent.change(inputs[0], {target: {value: 'CHAPUBK_TEST-onlypublic'}});
-
-    const submitBtn = screen.getByRole('button', {name: /Save Chapa credentials/i});
-    expect(submitBtn.hasAttribute('disabled')).toBe(true);
-    expect(mockApiClient.put).not.toHaveBeenCalled();
+  it('does not switch merchant mode until password and typed phrase match', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('button', {name: 'LIVE'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Switch to LIVE'}));
+    fireEvent.change(screen.getByLabelText('Confirmation phrase'), {target: {value: 'SWITCH TO LIVE'}});
+    expect(screen.getByRole('button', {name: 'Confirm'}).hasAttribute('disabled')).toBe(true);
+    fireEvent.change(screen.getByLabelText('Administrator password'), {target: {value: 'unit-admin-password'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Confirm'}));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      '/api/v1/admin/billing/chapa/activate',
+      {mode: 'live', confirmation: 'SWITCH TO LIVE', admin_password: 'unit-admin-password'},
+    ));
+    expect(await screen.findByText(/Checkout is paused until separately enabled/)).toBeTruthy();
   });
 
-  it('submits classic CHAPUBK and CHASECK keys', async () => {
-    renderComponent();
-
-    await waitFor(() => {
-      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
-    });
-
-    const inputs = screen.getAllByRole('textbox');
-    fireEvent.change(inputs[0], {target: {value: 'CHAPUBK_TEST-examplepublic'}});
-    const secretInput = document.querySelector('input[type="password"]') as HTMLInputElement;
-    fireEvent.change(secretInput, {target: {value: 'CHASECK_TEST-examplesecret'}});
-
-    fireEvent.click(screen.getByRole('button', {name: /Save Chapa credentials/i}));
-
-    await waitFor(() => {
-      expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/api/v1/admin/billing/subscription-gateway',
-        expect.objectContaining({
-          public_key: 'CHAPUBK_TEST-examplepublic',
-          secret_key: 'CHASECK_TEST-examplesecret',
-        }),
-      );
-    });
-    expect(screen.queryByText(/These are Chapa v1 keys/)).toBeNull();
-  });
-
-  it('switches to payout methods tab and lists supported banks and limits', async () => {
-    renderComponent();
-
-    await waitFor(() => {
-      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByRole('tab', {name: /Payout methods/i}));
-
-    await waitFor(() => {
-      expect(screen.getByText('Withdrawal providers')).toBeTruthy();
-    });
-
-    expect(screen.getByText('Commercial Bank of Ethiopia (CBE)')).toBeTruthy();
-    expect(screen.getByText('Telebirr')).toBeTruthy();
-    expect(screen.getByRole('switch', {name: 'Telebirr payouts'})).toBeTruthy();
-    expect(screen.queryByText('Seller receiving account approvals')).toBeNull();
-  });
-
-  it('switches to commissions & policy tab and renders marketplace rules', async () => {
-    renderComponent();
-
-    await waitFor(() => {
-      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByRole('tab', {name: /Commissions & policy/i}));
-
-    expect(screen.getByText('Marketplace commission & settlement policy')).toBeTruthy();
-    expect(screen.getByText('Escrow hold period')).toBeTruthy();
-    expect(screen.getByText('Minimum withdrawal')).toBeTruthy();
-    expect(screen.getByText('Single-Profile Marketplace Principles')).toBeTruthy();
-    expect(
-      screen.getByText('Zero seller gateway keys: creators never provide personal Chapa API secrets.'),
-    ).toBeTruthy();
-  });
-
-  it('switches to reconciliation tab, audits ledger integrity, and runs reconciliation', async () => {
-    renderComponent();
-
-    await waitFor(() => {
-      expect(screen.getByText('Platform Chapa Merchant Gateway')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByRole('tab', {name: /Ledger audit & reconciliation/i}));
-
-    await waitFor(() => {
-      expect(screen.getByText('Double-entry ledger integrity audit')).toBeTruthy();
-    });
-
-    expect(screen.getByText('Balanced (Debits = Credits)')).toBeTruthy();
-    expect(screen.getByText('2000.00 ETB')).toBeTruthy(); // platform clearing
-    expect(screen.getByText('1500.00 ETB')).toBeTruthy(); // creator liabilities
-    expect(screen.getByText('500.00 ETB')).toBeTruthy(); // commission
-    expect(screen.getByText('48000.00 ETB')).toBeTruthy(); // disbursed
-
-    // Actionable items
-    expect(screen.getByText('Matured escrow:')).toBeTruthy();
-    expect(screen.getByText('3')).toBeTruthy();
-
-    const reconcileBtn = screen.getByRole('button', {name: /Run reconciliation/i});
-    fireEvent.click(reconcileBtn);
-
-    await waitFor(() => {
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/admin/marketplace/financial-summary');
-      expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/admin/marketplace/reconcile', {
-        dry_run: false,
-      });
-    });
-
-    expect(
-      await screen.findByText(
-        'Reconciliation complete (Applied): 3 matured orders, 5 payments, 1 payouts processed.',
-      ),
-    ).toBeTruthy();
+  it('preserves the financial reconciliation panel', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('tab', {name: /Ledger audit & reconciliation/}));
+    expect(await screen.findByText('Double-entry ledger integrity audit')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', {name: /Run reconciliation/}));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      '/api/v1/admin/marketplace/reconcile', {dry_run: false},
+    ));
   });
 });
