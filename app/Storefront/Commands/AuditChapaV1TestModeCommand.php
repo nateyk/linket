@@ -140,6 +140,9 @@ final class AuditChapaV1TestModeCommand extends Command
             ['currency', 'ETB'],
         ]);
         $this->line('Read-only payment verification; no order is fulfilled and no ledger entry is written.');
+        if ($status !== 'success') {
+            throw new RuntimeException('The test checkout has not settled successfully.');
+        }
     }
 
     /** @param array<string, mixed> $response */
