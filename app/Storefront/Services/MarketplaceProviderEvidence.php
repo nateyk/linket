@@ -10,7 +10,7 @@ use JsonException;
 final class MarketplaceProviderEvidence
 {
     private const GROUPS = [
-        'chapa_payments', 'chapa_refunds', 'chapa_payouts', 'verify_et_verifications',
+        'chapa_payments', 'chapa_refunds', 'chapa_payouts',
     ];
 
     /** @var array<string, array<string, array{amount_cents: int, currency: string, status: string}>> */

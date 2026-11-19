@@ -2,10 +2,10 @@
 
 namespace Tests\Unit;
 
-use App\Payments\VerifyEt\EthiopianNameNormalizer;
+use App\Storefront\Support\EthiopianNameNormalizer;
 use PHPUnit\Framework\TestCase;
 
-class VerifyEtNameNormalizerTest extends TestCase
+class CreatorPaymentNameNormalizerTest extends TestCase
 {
     public function testHonorificsAndPunctuationAreNormalized(): void
     {
