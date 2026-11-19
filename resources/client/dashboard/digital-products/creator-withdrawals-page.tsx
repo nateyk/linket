@@ -282,9 +282,11 @@ function WithdrawalReadinessNotice({
       <div className="min-w-0 space-y-1 text-muted-foreground">
         {available <= 0 && (
           <p>
-            <Trans message={held > 0
-              ? 'Your verified earnings are currently held. They can be withdrawn only after the payout hold period and ledger reconciliation.'
-              : 'There are no cleared earnings available yet. Check that your Chapa order is paid and belongs to this creator account.'} />{' '}
+            {held > 0 ? (
+              <Trans message="Your verified earnings are currently held. They can be withdrawn only after the payout hold period and ledger reconciliation." />
+            ) : (
+              <Trans message="There are no cleared earnings available yet. Check that your Chapa order is paid and belongs to this creator account." />
+            )}{' '}
             <Link to="/dashboard/orders" className="font-medium text-primary underline underline-offset-2">
               <Trans message="Review Orders & Sales" />
             </Link>
@@ -292,9 +294,11 @@ function WithdrawalReadinessNotice({
         )}
         {!hasApprovedDestination && (
           <p>
-            <Trans message={hasPayoutAccounts
-              ? 'Your payout account must be approved by an administrator and its provider enabled. Default does not mean approved.'
-              : 'Add a receiving account and obtain administrator approval before requesting a withdrawal.'} />{' '}
+            {hasPayoutAccounts ? (
+              <Trans message="Your payout account must be approved by an administrator and its provider enabled. Default does not mean approved." />
+            ) : (
+              <Trans message="Add a receiving account and obtain administrator approval before requesting a withdrawal." />
+            )}{' '}
             <Link to="/account-settings/receiving-accounts" className="font-medium text-primary underline underline-offset-2">
               <Trans message="Review payout accounts" />
             </Link>
