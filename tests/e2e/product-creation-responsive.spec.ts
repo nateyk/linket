@@ -335,8 +335,11 @@ test('keyboard-only product choice and Preview support focus return', async ({pa
   await expect(page).toHaveURL(/\/dashboard\/items\/new\/ebook$/);
 
   const preview = page.getByRole('button', {name: 'Preview', exact: true});
-  await preview.focus();
-  await page.keyboard.press('Enter');
+  await expect(preview).toBeVisible();
+  await expect(preview).toBeEnabled();
+  // Press on the locator itself: route hydration may replace the focused
+  // header button between separate focus() and keyboard.press() commands.
+  await preview.press('Enter');
   const dialog = page.getByRole('dialog', {name: 'Customer preview'});
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', {name: 'Close', exact: true}).first()).toBeVisible();
