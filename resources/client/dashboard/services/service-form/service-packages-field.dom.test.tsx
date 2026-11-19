@@ -122,6 +122,12 @@ describe('Service Creation fixed package tiers', () => {
     expect(screen.getByRole('textbox', {name: 'Package description'})).toHaveProperty('value', 'Includes source files');
   });
 
+  it('opens the first offered package instead of an empty Basic editor', () => {
+    renderField([pkg({name: 'Standard', price: '450'})]);
+    expect(screen.getByRole('region', {name: 'Standard package details'})).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'Edit Standard package'}).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('enables Standard directly with its fixed name, without adding Basic', async () => {
     const {changes} = renderField([]);
     await userEvent.click(screen.getByRole('switch', {name: 'Enable Standard package'}));
