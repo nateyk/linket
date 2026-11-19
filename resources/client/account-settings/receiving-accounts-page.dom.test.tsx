@@ -212,6 +212,28 @@ it('shows only admin-enabled Chapa v1 banks and wallets in seller dropdown', asy
   expect(api.get).toHaveBeenCalledWith('/api/v1/items/payout-methods');
 });
 
+it('shows every active bank returned by Chapa while excluding inactive banks', async () => {
+  api.get.mockImplementation((url: string) =>
+    url === '/api/v1/items/payout-banks'
+      ? Promise.resolve({data: {data: [
+          {code: 'awash', name: 'Awash Bank', type: 'bank_transfer'},
+          {code: 'boa', name: 'Bank of Abyssinia', type: 'bank_transfer'},
+          {code: 'dashen', name: 'Dashen Bank', type: 'bank_transfer'},
+          {code: 'hibret', name: 'Hibret Bank', type: 'bank_transfer'},
+          {code: 'nib', name: 'Nib International Bank', type: 'bank_transfer'},
+          {code: 'zemen', name: 'Zemen Bank', type: 'bank_transfer'},
+          {code: 'yaya', is_active: false},
+        ]}})
+      : Promise.resolve({data: {data: []}}),
+  );
+  render(<Component />);
+  expect(await screen.findByText('No payout accounts yet')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', {name: 'Add payout account'}));
+  const options = Array.from((screen.getByLabelText('Bank or Wallet') as HTMLSelectElement).options).map(o => o.value);
+  expect(options).toEqual(['awash', 'boa', 'dashen', 'hibret', 'nib', 'zemen']);
+  expect(options).not.toContain('yaya');
+});
+
 it('keeps account creation disabled if no providers are enabled', async () => {
   api.get.mockImplementation((url: string) =>
     url === '/api/v1/items/payout-banks'

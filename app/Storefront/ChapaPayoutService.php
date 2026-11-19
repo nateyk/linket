@@ -16,15 +16,22 @@ class ChapaPayoutService
 {
     public const WALLET_CODES = ['telebirr', 'mpesa', 'yaya', 'cbebirr'];
 
-    // The five destinations in Linket's Chapa v1 payout offering. Chapa's
-    // authenticated /v1/banks directory remains the authority on availability
-    // and the numeric bank_code sent to /v1/transfers.
+    // Curated names from the Chapa v1 bank/wallet selector. These are NOT
+    // a blanket availability list: the authenticated /v1/banks endpoint
+    // must still return an active ETB entry for the current merchant.
+    // Numeric transfer bank_code IDs are always taken from Chapa.
     public const PAYOUT_BANK_OPTIONS = [
+        'awash' => ['name' => 'Awash Bank', 'type' => 'bank_transfer', 'method' => 'bank_transfer'],
+        'boa' => ['name' => 'Bank of Abyssinia', 'type' => 'bank_transfer', 'method' => 'bank_transfer'],
         'cbebirr' => ['name' => 'CBEBirr', 'type' => 'cbebirr', 'method' => 'cbebirr'],
         'cbe' => ['name' => 'Commercial Bank of Ethiopia (CBE)', 'type' => 'bank_transfer', 'method' => 'bank_transfer'],
+        'dashen' => ['name' => 'Dashen Bank', 'type' => 'bank_transfer', 'method' => 'bank_transfer'],
+        'hibret' => ['name' => 'Hibret Bank', 'type' => 'bank_transfer', 'method' => 'bank_transfer'],
         'mpesa' => ['name' => 'M-Pesa', 'type' => 'mpesa', 'method' => 'mpesa'],
+        'nib' => ['name' => 'Nib International Bank', 'type' => 'bank_transfer', 'method' => 'bank_transfer'],
         'telebirr' => ['name' => 'telebirr', 'type' => 'telebirr', 'method' => 'telebirr'],
         'yaya' => ['name' => 'YaYaWallet', 'type' => 'yaya', 'method' => 'yaya'],
+        'zemen' => ['name' => 'Zemen Bank', 'type' => 'bank_transfer', 'method' => 'bank_transfer'],
     ];
 
     public static function canonicalBankCode(string $value): ?string
@@ -32,11 +39,17 @@ class ChapaPayoutService
         $key = strtolower((string) preg_replace('/[^a-zA-Z0-9]/', '', $value));
 
         return match ($key) {
+            'awash', 'awashbank' => 'awash',
+            'boa', 'bankofabyssinia', 'bankofabyssiniaboa', 'abyssiniabank' => 'boa',
             'cbebirr', 'cbebirrwallet' => 'cbebirr',
             'cbe', 'cbebank', 'commercialbankofethiopia', 'commercialbankofethiopiacbe' => 'cbe',
+            'dashen', 'dashenbank' => 'dashen',
+            'hibret', 'hibretbank', 'unitedbank', 'unitedbankethiopia' => 'hibret',
             'mpesa', 'mpesaethiopia' => 'mpesa',
+            'nib', 'nibbank', 'nibinternationalbank', 'nibinternational' => 'nib',
             'telebirr', 'telebirrethio', 'telebirrethiotelecom' => 'telebirr',
             'yaya', 'yayawallet' => 'yaya',
+            'zemen', 'zemenbank' => 'zemen',
             default => null,
         };
     }

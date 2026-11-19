@@ -8,6 +8,7 @@ use App\Payments\Chapa\ChapaV1TransferClient;
 use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Support\EtbMajorAmount;
+use App\Storefront\ChapaPayoutService;
 use Illuminate\Console\Command;
 use RuntimeException;
 use Throwable;
@@ -55,7 +56,9 @@ final class AuditChapaV1TestModeCommand extends Command
         }
 
         try {
-            $this->showWallets($client->banks($secret));
+            $banks = $client->banks($secret);
+            $this->showWallets($banks);
+            $this->showSupportedBanks($banks);
             $this->showBalance($client->balance($secret));
             if ($reference !== '') {
                 $this->showVerification(
@@ -90,6 +93,37 @@ final class AuditChapaV1TestModeCommand extends Command
         }
 
         $this->table(['Wallet', 'Chapa test catalog', 'Bank ID'], $rows);
+    }
+
+    /** @param array<int, array<string, mixed>> $banks */
+    private function showSupportedBanks(array $banks): void
+    {
+        $found = [];
+        foreach ($banks as $bank) {
+            if (!is_array($bank) || empty($bank['active']) || empty($bank['is_active'])
+                || strtoupper((string) ($bank['currency'] ?? '')) !== 'ETB'
+                || !filter_var($bank['id'] ?? null, FILTER_VALIDATE_INT)) {
+                continue;
+            }
+
+            $code = ChapaPayoutService::canonicalBankCode((string) ($bank['slug'] ?? ''))
+                ?? ChapaPayoutService::canonicalBankCode((string) ($bank['name'] ?? ''));
+            if ($code !== null && (ChapaPayoutService::PAYOUT_BANK_OPTIONS[$code]['method'] ?? '') === 'bank_transfer') {
+                $found[$code] = [
+                    ChapaPayoutService::PAYOUT_BANK_OPTIONS[$code]['name'],
+                    (string) $bank['id'],
+                ];
+            }
+        }
+
+        $rows = [];
+        foreach (ChapaPayoutService::PAYOUT_BANK_OPTIONS as $code => $option) {
+            if ($option['method'] === 'bank_transfer' && isset($found[$code])) {
+                $rows[] = [$option['name'], $code, $found[$code][1]];
+            }
+        }
+
+        $this->table(['Active Chapa TEST bank', 'Code', 'Bank ID'], $rows);
     }
 
     /** @param array<string, mixed> $response */

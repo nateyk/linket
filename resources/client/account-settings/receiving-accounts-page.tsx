@@ -55,11 +55,17 @@ export type BankOption = {
 // Names are display fallbacks; seller availability is loaded from authenticated
 // Chapa v1 /banks and filtered by Linket's enabled payout methods server-side.
 export const ETHIOPIAN_BANKS: BankOption[] = [
+  {code: 'awash', name: 'Awash Bank', type: 'bank_transfer'},
+  {code: 'boa', name: 'Bank of Abyssinia', type: 'bank_transfer'},
   {code: 'cbebirr', name: 'CBEBirr', type: 'cbebirr'},
   {code: 'cbe', name: 'Commercial Bank of Ethiopia (CBE)', type: 'bank_transfer'},
+  {code: 'dashen', name: 'Dashen Bank', type: 'bank_transfer'},
+  {code: 'hibret', name: 'Hibret Bank', type: 'bank_transfer'},
   {code: 'mpesa', name: 'M-Pesa', type: 'mpesa'},
+  {code: 'nib', name: 'Nib International Bank', type: 'bank_transfer'},
   {code: 'telebirr', name: 'telebirr', type: 'telebirr'},
   {code: 'yaya', name: 'YaYaWallet', type: 'yaya'},
+  {code: 'zemen', name: 'Zemen Bank', type: 'bank_transfer'},
 ];
 
 const logos: Record<string, string> = {cbe, cbebirr, telebirr};
@@ -113,8 +119,10 @@ function isValidAccountNumber(number: string, bankCode: string): boolean {
   }
   if (bankCode === 'yaya') return /^\d{12}$/.test(normalized);
   if (bankCode === 'cbe') return /^\d{13}$/.test(normalized);
-  if (bankCode === 'boa') return /^(?:\d{8}|\d{10}|\d{16})$/.test(normalized);
-  return true;
+  // Account-length conventions for banks vary; validate digits locally
+  // and let provider-side account checks/approval enforce the final format.
+  if (bankCode === 'boa') return /^\d{8,20}$/.test(normalized);
+  return /^\d{8,20}$/.test(normalized);
 }
 
 function PayoutAccountsInfo() {
@@ -251,7 +259,8 @@ export function Component() {
   const [accountHolder, setAccountHolder] = useState('');
   const [isDefault, setIsDefault] = useState(false);
 
-  const selectedBank = ETHIOPIAN_BANKS.find(b => b.code === bankCode);
+  const selectedBank = availableBanks.find(b => b.code === bankCode)
+    ?? ETHIOPIAN_BANKS.find(b => b.code === bankCode);
   const validNumber = isValidAccountNumber(accountNumber, bankCode);
   const invalidNumber = accountNumber.trim().length > 0 && !validNumber;
   const invalidName = accountHolder.trim().length > 0 && accountHolder.trim().length < 3;
@@ -271,11 +280,15 @@ export function Component() {
       }
 
       // Fail closed if Chapa is unavailable or returns no verified ETB providers.
-      setAvailableBanks(ETHIOPIAN_BANKS.filter(bank =>
-        methods.some((method: BankOption & {is_active?: boolean}) =>
-          method.code === bank.code && method.is_active !== false
-        )
-      ));
+      setAvailableBanks(methods.flatMap((method: BankOption & {is_active?: boolean}) => {
+        const fallback = ETHIOPIAN_BANKS.find(bank => bank.code === method.code);
+        if (!fallback || method.is_active === false) return [];
+        return [{
+          ...fallback,
+          name: method.name || fallback.name,
+          type: fallback.type,
+        }];
+      }));
       setAccounts(destinations);
       setLoadError(false);
     } catch {

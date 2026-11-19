@@ -27,6 +27,8 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
                 'data' => [
                     ['id' => 855, 'slug' => 'telebirr', 'currency' => 'ETB', 'is_active' => 1, 'active' => 1],
                     ['id' => 266, 'slug' => 'mpesa', 'currency' => 'ETB', 'is_active' => 0, 'active' => 0],
+                    ['id' => 333, 'slug' => 'awash_bank', 'name' => 'Awash Bank', 'currency' => 'ETB', 'is_active' => 1, 'active' => 1],
+                    ['id' => 444, 'slug' => 'hibret_bank', 'name' => 'Hibret Bank', 'currency' => 'ETB', 'is_active' => 0, 'active' => 0],
                 ],
             ]),
             'https://api.chapa.co/v1/balances' => Http::response([
@@ -82,6 +84,8 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
 
         $this->assertSame(0, Artisan::call('chapa:v1:audit-test'));
         $this->assertStringContainsString('telebirr', Artisan::output());
+        $this->assertStringContainsString('Awash Bank', Artisan::output());
+        $this->assertStringNotContainsString('Hibret Bank', Artisan::output());
         Http::assertSent(fn ($request) => $request->url() === 'https://api.chapa.co/v1/balances');
         Http::assertSentCount(2);
         Http::assertNotSent(fn ($request) => $request->method() !== 'GET');

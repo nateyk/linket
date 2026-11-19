@@ -106,7 +106,7 @@ export function Component() {
       <DashboardLayout.SectionContent className="min-w-0 overflow-x-hidden overflow-y-auto">
         <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-6 sm:px-0">
           <p className="mb-5 text-sm text-muted-foreground">
-            <Trans message="Configure limits for the five Chapa v1 payout providers. Unsupported legacy destinations are retained for historical records but cannot be enabled." />
+            <Trans message="Configure bank transfers and Chapa v1 wallet payouts. The Bank transfer switch controls all active Chapa-supported banks; wallet switches apply individually. Historical methods remain for audit records." />
           </p>
           <div className="mb-4 flex flex-wrap gap-2 sm:hidden">
             <Button
