@@ -189,6 +189,56 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
     }
 
+    public function testOneRecordDataArrayVerifiesExistingTestTransferExactly(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        $this->fakeReadOnlyEndpoints();
+        Http::fake([
+            'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
+                'status' => 'success',
+                'data' => [[
+                    'status' => 'success',
+                    'reference' => 'lk-po-TEST123',
+                    'currency' => 'ETB',
+                    'amount' => '20.00',
+                    'account_number' => '251911223344',
+                ]],
+            ]),
+        ]);
+
+        $this->assertSame(0, Artisan::call('chapa:v1:audit-test', [
+            '--reference' => 'lk-po-TEST123',
+            '--transfer-amount-cents' => '2000',
+        ]));
+        $output = Artisan::output();
+        $this->assertStringContainsString('returned 1 record(s)', $output);
+        $this->assertStringContainsString('settlement verified', $output);
+        $this->assertStringNotContainsString('251911223344', $output);
+        Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+    }
+
+    public function testListResponseWithoutIdentityDoesNotClaimSettlement(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        $this->fakeReadOnlyEndpoints();
+        Http::fake([
+            'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
+                'status' => 'success',
+                'data' => [['status' => 'success']],
+            ]),
+        ]);
+
+        $this->assertSame(1, Artisan::call('chapa:v1:audit-test', [
+            '--reference' => 'lk-po-TEST123',
+            '--transfer-amount-cents' => '2000',
+        ]));
+        $output = Artisan::output();
+        $this->assertStringContainsString('reference matches', $output);
+        $this->assertStringContainsString('no', $output);
+        $this->assertStringNotContainsString('settlement verified', $output);
+        Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+    }
+
     public function testTransferAmountWithoutReferenceIsRejectedBeforeProviderCalls(): void
     {
         $this->withSecret('CHASECK_TEST-fixture');

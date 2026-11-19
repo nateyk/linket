@@ -17,19 +17,40 @@ final class ChapaV1TransferVerificationGuard
     /** @param array<string, mixed> $response */
     public function status(StorefrontPayoutIntent $intent, array $response): string
     {
+        $data = self::verifiedTransferDetails($response);
+        $this->assertTransferIdentity($intent, $data);
+        $this->assertRecipientWhenPresent($intent, $data);
+
+        return strtolower(trim((string) ($data['status'] ?? '')));
+    }
+
+    /**
+     * Chapa v1 may wrap one transfer record in a one-element data array.
+     * Never select an arbitrary record from multiple candidates and never
+     * interpret lookup-level "success" as successful transfer settlement.
+     *
+     * @param array<string, mixed> $response
+     * @return array<string, mixed>
+     */
+    public static function verifiedTransferDetails(array $response): array
+    {
         if (strtolower((string) ($response['status'] ?? '')) !== 'success') {
             throw new RuntimeException('Chapa did not confirm a successful transfer verification lookup.');
         }
 
         $data = $response['data'] ?? null;
+        if (is_array($data) && array_is_list($data)) {
+            if (count($data) !== 1) {
+                throw new RuntimeException('Chapa did not return one unambiguous transfer record.');
+            }
+            $data = $data[0];
+        }
+
         if (!is_array($data) || array_is_list($data)) {
             throw new RuntimeException('Chapa did not return verifiable transfer details.');
         }
 
-        $this->assertTransferIdentity($intent, $data);
-        $this->assertRecipientWhenPresent($intent, $data);
-
-        return strtolower(trim((string) ($data['status'] ?? '')));
+        return $data;
     }
 
     /** @param array<string, mixed> $data */
