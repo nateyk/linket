@@ -63,7 +63,7 @@ export function ServiceFormSection({
 
   if (collapsible) {
     return (
-      <Collapsible open={expanded} onOpenChange={setExpanded}>
+      <Collapsible open={expanded || hasError} onOpenChange={setExpanded}>
         <section
           id={`service-step-${id}`}
           aria-labelledby={`service-step-${id}-heading`}
@@ -88,7 +88,7 @@ export function ServiceFormSection({
             )}
             <ChevronDownIcon
               aria-hidden="true"
-              className={cn('size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none', expanded && 'rotate-180')}
+              className={cn('size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none', (expanded || hasError) && 'rotate-180')}
             />
           </CollapsibleTrigger>
           <CollapsibleContent>
