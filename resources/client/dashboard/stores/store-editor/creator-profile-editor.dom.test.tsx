@@ -393,6 +393,19 @@ test('opening a new section closes the previous section', () => {
   expect(triggerByName('Actions').getAttribute('aria-expanded')).toBe('true');
 });
 
+test('content collapsible controls can close without changing saved profile data', async () => {
+  renderProfileEditor();
+  for (const name of ['Profile', 'Social links', 'Actions', 'Products']) {
+    const button = await screen.findByRole('button', {name});
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(preview()).toContain('|clean');
+  }
+});
+
 test('content sections start collapsed (nothing open by default)', () => {
   renderProfileEditor();
   for (const name of ['Profile', 'Social links', 'Actions', 'Products']) {
