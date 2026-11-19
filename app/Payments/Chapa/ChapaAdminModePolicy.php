@@ -31,7 +31,11 @@ final class ChapaAdminModePolicy
     public function assertReady(string $mode, ChapaMerchantProfiles $profiles): void
     {
         $status = $profiles->summary($mode);
-        if (!($status['configured'] && $status['webhook_configured'] && $status['approval_configured'])) {
+        if (in_array(false, [
+            $status['configured'],
+            $status['webhook_configured'],
+            $status['approval_configured'],
+        ], true)) {
             throw ValidationException::withMessages([
                 'mode' => __('Save merchant, webhook and transfer-approval credentials first.'),
             ]);
