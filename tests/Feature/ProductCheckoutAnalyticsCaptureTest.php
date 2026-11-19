@@ -116,14 +116,24 @@ class ProductCheckoutAnalyticsCaptureTest extends TestCase
         $this->assertNull($order->fresh()->buyer_referrer);
     }
 
-    public function testCheckoutCapturesBuyerCountryFromGeoipFallback(): void
+    public function testCheckoutDoesNotInventCountryForPrivateVisitorIp(): void
     {
         config(['geoip.default_location.iso_code' => 'US']);
         app()->forgetInstance('geoip');
 
         $order = $this->checkout($this->freeProduct());
 
-        $this->assertSame('US', $order->fresh()->buyer_country);
+        $this->assertNull($order->fresh()->buyer_country);
+    }
+
+    public function testCheckoutCapturesCountryFromAnAllowlistedIngressProxy(): void
+    {
+        config(['geoip.country_header_proxies' => '10.0.0.1']);
+        request()->headers->set('CF-IPCountry', 'ET');
+
+        $order = $this->checkout($this->freeProduct());
+
+        $this->assertSame('ET', $order->fresh()->buyer_country);
     }
 
     public function testLegacyOrdersWithoutAnalyticsColumnsStillInsertWithNulls(): void
