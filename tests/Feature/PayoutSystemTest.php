@@ -559,6 +559,33 @@ class PayoutSystemTest extends TestCase
         $this->assertNull($payout->fresh()->paid_at);
     }
 
+    public function testAdminCanSavePayoutPolicyAndValidationRejectsUnsafeMinimum(): void
+    {
+        $admin = $this->createAdmin();
+        $admin->permissions()->attach(Permission::query()->firstOrCreate(['name' => 'settings.update']));
+
+        $this->stateful()->actingAs($admin);
+        $this->getJson('/api/v1/admin/marketplace/payout-policy')
+            ->assertOk()
+            ->assertJsonPath('data.payout_hold_days', 0)
+            ->assertJsonPath('data.minimum_payout_cents', 100);
+
+        $this->putJson('/api/v1/admin/marketplace/payout-policy', [
+            'payout_hold_days' => 2,
+            'minimum_payout_cents' => 5000,
+        ])->assertOk()
+            ->assertJsonPath('data.payout_hold_days', 2)
+            ->assertJsonPath('data.minimum_payout_cents', 5000);
+
+        $this->assertSame(2, app(\App\Storefront\Services\MarketplacePayoutPolicy::class)->holdDays());
+        $this->assertSame(5000, app(\App\Storefront\Services\MarketplacePayoutPolicy::class)->minimumWithdrawalCents());
+
+        $this->putJson('/api/v1/admin/marketplace/payout-policy', [
+            'payout_hold_days' => -1,
+            'minimum_payout_cents' => 0,
+        ])->assertUnprocessable();
+    }
+
     public function testNonAdminCannotAccessAdminPayoutRoutes(): void
     {
         settings()->save(['kyc.enabled' => true]);
