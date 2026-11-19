@@ -14,6 +14,13 @@ final class ChapaMerchantProfiles
 {
     public const MODES = ['test', 'live'];
 
+    public function __construct(private readonly ?Settings $settings = null) {}
+
+    private function setting(string $key, mixed $default = null): mixed
+    {
+        return ($this->settings ?? app(Settings::class))->get($key, $default);
+    }
+
     public static function modeForSecret(string $key): string
     {
         if (str_starts_with($key, 'CHASECK_TEST-')) {
@@ -30,7 +37,7 @@ final class ChapaMerchantProfiles
 
     public function activeMode(): string
     {
-        $selected = (string) settings()->get('billing.chapa.active_mode', '');
+        $selected = (string) $this->setting('billing.chapa.active_mode', '');
         if (in_array($selected, self::MODES, true)) {
             return $selected;
         }
@@ -44,7 +51,7 @@ final class ChapaMerchantProfiles
             return '';
         }
 
-        $stored = settings()->get(self::key($mode, $field));
+        $stored = $this->setting(self::key($mode, $field));
         if (is_string($stored) && $stored !== '') {
             return $stored;
         }
@@ -55,8 +62,8 @@ final class ChapaMerchantProfiles
         }
         return match ($field) {
             'secret_key' => $this->legacySecret(),
-            'public_key' => (string) settings()->get('billing.chapa.public_key', ''),
-            'webhook_secret' => (string) (settings()->get('billing.chapa.webhook_secret')
+            'public_key' => (string) $this->setting('billing.chapa.public_key', ''),
+            'webhook_secret' => (string) ($this->setting('billing.chapa.webhook_secret')
                 ?: config('services.chapa.webhook_secret', '')),
         };
     }
@@ -83,7 +90,7 @@ final class ChapaMerchantProfiles
 
     private function legacySecret(): string
     {
-        $stored = settings()->get('billing.chapa.secret_key');
+        $stored = $this->setting('billing.chapa.secret_key');
 
         return is_string($stored) && $stored !== ''
             ? $stored : (string) config('services.chapa.secret', '');

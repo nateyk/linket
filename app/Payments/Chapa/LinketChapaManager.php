@@ -30,16 +30,30 @@ class LinketChapaManager
     public function platformSecret(): string
     {
         $settings = $this->settings ?? app(Settings::class);
-        return app(ChapaMerchantProfiles::class)->active('secret_key');
+        $profiles = new ChapaMerchantProfiles($this->settings);
+        $selected = $profiles->active('secret_key');
+        if ($selected !== '' || $profiles->activeMode() !== 'unconfigured') {
+            return $selected;
+        }
+
+        // Preserve injectable legacy adapter fixtures without allowing an
+        // explicit mode to fall back to the wrong merchant credentials.
+        $legacy = ($this->settings ?? app(Settings::class))->get('billing.chapa.secret_key');
+        return filled($legacy) ? (string) $legacy : (string) config('services.chapa.secret', '');
     }
 
     public function webhookSecret(): ?string
     {
         $settings = $this->settings ?? app(Settings::class);
 
-        $selected = app(ChapaMerchantProfiles::class)->active('webhook_secret');
+        $profiles = new ChapaMerchantProfiles($this->settings);
+        $selected = $profiles->active('webhook_secret');
+        if ($selected !== '' || $profiles->activeMode() !== 'unconfigured') {
+            return $selected !== '' ? $selected : null;
+        }
 
-        return $selected !== '' ? $selected : null;
+        return ($this->settings ?? app(Settings::class))->get('billing.chapa.webhook_secret')
+            ?: config('services.chapa.webhook_secret');
     }
 
     public function platformClient(): ChapaClient
