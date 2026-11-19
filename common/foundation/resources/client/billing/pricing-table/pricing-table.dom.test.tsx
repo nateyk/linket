@@ -64,7 +64,6 @@ test('public pricing displays the Chapa checkout summary without obsolete verifi
   expect(screen.queryByText(/lifetime verified sales/i)).toBeNull();
 });
 
-
 test('plan cards retain features and highlight only the recommended plan', () => {
   render(
     <PricingTable
@@ -138,9 +137,8 @@ test('annual savings compares equivalent monthly costs', () => {
   expect(screen.getByText('Save up to 17%')).toBeTruthy();
 });
 
-
 test('monthly pricing prefers a one-month price even if annual comes first', () => {
-  const plans = [
+  const plans: NonNullable<Product['prices']> = [
     {
       id: 9, amount: 6000, currency: 'ETB',
       interval: 'month', interval_count: 12,
