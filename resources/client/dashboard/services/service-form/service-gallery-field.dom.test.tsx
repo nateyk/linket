@@ -64,7 +64,7 @@ describe('service gallery field', () => {
     ).toBeNull();
   });
 
-  it('gives the cover the full width of the field', () => {
+  it('keeps the cover compact and responsive inside the field', () => {
     render(
       <ServiceGalleryField
         coverUrl=""
@@ -75,7 +75,7 @@ describe('service gallery field', () => {
     );
 
     const cover = screen.getByTestId('cropped-cover');
-    expect(cover.dataset.class).not.toContain('max-w-');
+    expect(cover.dataset.class).toContain('aspect-video w-full max-w-sm');
   });
 
   it('keeps the media section quiet rather than explaining it', () => {
