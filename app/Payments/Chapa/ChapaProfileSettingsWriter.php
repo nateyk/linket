@@ -12,15 +12,16 @@ final class ChapaProfileSettingsWriter
     /** @param array<string, string> $values */
     public function save(string $mode, array $values): void
     {
-        $this->assertKeyPair($values);
-        $this->assertPrefixes($mode, $values);
-        $this->assertCleanValues($values);
+        $profile = new ChapaProfileConfiguration($mode, $values);
+        $this->assertKeyPair($profile->values);
+        $this->assertPrefixes($profile);
+        $this->assertCleanValues($profile->values);
 
         if (($values['secret_key'] ?? '') !== '') {
             $this->validateProviderSecret($values['secret_key']);
         }
 
-        $this->persist($mode, $values);
+        $this->persist($profile);
     }
 
     /** @param array<string, string> $values */
@@ -33,11 +34,11 @@ final class ChapaProfileSettingsWriter
         }
     }
 
-    /** @param array<string, string> $values */
-    private function assertPrefixes(string $mode, array $values): void
+    private function assertPrefixes(ChapaProfileConfiguration $profile): void
     {
-        $secret = $values['secret_key'] ?? '';
-        $public = $values['public_key'] ?? '';
+        $secret = $profile->values['secret_key'] ?? '';
+        $public = $profile->values['public_key'] ?? '';
+        $mode = $profile->mode;
         if ($secret !== '' && ChapaMerchantProfiles::modeForSecret($secret) !== $mode) {
             throw ValidationException::withMessages([
                 'secret_key' => __('This key belongs to another Chapa environment or API version.'),
@@ -90,23 +91,24 @@ final class ChapaProfileSettingsWriter
         }
     }
 
-    /** @param array<string, string> $values */
-    private function persist(string $mode, array $values): void
+    private function persist(ChapaProfileConfiguration $profile): void
     {
         $updates = [];
+        $mode = $profile->mode;
+        $values = $profile->values;
         foreach (['public_key', 'secret_key', 'webhook_secret'] as $field) {
             if (($values[$field] ?? '') !== '') {
                 $updates[ChapaMerchantProfiles::key($mode, $field)] = $values[$field];
             }
         }
-        $this->saveApprovalSecret($mode, $values, $updates);
+        $this->saveApprovalSecret($profile, $updates);
     }
 
-    /** @param array<string, string> $values @param array<string, string> $updates */
-    private function saveApprovalSecret(string $mode, array $values, array $updates): void
+    /** @param array<string, string> $updates */
+    private function saveApprovalSecret(ChapaProfileConfiguration $profile, array $updates): void
     {
-        if (($values['transfer_approval_secret'] ?? '') !== '') {
-            $updates[ChapaTransferApprovalSecret::settingKey($mode)] = $values['transfer_approval_secret'];
+        if (($profile->values['transfer_approval_secret'] ?? '') !== '') {
+            $updates[ChapaTransferApprovalSecret::settingKey($profile->mode)] = $profile->values['transfer_approval_secret'];
         }
         if ($updates !== []) {
             settings()->save($updates);
