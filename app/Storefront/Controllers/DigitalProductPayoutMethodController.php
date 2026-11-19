@@ -290,6 +290,19 @@ class DigitalProductPayoutMethodController extends Controller
             throw ValidationException::withMessages(['withdrawal_method_id' => __('This payout method is unavailable.')]);
         }
 
+        try {
+            $available = app(ChapaPayoutService::class)->availableBankOptions();
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'bank_code' => __('Unable to confirm this payout destination with Chapa. Retry when the provider is available.'),
+            ]);
+        }
+        if (!in_array($bankCode, array_column($available, 'code'), true)) {
+            throw ValidationException::withMessages([
+                'bank_code' => __('This bank or wallet is currently unavailable for Chapa ETB payouts.'),
+            ]);
+        }
+
         return $method;
     }
 

@@ -19,14 +19,31 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         $this->app->instance(LinketChapaManager::class, $manager);
     }
 
-    private function fakeReadOnlyEndpoints(string $paymentStatus = 'success', string $transferStatus = 'pending'): void
-    {
+    private function fakeReadOnlyEndpoints(
+        string $paymentStatus = 'success',
+        string $transferStatus = 'pending',
+        bool $asList = false,
+        bool $missingIdentity = false,
+    ): void {
+        $transferData = [
+            'status' => $transferStatus,
+            'reference' => 'lk-po-TEST123',
+            'currency' => 'ETB',
+            'amount' => '20.00',
+            'account_number' => '251911223344',
+        ];
+        if ($missingIdentity) {
+            unset($transferData['reference'], $transferData['currency'], $transferData['amount']);
+        }
+
         Http::fake([
             'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'success',
                 'data' => [
                     ['id' => 855, 'slug' => 'telebirr', 'currency' => 'ETB', 'is_active' => 1, 'active' => 1],
                     ['id' => 266, 'slug' => 'mpesa', 'currency' => 'ETB', 'is_active' => 0, 'active' => 0],
+                    ['id' => 333, 'slug' => 'awash_bank', 'name' => 'Awash Bank', 'currency' => 'ETB', 'is_active' => 1, 'active' => 1],
+                    ['id' => 444, 'slug' => 'hibret_bank', 'name' => 'Hibret Bank', 'currency' => 'ETB', 'is_active' => 0, 'active' => 0],
                 ],
             ]),
             'https://api.chapa.co/v1/balances' => Http::response([
@@ -45,13 +62,7 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
             ]),
             'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
                 'status' => 'success',
-                'data' => [
-                    'status' => $transferStatus,
-                    'reference' => 'lk-po-TEST123',
-                    'currency' => 'ETB',
-                    'amount' => '20.00',
-                    'account_number' => '251911223344',
-                ],
+                'data' => $asList ? [$transferData] : $transferData,
             ]),
         ]);
     }
@@ -81,7 +92,11 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         $this->fakeReadOnlyEndpoints();
 
         $this->assertSame(0, Artisan::call('chapa:v1:audit-test'));
-        $this->assertStringContainsString('telebirr', Artisan::output());
+        // Artisan::output() drains the console output buffer; read it once.
+        $output = Artisan::output();
+        $this->assertStringContainsString('telebirr', $output);
+        $this->assertStringContainsString('Awash Bank', $output);
+        $this->assertStringNotContainsString('Hibret Bank', $output);
         Http::assertSent(fn ($request) => $request->url() === 'https://api.chapa.co/v1/balances');
         Http::assertSentCount(2);
         Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
@@ -182,6 +197,38 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
             '--transfer-amount-cents' => '2000',
         ]));
         Http::assertSentCount(3);
+        Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+    }
+
+    public function testOneRecordDataArrayVerifiesExistingTestTransferExactly(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        $this->fakeReadOnlyEndpoints('success', 'success', asList: true);
+
+        $this->assertSame(0, Artisan::call('chapa:v1:audit-test', [
+            '--reference' => 'lk-po-TEST123',
+            '--transfer-amount-cents' => '2000',
+        ]));
+        $output = Artisan::output();
+        $this->assertStringContainsString('returned 1 record(s)', $output);
+        $this->assertStringContainsString('settlement verified', $output);
+        $this->assertStringNotContainsString('251911223344', $output);
+        Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+    }
+
+    public function testListResponseWithoutIdentityDoesNotClaimSettlement(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        $this->fakeReadOnlyEndpoints('success', 'success', asList: true, missingIdentity: true);
+
+        $this->assertSame(1, Artisan::call('chapa:v1:audit-test', [
+            '--reference' => 'lk-po-TEST123',
+            '--transfer-amount-cents' => '2000',
+        ]));
+        $output = Artisan::output();
+        $this->assertStringContainsString('reference matches', $output);
+        $this->assertStringContainsString('no', $output);
+        $this->assertStringNotContainsString('settlement verified', $output);
         Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
     }
 

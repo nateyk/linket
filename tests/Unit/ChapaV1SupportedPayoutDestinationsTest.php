@@ -44,9 +44,9 @@ class ChapaV1SupportedPayoutDestinationsTest extends TestCase
             $service = $this->service();
             $options = $service->availableBankOptions();
 
-            $this->assertSame(['cbebirr', 'cbe', 'telebirr'], array_column($options, 'code'));
+            $this->assertSame(['awash', 'cbebirr', 'cbe', 'telebirr'], array_column($options, 'code'));
             $this->assertSame(
-                ['CBEBirr', 'Commercial Bank of Ethiopia (CBE)', 'telebirr'],
+                ['Awash Bank', 'CBEBirr', 'Commercial Bank of Ethiopia (CBE)', 'telebirr'],
                 array_column($options, 'name')
             );
             $this->assertSame(202, $service->resolveBank('cbe')['id']);
@@ -56,11 +56,23 @@ class ChapaV1SupportedPayoutDestinationsTest extends TestCase
         }
     }
 
-    public function testUnrelatedBankCannotBecomeAPayoutDestinationEvenIfChapaListsIt(): void
+    public function testUnsupportedProviderCannotBecomeAPayoutDestination(): void
     {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('not part of the supported Chapa payout methods');
-        $this->service()->resolveBank('awash');
+        $this->service()->resolveBank('madeupbank');
+    }
+
+    public function testBankAliasesResolveToCurrentChapaIdsInsteadOfHardcodedIds(): void
+    {
+        $service = $this->service();
+        $this->assertSame(206, $service->resolveBank('awash')['id']);
+        $this->assertSame('awash', ChapaPayoutService::canonicalBankCode('Awash Bank'));
+        $this->assertSame('boa', ChapaPayoutService::canonicalBankCode('Bank of Abyssinia'));
+        $this->assertSame('dashen', ChapaPayoutService::canonicalBankCode('Dashen Bank'));
+        $this->assertSame('hibret', ChapaPayoutService::canonicalBankCode('Hibret Bank'));
+        $this->assertSame('nib', ChapaPayoutService::canonicalBankCode('Nib International Bank'));
+        $this->assertSame('zemen', ChapaPayoutService::canonicalBankCode('Zemen Bank'));
     }
 
     public function testUnavailableChapaProviderCannotBeUsedForTransfers(): void

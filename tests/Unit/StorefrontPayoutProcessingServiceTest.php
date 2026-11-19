@@ -370,6 +370,84 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $intent->fresh()->status);
     }
 
+    public function testSingleRecordListVerificationCanSettleExactlyOnce(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->twice()->andReturn([
+            'status' => 'success',
+            'data' => [$this->verified()['data']],
+        ]);
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('disbursePayout')->once();
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger,
+            chapaPayoutService: $provider,
+        );
+
+        $service->verifyPayout($intent);
+        $service->verifyPayout($intent->fresh());
+
+        $this->assertSame('paid', $payout->fresh()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $intent->fresh()->status);
+    }
+
+    public function testAmbiguousListVerificationLeavesFundsReserved(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn([
+            'status' => 'success',
+            'data' => [$this->verified()['data'], $this->verified()['data']],
+        ]);
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+        $ledger->shouldNotReceive('releasePayoutReservation');
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger,
+            chapaPayoutService: $provider,
+        );
+
+        try {
+            $service->verifyPayout($intent);
+            $this->fail('Multiple records must fail closed.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('unambiguous', $exception->getMessage());
+        }
+
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $intent->fresh()->status);
+    }
+
+    public function testListVerificationWithWrongAmountCannotDisburse(): void
+    {
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $record = $this->verified()['data'];
+        $record['amount'] = '499.00';
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn([
+            'status' => 'success', 'data' => [$record],
+        ]);
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger,
+            chapaPayoutService: $provider,
+        );
+
+        $this->expectExceptionMessage('verification details do not match');
+        try {
+            $service->verifyPayout($this->intent($payout));
+        } finally {
+            $this->assertSame('processing', $payout->fresh()->status);
+        }
+    }
+
     public function testMismatchedProviderVerificationCannotSettle(): void
     {
         $provider = Mockery::mock(ChapaPayoutService::class);

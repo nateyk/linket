@@ -8,6 +8,8 @@ use App\Payments\Chapa\ChapaV1TransferClient;
 use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Support\EtbMajorAmount;
+use App\Storefront\Services\ChapaV1TransferVerificationGuard;
+use App\Storefront\ChapaPayoutService;
 use Illuminate\Console\Command;
 use RuntimeException;
 use Throwable;
@@ -55,7 +57,9 @@ final class AuditChapaV1TestModeCommand extends Command
         }
 
         try {
-            $this->showWallets($client->banks($secret));
+            $banks = $client->banks($secret);
+            $this->showWallets($banks);
+            $this->showSupportedBanks($banks);
             $this->showBalance($client->balance($secret));
             if ($reference !== '') {
                 $this->showVerification(
@@ -90,6 +94,37 @@ final class AuditChapaV1TestModeCommand extends Command
         }
 
         $this->table(['Wallet', 'Chapa test catalog', 'Bank ID'], $rows);
+    }
+
+    /** @param array<int, array<string, mixed>> $banks */
+    private function showSupportedBanks(array $banks): void
+    {
+        $found = [];
+        foreach ($banks as $bank) {
+            if (!is_array($bank) || empty($bank['active']) || empty($bank['is_active'])
+                || strtoupper((string) ($bank['currency'] ?? '')) !== 'ETB'
+                || !filter_var($bank['id'] ?? null, FILTER_VALIDATE_INT)) {
+                continue;
+            }
+
+            $code = ChapaPayoutService::canonicalBankCode((string) ($bank['slug'] ?? ''))
+                ?? ChapaPayoutService::canonicalBankCode((string) ($bank['name'] ?? ''));
+            if ($code !== null && (ChapaPayoutService::PAYOUT_BANK_OPTIONS[$code]['method'] ?? '') === 'bank_transfer') {
+                $found[$code] = [
+                    ChapaPayoutService::PAYOUT_BANK_OPTIONS[$code]['name'],
+                    (string) $bank['id'],
+                ];
+            }
+        }
+
+        $rows = [];
+        foreach (ChapaPayoutService::PAYOUT_BANK_OPTIONS as $code => $option) {
+            if ($option['method'] === 'bank_transfer' && isset($found[$code])) {
+                $rows[] = [$option['name'], $code, $found[$code][1]];
+            }
+        }
+
+        $this->table(['Active Chapa TEST bank', 'Code', 'Bank ID'], $rows);
     }
 
     /** @param array<string, mixed> $response */
@@ -159,11 +194,22 @@ final class AuditChapaV1TestModeCommand extends Command
     /** @param array<string, mixed> $response */
     private function showVerification(array $response, string $expectedReference, ?int $expectedCents): void
     {
-        $payload = $response['data'] ?? null;
-        if (!is_array($payload)) {
-            throw new RuntimeException('Unexpected Chapa transfer verification schema.');
+        // Report structure without exposing provider payloads or beneficiary
+        // details. A numeric data[0] wrapper is not a reference mismatch.
+        $data = $response['data'] ?? null;
+        if (is_array($data) && array_is_list($data)) {
+            $this->line('Chapa verification returned '.count($data).' record(s).');
+            $first = $data[0] ?? null;
+            $recognized = is_array($first)
+                ? array_values(array_intersect(
+                    ['status', 'reference', 'tx_ref', 'merchant_reference', 'amount', 'currency', 'account_number'],
+                    array_keys($first),
+                ))
+                : [];
+            $this->line('Recognized record fields: '.($recognized ? implode(', ', $recognized) : 'none'));
         }
 
+        $payload = ChapaV1TransferVerificationGuard::verifiedTransferDetails($response);
         $reference = (string) ($payload['reference'] ?? $payload['tx_ref'] ?? $payload['merchant_reference'] ?? '');
         $this->table(['Verification field', 'Test value'], [
             ['provider status', (string) ($payload['status'] ?? 'unspecified')],
@@ -171,7 +217,12 @@ final class AuditChapaV1TestModeCommand extends Command
             ['currency', (string) ($payload['currency'] ?? 'unspecified')],
             ['amount', is_numeric($payload['amount'] ?? null) ? (string) $payload['amount'] : 'unspecified'],
         ]);
-        $this->line('Response data fields: '.implode(', ', array_keys($payload)));
+        // Only show field names, never account numbers, recipient names or raw payloads.
+        $recognized = array_values(array_intersect(
+            ['status', 'reference', 'tx_ref', 'merchant_reference', 'amount', 'currency', 'account_number'],
+            array_keys($payload),
+        ));
+        $this->line('Recognized response fields: '.($recognized ? implode(', ', $recognized) : 'none'));
 
         if (!hash_equals($expectedReference, $reference)) {
             throw new RuntimeException('Chapa verification reference mismatch.');

@@ -6,6 +6,7 @@ namespace Tests\Unit;
 
 use App\Models\User;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\Exceptions\InsufficientBalanceException;
@@ -61,6 +62,17 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'maximum_amount_cents' => 1000000,
             'is_active' => true,
         ]);
+        $this->app->instance(ChapaPayoutService::class, new class extends ChapaPayoutService {
+            public function getBanks(): array
+            {
+                return [
+                    ['id' => 202, 'slug' => 'cbe_bank', 'name' => 'Commercial Bank of Ethiopia', 'currency' => 'ETB', 'active' => 1, 'is_active' => 1],
+                    ['id' => 855, 'slug' => 'telebirr', 'name' => 'telebirr', 'currency' => 'ETB', 'active' => 1, 'is_active' => 1],
+                    ['id' => 207, 'slug' => 'awash_bank', 'name' => 'Awash Bank', 'currency' => 'ETB', 'active' => 1, 'is_active' => 1],
+                    ['id' => 208, 'slug' => 'hibret_bank', 'name' => 'Hibret Bank', 'currency' => 'ETB', 'active' => 1, 'is_active' => 0],
+                ];
+            }
+        });
     }
 
     protected function tearDown(): void
@@ -76,11 +88,41 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
 
         try {
             $controller->store($this->makePayoutRequest([
-                'bank_code' => 'awash',
-                'bank_name' => 'Awash Bank',
+                'bank_code' => 'madeupbank',
+                'bank_name' => 'Unsupported bank',
                 'destination' => '1234567890123',
             ]));
             $this->fail('Unsupported bank must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_code', $exception->errors());
+        }
+
+        $this->assertSame(0, DigitalProductPayoutMethod::query()->count());
+    }
+
+    public function testCreatorCanUseActiveAwashBankWithGenericBankTransferMethod(): void
+    {
+        $response = (new DigitalProductPayoutMethodController())->store($this->makePayoutRequest([
+            'withdrawal_method_id' => $this->bankMethod->id,
+            'bank_code' => 'awash',
+            'bank_name' => 'Awash Bank',
+            'destination' => '1234567890123',
+        ]));
+
+        $this->assertSame(201, $response->getStatusCode());
+        $this->assertSame('awash', DigitalProductPayoutMethod::query()->firstOrFail()->bank_code);
+    }
+
+    public function testCreatorCannotSaveChapaInactiveBankEvenIfItIsInTheCuratedDirectory(): void
+    {
+        try {
+            (new DigitalProductPayoutMethodController())->store($this->makePayoutRequest([
+                'withdrawal_method_id' => $this->bankMethod->id,
+                'bank_code' => 'hibret',
+                'bank_name' => 'Hibret Bank',
+                'destination' => '1234567890123',
+            ]));
+            $this->fail('Inactive Chapa bank must not be saved.');
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('bank_code', $exception->errors());
         }
