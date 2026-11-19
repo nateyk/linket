@@ -24,6 +24,26 @@ test('deploy refuses missing intl before any migrations or activation', function
         ->and(file_exists($fixture->root.'/commands.jsonl'))->toBeFalse();
 });
 
+test('verbose PHP module output does not cause false extension failures under pipefail', function () {
+    $fixture = $this->deployment;
+    $bin = $fixture->root.'/bin/php';
+    $original = file_get_contents($bin);
+    $needle = "  printf '%s\\n' pdo_mysql mbstring openssl fileinfo curl zip bcmath intl";
+    $replacement = <<<'SH'
+  printf '%s\n' pdo_mysql mbstring openssl fileinfo curl zip bcmath intl
+  for i in {1..6000}; do printf '%s\n' "optional-synthetic-module-$i"; done
+SH;
+
+    expect($original)->toContain($needle);
+    file_put_contents($bin, str_replace($needle, $replacement, $original));
+
+    // Before the fix, grep -q would close the pipeline early and php -m could
+    // exit with SIGPIPE, falsely reporting that pdo_mysql was missing.
+    $result = $fixture->deploy();
+
+    $this->assertSame(0, $result->getExitCode(), $result->getOutput().$result->getErrorOutput());
+});
+
 test('artifact verification uses the explicit cPanel PHP binary over the environment default', function () {
     $result = $this->deployment->deploy(environment: ['PHP_BINARY' => '/bin/false']);
 
