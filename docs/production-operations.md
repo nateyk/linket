@@ -138,7 +138,7 @@ sha256sum "/backups/linket-"*.sql.gz | tail -1
 ```bash
 composer install --prefer-dist --no-interaction
 npm ci
-php artisan test --compact --filter='PaymentDispute|VerifyEtDirectCheckout|BuyerDownload|ProductionPreflight|PaymentRecovery'
+php artisan test --compact --filter='PaymentDispute|Chapa|ProductionPreflight|PaymentRecovery'
 composer audit
 npm audit
 npm run build
@@ -166,7 +166,7 @@ php artisan up
 php artisan linket:production-preflight --strict
 php artisan queue:failed
 # Confirm Admin → Transactions payment health: failed jobs, scheduler heartbeat,
-# Verify.et webhook failures, stale pending verifications.
+# and Chapa callback and settlement status.
 ```
 
 ### 5. Rollback
@@ -195,7 +195,7 @@ php artisan linket:production-preflight --json
 php artisan deploy:health --post                   # complementary deploy.sh checks
 ```
 
-Required checks include dispute migrations, Redis connectivity, queue driver, Horizon workers (when not sync), scheduler registration/heartbeat, Verify.et API key + webhook signing configuration (presence only), storage writability, and advisory counts for failed jobs, stale pending verifications, and webhook failures.
+Required checks include dispute migrations, Redis connectivity, queue driver, Horizon workers (when not sync), scheduler registration/heartbeat, Chapa configuration, storage writability, and failed payment job advisories.
 
 ## Deployment gate
 
