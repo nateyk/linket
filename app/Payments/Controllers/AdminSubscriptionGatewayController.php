@@ -145,7 +145,7 @@ final class AdminSubscriptionGatewayController extends Controller
     private function payload(): array
     {
         $profiles = app(\App\Payments\Chapa\ChapaMerchantProfiles::class);
-        $publicKey = $profiles->active('public_key');
+        $publicKey = $profiles->active(\App\Payments\Chapa\ChapaProfileField::PublicKey);
         // Before an explicit TEST/LIVE selection, preserve the legacy settings
         // form's public-key display. Never cross modes once a profile is selected.
         if ($profiles->activeMode() === 'unconfigured') {
