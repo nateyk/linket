@@ -4,8 +4,6 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
-import {Field} from '@shadcn/forms/field';
-import {Input} from '@shadcn/forms/input/input';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Table} from '@shadcn/table/table';
@@ -17,7 +15,6 @@ import {
   CheckCircle2Icon,
   CircleAlertIcon,
   CoinsIcon,
-  CopyIcon,
   CreditCardIcon,
   PlayIcon,
   ScaleIcon,
@@ -26,16 +23,9 @@ import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
 import {CurrencySettingsCard} from './currency-settings-card';
 import {ChapaPayoutReadinessCard} from './chapa-payout-readiness-card';
+import {ChapaEnvironmentManagerCard} from './chapa-environment-manager-card';
 
 type Tab = 'chapa' | 'currency' | 'payout-methods' | 'commission' | 'reconciliation';
-
-type GatewayConfig = {
-  gateway: string;
-  secret_configured: boolean;
-  public_key_masked: string | null;
-  webhook_secret_configured: boolean;
-  webhook_url: string;
-};
 
 type WithdrawalMethod = {
   id: number;
@@ -47,20 +37,8 @@ type WithdrawalMethod = {
   is_active: boolean;
 };
 
-const subscriptionGatewayUrl = '/api/v1/admin/billing/subscription-gateway';
 const financialSummaryUrl = '/api/v1/admin/marketplace/financial-summary';
 const reconcileUrl = '/api/v1/admin/marketplace/reconcile';
-
-function canSaveChapaCredentials(publicKey: string, secretKey: string, webhookSecret: string): boolean {
-  const hasPublic = publicKey.trim() !== '';
-  const hasSecret = secretKey.trim() !== '';
-  const hasWebhook = webhookSecret.trim() !== '';
-  if (hasPublic !== hasSecret) {
-    return false;
-  }
-
-  return (hasPublic && hasSecret) || hasWebhook;
-}
 
 type ReconciliationData = {
   ledger_audit: {
@@ -154,159 +132,13 @@ export function Component() {
 }
 
 function ChapaPlatformGatewayTab() {
-  const [config, setConfig] = useState<GatewayConfig>();
-  const [publicKey, setPublicKey] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-  const [webhookSecret, setWebhookSecret] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{type: 'error' | 'success'; text: string}>();
-  const [readinessRevision, setReadinessRevision] = useState(0);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient.get(subscriptionGatewayUrl);
-      setConfig(res.data.data);
-    } catch {
-      setStatusMsg({type: 'error', text: 'Unable to load Chapa gateway configuration.'});
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSaveChapaCredentials(publicKey, secretKey, webhookSecret)) {
-      return;
-    }
-    setSaving(true);
-    setStatusMsg(undefined);
-    try {
-      const payload: Record<string, string> = {gateway: 'chapa'};
-      if (publicKey.trim() && secretKey.trim()) {
-        payload.public_key = publicKey.trim();
-        payload.secret_key = secretKey.trim();
-      }
-      if (webhookSecret.trim()) payload.webhook_secret = webhookSecret.trim();
-
-      const res = await apiClient.put(subscriptionGatewayUrl, payload);
-      setConfig(res.data.data);
-      setPublicKey('');
-      setSecretKey('');
-      setWebhookSecret('');
-      setStatusMsg({type: 'success', text: 'Chapa credentials validated and saved.'});
-      setReadinessRevision(v => v + 1);
-    } catch (reason) {
-      setStatusMsg({type: 'error', text: getApiErrorMessage(reason)});
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const copyWebhookUrl = () => {
-    if (!config?.webhook_url) return;
-    void navigator.clipboard.writeText(config.webhook_url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (loading) return <TabLoadingSpinner />;
+  const [revision, setRevision] = useState(0);
 
   return (
-    <Card.Root className="min-w-0">
-      <Card.Header>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <Card.Title><Trans message="Platform Chapa Merchant Gateway" /></Card.Title>
-            <Card.Description>
-              <Trans message="All buyer orders and subscriptions flow into this platform merchant account. Individual creators do not need Chapa keys." />
-            </Card.Description>
-          </div>
-          <Badge variant={config?.secret_configured ? 'positive' : 'destructive'}>
-            {config?.secret_configured ? <Trans message="Keys configured" /> : <Trans message="Not configured" />}
-          </Badge>
-        </div>
-      </Card.Header>
-      <Card.Content className="space-y-6">
-        {statusMsg && (
-          <div role={statusMsg.type === 'error' ? 'alert' : 'status'} className={`flex items-center gap-2 rounded-input border p-3 text-sm ${statusMsg.type === 'error' ? 'border-destructive/40 bg-destructive/5 text-destructive' : 'border-positive/40 bg-positive/5 text-positive'}`}>
-            {statusMsg.type === 'error' ? <CircleAlertIcon className="size-4 shrink-0" /> : <CheckCircle2Icon className="size-4 shrink-0" />}
-            <span>{statusMsg.text}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field.Root>
-              <Field.Label><Trans message="Public key" /></Field.Label>
-              <Input
-                value={publicKey}
-                onChange={e => setPublicKey(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={config?.public_key_masked ?? 'CHAPUBK_TEST-...'}
-              />
-              <Field.Description><Trans message="Your Chapa public key. Test keys start with CHAPUBK_TEST- and live keys start with CHAPUBK-." /></Field.Description>
-            </Field.Root>
-
-            <Field.Root>
-              <Field.Label><Trans message="Secret key" /></Field.Label>
-              <Input
-                type="password"
-                value={secretKey}
-                onChange={e => setSecretKey(e.target.value)}
-                autoComplete="new-password"
-                spellCheck={false}
-                placeholder={config?.secret_configured ? '••••••••••••••••' : 'CHASECK_TEST-...'}
-              />
-              <Field.Description><Trans message="Secret key from the same page. Chapa checks it before saving." /></Field.Description>
-            </Field.Root>
-          </div>
-
-          <Field.Root>
-            <Field.Label><Trans message="Webhook signing secret (optional)" /></Field.Label>
-            <Input
-              type="password"
-              value={webhookSecret}
-              onChange={e => setWebhookSecret(e.target.value)}
-              autoComplete="new-password"
-              spellCheck={false}
-              placeholder={config?.webhook_secret_configured ? '••••••••••••••••' : 'Enter webhook secret...'}
-            />
-            <Field.Description><Trans message="Used to verify HMAC-SHA256 signatures on inbound Chapa webhooks." /></Field.Description>
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label><Trans message="Webhook callback URL" /></Field.Label>
-            <div className="flex min-w-0 gap-2">
-              <Input readOnly value={config?.webhook_url ?? ''} className="min-w-0 flex-1 font-mono text-xs" />
-              <Button type="button" className="shrink-0" variant="outline" onClick={copyWebhookUrl}>
-                <CopyIcon />
-                {copied ? <Trans message="Copied" /> : <Trans message="Copy" />}
-              </Button>
-            </div>
-            <Field.Description><Trans message="Register this endpoint in your Chapa Merchant Dashboard." /></Field.Description>
-          </Field.Root>
-
-          {(publicKey.trim() !== '') !== (secretKey.trim() !== '') && (
-            <p role="alert" className="text-sm text-destructive">
-              <Trans message="Enter the public key and the secret key together." />
-            </p>
-          )}
-
-          <Button type="submit" color="primary" disabled={saving || !canSaveChapaCredentials(publicKey, secretKey, webhookSecret)}>
-            {saving ? <Trans message="Saving & validating..." /> : <Trans message="Save Chapa credentials" />}
-          </Button>
-        </form>
-        <ChapaPayoutReadinessCard key={readinessRevision} />
-      </Card.Content>
-    </Card.Root>
+    <div className="space-y-4">
+      <ChapaEnvironmentManagerCard onUpdated={() => setRevision(current => current + 1)} />
+      <ChapaPayoutReadinessCard key={revision} />
+    </div>
   );
 }
 

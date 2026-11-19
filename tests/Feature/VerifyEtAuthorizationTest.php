@@ -30,27 +30,6 @@ class VerifyEtAuthorizationTest extends TestCase
             ->assertUnauthorized();
     }
 
-    public function testOnlyAdminsCanReadDirectOrderEvidenceSummaries(): void
-    {
-        $this->getJson('/api/v1/admin/storefront/direct-orders')->assertUnauthorized();
-        $this->stateful()->actingAs($this->createUser())
-            ->getJson('/api/v1/admin/storefront/direct-orders')->assertForbidden();
-    }
-
-    public function testCreatorCannotApproveProviderMismatches(): void
-    {
-        $this->stateful()->actingAs($this->createUser())
-            ->postJson('/api/v1/storefront/direct-orders/synthetic-order/manual-approve')->assertForbidden();
-    }
-
-    public function testAdminCannotApproveProviderMismatches(): void
-    {
-        $admin = $this->createUser();
-        $admin->permissions()->attach(Permission::query()->firstOrCreate(['name' => 'admin.access']));
-        $this->stateful()->actingAs($admin, 'sanctum')
-            ->postJson('/api/v1/admin/storefront/direct-orders/synthetic-order/approve')->assertStatus(409);
-    }
-
     public function testAuthenticatedCreatorCannotManageTheAdminPaymentMethodCatalog(): void
     {
         $this->stateful()->actingAs($this->createUser())

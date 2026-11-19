@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Storefront\Services;
 
-use App\Payments\VerifyEt\VerifyEtRetirementAudit;
 use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\PayoutRequest;
@@ -33,7 +32,6 @@ final class MarketplaceIndependentAudit
     public function __construct(
         private readonly MarketplaceEvidenceJournal $journal,
         private readonly MarketplaceReconciliationService $reconciliation,
-        private readonly VerifyEtRetirementAudit $legacy,
     ) {}
 
     /** @return array<string, mixed> */
@@ -45,7 +43,7 @@ final class MarketplaceIndependentAudit
             'candidate_for_manual_review' => false,
             'retirement_authorized' => false,
             'live_payouts_authorized' => false,
-            'counts' => ['payments' => 0, 'refunds' => 0, 'payouts' => 0, 'legacy_orders' => 0, 'legacy_verifications' => 0],
+            'counts' => ['payments' => 0, 'refunds' => 0, 'payouts' => 0],
             'issue_count' => 0,
             'issues' => [],
         ];
@@ -68,7 +66,6 @@ final class MarketplaceIndependentAudit
         $this->orders($evidence);
         $this->refunds($evidence);
         $this->payouts($evidence);
-        $this->historical($evidence);
         $this->orphanSaleJournals();
 
         if ($evidence === null) {
@@ -230,44 +227,6 @@ final class MarketplaceIndependentAudit
             'currency' => (string) $intent->currency,
             'statuses' => $statuses,
         ], ['record_type' => 'payout', 'record_id' => $payout->id]);
-    }
-
-    private function historical(?MarketplaceProviderEvidence $evidence): void
-    {
-        $snapshot = $this->legacy->snapshot();
-        $this->report['verify_et_retirement'] = $snapshot;
-        if (!($snapshot['candidate_for_manual_signoff'] ?? false)) {
-            $this->issue('verify_et_retirement_blocked', ['record_type' => 'legacy', 'record_id' => 0]);
-        }
-
-        StorefrontOrder::query()->where(function ($query): void {
-            $query->where('payment_gateway', 'verify_et')
-                ->orWhereIn('collection_owner', ['verify_et_creator', 'creator_chapa']);
-        })->chunkById(200, function ($orders): void {
-            foreach ($orders as $order) {
-                $this->count('legacy_orders');
-                if ($this->journal->hasOrderSale((int) $order->id)) {
-                    $this->issue('seller_collected_order_created_platform_liability', ['record_type' => 'order', 'record_id' => $order->id]);
-                }
-            }
-        });
-
-        if (!Schema::hasTable('direct_payment_verifications')) {
-            return;
-        }
-        DB::table('direct_payment_verifications')->orderBy('id')->chunkById(200,
-            function ($verifications) use ($evidence): void {
-                foreach ($verifications as $verification) {
-                    $this->count('legacy_verifications');
-                    $this->compare($evidence, [
-                        'group' => 'verify_et_verifications',
-                        'reference' => $verification->reference,
-                        'amount_cents' => (int) $verification->amount_cents,
-                        'currency' => (string) $verification->currency,
-                        'statuses' => [strtolower((string) $verification->status)],
-                    ], ['record_type' => 'verification', 'record_id' => $verification->id]);
-                }
-            });
     }
 
     private function orphanSaleJournals(): void
