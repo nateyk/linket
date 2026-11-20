@@ -7,9 +7,11 @@ namespace App\Storefront\Controllers;
 use App\Storefront\ChapaPayoutService;
 use App\Storefront\Models\StorefrontPayoutIntent;
 use App\Storefront\Services\ChapaTransferApprovalSecret;
+use App\Storefront\Services\ChapaV1PayoutMode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -20,14 +22,17 @@ final class ChapaV1TransferApprovalController extends Controller
 {
     public function __invoke(Request $request, ChapaPayoutService $service): JsonResponse
     {
-        if (!app(\App\Storefront\Services\ChapaV1PayoutMode::class)->enabled()) {
-            return response()->json(['message' => 'Transfer not approved'], 400);
+        if (!app(ChapaV1PayoutMode::class)->enabled()) {
+            return $this->reject('payouts_disabled');
         }
         $secret = app(ChapaTransferApprovalSecret::class)->current();
         $signature = (string) $request->header('Chapa-Signature', '');
 
+        if ($secret === '') {
+            return $this->reject('approval_secret_missing');
+        }
         if (!$this->isValidSignature($secret, $signature)) {
-            return response()->json(['message' => 'Transfer not approved'], 400);
+            return $this->reject($signature === '' ? 'signature_missing' : 'signature_invalid');
         }
 
         $validator = Validator::make($request->all(), [
@@ -39,7 +44,7 @@ final class ChapaV1TransferApprovalController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Transfer not approved'], 400);
+            return $this->reject('invalid_payload', ['fields' => array_keys($validator->failed())]);
         }
         $payload = $validator->validated();
 
@@ -48,19 +53,28 @@ final class ChapaV1TransferApprovalController extends Controller
             ->where('merchant_reference', $payload['reference'])
             ->first();
 
-        if (!$intent || !$service->approvalMatches($intent, $payload)) {
-            return response()->json(['message' => 'Transfer not approved'], 400);
+        if (!$intent) {
+            return $this->reject('intent_not_found');
+        }
+        $reason = $service->approvalMismatchReason($intent, $payload);
+        if ($reason !== null) {
+            return $this->reject($reason, ['intent_id' => $intent->id]);
         }
 
         // Idempotent callback: no transfer dispatch and no ledger mutation here.
         return response()->json(['message' => 'Transfer approved'], 200);
     }
+
+    /** @param array{fields?: list<string>, intent_id?: int} $context */
+    private function reject(string $reason, array $context = []): JsonResponse
+    {
+        Log::warning('chapa.transfer_approval_rejected', ['reason' => $reason, ...$context]);
+
+        return response()->json(['message' => 'Transfer not approved'], 400);
+    }
+
     private function isValidSignature(string $secret, string $signature): bool
     {
-        if ($secret === '') {
-            return false;
-        }
-
         if (preg_match('/^[0-9a-f]{64}$/i', $signature) !== 1) {
             return false;
         }

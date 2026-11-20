@@ -14,6 +14,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -158,15 +159,20 @@ class ChapaV1TransferApprovalContractTest extends TestCase
 
     public function testChangedBankRecipientAmountAndReferenceAreRejected(): void
     {
+        Log::spy();
+        $intentId = StorefrontPayoutIntent::query()->sole()->id;
         foreach ([
-            ['amount' => '500.01'],
-            ['bank' => 'mpesa'],
-            ['account_name' => 'Different Seller'],
-            ['account_number' => '251911223345'],
-            ['reference' => 'unknown-reference'],
-            ['amount' => 'not-a-number'],
-        ] as $change) {
-            $this->assertSame(400, $this->requestApproval($change)->status());
+            [['amount' => '500.01'], ['reason' => 'amount_mismatch', 'intent_id' => $intentId]],
+            [['bank' => 'mpesa'], ['reason' => 'bank_mismatch', 'intent_id' => $intentId]],
+            [['account_name' => 'Different Seller'], ['reason' => 'account_name_mismatch', 'intent_id' => $intentId]],
+            [['account_number' => '251911223345'], ['reason' => 'account_number_mismatch', 'intent_id' => $intentId]],
+            [['reference' => 'unknown-reference'], ['reason' => 'intent_not_found']],
+            [['amount' => 'not-a-number'], ['reason' => 'invalid_payload', 'fields' => ['amount']]],
+        ] as [$change, $expectedContext]) {
+            $response = $this->requestApproval($change);
+            $this->assertSame(400, $response->status());
+            $this->assertSame(['message' => 'Transfer not approved'], $response->getData(true));
+            Log::shouldHaveReceived('warning')->with('chapa.transfer_approval_rejected', $expectedContext)->once();
         }
         Http::assertNothingSent();
     }
@@ -190,27 +196,37 @@ class ChapaV1TransferApprovalContractTest extends TestCase
 
     public function testWrongSignatureAndMissingApprovalSecretFailClosed(): void
     {
+        Log::spy();
         $this->assertSame(400, $this->requestApproval([], str_repeat('0', 64))->status());
         $this->assertSame(400, $this->requestApproval([], str_repeat('0', 63))->status());
+        Log::shouldHaveReceived('warning')->with('chapa.transfer_approval_rejected', ['reason' => 'signature_invalid'])->twice();
         config()->set('services.chapa.transfer_approval_secret', '');
         $this->assertSame(400, $this->requestApproval()->status());
+        Log::shouldHaveReceived('warning')->with('chapa.transfer_approval_rejected', ['reason' => 'approval_secret_missing'])->once();
         Http::assertNothingSent();
     }
 
     public function testDisabledTestPayoutSwitchRejectsApprovalEvenWhenLiveFlagIsSet(): void
     {
+        Log::spy();
         config()->set('services.chapa.test_payouts_enabled', false);
         config()->set('services.chapa.payouts_enabled', true);
         $this->assertSame(400, $this->requestApproval()->status());
+        Log::shouldHaveReceived('warning')->with('chapa.transfer_approval_rejected', ['reason' => 'payouts_disabled'])->once();
     }
 
     public function testUnapprovedAccountAndPreparedIntentFailClosed(): void
     {
+        Log::spy();
+        $intentId = StorefrontPayoutIntent::query()->sole()->id;
         DigitalProductPayoutMethod::query()->update([
             'status' => DigitalProductPayoutMethod::STATUS_PENDING,
             'approved_at' => null,
         ]);
         $this->assertSame(400, $this->requestApproval()->status());
+        Log::shouldHaveReceived('warning')->with('chapa.transfer_approval_rejected', [
+            'reason' => 'payout_account_unavailable', 'intent_id' => $intentId,
+        ])->once();
 
         DigitalProductPayoutMethod::query()->update([
             'status' => DigitalProductPayoutMethod::STATUS_ACTIVE,
@@ -218,16 +234,48 @@ class ChapaV1TransferApprovalContractTest extends TestCase
         ]);
         StorefrontPayoutIntent::query()->update(['status' => StorefrontPayoutIntent::STATUS_PREPARED]);
         $this->assertSame(400, $this->requestApproval()->status());
+        Log::shouldHaveReceived('warning')->with('chapa.transfer_approval_rejected', [
+            'reason' => 'intent_not_submitted', 'intent_id' => $intentId,
+        ])->once();
     }
 
     public function testUnsignedPublicRouteReturnsHttp400NotAuthRedirect(): void
     {
+        Log::spy();
         $this->postJson('/api/v1/chapa/transfer-approval', [
             'reference' => self::REFERENCE,
             'amount' => '500.00',
             'bank' => 'telebirr',
             'account_name' => 'Test Seller',
             'account_number' => '251911223344',
-        ])->assertStatus(400);
+        ])->assertStatus(400)->assertExactJson(['message' => 'Transfer not approved']);
+        Log::shouldHaveReceived('warning')->with('chapa.transfer_approval_rejected', ['reason' => 'signature_missing'])->once();
+    }
+
+    public function testLiveApprovalRouteChecksTheApprovedAmountBeforeSettlement(): void
+    {
+        config()->set('services.chapa.secret', 'CHASECK-synthetic-route-fixture');
+        config()->set('services.chapa.payouts_enabled', true);
+        $payout = PayoutRequest::query()->sole();
+        $intent = StorefrontPayoutIntent::query()->sole();
+        $payout->update(['amount_cents' => 500]);
+        $intent->update(['amount_cents' => 500]);
+
+        $path = '/api/v1/chapa/transfer-approval';
+        $headers = ['Chapa-Signature' => hash_hmac('sha256', self::SECRET, self::SECRET)];
+        $payload = [
+            'reference' => self::REFERENCE,
+            'bank' => 'telebirr',
+            'account_name' => 'Test Seller',
+            'account_number' => '251911223344',
+            'amount' => '5.00',
+        ];
+        $this->postJson($path, $payload, $headers)->assertOk()->assertJsonPath('message', 'Transfer approved');
+        $this->postJson($path, [...$payload, 'amount' => 4.90, 'charge' => 0.10], $headers)
+            ->assertStatus(400)->assertJsonPath('message', 'Transfer not approved');
+
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $intent->fresh()->status);
+        Http::assertNothingSent();
     }
 }
