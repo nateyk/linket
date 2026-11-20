@@ -140,7 +140,8 @@ describe('Admin Chapa environment controls', () => {
     expect(screen.getByText('Bank of Abyssinia')).toBeTruthy();
     expect(screen.getByText('YaYaWallet')).toBeTruthy();
     expect(screen.getByText(/Chapa ID 656/)).toBeTruthy();
-    expect((screen.getByRole('switch', {name: 'YaYaWallet payouts'}) as HTMLButtonElement).disabled).toBe(true);
+    const unavailableWallet = screen.getByRole('switch', {name: 'YaYaWallet payouts'});
+    expect(unavailableWallet.hasAttribute('data-disabled') || unavailableWallet.hasAttribute('disabled')).toBe(true);
     fireEvent.click(screen.getByRole('switch', {name: 'Awash Bank payouts'}));
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(
       '/api/v1/admin/financial/chapa-payout-destinations/awash', {enabled: false},
