@@ -28,7 +28,6 @@ import {UploadedFile} from '@ui/utils/files/uploaded-file';
 import {FileInputType} from '@ui/utils/files/file-input-config';
 import {UploadIcon} from 'lucide-react';
 import {
-  type ChangeEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -138,18 +137,14 @@ function ImageSelectorDialogContent({
     [closeDialog, onSelected, uploadMetadata, uploadType],
   );
 
-  const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
+  const handleFilePicked = useCallback((file?: File) => {
+    if (!file || !file.type.startsWith('image/')) return;
 
     setSelectedFile(file);
     setSelectedImageUrl(URL.createObjectURL(file));
     setCrop({x: 0, y: 0});
     setZoom(1);
     setCroppedAreaPixels(null);
-    e.target.value = '';
   }, []);
 
   const handleCropComplete = useCallback(
@@ -270,7 +265,7 @@ function ImageSelectorDialogContent({
           <Dropzone
             disabled={isBusy}
             uploadType={uploadType}
-            onFileChange={handleFileChange}
+            onFilePicked={handleFilePicked}
           />
         )}
       </Dialog.Body>
@@ -311,26 +306,35 @@ function ImageSelectorDialogContent({
 function Dropzone({
   disabled,
   uploadType,
-  onFileChange,
+  onFilePicked,
 }: {
   disabled?: boolean;
   uploadType: keyof typeof UploadType;
-  onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onFilePicked: (file?: File) => void;
 }) {
+  const {trans} = useTrans();
   return (
     <div
       className={cn(
         'relative isolate flex h-36 flex-col items-center justify-center gap-3.5 rounded-card-sm border border-dashed border-border/80',
         disabled && 'pointer-events-none opacity-60',
       )}
+      onDragOver={event => event.preventDefault()}
+      onDrop={event => {
+        event.preventDefault();
+        if (!disabled) onFilePicked(event.dataTransfer.files?.[0]);
+      }}
     >
       <input
         className="absolute inset-0 z-10 size-full cursor-pointer opacity-0 file:text-transparent"
-        title=""
+        aria-label={trans(message('Upload image'))}
         accept={FileInputType.image}
         type="file"
         disabled={disabled}
-        onChange={onFileChange}
+        onChange={event => {
+          onFilePicked(event.target.files?.[0]);
+          event.target.value = '';
+        }}
       />
 
       <Empty.Root>
