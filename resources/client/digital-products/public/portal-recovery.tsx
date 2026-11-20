@@ -17,7 +17,7 @@ import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {useEffect, useState} from 'react';
 import {useNavigate} from 'react-router';
 import {PORTAL_EMAIL_KEY} from './portal-order-types';
-import {MyPortalShell} from './my-portal-shell';
+import {AuthLayoutV2} from '@common/auth/ui/auth-layout/auth-layout-v2';
 
 const RESEND_SECONDS = 30;
 
@@ -98,11 +98,10 @@ export function RecoveryRequest() {
   };
 
   return (
-    <MyPortalShell>
-      <div className="flex min-h-[calc(100dvh-144px)] items-center justify-center py-10 sm:py-14">
-        <section className="w-full max-w-md rounded-2xl border border-border bg-card px-5 py-8 shadow-sm sm:px-8">
-          <div className="mb-7 flex flex-col items-center gap-3 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+    <AuthLayoutV2 audience="portal">
+      <section className="w-full">
+          <div className="mb-7 flex flex-col items-start gap-4 text-left">
+            <span className="flex size-11 items-center justify-center rounded-lg border border-border bg-muted/60 text-primary">
               {sent ? (
                 <MailCheckIcon className="size-6" aria-hidden="true" />
               ) : (
@@ -110,7 +109,7 @@ export function RecoveryRequest() {
               )}
             </span>
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 {sent ? (
                   <Trans message="Check your inbox" />
                 ) : (
@@ -251,9 +250,8 @@ export function RecoveryRequest() {
               </p>
             </form>
           )}
-        </section>
-      </div>
-    </MyPortalShell>
+      </section>
+    </AuthLayoutV2>
   );
 }
 
