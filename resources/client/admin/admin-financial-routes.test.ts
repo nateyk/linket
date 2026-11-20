@@ -40,6 +40,21 @@ describe('admin financial routes and redirects', () => {
     expect(response.headers.get('Location')).toBe('/admin/payout-accounts');
   });
 
+  it('redirects obsolete withdrawal editor URLs to the active financial settings', async () => {
+    const financialRoute = adminChildren.find(r => r.path === 'financial');
+    const children = financialRoute?.children as RouteObject[];
+    for (const path of ['withdrawal-methods/legacy', 'withdrawal-methods/create', 'withdrawal-methods/:methodId/edit']) {
+      const oldRoute = children.find(r => r.path === path);
+      expect(oldRoute?.loader).toBeTypeOf('function');
+      const response = await (oldRoute!.loader as any)({
+        params: {methodId: '12'},
+        request: new Request('http://localhost/admin/financial/withdrawal-methods/legacy'),
+      });
+      expect(response.headers.get('Location')).toBe('/admin/financial/general');
+      expect(oldRoute?.lazy).toBeUndefined();
+    }
+  });
+
   it('retires Verify.et-only admin pages without losing Chapa settings', async () => {
     const financialRoute = adminChildren.find(r => r.path === 'financial');
     const financialChildren = financialRoute?.children as RouteObject[];

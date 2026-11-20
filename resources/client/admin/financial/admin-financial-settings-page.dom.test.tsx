@@ -31,6 +31,14 @@ describe('Admin Chapa environment controls', () => {
         approval_url: merchant.transfer_approval_url, admin_step_up_required: false,
       }}});
       if (url.endsWith('/withdrawal-methods')) return Promise.resolve({data: {data: []}});
+      if (url.endsWith('/chapa-payout-destinations')) return Promise.resolve({data: {data: [
+        {code: 'awash', name: 'Awash Bank', type: 'bank_transfer', method: 'bank_transfer',
+          provider_available: true, provider_bank_id: 656, admin_enabled: true, enabled: true},
+        {code: 'boa', name: 'Bank of Abyssinia', type: 'bank_transfer', method: 'bank_transfer',
+          provider_available: true, provider_bank_id: 347, admin_enabled: true, enabled: true},
+        {code: 'yaya', name: 'YaYaWallet', type: 'yaya', method: 'yaya',
+          provider_available: false, provider_bank_id: null, admin_enabled: true, enabled: false},
+      ]}});
       if (url.endsWith('/payout-policy')) return Promise.resolve({data: {data: {payout_hold_days: 0, minimum_payout_cents: 100}}});
       if (url.endsWith('/financial-summary')) return Promise.resolve({data: {data: {
         ledger_audit: {is_balanced: true, total_debits_cents: 0, total_credits_cents: 0,
@@ -122,6 +130,23 @@ describe('Admin Chapa environment controls', () => {
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(
       '/api/v1/admin/marketplace/payout-policy', {payout_hold_days: 2, minimum_payout_cents: 5000},
     ));
+  });
+
+  it('shows Chapa banks individually and allows disabling a supported bank', async () => {
+    view();
+    await screen.findByText('Platform Chapa environments');
+    fireEvent.click(screen.getByRole('tab', {name: 'Payout methods'}));
+    expect(await screen.findByText('Awash Bank')).toBeTruthy();
+    expect(screen.getByText('Bank of Abyssinia')).toBeTruthy();
+    expect(screen.getByText('YaYaWallet')).toBeTruthy();
+    expect(screen.getByText(/Chapa ID 656/)).toBeTruthy();
+    const unavailableWallet = screen.getByRole('switch', {name: 'YaYaWallet payouts'});
+    expect(unavailableWallet.hasAttribute('data-disabled') || unavailableWallet.hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('switch', {name: 'Awash Bank payouts'}));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      '/api/v1/admin/financial/chapa-payout-destinations/awash', {enabled: false},
+    ));
+    expect(screen.queryByText('Manage provider limits')).toBeNull();
   });
 
   it('preserves the financial reconciliation panel', async () => {
