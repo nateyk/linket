@@ -103,7 +103,8 @@ test('WebGL2 shader renders a live canvas with uniforms and disposes on unmount'
       density={1.5}
       depth={0.9}
       glow={0.9}
-      hazeColors={['var(--primary)', 'var(--foreground)']}
+      hazeColors={['#0049CC', '#006BE4', '#0097CC', '#00B585']}
+      starColors={['#0049CC', '#0092F6', '#00CBE9', '#00A7AA']}
       warp={0.3}
       interactive
     />,
@@ -120,6 +121,18 @@ test('WebGL2 shader renders a live canvas with uniforms and disposes on unmount'
   expect(gl.viewport).toHaveBeenCalled();
   expect(gl.uniform2f).toHaveBeenCalled();
   expect(gl.uniform3fv).toHaveBeenCalled();
+  const starPalette = gl.uniform3fv.mock.calls.find(
+    call => call[0]?.name === 'uStarColors[0]',
+  )?.[1] as Float32Array | undefined;
+  expect(starPalette).toBeInstanceOf(Float32Array);
+  expect(starPalette?.length).toBe(12);
+  expect(starPalette?.[0]).toBeCloseTo(0);
+  expect(starPalette?.[1]).toBeCloseTo(73 / 255);
+  expect(starPalette?.[2]).toBeCloseTo(204 / 255);
+  expect(starPalette?.[10]).toBeCloseTo(167 / 255);
+  expect(gl.uniform1i.mock.calls).toContainEqual([
+    {name: 'uStarColorsCount'}, 4,
+  ]);
   expect(gl.uniform1f.mock.calls.some(call => call[0]?.name === 'uWarp' && call[1] === 0.3)).toBe(true);
   unmount();
   expect(gl.deleteProgram).toHaveBeenCalled();

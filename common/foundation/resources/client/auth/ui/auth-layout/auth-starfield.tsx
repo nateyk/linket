@@ -15,6 +15,8 @@ export interface StarfieldProps extends Omit<
   glow?: number;
   haze?: number;
   hazeColors?: readonly string[];
+  /** A brand-led spectrum for stars; independent of the softer haze. */
+  starColors?: readonly string[];
   intensity?: number;
   size?: number;
   twinkle?: number;
@@ -22,7 +24,8 @@ export interface StarfieldProps extends Omit<
   warp?: number;
 }
 
-const HAZE = ['var(--primary)', 'var(--foreground)'] as const;
+const HAZE = ['var(--primary)', '#006BE4', '#0097CC', '#00B585'] as const;
+const STAR_COLORS = ['var(--primary)', '#0092F6', '#00CBE9', '#00A7AA'] as const;
 const radians = (degrees: number) => (degrees * Math.PI) / 180;
 
 // Based on the supplied Starfield GLSL scene. The BackgroundCanvas runtime
@@ -31,6 +34,8 @@ export const STARFIELD_SCENE = String.raw`
 uniform vec3 uColor;
 uniform vec3 uHazeColors[8];
 uniform int uHazeColorsCount;
+uniform vec3 uStarColors[8];
+uniform int uStarColorsCount;
 uniform float uDensity;
 uniform float uDepth;
 uniform float uDirection;
@@ -98,21 +103,29 @@ vec4 scene(vec2 frag) {
   float cloud = fbm(hp * 1.3 + vec2(3.1, 1.7), 3) * 0.5 + 0.5;
   float lane = exp(-pow(dot(hp, vec2(-0.42, 0.91)) * 2.4, 2.0));
   float mist = smoothstep(0.4, 1.15, cloud + lane * 0.5);
-  float turn = smoothstep(0.25, 0.75,
-    fbm(hp * 0.9 - vec2(7.3, 2.9), 2) * 0.5 + 0.5);
+  // A stable spatial gradient: predominantly brand blue, with restrained
+  // cyan and teal farther across the panel. Noise adds softness, not stripes.
+  float spread = smoothstep(-0.95, 0.95, hp.x);
+  float variation = fbm(hp * 0.9 - vec2(7.3, 2.9), 2);
+  float turn = clamp(0.08 + spread * 0.75 + variation * 0.12, 0.0, 0.999);
   vec4 haze = glow(ramp(uHazeColors, uHazeColorsCount, turn),
     mist * uHaze * uIntensity * uIntro * mix(0.2, 0.3, uDark));
 
-  vec3 lab = legible(uColor);
-  float tinted = mix(lab.x, mix(0.5, 0.86, uDark), 0.7);
+  // Neutral highlights keep both themes readable. Most stars lean Linket
+  // blue; only a smaller share picks up the cyan/teal accent spectrum.
+  vec3 neutralLab = legible(uColor);
+  vec3 blueLab = legible(ramp(uStarColors, uStarColorsCount, 0.06));
+  vec3 cyanLab = legible(ramp(uStarColors, uStarColorsCount, 0.60));
+  vec3 tealLab = legible(ramp(uStarColors, uStarColorsCount, 0.92));
+  vec3 baseLab = mix(neutralLab, blueLab, 0.44);
   mat3 tones = mat3(
-    fromOklab(lab),
-    fromOklab(vec3(tinted, lab.yz + vec2(-0.03, -0.14))),
-    fromOklab(vec3(tinted, lab.yz + vec2(0.06, 0.12)))
+    fromOklab(baseLab),
+    fromOklab(mix(baseLab, cyanLab, 0.65)),
+    fromOklab(mix(baseLab, tealLab, 0.56))
   );
 
   vec4 sum = vec4(0.0);
-  float spread = clamp(uDepth, 0.0, 1.0);
+  float depthSpread = clamp(uDepth, 0.0, 1.0);
   float pack = inversesqrt(max(uDensity, 0.05));
   for (int l = 0; l < 5; l++) {
     float fl = float(l);
@@ -120,7 +133,7 @@ vec4 scene(vec2 frag) {
     float z = fract(rest + uTime * 0.02 * uWarp);
     float cell = 30.0 * pow(4.6, z) * pack;
     float home = 30.0 * pow(4.6, rest) * pack;
-    float pace = 4.5 * mix(1.0 / home, 1.0 / (64.0 * pack), spread);
+    float pace = 4.5 * mix(1.0 / home, 1.0 / (64.0 * pack), depthSpread);
     mat2 spin = rotate(fl * 0.71 + 0.4);
     vec2 q = spin * (
       (p - lean * 26.0 * uDepth * (0.15 + z)) / cell - way * drift * pace
@@ -146,6 +159,7 @@ export function Starfield({
   glow = 0.5,
   haze = 0.5,
   hazeColors = HAZE,
+  starColors = STAR_COLORS,
   intensity = 1,
   size = 1,
   twinkle = 0.5,
@@ -154,7 +168,10 @@ export function Starfield({
   ...rest
 }: StarfieldProps) {
   const colors = useMemo(() => ({uColor: color}), [color]);
-  const palette = useMemo(() => ({uHazeColors: hazeColors}), [hazeColors]);
+  const palette = useMemo(
+    () => ({uHazeColors: hazeColors, uStarColors: starColors}),
+    [hazeColors, starColors],
+  );
   const uniforms = useMemo(() => ({
     uDensity: density,
     uDepth: depth,
@@ -177,7 +194,7 @@ export function Starfield({
       palettes={palette}
       uniforms={uniforms}
       still={8}
-      fallback="radial-gradient(ellipse at 50% 45%, color-mix(in oklch, var(--primary) 10%, transparent), transparent 75%)"
+      fallback="radial-gradient(ellipse at 25% 38%, color-mix(in oklch, var(--primary) 10%, transparent), transparent 67%), radial-gradient(ellipse at 86% 75%, color-mix(in oklch, #00A7AA 5%, transparent), transparent 65%)"
     />
   );
 }
