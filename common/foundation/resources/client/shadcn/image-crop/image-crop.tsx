@@ -22,7 +22,7 @@ type ImageCropContextValue = {
   zoom: number;
   minZoom: number;
   croppedAreaPixels: Area | null;
-  setCrop: (crop: {x: number; y: number}) => void;
+  setCrop: React.Dispatch<React.SetStateAction<{x: number; y: number}>>;
   setZoom: (zoom: number) => void;
   setMinZoom: (zoom: number) => void;
   setCroppedAreaPixels: (area: Area | null) => void;
@@ -62,10 +62,10 @@ export function cropStageBoxStyle(
   const wide = aspect >= 2.5;
   const landscape = aspect >= 1.45;
   const maxHeight = wide
-    ? 'min(26dvh, 200px)'
+    ? 'min(24dvh, 170px)'
     : landscape
-      ? 'min(34dvh, 280px)'
-      : 'min(46dvh, 360px)';
+      ? 'min(31dvh, 240px)'
+      : 'min(37dvh, 300px)';
 
   return {
     aspectRatio: `${aspect}`,
@@ -257,6 +257,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
   } = useImageCropContext();
 
   const stageRef = React.useRef<HTMLDivElement>(null);
+  const cropInstructionsId = React.useId();
   const [stageSize, setStageSize] = React.useState({width: 0, height: 0});
   // Mirror for onMediaLoaded: the observer effect below may run before or
   // after the media load, so the load handler must read live dims, never a
@@ -346,8 +347,28 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           ref={stageRef}
           data-crop-radius={radius ? '' : undefined}
           style={cropStageBoxStyle(lockedAspect, radius)}
-          className="image-crop-stage relative overflow-hidden rounded-card bg-muted"
+          className="image-crop-stage relative overflow-hidden rounded-card bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          role="group"
+          tabIndex={0}
+          aria-label={trans(message('Image crop area'))}
+          aria-describedby={cropInstructionsId}
+          onKeyDown={event => {
+            if (event.target !== event.currentTarget) return;
+            const step = event.shiftKey ? 20 : 6;
+            const delta = {
+              ArrowLeft: {x: -step, y: 0},
+              ArrowRight: {x: step, y: 0},
+              ArrowUp: {x: 0, y: -step},
+              ArrowDown: {x: 0, y: step},
+            }[event.key as 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown'];
+            if (!delta) return;
+            event.preventDefault();
+            setCrop(previous => ({x: previous.x + delta.x, y: previous.y + delta.y}));
+          }}
         >
+          <span id={cropInstructionsId} className="sr-only">
+            <Trans message="Drag to move the image, or use arrow keys. Hold Shift for larger steps." />
+          </span>
           <Cropper
             key={cropperKey}
             image={imageUrl}
@@ -379,12 +400,12 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
               typeof raw === 'number' && Number.isFinite(raw) ? raw : minZoom,
             );
           }}
-          className="gap-y-1"
+          className="flex items-center gap-3"
         >
-          <Slider.Label>
+          <Slider.Label className="shrink-0 text-xs text-muted-foreground">
             <Trans message="Zoom" />
           </Slider.Label>
-          <Slider.Control className="py-1.5">
+          <Slider.Control className="min-w-0 flex-1 py-2">
             <Slider.Track className="data-horizontal:h-2.5">
               <Slider.Indicator />
             </Slider.Track>
