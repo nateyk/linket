@@ -30,7 +30,7 @@ describe('cropped image selector', () => {
     expect(selectorSource).toContain('border-primary bg-primary/5');
   });
 
-  test('footer uses Dialog.Footer without overriding col-reverse', () => {
+  test('footer uses Dialog.Footer with a compact horizontal action row', () => {
     expect(selectorSource).toContain('<Dialog.Footer');
     expect(selectorSource).toContain('flex-row flex-wrap items-center');
     expect(selectorSource).not.toContain('flex items-center justify-end');
@@ -160,6 +160,8 @@ describe('image selector upload dialog', () => {
     expect(legacySelectorSource).toContain("aria-label={trans(message('Zoom'))}");
     expect(legacySelectorSource).toContain('flex-row flex-wrap items-center');
     expect(legacySelectorSource).toContain('Dialog.CloseButton');
+    expect(legacySelectorSource).toContain('onDrop={event =>');
+    expect(legacySelectorSource).toContain("aria-label={trans(message('Upload image'))}");
     expect(legacySelectorSource).toContain('Crop image area');
   });
 });
