@@ -90,31 +90,31 @@ vec4 over(vec4 a, vec4 b) {
   return a + b * (1.0 - a.a);
 }
 vec3 toOklab(vec3 rgb) {
-  vec3 c = max(rgb, 0.0);
-  vec3 linear = pow(c, vec3(2.2));
-  vec3 lms = mat3(
-    0.4122214708, 0.5363325363, 0.0514459929,
-    0.2119034982, 0.6806995451, 0.1073969566,
-    0.0883024619, 0.2817188376, 0.6299787005
-  ) * linear;
-  vec3 r = pow(max(lms, 0.0), vec3(1.0 / 3.0));
-  return mat3(
-    0.2104542553, 0.7936177850, -0.0040720468,
-    1.9779984951, -2.4285922050, 0.4505937099,
-    0.0259040371, 0.7827717662, -0.8086757660
-  ) * r;
+  vec3 c = pow(max(rgb, 0.0), vec3(2.2));
+  vec3 lms = vec3(
+    dot(c, vec3(0.4122214708, 0.5363325363, 0.0514459929)),
+    dot(c, vec3(0.2119034982, 0.6806995451, 0.1073969566)),
+    dot(c, vec3(0.0883024619, 0.2817188376, 0.6299787005))
+  );
+  vec3 t = pow(max(lms, 0.0), vec3(1.0 / 3.0));
+  return vec3(
+    dot(t, vec3(0.2104542553, 0.7936177850, -0.0040720468)),
+    dot(t, vec3(1.9779984951, -2.4285922050, 0.4505937099)),
+    dot(t, vec3(0.0259040371, 0.7827717662, -0.8086757660))
+  );
 }
 vec3 fromOklab(vec3 lab) {
-  vec3 t = mat3(
-    1.0, 0.3963377774, 0.2158037573,
-    1.0, -0.1055613458, -0.0638541728,
-    1.0, -0.0894841775, -1.2914855480
-  ) * lab;
-  vec3 rgb = mat3(
-    4.0767416621, -3.3077115913, 0.2309699292,
-    -1.2684380046, 2.6097574011, -0.3413193965,
-    -0.0041960863, -0.7034186147, 1.7076147010
-  ) * (t * t * t);
+  vec3 t = vec3(
+    dot(lab, vec3(1.0, 0.3963377774, 0.2158037573)),
+    dot(lab, vec3(1.0, -0.1055613458, -0.0638541728)),
+    dot(lab, vec3(1.0, -0.0894841775, -1.2914855480))
+  );
+  t = t * t * t;
+  vec3 rgb = vec3(
+    dot(t, vec3(4.0767416621, -3.3077115913, 0.2309699292)),
+    dot(t, vec3(-1.2684380046, 2.6097574011, -0.3413193965)),
+    dot(t, vec3(-0.0041960863, -0.7034186147, 1.7076147010))
+  );
   return pow(clamp(rgb, 0.0, 1.0), vec3(1.0 / 2.2));
 }
 vec3 ramp(vec3 colors[8], int count, float t) {
@@ -250,7 +250,7 @@ function mountBackground(
       setVec3(name, rgb(resolveColor(root, color), '#ffffff')),
     );
     Object.entries(options.palettes || {}).forEach(([name, colors]) => {
-      const flat = new Float32Array(24);
+      const flat = new Float32Array(Math.max(1, Math.min(colors.length, 8)) * 3);
       colors.slice(0, 8).forEach((color, i) => {
         flat.set(rgb(resolveColor(root, color), '#0049cc'), i * 3);
       });
