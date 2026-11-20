@@ -284,34 +284,56 @@ class ChapaPayoutService
     /** Check callback recipient details against the immutable approved payout snapshot. */
     public function approvalMatches(StorefrontPayoutIntent $intent, array $payload): bool
     {
+        return $this->approvalMismatchReason($intent, $payload) === null;
+    }
+
+    /** @param array<string, mixed> $payload */
+    public function approvalMismatchReason(StorefrontPayoutIntent $intent, array $payload): ?string
+    {
         $payout = $intent->payoutRequest;
-        $code = strtolower((string) $payout?->bank_code_snapshot);
+        if ($payout === null || $payout->status !== 'processing') {
+            return 'withdrawal_not_processing';
+        }
+        if (!$payout->withdrawalMethod?->is_active) {
+            return 'withdrawal_method_inactive';
+        }
+        $account = $payout->payoutMethod;
+        if (!$account?->is_active || $account->status !== 'active' || $account->approved_at === null) {
+            return 'payout_account_unavailable';
+        }
+        if (!in_array($intent->status, [
+            StorefrontPayoutIntent::STATUS_SUBMITTED,
+            StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+        ], true)) {
+            return 'intent_not_submitted';
+        }
+        if ((string) ($payload['reference'] ?? '') !== (string) $intent->merchant_reference) {
+            return 'reference_mismatch';
+        }
+
+        $code = strtolower((string) $payout->bank_code_snapshot);
         $expectedBank = self::canonicalBankCode($code);
         $actualBank = strtolower(trim((string) ($payload['bank'] ?? '')));
+        if ($expectedBank === null || self::canonicalBankCode($actualBank) !== $expectedBank) {
+            return 'bank_mismatch';
+        }
         $actualNumber = preg_replace('/[\s+\-]/', '', (string) ($payload['account_number'] ?? ''));
         $expectedNumber = preg_replace('/[\s+\-]/', '', (string) $intent->destination_snapshot);
         if (in_array($code, self::WALLET_CODES, true)) {
             $actualNumber = $this->normalizeMobile($actualNumber);
             $expectedNumber = $this->normalizeMobile($expectedNumber);
         }
+        if (!hash_equals((string) $expectedNumber, (string) $actualNumber)) {
+            return 'account_number_mismatch';
+        }
+        if (!hash_equals((string) $payout->account_holder_snapshot, (string) ($payload['account_name'] ?? ''))) {
+            return 'account_name_mismatch';
+        }
         $amountCents = EtbMajorAmount::cents($payload['amount'] ?? null);
+        if ($amountCents === null || $amountCents !== (int) $intent->amount_cents) {
+            return 'amount_mismatch';
+        }
 
-        return $payout !== null
-            && $payout->status === 'processing'
-            && $payout->withdrawalMethod?->is_active
-            && $payout->payoutMethod?->is_active
-            && $payout->payoutMethod->status === 'active'
-            && $payout->payoutMethod->approved_at !== null
-            && in_array($intent->status, [
-                StorefrontPayoutIntent::STATUS_SUBMITTED,
-                StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
-            ], true)
-            && (string) ($payload['reference'] ?? '') === (string) $intent->merchant_reference
-            && $expectedBank !== null
-            && self::canonicalBankCode($actualBank) === $expectedBank
-            && hash_equals((string) $expectedNumber, (string) $actualNumber)
-            && hash_equals((string) $payout->account_holder_snapshot, (string) ($payload['account_name'] ?? ''))
-            && $amountCents !== null
-            && $amountCents === (int) $intent->amount_cents;
+        return null;
     }
 }
