@@ -54,4 +54,21 @@ class ReactEmailRendererTest extends TestCase
         $this->assertStringContainsString('Your payout was sent.', $result['html']);
         $this->assertStringContainsString('Reference: lk-123', $result['text']);
     }
+
+    #[Test]
+    public function it_gracefully_falls_back_when_node_binary_is_non_existent(): void
+    {
+        $renderer = new ReactEmailRenderer(
+            nodeBinary: '/non/existent/path/to/node',
+            timeoutSeconds: 5,
+        );
+
+        $result = $renderer->render('message', [
+            'greeting' => 'Hello Developer',
+            'lines' => ['Order #12345 confirmed.'],
+        ]);
+
+        $this->assertStringContainsString('Hello Developer', $result['html']);
+        $this->assertStringContainsString('Order #12345 confirmed.', $result['text']);
+    }
 }

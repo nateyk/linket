@@ -24,6 +24,7 @@ RELEASE_ID=""
 EXPECTED_SHA=""
 ARTIFACT=""
 PHP_BIN="${PHP_BINARY:-php}"
+NODE_BIN="${NODE_BINARY:-}"
 HEALTH_URL="${APP_URL:-}/up"
 KEEP_RELEASES="${KEEP_RELEASES:-5}"
 LINK_PUBLIC_HTML="${LINK_PUBLIC_HTML:-false}"
@@ -37,6 +38,8 @@ while [[ $# -gt 0 ]]; do
     --artifact)     ARTIFACT="$2"; shift 2 ;;
     --php-binary=*) PHP_BIN="${1#*=}"; shift ;;
     --php-binary)   PHP_BIN="$2"; shift 2 ;;
+    --node-binary=*) NODE_BIN="${1#*=}"; shift ;;
+    --node-binary)   NODE_BIN="$2"; shift 2 ;;
     --health-url=*) HEALTH_URL="${1#*=}"; shift ;;
     --health-url)   HEALTH_URL="$2"; shift 2 ;;
     --keep-releases=*) KEEP_RELEASES="${1#*=}"; shift ;;
@@ -160,8 +163,52 @@ fi
 if [[ ! -s "$RELEASE_DIR/scripts/dist/render-email.cjs" ]]; then
   fail "Verified artifact missing scripts/dist/render-email.cjs (React Email production renderer)"
 fi
-if ! command -v node >/dev/null 2>&1; then
-  fail "Node.js is required on the deploy host to render React Email templates"
+
+# ---------- resolve node for React Email ----------
+RESOLVED_NODE=""
+if [[ -n "${NODE_BIN:-}" && -x "$NODE_BIN" ]]; then
+  RESOLVED_NODE="$NODE_BIN"
+elif [[ -n "${NODE_BIN:-}" ]] && command -v "$NODE_BIN" >/dev/null 2>&1; then
+  RESOLVED_NODE="$(command -v "$NODE_BIN")"
+elif command -v node >/dev/null 2>&1; then
+  RESOLVED_NODE="$(command -v node)"
+else
+  for candidate in \
+    /opt/alt/alt-nodejs22/root/usr/bin/node \
+    /opt/alt/alt-nodejs20/root/usr/bin/node \
+    /opt/alt/alt-nodejs18/root/usr/bin/node \
+    /opt/cpanel/ea-nodejs22/bin/node \
+    /opt/cpanel/ea-nodejs20/bin/node \
+    /opt/cpanel/ea-nodejs18/bin/node \
+    /usr/local/bin/node \
+    /usr/bin/node \
+    "$DEPLOY_PATH/bin/node" \
+    "$HOME/bin/node" \
+    "$HOME/.local/bin/node"
+  do
+    if [[ -x "$candidate" ]]; then
+      RESOLVED_NODE="$candidate"
+      break
+    fi
+  done
+  if [[ -z "$RESOLVED_NODE" ]]; then
+    for nvm_node in "$HOME"/.nvm/versions/node/*/bin/node; do
+      if [[ -x "$nvm_node" ]]; then
+        RESOLVED_NODE="$nvm_node"
+        break
+      fi
+    done
+  fi
+fi
+
+if [[ -n "$RESOLVED_NODE" ]]; then
+  NODE_BIN="$RESOLVED_NODE"
+  log "Node.js $($NODE_BIN -v 2>&1 || echo "") ($NODE_BIN)"
+  mkdir -p "$DEPLOY_PATH/bin"
+  ln -sfn "$NODE_BIN" "$DEPLOY_PATH/bin/node"
+  export PATH="$DEPLOY_PATH/bin:$PATH"
+else
+  log "WARNING: Node.js not detected on deploy host. Transactional emails will render via built-in HTML/text fallback until Node.js is configured."
 fi
 
 # ---------- secure storage BEFORE shared writes or Artisan ----------
