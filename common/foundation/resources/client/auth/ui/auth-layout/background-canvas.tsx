@@ -17,6 +17,7 @@ export interface BackgroundCanvasProps extends Omit<ComponentProps<'div'>, 'colo
   interactive?: boolean;
   paused?: boolean;
   fallback?: string;
+  'data-slot'?: string;
 }
 
 const VERTEX = String.raw`#version 300 es
@@ -375,6 +376,7 @@ export function BackgroundCanvas({
   fallback,
   className,
   children,
+  'data-slot': dataSlot = 'background-canvas',
   ...rest
 }: BackgroundCanvasProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -390,14 +392,14 @@ export function BackgroundCanvas({
     <div
       {...rest}
       ref={rootRef}
-      data-slot="background-canvas"
+      data-slot={dataSlot}
       data-state="loading"
-      className={cn('relative isolate overflow-hidden', className)}
+      className={cn('group/background relative isolate overflow-hidden', className)}
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0" data-slot="background-canvas-layer">
         {fallback && (
           <div
-            className="absolute inset-0 opacity-100 group-data-[state=live]:opacity-0"
+            className="absolute inset-0 opacity-100 transition-opacity duration-300 group-data-[state=live]/background:opacity-0 group-data-[state=still]/background:opacity-0"
             data-slot="background-canvas-fallback"
             style={{background: fallback}}
           />
@@ -405,7 +407,7 @@ export function BackgroundCanvas({
         <canvas
           ref={canvasRef}
           aria-hidden="true"
-          className="absolute inset-0 block size-full opacity-0 transition-opacity duration-300 group-data-[state=live]:opacity-100 group-data-[state=still]:opacity-100"
+          className="absolute inset-0 block size-full opacity-0 transition-opacity duration-300 group-data-[state=live]/background:opacity-100 group-data-[state=still]/background:opacity-100"
           data-slot="background-canvas-canvas"
         />
       </div>
