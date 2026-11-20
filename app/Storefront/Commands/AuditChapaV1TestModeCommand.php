@@ -194,47 +194,77 @@ final class AuditChapaV1TestModeCommand extends Command
     /** @param array<string, mixed> $response */
     private function showVerification(array $response, string $expectedReference, ?int $expectedCents): void
     {
-        // Report structure without exposing provider payloads or beneficiary
-        // details. A numeric data[0] wrapper is not a reference mismatch.
-        $data = $response['data'] ?? null;
-        if (is_array($data) && array_is_list($data)) {
-            $this->line('Chapa verification returned '.count($data).' record(s).');
-            $first = $data[0] ?? null;
-            $recognized = is_array($first)
-                ? array_values(array_intersect(
-                    ['status', 'reference', 'tx_ref', 'merchant_reference', 'amount', 'currency', 'account_number'],
-                    array_keys($first),
-                ))
-                : [];
-            $this->line('Recognized record fields: '.($recognized ? implode(', ', $recognized) : 'none'));
-        }
+        $this->reportRecordStructure($response['data'] ?? null);
 
         $payload = ChapaV1TransferVerificationGuard::verifiedTransferDetails($response);
         $reference = (string) ($payload['reference'] ?? $payload['tx_ref'] ?? $payload['merchant_reference'] ?? '');
+
+        $this->renderVerificationTable($payload, hash_equals($expectedReference, $reference));
+
+        if (!hash_equals($expectedReference, $reference)) {
+            throw new RuntimeException('Chapa verification reference mismatch.');
+        }
+
+        if ($expectedCents !== null) {
+            $this->verifySettlementAmount($payload, $expectedCents);
+        }
+    }
+
+    private function reportRecordStructure(mixed $data): void
+    {
+        if (!is_array($data) || !array_is_list($data)) {
+            return;
+        }
+
+        $this->line('Chapa verification returned '.count($data).' record(s).');
+        $first = $data[0] ?? null;
+        if (is_string($first)) {
+            $this->line('Recognized record fields: reference (queued string)');
+            return;
+        }
+
+        $recognized = is_array($first)
+            ? array_values(array_intersect(
+                ['status', 'reference', 'tx_ref', 'merchant_reference', 'amount', 'currency', 'account_number'],
+                array_keys($first),
+            ))
+            : [];
+        $this->line('Recognized record fields: '.($recognized ? implode(', ', $recognized) : 'none'));
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function renderVerificationTable(array $payload, bool $referenceMatches): void
+    {
         $this->table(['Verification field', 'Test value'], [
             ['provider status', (string) ($payload['status'] ?? 'unspecified')],
-            ['reference matches', hash_equals($expectedReference, $reference) ? 'yes' : 'no'],
+            ['reference matches', $referenceMatches ? 'yes' : 'no'],
             ['currency', (string) ($payload['currency'] ?? 'unspecified')],
             ['amount', is_numeric($payload['amount'] ?? null) ? (string) $payload['amount'] : 'unspecified'],
         ]);
-        // Only show field names, never account numbers, recipient names or raw payloads.
+
         $recognized = array_values(array_intersect(
             ['status', 'reference', 'tx_ref', 'merchant_reference', 'amount', 'currency', 'account_number'],
             array_keys($payload),
         ));
         $this->line('Recognized response fields: '.($recognized ? implode(', ', $recognized) : 'none'));
+    }
 
-        if (!hash_equals($expectedReference, $reference)) {
-            throw new RuntimeException('Chapa verification reference mismatch.');
-        }
-        if ($expectedCents !== null) {
-            $amount = EtbMajorAmount::cents($payload['amount'] ?? null);
-            $currency = strtoupper((string) ($payload['currency'] ?? ''));
-            $status = strtolower((string) ($payload['status'] ?? ''));
-            if ($amount !== $expectedCents || $currency !== 'ETB' || $status !== 'success') {
-                throw new RuntimeException('Chapa test transfer has not passed settlement verification.');
-            }
+    /** @param array<string, mixed> $payload */
+    private function verifySettlementAmount(array $payload, int $expectedCents): void
+    {
+        $amount = EtbMajorAmount::cents($payload['amount'] ?? null);
+        $currency = strtoupper((string) ($payload['currency'] ?? ''));
+        $status = strtolower((string) ($payload['status'] ?? ''));
+
+        if ($amount === $expectedCents && $currency === 'ETB' && $status === 'success') {
             $this->line('TEST transfer settlement verified by reference, ETB amount and success status.');
+            return;
         }
+
+        if (in_array($status, ['queued', 'pending'], true)) {
+            $this->warn('Transfer reference matches and is queued in Chapa Test Mode, but has not settled.');
+        }
+
+        throw new RuntimeException('Chapa test transfer has not passed settlement verification.');
     }
 }

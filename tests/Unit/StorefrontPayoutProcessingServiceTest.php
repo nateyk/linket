@@ -394,6 +394,31 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $intent->fresh()->status);
     }
 
+    public function testQueuedTransferStringListLeavesFundsReservedAndPending(): void
+    {
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn([
+            'status' => 'success',
+            'data' => [$intent->merchant_reference],
+        ]);
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('disbursePayout');
+        $ledger->shouldNotReceive('releasePayoutReservation');
+
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger,
+            chapaPayoutService: $provider,
+        );
+
+        $result = $service->verifyPayout($intent);
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $result->status);
+        $this->assertSame('processing', $payout->fresh()->status);
+    }
+
     public function testAmbiguousListVerificationLeavesFundsReserved(): void
     {
         $provider = Mockery::mock(ChapaPayoutService::class);
