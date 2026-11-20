@@ -82,8 +82,8 @@ export function RegisterPage({inviteType, fields, children}: Props) {
           <Trans message="Register" />
         </StaticPageTitle>
 
-        <div className="space-y-2 text-center">
-          <h1 className="font-medium text-3xl">{heading}</h1>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h1>
           <p className="text-sm text-muted-foreground">
             {isRegisteringUsingInvite || isBillingRegister ? null : (
               <Trans message="Please enter your details to create an account." />
@@ -91,12 +91,7 @@ export function RegisterPage({inviteType, fields, children}: Props) {
           </p>
         </div>
 
-        <div className="space-y-4">
-          <SocialAuthSection
-            isUsingInvite={isRegisteringUsingInvite}
-            dividerMessage={<Trans message="Or continue with" />}
-          />
-
+        <div className="space-y-5">
           <HookForm.Root
             form={form}
             onSubmit={async payload => {
@@ -172,9 +167,13 @@ export function RegisterPage({inviteType, fields, children}: Props) {
               </Button>
             </Field.Group>
           </HookForm.Root>
+          <SocialAuthSection
+            isUsingInvite={isRegisteringUsingInvite}
+            dividerMessage={<Trans message="Or continue with" />}
+          />
         </div>
 
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground">
           {footerMessage}
         </div>
       </AuthLayoutV2>
