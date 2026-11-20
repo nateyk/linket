@@ -197,7 +197,7 @@ export function CroppedImageSelector({
           />
           <div
             className={cn(
-              'absolute opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100',
+              'absolute opacity-100',
               shape === 'circle' ? 'right-1 bottom-1' : 'top-2 right-2',
             )}
           >
@@ -208,7 +208,7 @@ export function CroppedImageSelector({
                     size="icon-xs"
                     variant="outline"
                     aria-label={label}
-                    className="size-7 rounded-full bg-card shadow-sm hover:bg-card"
+                    className="size-8 rounded-full bg-card shadow-sm hover:bg-card"
                   />
                 }
               >
@@ -313,7 +313,7 @@ export function CroppedImageSelector({
           <Dialog.Backdrop />
           <Dialog.Content
             className={cn(
-              'gap-3',
+              'max-h-[calc(100dvh-1rem)] gap-2.5 overflow-y-auto p-3 sm:p-4',
               // Dialog.Content ships sm:max-w-md — unprefixed max-w-* does NOT
               // replace it (tw-merge keeps both variants). Override sm: too.
               (aspect ?? 1) <= 1.15
@@ -330,22 +330,22 @@ export function CroppedImageSelector({
                 onCrop={handleCrop}
                 radius={cropRadius}
               >
-                <Dialog.Header className="gap-1">
+                <Dialog.Header className="gap-0.5 pr-8">
                   <Dialog.Title>
                     {label ? label : <Trans message="Crop image" />}
                   </Dialog.Title>
-                  <Dialog.Description>
-                    <Trans message="Adjust the preferred region, then apply. Large images are compressed to WebP automatically." />
+                  <Dialog.Description className="sr-only">
+                    <Trans message="Drag to reposition the image. Adjust Zoom, then apply the crop." />
                   </Dialog.Description>
                 </Dialog.Header>
                 {/* flex-none: Dialog.Body defaults to flex-1 and leaves a tall
                     empty band between Zoom and the footer. */}
-                <Dialog.Body className="flex-none grow-0 py-1">
+                <Dialog.Body className="-mx-3 flex-none grow-0 px-3 py-0 sm:-mx-4 sm:px-4">
                   <ImageCropContent />
                 </Dialog.Body>
-                <Dialog.Footer variant="muted" className="gap-2 pt-3">
+                <Dialog.Footer className="-mx-3 -mb-3 flex-row flex-wrap items-center justify-end gap-1.5 border-t border-border/60 px-3 pt-2.5 pb-3 sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-3 sm:pb-4">
                   <ImageCropReset asChild>
-                    <Button type="button" variant="ghost" size="sm">
+                    <Button type="button" variant="ghost" size="sm" className="mr-auto px-2">
                       <Trans message="Reset" />
                     </Button>
                   </ImageCropReset>
