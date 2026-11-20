@@ -25,9 +25,8 @@ final class ChapaV1TransferVerificationGuard
     }
 
     /**
-     * Chapa v1 may wrap one transfer record in a one-element data array.
-     * Never select an arbitrary record from multiple candidates and never
-     * interpret lookup-level "success" as successful transfer settlement.
+     * Chapa v1 may wrap one transfer record in a one-element data array,
+     * or return the raw queued reference string for in-flight test transfers.
      *
      * @param array<string, mixed> $response
      * @return array<string, mixed>
@@ -38,26 +37,13 @@ final class ChapaV1TransferVerificationGuard
             throw new RuntimeException('Chapa did not confirm a successful transfer verification lookup.');
         }
 
-        $data = $response['data'] ?? null;
-        while (is_array($data) && array_is_list($data)) {
-            if (count($data) !== 1) {
-                throw new RuntimeException('Chapa did not return one unambiguous transfer record.');
-            }
-            $data = $data[0];
-        }
+        $data = self::unwrapSingleRecord($response['data'] ?? null);
 
         if (is_string($data) && trim($data) !== '') {
             return [
                 'reference' => trim($data),
                 'status' => 'queued',
             ];
-        }
-
-        if (is_array($data)) {
-            $nested = $data['transfers'] ?? $data['transfer'] ?? null;
-            if (is_array($nested) && array_is_list($nested) && count($nested) === 1) {
-                $data = $nested[0];
-            }
         }
 
         if (!is_array($data) || array_is_list($data)) {
@@ -67,27 +53,36 @@ final class ChapaV1TransferVerificationGuard
         return $data;
     }
 
+    private static function unwrapSingleRecord(mixed $data): mixed
+    {
+        while (is_array($data) && array_is_list($data)) {
+            if (count($data) !== 1) {
+                throw new RuntimeException('Chapa did not return one unambiguous transfer record.');
+            }
+            $data = $data[0];
+        }
+
+        return $data;
+    }
+
     /** @param array<string, mixed> $data */
     private function assertTransferIdentity(StorefrontPayoutIntent $intent, array $data): void
     {
         $reference = (string) ($data['reference'] ?? $data['tx_ref'] ?? $data['merchant_reference'] ?? '');
-        $amount = (string) ($data['amount'] ?? '');
-        $currency = strtoupper((string) ($data['currency'] ?? ''));
-
         if (!hash_equals((string) $intent->merchant_reference, $reference)) {
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
 
         $status = strtolower(trim((string) ($data['status'] ?? '')));
+        $amount = (string) ($data['amount'] ?? '');
+        $currency = strtoupper((string) ($data['currency'] ?? ''));
+
         if (in_array($status, ['pending', 'queued', 'processing'], true) && $amount === '' && $currency === '') {
             return;
         }
 
-        if ($currency !== strtoupper((string) $intent->currency)) {
-            throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
-        }
-
-        if (EtbMajorAmount::cents($amount) !== (int) $intent->amount_cents) {
+        if ($currency !== strtoupper((string) $intent->currency)
+            || EtbMajorAmount::cents($amount) !== (int) $intent->amount_cents) {
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
     }
