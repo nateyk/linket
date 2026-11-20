@@ -360,7 +360,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
               ArrowRight: {x: step, y: 0},
               ArrowUp: {x: 0, y: -step},
               ArrowDown: {x: 0, y: step},
-            }[event.key];
+            }[event.key as 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown'];
             if (!delta) return;
             event.preventDefault();
             setCrop(previous => ({x: previous.x + delta.x, y: previous.y + delta.y}));
