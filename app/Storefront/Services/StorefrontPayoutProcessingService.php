@@ -171,6 +171,7 @@ final class StorefrontPayoutProcessingService
 
             $intent->update([
                 'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
+                'last_error' => null,
                 'verified_at' => now(),
                 'verification_data' => $raw,
             ]);

@@ -83,15 +83,17 @@ final class ChapaV1TransferVerificationGuard
 
         $amountCents = EtbMajorAmount::cents($data['amount'] ?? null);
         if ($currency !== strtoupper((string) $intent->currency)
-            || ($amountCents !== $intent->amount_cents && !$this->matchesFailedAmountWithCharge($intent, $data, $status, $amountCents))) {
+            || ($amountCents !== $intent->amount_cents && !$this->matchesAmountWithCharge($intent, $data, $status, $amountCents))) {
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
     }
 
     /** @param array<string, mixed> $data */
-    private function matchesFailedAmountWithCharge(StorefrontPayoutIntent $intent, array $data, string $status, ?int $amountCents): bool
+    private function matchesAmountWithCharge(StorefrontPayoutIntent $intent, array $data, string $status, ?int $amountCents): bool
     {
-        if ($status !== 'failed/cancelled' || $amountCents === null || $amountCents <= 0
+        $successfulTelebirr = $status === 'success' && $intent->withdrawal_code === 'telebirr'
+            && strtoupper((string) $intent->currency) === 'ETB';
+        if ((!$successfulTelebirr && $status !== 'failed/cancelled') || $amountCents === null || $amountCents <= 0
             || !isset($data['account_number'])
             || ($data['tx_ref'] ?? null) !== $intent->merchant_reference) {
             return false;
