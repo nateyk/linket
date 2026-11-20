@@ -122,7 +122,7 @@ final class StorefrontPayoutProcessingService
         if (in_array($status, ['success', 'successful', 'completed', 'paid'], true)) {
             return $this->settle($intent, $raw);
         }
-        if (in_array($status, ['failed', 'reversed', 'rejected'], true)) {
+        if (in_array($status, ['failed', 'failed/cancelled', 'reversed', 'rejected'], true)) {
             return $this->releaseFailed($intent, $raw);
         }
         if (in_array($status, ['pending', 'queued', 'processing'], true)) {

@@ -214,7 +214,7 @@ final class MarketplaceIndependentAudit
         }
         $statuses = match ($intent->status) {
             StorefrontPayoutIntent::STATUS_SUCCESSFUL => ['success', 'successful', 'completed', 'paid'],
-            StorefrontPayoutIntent::STATUS_FAILED => ['failed', 'reversed', 'rejected'],
+            StorefrontPayoutIntent::STATUS_FAILED => ['failed', 'failed/cancelled', 'reversed', 'rejected'],
             default => ['pending', 'queued', 'processing'],
         };
         if ($payout->status === 'paid' && $intent->status !== StorefrontPayoutIntent::STATUS_SUCCESSFUL) {
