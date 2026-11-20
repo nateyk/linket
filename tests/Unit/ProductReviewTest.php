@@ -468,22 +468,16 @@ class ProductReviewTest extends TestCase
         $this->assertSame(3, $job->tries);
         $this->assertSame([60, 300, 900], $job->backoff);
 
-        $mailer = new class {
-            public array $rawCalls = [];
-
-            public function raw(string $text, $callback): void
-            {
-                $this->rawCalls[] = [$text, $callback];
-            }
-        };
-        \Illuminate\Support\Facades\Mail::swap($mailer);
+        \Illuminate\Support\Facades\Mail::fake();
         $job->handle();
 
-        $this->assertCount(1, $mailer->rawCalls);
-        [$text, $callback] = $mailer->rawCalls[0];
-        $this->assertStringContainsString('5-star', $text);
-        $this->assertStringContainsString($product->title, $text);
-        $this->assertInstanceOf(\Closure::class, $callback);
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\ReactEmailMailable::class, function (\App\Mail\ReactEmailMailable $mailable) use ($product, $stars) {
+            $mailable->assertHasTo($product->creator->email);
+            $mailable->assertSeeInHtml("{$stars}-star");
+            $mailable->assertSeeInHtml($product->title);
+
+            return true;
+        });
     }
 
     public function testFullRefundDeletesOrderReviewAndRevokesEntitlement(): void

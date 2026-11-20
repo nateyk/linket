@@ -39,4 +39,19 @@ class ReactEmailRendererTest extends TestCase
 
         $renderer->render('missing', []);
     }
+
+    #[Test]
+    public function it_renders_fallback_in_testing_environment_without_script(): void
+    {
+        $renderer = new ReactEmailRenderer();
+
+        $result = $renderer->render('message', [
+            'greeting' => 'Hello Ada',
+            'lines' => ['Your payout was sent.', 'Reference: lk-123'],
+        ]);
+
+        $this->assertStringContainsString('Hello Ada', $result['html']);
+        $this->assertStringContainsString('Your payout was sent.', $result['html']);
+        $this->assertStringContainsString('Reference: lk-123', $result['text']);
+    }
 }
