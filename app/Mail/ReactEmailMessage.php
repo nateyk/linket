@@ -24,11 +24,18 @@ final class ReactEmailMessage
             'note' => $params['note'],
         ]);
 
-        return new ReactEmailMailable(
+        $mailable = new ReactEmailMailable(
             html: $rendered['html'],
             text: $rendered['text'],
             subjectLine: $params['subject'],
         );
+        $mailable->subject = $params['subject'];
+        $mailable->greeting = $params['heading'];
+        $mailable->introLines = $params['lines'];
+        $mailable->actionUrl = $params['actionUrl'];
+        $mailable->actionText = $params['actionLabel'];
+
+        return $mailable;
     }
 
     /**

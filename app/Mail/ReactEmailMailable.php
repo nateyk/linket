@@ -12,6 +12,18 @@ final class ReactEmailMailable extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public ?string $greeting = null;
+
+    /** @var list<string> */
+    public array $introLines = [];
+
+    /** @var list<string> */
+    public array $outroLines = [];
+
+    public ?string $actionUrl = null;
+
+    public ?string $actionText = null;
+
     private string $renderedHtml;
 
     private string $renderedText;
@@ -23,6 +35,7 @@ final class ReactEmailMailable extends Mailable
     ) {
         $this->renderedHtml = $html;
         $this->renderedText = $text;
+        $this->subject = $subjectLine;
     }
 
     public function envelope(): Envelope
@@ -37,5 +50,15 @@ final class ReactEmailMailable extends Mailable
             text: 'emails.react-email-plain',
             with: ['body' => $this->renderedText],
         );
+    }
+
+    public function renderHtml(): string
+    {
+        return $this->renderedHtml;
+    }
+
+    public function renderText(): string
+    {
+        return $this->renderedText;
     }
 }

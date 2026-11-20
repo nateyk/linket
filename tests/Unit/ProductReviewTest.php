@@ -462,6 +462,7 @@ class ProductReviewTest extends TestCase
             'ratings' => ['overall' => 5],
         ]));
         $review = ProductReview::query()->where('reviewable_id', $product->id)->first();
+        $stars = 5;
 
         $job = new \App\Storefront\Jobs\SendStorefrontReviewNotification($review->id);
         $this->assertSame('mail', $job->queue);

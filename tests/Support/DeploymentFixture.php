@@ -19,7 +19,7 @@ final class DeploymentFixture
     {
         $this->root = sys_get_temp_dir().'/linket-deploy-permissions-'.bin2hex(random_bytes(8));
         mkdir($this->root, 0700);
-        foreach (['shared/storage/app/digital-products', 'deploy', 'bin', 'source/public/build', 'source/vendor', 'releases/previous/bootstrap/cache', 'releases/previous/vendor'] as $directory) {
+        foreach (['shared/storage/app/digital-products', 'deploy', 'bin', 'source/public/build', 'source/scripts/dist', 'source/vendor', 'releases/previous/bootstrap/cache', 'releases/previous/vendor'] as $directory) {
             mkdir($this->root.'/'.$directory, 0755, true);
         }
 
@@ -39,6 +39,7 @@ final class DeploymentFixture
         $this->write('source/RELEASE_SHA', self::SHA."\n");
         $this->write('source/CI_META', 'CI_SHA='.self::SHA."\n");
         $this->write('source/public/build/manifest.json', '{}');
+        $this->write('source/scripts/dist/render-email.cjs', '// Synthetic render email');
         symlink($this->root.'/shared/storage', $this->root.'/releases/previous/storage');
         symlink($this->root.'/shared/.env', $this->root.'/releases/previous/.env');
         symlink($this->root.'/releases/previous', $this->root.'/current');
