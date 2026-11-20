@@ -3,6 +3,7 @@
 namespace Common\Auth\Models;
 
 use App\Models\User;
+use App\Notifications\LinketResetPasswordNotification;
 use Common\Auth\Notifications\VerifyEmailWithOtp;
 use Common\Permissions\Models\Permission;
 use Common\Permissions\Traits\HasPermissionsRelation;
@@ -19,7 +20,6 @@ use Common\Files\Traits\HasAttachedFileEntries;
 use Common\Notifications\NotificationSubscription;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Auth\MustVerifyEmail;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
@@ -418,12 +418,9 @@ abstract class BaseUser extends BaseModel implements
             );
     }
 
-    public function sendPasswordResetNotification(mixed $token)
+    public function sendPasswordResetNotification(mixed $token): void
     {
-        ResetPassword::$createUrlCallback = function ($user, $token) {
-            return url("password/reset/$token");
-        };
-        $this->notify(new ResetPassword($token));
+        $this->notify(new LinketResetPasswordNotification((string) $token));
     }
 
     public static function findAdmin(): ?self

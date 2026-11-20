@@ -2,9 +2,10 @@
 
 namespace Common\Notifications;
 
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Common\Settings\Settings;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class ContactPageMessage extends Notification
@@ -26,33 +27,26 @@ class ContactPageMessage extends Notification
         return ['mail'];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     *
-     * @param  mixed  $notifiable
-     * @return MailMessage
-     */
-    public function toMail($notifiable)
+    public function toMail($notifiable): ReactEmailMailable
     {
         $siteName = app(Settings::class)->get('branding.site_name');
         $userEmail = $this->message['email'];
+        $subject = __('New message via :siteName contact page.', [
+            'siteName' => $siteName,
+        ]);
 
-        return (new MailMessage())
-            ->subject(
-                __('New message via :siteName contact page.', [
-                    'siteName' => $siteName,
-                ]),
-            )
-            ->greeting(
-                __("New message via :siteName contact page from ':userEmail'", [
-                    'siteName' => $siteName,
-                    'userEmail' => $userEmail,
-                ]),
-            )
-            ->salutation(' ')
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            __("New message via :siteName contact page from ':userEmail'", [
+                'siteName' => $siteName,
+                'userEmail' => $userEmail,
+            ]),
+            [(string) $this->message['message']],
+        )
             ->from(config('mail.from.address'), config('mail.from.name'))
-            ->replyTo($userEmail, $this->message['name'])
-            ->line($this->message['message']);
+            ->replyTo($userEmail, $this->message['name']);
     }
 
     /**

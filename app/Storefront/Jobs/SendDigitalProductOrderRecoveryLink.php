@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Support\Facades\Mail;
 
 class SendDigitalProductOrderRecoveryLink implements ShouldQueue
@@ -38,10 +39,16 @@ class SendDigitalProductOrderRecoveryLink implements ShouldQueue
                 return;
             }
 
-            Mail::raw(
-                "Your Linket sign-in code is: {$this->code}\n\nThis code expires in 10 minutes.",
-                fn($message) => $message->to($recovery->email)->subject(__('Your Linket sign-in code')),
-            );
+            $subject = __('Your Linket sign-in code');
+            Mail::to($recovery->email)->send(ReactEmailMessage::make(
+                $subject,
+                $subject,
+                $subject,
+                [
+                    __('Your Linket sign-in code is: :code', ['code' => $this->code]),
+                    __('This code expires in 10 minutes.'),
+                ],
+            ));
 
             $delivery->update(['status' => 'sent', 'failure_code' => null]);
         });

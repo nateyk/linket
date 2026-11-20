@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Support\Facades\Mail;
 
 class SendAdminMailTest implements ShouldQueue
@@ -26,11 +27,12 @@ class SendAdminMailTest implements ShouldQueue
 
     public function handle(): void
     {
-        Mail::raw(
-            __('This is a test email from Linket. If you received it, outgoing email and the mail queue are working.'),
-            fn($message) => $message
-                ->to($this->email, $this->name)
-                ->subject(__('Linket email delivery test')),
-        );
+        $subject = __('Linket email delivery test');
+        Mail::to($this->email, $this->name)->send(ReactEmailMessage::make(
+            $subject,
+            $subject,
+            $subject,
+            [__('This is a test email from Linket. If you received it, outgoing email and the mail queue are working.')],
+        ));
     }
 }

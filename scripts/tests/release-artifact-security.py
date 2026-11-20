@@ -21,6 +21,7 @@ BASE = {
     "CI_META": ("CI_SHA=" + SHA + "\n").encode(),
     "artisan": b"<?php // synthetic boot entry",
     "public/build/manifest.json": b"{}",
+    "scripts/dist/render-email.cjs": b"// synthetic React Email renderer bundle\n",
     "vendor/autoload.php": b"<?php // synthetic Composer entry",
     "bootstrap/app.php": b"<?php // required boot source",
     "config/app.php": b"<?php return ['key' => env('APP_KEY')];",

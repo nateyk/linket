@@ -7,7 +7,8 @@ use App\Telegram\Support\TelegramNotificationChannels;
 use App\Telegram\Support\TelegramNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Telegram\TelegramMessage;
 
@@ -58,28 +59,37 @@ class ProductModerationNotification extends Notification implements ShouldQueue
         return DigitalProduct::whereKey($this->productId)->exists();
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): ReactEmailMailable
     {
         $product = $this->product();
+        $heading = __('Hello, :name', ['name' => $notifiable->name]);
 
         if (!$product) {
-            return (new MailMessage())
-                ->subject(__('Product update'))
-                ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
-                ->line(__('Your product catalog changed. Open your dashboard for the latest.'))
-                ->action(__('Open dashboard'), url('/dashboard/items'));
+            return ReactEmailMessage::toNotifiable(
+                $notifiable,
+                __('Product update'),
+                __('Product update'),
+                $heading,
+                [__('Your product catalog changed. Open your dashboard for the latest.')],
+                __('Open dashboard'),
+                url('/dashboard/items'),
+            );
         }
 
-        $mail = (new MailMessage())
-            ->subject($this->subject())
-            ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
-            ->line($this->summary($product));
-
+        $lines = [$this->summary($product)];
         if ($this->includesReason() && $this->reason) {
-            $mail->line(__('Reason: :reason', ['reason' => $this->reason]));
+            $lines[] = __('Reason: :reason', ['reason' => $this->reason]);
         }
 
-        return $mail->action($this->actionLabel(), url($this->actionPath($product)));
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $this->subject(),
+            $this->subject(),
+            $heading,
+            $lines,
+            $this->actionLabel(),
+            url($this->actionPath($product)),
+        );
     }
 
     public function toTelegram(object $notifiable): TelegramMessage

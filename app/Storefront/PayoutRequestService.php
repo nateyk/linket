@@ -11,6 +11,7 @@ use App\Storefront\Ledger\Exceptions\InsufficientBalanceException;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Notifications\ChapaPayoutStatusNotification;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use App\Storefront\Services\MarketplacePayoutPolicy;
 use Illuminate\Support\Facades\DB;
@@ -181,6 +182,13 @@ class PayoutRequestService
 
             if ($target === 'paid') {
                 app(CreatorLedgerService::class)->disbursePayout($payout);
+            }
+
+            if ($target === 'paid' || $target === 'rejected') {
+                ChapaPayoutStatusNotification::notifyCreator(
+                    $payout,
+                    $target === 'paid' ? 'sent' : 'failed',
+                );
             }
 
             $this->activity($payout, $actorId, $target, $data['reason'] ?? $data['note'] ?? null);

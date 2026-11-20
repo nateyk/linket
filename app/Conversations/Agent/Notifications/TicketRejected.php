@@ -4,7 +4,8 @@ namespace App\Conversations\Agent\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 
 class TicketRejected extends Notification implements ShouldQueue
@@ -19,9 +20,16 @@ class TicketRejected extends Notification implements ShouldQueue
     public function toMail(mixed $notifiable)
     {
         $siteName = config('app.name');
-        return (new MailMessage())
-            ->subject(__(':siteName support', ['siteName' => $siteName]))
-            ->line(__('Please create new tickets via our support site.'))
-            ->action(__('Create Ticket'), url('/hc/tickets/new'));
+        $subject = __(':siteName support', ['siteName' => $siteName]);
+
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            $subject,
+            [__('Please create new tickets via our support site.')],
+            __('Create Ticket'),
+            url('/hc/tickets/new'),
+        );
     }
 }

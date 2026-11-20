@@ -5,7 +5,8 @@ namespace App\Conversations\Agent\Notifications;
 use App\Conversations\Models\Conversation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 
 class TicketIsLocked extends Notification implements ShouldQueue
@@ -19,15 +20,22 @@ class TicketIsLocked extends Notification implements ShouldQueue
         return ['mail'];
     }
 
-    public function toMail($notifiable): MailMessage
+    public function toMail($notifiable): ReactEmailMailable
     {
-        return (new MailMessage())
-            ->subject(__('Ticket is locked'))
-            ->line(
+        $subject = __('Ticket is locked');
+
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            $subject,
+            [
                 __(
                     "Ticket you replied to ({$this->conversation->id}) was locked due to inactivity. Please create a new ticket on our support site.",
                 ),
-            )
-            ->action(__('Create Ticket'), url('/hc/tickets/new'));
+            ],
+            __('Create Ticket'),
+            url('/hc/tickets/new'),
+        );
     }
 }

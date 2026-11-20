@@ -8,6 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 
@@ -39,9 +40,20 @@ class SendStorefrontReviewNotification implements ShouldQueue
         $stars = $review->ratings->firstWhere('key', 'overall')?->value ?? 0;
         $dashboardUrl = URL::to('/dashboard/items/' . $product->id . '/reviews');
 
-        Mail::raw(
-            "Hello {$product->creator->name},\n\nYou received a new {$stars}-star review for \"{$product->title}\".\n\n{$review->review}\n\nView all reviews in your dashboard: {$dashboardUrl}",
-            fn($message) => $message->to($product->creator->email)->subject(__('You received a new product review')),
-        );
+        $subject = __('You received a new product review');
+        Mail::to($product->creator->email)->send(ReactEmailMessage::make(
+            $subject,
+            $subject,
+            __('Hello, :name', ['name' => $product->creator->name]),
+            [
+                __('You received a new :stars-star review for ":title".', [
+                    'stars' => $stars,
+                    'title' => $product->title,
+                ]),
+                (string) $review->review,
+            ],
+            __('View reviews'),
+            $dashboardUrl,
+        ));
     }
 }

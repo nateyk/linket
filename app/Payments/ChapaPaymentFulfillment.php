@@ -3,6 +3,7 @@
 namespace App\Payments;
 
 use App\Payments\Models\PaymentTransaction;
+use App\Payments\Notifications\ChapaProActivatedNotification;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
@@ -180,6 +181,12 @@ class ChapaPaymentFulfillment
             throw new RuntimeException('Chapa subscription prices must be configured in ETB.');
         }
 
+        $event = $subscription->gateway_name === 'chapa'
+            && $subscription->gateway_status === 'active'
+            && $subscription->ends_at === null
+            ? 'renewed'
+            : 'activated';
+
         $subscription->update([
             'product_id' => $subscription->pending_product_id ?? $subscription->product_id,
             'price_id' => $price->id,
@@ -199,6 +206,13 @@ class ChapaPaymentFulfillment
             'amount_paid' => (int) round(((float) $price->amount) * 100),
             'currency' => 'etb',
         ]);
+
+        $subscription->loadMissing('user', 'product');
+        $subscription->user?->notify(new ChapaProActivatedNotification(
+            $event,
+            $subscription->product?->name ?? 'Pro',
+            $subscription->renews_at?->toDayDateTimeString() ?? '',
+        ));
     }
 
     private function nextRenewalAt(Price $price): Carbon

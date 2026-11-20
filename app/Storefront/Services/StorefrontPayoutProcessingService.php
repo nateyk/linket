@@ -10,6 +10,7 @@ use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Notifications\ChapaPayoutStatusNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -166,6 +167,8 @@ final class StorefrontPayoutProcessingService
                 throw new RuntimeException('Settlement conflicts with the existing withdrawal state.');
             }
 
+            $alreadyPaid = $payout->status === 'paid';
+
             $intent->update([
                 'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
                 'verified_at' => now(),
@@ -177,6 +180,9 @@ final class StorefrontPayoutProcessingService
                 'transfer_reference' => $intent->merchant_reference,
             ]);
             $this->ledger()->disbursePayout($payout);
+            if (! $alreadyPaid) {
+                ChapaPayoutStatusNotification::notifyCreator($payout, 'sent');
+            }
 
             return $intent->fresh();
         });
@@ -202,6 +208,7 @@ final class StorefrontPayoutProcessingService
                 'verified_at' => now(),
                 'verification_data' => $raw,
             ]);
+            $alreadyRejected = $payout->status === 'rejected';
             $payout->update([
                 'status' => 'rejected',
                 'rejected_at' => now(),
@@ -217,6 +224,9 @@ final class StorefrontPayoutProcessingService
                 ['payout_request_id' => $payout->id, 'description' => 'Chapa transfer failed'],
             );
             $this->ledger()->releasePayoutReservation($payout);
+            if (! $alreadyRejected) {
+                ChapaPayoutStatusNotification::notifyCreator($payout, 'failed');
+            }
 
             return $intent->fresh();
         });

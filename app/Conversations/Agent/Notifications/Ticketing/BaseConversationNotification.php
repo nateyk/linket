@@ -2,10 +2,11 @@
 
 namespace App\Conversations\Agent\Notifications\Ticketing;
 
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Slack\SlackMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
@@ -60,19 +61,26 @@ abstract class BaseConversationNotification extends Notification implements
         return $channels;
     }
 
-    public function toMail(User $notifiable): MailMessage
+    public function toMail(User $notifiable): ReactEmailMailable
     {
         $mainAction = $this->mainAction();
+        $lines = array_map(
+            fn ($line) => trim(strip_tags(str_replace(['**', "\n"], ['', ' '], (string) $line))),
+            $this->lines($notifiable),
+        );
         $subject = method_exists($this, 'subject')
             ? $this->subject()
-            : strip_tags(str_replace('**', '', $this->lines($notifiable)[0]));
-        $msg = (new MailMessage())->subject($subject);
+            : ($lines[0] ?? __('Conversation update'));
 
-        foreach ($this->lines($notifiable) as $line) {
-            $msg->line($line);
-        }
-
-        return $msg->action($mainAction['label'], $mainAction['action']);
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            $subject,
+            $lines,
+            $mainAction['label'] ?? null,
+            $mainAction['action'] ?? null,
+        );
     }
 
     public function toSlack(User $notifiable): SlackMessage
