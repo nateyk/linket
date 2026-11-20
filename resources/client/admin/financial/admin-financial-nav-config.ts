@@ -3,7 +3,6 @@ import {MessageDescriptor} from '@ui/i18n/message-descriptor';
 import {
   CircleDollarSignIcon,
   CreditCardIcon,
-  LandmarkIcon,
   ScaleIcon,
   SlidersHorizontalIcon,
 } from 'lucide-react';
@@ -34,12 +33,6 @@ export const financialNavItems: FinancialNavItem[] = [
     description: message('Storefront transactions & buyer payments'),
     to: '/admin/financial/payment-activity',
     icon: CircleDollarSignIcon,
-  },
-  {
-    label: message('Withdrawal methods'),
-    description: message('Payout limits & legacy method rules'),
-    to: '/admin/financial/withdrawal-methods/legacy',
-    icon: LandmarkIcon,
   },
   {
     label: message('Ledger & reconciliation'),

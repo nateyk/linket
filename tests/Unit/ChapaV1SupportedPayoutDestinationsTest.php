@@ -56,6 +56,34 @@ class ChapaV1SupportedPayoutDestinationsTest extends TestCase
         }
     }
 
+    public function testAdminDisabledBankIsExcludedFromSellerChoicesAndCannotBeResolved(): void
+    {
+        config()->set('database.default', 'sqlite');
+        config()->set('database.connections.sqlite.database', ':memory:');
+        Schema::create('digital_product_withdrawal_methods', function (Blueprint $table): void {
+            $table->id();
+            $table->string('code');
+            $table->string('name');
+            $table->boolean('is_active');
+            $table->timestamps();
+        });
+        try {
+            DB::table('digital_product_withdrawal_methods')->insert([
+                'name' => 'Bank transfer', 'code' => 'bank_transfer', 'is_active' => true,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+            settings()->set('marketplace.payout_bank.awash.enabled', 0);
+            $service = $this->service();
+            $this->assertNotContains('awash', array_column($service->availableBankOptions(), 'code'));
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('disabled by the administrator');
+            $service->resolveBank('awash');
+        } finally {
+            settings()->set('marketplace.payout_bank.awash.enabled', 1);
+            Schema::dropIfExists('digital_product_withdrawal_methods');
+        }
+    }
+
     public function testUnsupportedProviderCannotBecomeAPayoutDestination(): void
     {
         $this->expectException(RuntimeException::class);

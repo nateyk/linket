@@ -317,6 +317,9 @@ Route::group(['prefix' => 'v1'], function() {
 
         // ADMIN WITHDRAWAL METHODS
         Route::get('admin/financial/chapa-payout-readiness', ChapaPayoutReadinessController::class);
+        Route::get('admin/financial/chapa-payout-destinations', [DigitalProductWithdrawalMethodsController::class, 'chapaDestinations']);
+        Route::put('admin/financial/chapa-payout-destinations/{code}', [DigitalProductWithdrawalMethodsController::class, 'updateChapaDestination'])
+            ->where('code', '[a-z]+');
         Route::get('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'adminIndex'])->name('admin.withdrawal-methods.index');
         Route::post('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'store'])->name('admin.withdrawal-methods.store');
         Route::put('admin/financial/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update'])->name('admin.withdrawal-methods.update');

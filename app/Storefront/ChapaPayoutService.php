@@ -55,6 +55,24 @@ class ChapaPayoutService
     }
 
     /**
+     * Admin controls are per bank. The old bank_transfer method remains the
+     * shared financial method/limits for existing accounts and payouts.
+     * Use integer 0/1 because Settings::save removes boolean false values.
+     */
+    public static function bankEnabled(string $code): bool
+    {
+        if (!isset(self::PAYOUT_BANK_OPTIONS[$code])) {
+            return false;
+        }
+
+        if (self::PAYOUT_BANK_OPTIONS[$code]['method'] !== 'bank_transfer') {
+            return true; // Wallet controls continue using withdrawal-method rows.
+        }
+
+        return (int) settings('marketplace.payout_bank.'.$code.'.enabled', 1) === 1;
+    }
+
+    /**
      * Show only destinations enabled by Linket AND currently active in
      * the authenticated Chapa v1 ETB bank list. Never offer speculative banks.
      *
@@ -83,7 +101,7 @@ class ChapaPayoutService
         $options = [];
         foreach (self::PAYOUT_BANK_OPTIONS as $code => $option) {
             $method = $enabled->get($option['method']);
-            if ($method && isset($verified[$code])) {
+            if ($method && isset($verified[$code]) && self::bankEnabled($code)) {
                 $options[] = [
                     'code' => $code,
                     'name' => $option['name'],
@@ -117,6 +135,9 @@ class ChapaPayoutService
         $canonical = self::canonicalBankCode($code);
         if ($canonical === null) {
             throw new RuntimeException('This destination is not part of the supported Chapa payout methods.');
+        }
+        if (!self::bankEnabled($canonical)) {
+            throw new RuntimeException('This Chapa payout bank is disabled by the administrator.');
         }
 
         foreach ($this->getBanks() as $bank) {

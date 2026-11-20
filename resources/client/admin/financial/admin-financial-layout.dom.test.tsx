@@ -59,7 +59,7 @@ describe('AdminFinancialLayout', () => {
     expect(screen.queryByText('Receiving accounts')).toBeNull();
     expect(screen.getByText('Withdrawals')).toBeTruthy();
     expect(screen.getByText('Payment activity')).toBeTruthy();
-    expect(screen.getByText('Withdrawal methods')).toBeTruthy();
+    expect(screen.queryByText('Withdrawal methods')).toBeNull();
     expect(screen.getByText('Ledger & reconciliation')).toBeTruthy();
 
     // Child content rendered in outlet
