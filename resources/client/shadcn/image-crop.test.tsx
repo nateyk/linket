@@ -119,6 +119,9 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('}, [imageUrl]);');
     // Tight stack: stage → zoom; footer stays outside in the dialog
     expect(cropSource).toContain('flex min-h-0 w-full flex-col gap-2');
+    expect(cropSource).toContain('aria-describedby={cropInstructionsId}');
+    expect(cropSource).toContain('focus-visible:outline-2');
+    expect(cropSource).toContain('setCrop(previous =>');
     // slider-driven zoom with themed thumb, clamped minZoom-3
     expect(cropSource).toContain('<Slider');
     expect(cropSource).toContain('size-4');
@@ -134,7 +137,8 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('cropperKey');
     expect(cropSource).not.toContain("'free'");
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
-    expect(selectorSource).toContain('Dialog.Footer variant="muted"');
+    expect(selectorSource).toContain('Dialog.Footer className=');
+    expect(selectorSource).toContain('flex-row flex-wrap items-center');
     expect(selectorSource).not.toContain('flex items-center justify-end');
   });
 });
@@ -144,12 +148,12 @@ describe('crop stage box style', () => {
     const {cropStageBoxStyle} = await import('@shadcn/image-crop/image-crop');
     const cover = cropStageBoxStyle(3);
     expect(cover.aspectRatio).toBe('3');
-    expect(String(cover.maxHeight)).toContain('200px');
+    expect(String(cover.maxHeight)).toContain('170px');
 
     const avatar = cropStageBoxStyle(1);
     expect(avatar.aspectRatio).toBe('1');
     expect(avatar.maxWidth).toBe('100%');
-    expect(String(avatar.maxHeight)).toContain('360px');
+    expect(String(avatar.maxHeight)).toContain('300px');
   });
 });
 
