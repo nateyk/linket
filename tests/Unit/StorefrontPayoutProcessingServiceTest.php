@@ -443,6 +443,38 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $intent->fresh()->status);
     }
 
+    public function testSuccessfulTelebirrTransferWithAnItemizedChargeSettlesOnce(): void
+    {
+        $manager = $this->createStub(\App\Payments\Chapa\LinketChapaManager::class);
+        $manager->method('platformSecret')->willReturn('CHASECK-fixture');
+        $this->app->instance(\App\Payments\Chapa\LinketChapaManager::class, $manager);
+
+        $payout = $this->payout();
+        $payout->update(['amount_cents' => 500, 'payout_destination' => '0900000001']);
+        $intent = $this->intent($payout);
+        $intent->update([
+            'amount_cents' => 500, 'withdrawal_code' => 'telebirr', 'destination_snapshot' => '0900000001',
+            'status' => StorefrontPayoutIntent::STATUS_SUBMITTED, 'last_error' => 'Submission not confirmed.',
+        ]);
+        $response = ['status' => 'success', 'data' => [
+            'status' => 'success', 'mode' => 'live', 'tx_ref' => $intent->merchant_reference,
+            'currency' => 'ETB', 'account_number' => '251900000001', 'amount' => 4.90, 'charge' => 0.10,
+        ]];
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->with($intent->merchant_reference)->twice()->andReturn($response);
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('disbursePayout')->once()->withArgs(fn (PayoutRequest $paid): bool =>
+            $paid->is($payout) && $paid->amount_cents === 500);
+        $service = new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider);
+        $service->verifyPayout($intent);
+        $verified = $service->verifyPayout($intent->fresh());
+
+        $this->assertSame('paid', $payout->fresh()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $verified->status);
+        $this->assertSame($response, $verified->verification_data);
+        $this->assertNull($verified->last_error);
+    }
+
     public function testSingleRecordListVerificationCanSettleExactlyOnce(): void
     {
         $provider = Mockery::mock(ChapaPayoutService::class);
@@ -522,10 +554,13 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
     }
 
     #[TestWith(['success', 1, '1000123456789', 'live'])]
+    #[TestWith(['success', 0.99, '1000123456789', 'live', 'telebirr'])]
+    #[TestWith(['success', 1, null, 'live', 'telebirr'])]
+    #[TestWith(['success', 1, '1000123456789', 'test', 'telebirr'])]
     #[TestWith(['failed/cancelled', 0.99, '1000123456789', 'live'])]
     #[TestWith(['failed/cancelled', 1, null, 'live'])]
     #[TestWith(['failed/cancelled', 1, '1000123456789', 'test'])]
-    public function testListVerificationWithWrongAmountKeepsFundsReserved(string $status, float $charge, ?string $account, string $mode): void
+    public function testListVerificationWithWrongAmountKeepsFundsReserved(string $status, float $charge, ?string $account, string $mode, string $method = 'bank_transfer'): void
     {
         $manager = $this->createStub(\App\Payments\Chapa\LinketChapaManager::class);
         $manager->method('platformSecret')->willReturn('CHASECK-fixture');
@@ -552,8 +587,10 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         );
 
         $this->expectExceptionMessage('verification details do not match');
+        $intent = $this->intent($payout);
+        $intent->update(['withdrawal_code' => $method]);
         try {
-            $service->verifyPayout($this->intent($payout));
+            $service->verifyPayout($intent);
         } finally {
             $this->assertSame('processing', $payout->fresh()->status);
         }
