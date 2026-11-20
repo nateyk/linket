@@ -133,7 +133,7 @@ function rgb(input: string, fallback: string): [number, number, number] {
     ) as [number, number, number];
   } catch {
     const coords = new Color(fallback).to('srgb').coords;
-    return [coords[0], coords[1], coords[2]];
+    return [Number(coords[0] ?? 1), Number(coords[1] ?? 1), Number(coords[2] ?? 1)];
   }
 }
 
@@ -168,16 +168,17 @@ function mountBackground(
   options: Required<Pick<BackgroundCanvasProps, 'scene' | 'quality' | 'speed' | 'still' | 'interactive' | 'paused'>> &
     Pick<BackgroundCanvasProps, 'colors' | 'palettes' | 'uniforms'>,
 ) {
-  const gl = canvas.getContext('webgl2', {
+  const potentialGL = canvas.getContext('webgl2', {
     alpha: true,
     premultipliedAlpha: true,
     antialias: false,
     powerPreference: 'low-power',
   });
-  if (!gl) {
+  if (!potentialGL) {
     root.dataset.state = 'unsupported';
     return () => {};
   }
+  const gl = potentialGL;
 
   let program: WebGLProgram | null = null;
   let vertex: WebGLShader | null = null;
