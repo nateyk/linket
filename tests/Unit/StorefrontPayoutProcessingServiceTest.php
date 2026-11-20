@@ -82,6 +82,19 @@ class StorefrontPayoutProcessingServiceTest extends StorefrontPayoutTestCase
         ]);
     }
 
+    private function verified(string $status = 'success', string $reference = 'lk-po-TEST-REF-01'): array
+    {
+        return [
+            'status' => 'success',
+            'data' => [
+                'status' => $status,
+                'reference' => $reference,
+                'amount' => '500.00',
+                'currency' => 'ETB',
+            ],
+        ];
+    }
+
     public function testSignedApprovalPayloadMatchesExactApprovedWalletSnapshot(): void
     {
         $payout = new PayoutRequest([

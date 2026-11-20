@@ -53,23 +53,26 @@ final class ChapaItemizedTransferFeeTest extends StorefrontPayoutTestCase
         $this->assertNull($verified->last_error);
     }
 
-    #[TestWith(['success', 1, '1000123456789', 'live'])]
-    #[TestWith(['success', 0.99, '1000123456789', 'live', 'telebirr'])]
-    #[TestWith(['success', 1, null, 'live', 'telebirr'])]
-    #[TestWith(['success', 1, '1000123456789', 'test', 'telebirr'])]
-    #[TestWith(['failed/cancelled', 0.99, '1000123456789', 'live'])]
-    #[TestWith(['failed/cancelled', 1, null, 'live'])]
-    #[TestWith(['failed/cancelled', 1, '1000123456789', 'test'])]
-    public function testListVerificationWithWrongAmountKeepsFundsReserved(string $status, float $charge, ?string $account, string $mode, string $method = 'bank_transfer'): void
+    #[TestWith(['bank_transfer', []])]
+    #[TestWith(['telebirr', ['charge' => 0.99]])]
+    #[TestWith(['telebirr', ['account_number' => null]])]
+    #[TestWith(['telebirr', ['mode' => 'test']])]
+    #[TestWith(['bank_transfer', ['status' => 'failed/cancelled', 'charge' => 0.99]])]
+    #[TestWith(['bank_transfer', ['status' => 'failed/cancelled', 'account_number' => null]])]
+    #[TestWith(['bank_transfer', ['status' => 'failed/cancelled', 'mode' => 'test']])]
+    public function testListVerificationWithWrongAmountKeepsFundsReserved(string $method, array $overrides): void
     {
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+        $intent->update(['withdrawal_code' => $method]);
         $provider = Mockery::mock(ChapaPayoutService::class);
-        $record = $this->verified($status)['data'];
-        $record['amount'] = '499.00';
-        $record['charge'] = $charge;
-        $record['mode'] = $mode;
-        $record['tx_ref'] = $record['reference'];
-        if ($account !== null) {
-            $record['account_number'] = $account;
+        $record = [
+            'status' => 'success', 'currency' => 'ETB', 'tx_ref' => $intent->merchant_reference,
+            'amount' => '499.00', 'charge' => 1, 'mode' => 'live', 'account_number' => $intent->destination_snapshot,
+            ...$overrides,
+        ];
+        if ($record['account_number'] === null) {
+            unset($record['account_number']);
         }
         $provider->shouldReceive('verifyTransfer')->once()->andReturn([
             'status' => 'success', 'data' => [$record],
@@ -77,15 +80,12 @@ final class ChapaItemizedTransferFeeTest extends StorefrontPayoutTestCase
         $ledger = Mockery::mock(CreatorLedgerService::class);
         $ledger->shouldNotReceive('disbursePayout');
 
-        $payout = $this->payout();
         $service = new StorefrontPayoutProcessingService(
             creatorLedger: $ledger,
             chapaPayoutService: $provider,
         );
 
         $this->expectExceptionMessage('verification details do not match');
-        $intent = $this->intent($payout);
-        $intent->update(['withdrawal_code' => $method]);
         try {
             $service->verifyPayout($intent);
         } finally {

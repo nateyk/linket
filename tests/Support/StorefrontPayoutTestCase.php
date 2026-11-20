@@ -76,17 +76,4 @@ abstract class StorefrontPayoutTestCase extends TestCase
             'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
         ]);
     }
-
-    protected function verified(string $status = 'success', string $reference = 'lk-po-TEST-REF-01'): array
-    {
-        return [
-            'status' => 'success',
-            'data' => [
-                'status' => $status,
-                'reference' => $reference,
-                'amount' => '500.00',
-                'currency' => 'ETB',
-            ],
-        ];
-    }
 }
