@@ -294,17 +294,18 @@ export const adminRoutes: RouteObject[] = [
             path: 'withdrawal-methods',
             loader: () => redirect('/admin/payout-accounts'),
           },
+          // Old editor pages no longer exist; keep safe redirects for bookmarks.
           {
             path: 'withdrawal-methods/legacy',
-            lazy: () => import('@app/admin/financial/admin-withdrawal-methods-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawal-methods/create',
-            lazy: () => import('@app/admin/financial/admin-withdrawal-method-create-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawal-methods/:methodId/edit',
-            lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawals',

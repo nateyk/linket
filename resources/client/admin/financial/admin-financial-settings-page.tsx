@@ -27,14 +27,17 @@ import {ChapaEnvironmentManagerCard} from './chapa-environment-manager-card';
 
 type Tab = 'chapa' | 'currency' | 'payout-methods' | 'commission' | 'reconciliation';
 
-type WithdrawalMethod = {
-  id: number;
-  name: string;
+type PayoutDestination = {
   code: string;
-  destination_label?: string | null;
-  minimum_amount_cents?: number | null;
-  maximum_amount_cents?: number | null;
-  is_active: boolean;
+  name: string;
+  type: string;
+  method: string;
+  provider_available: boolean;
+  provider_bank_id: number | null;
+  admin_enabled: boolean;
+  enabled: boolean;
+  minimum_amount_cents: number | null;
+  maximum_amount_cents: number | null;
 };
 
 const financialSummaryUrl = '/api/v1/admin/marketplace/financial-summary';
@@ -144,21 +147,23 @@ function ChapaPlatformGatewayTab() {
 }
 
 function PayoutMethodsTab() {
-  const [methods, setMethods] = useState<WithdrawalMethod[]>([]);
+  const [destinations, setDestinations] = useState<PayoutDestination[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyCode, setBusyCode] = useState<string | null>(null);
+  const [providerUnavailable, setProviderUnavailable] = useState(false);
   const [error, setError] = useState<string>();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const methodRes = await apiClient.get('/api/v1/admin/financial/withdrawal-methods');
-      setMethods((methodRes.data.data ?? []).filter((method: WithdrawalMethod) =>
-        ['bank_transfer', 'cbebirr', 'mpesa', 'telebirr', 'yaya'].includes(method.code)
-      ));
+      const response = await apiClient.get('/api/v1/admin/financial/chapa-payout-destinations');
+      const rows = response.data?.data;
+      if (!Array.isArray(rows)) throw new Error('Invalid Chapa payout catalog response');
+      setDestinations(rows);
+      setProviderUnavailable(!!response.data?.provider_unavailable);
       setError(undefined);
-    } catch (e: unknown) {
-      setError(getApiErrorMessage(e));
+    } catch (reason: unknown) {
+      setError(getApiErrorMessage(reason));
     } finally {
       setLoading(false);
     }
@@ -166,73 +171,80 @@ function PayoutMethodsTab() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const toggleMethod = async (method: WithdrawalMethod, enabled: boolean) => {
-    setBusyId('method-' + method.id);
+  const toggle = async (destination: PayoutDestination, enabled: boolean) => {
+    setBusyCode(destination.code);
+    setError(undefined);
     try {
-      await apiClient.put('/api/v1/admin/financial/withdrawal-methods/' + method.id, {is_active: enabled});
+      await apiClient.put(
+        '/api/v1/admin/financial/chapa-payout-destinations/' + destination.code,
+        {enabled},
+      );
       await load();
-    } catch (e: unknown) {
-      setError(getApiErrorMessage(e));
+    } catch (reason: unknown) {
+      setError(getApiErrorMessage(reason));
     } finally {
-      setBusyId(null);
+      setBusyCode(null);
     }
   };
+
+  const renderRow = (destination: PayoutDestination) => (
+    <div key={destination.code} className="flex min-w-0 flex-wrap items-center gap-3 border-b border-border/70 py-3 last:border-b-0 sm:flex-nowrap">
+      <div className="min-w-0 flex-1">
+        <div className="font-medium">{destination.name}</div>
+        <div className="text-xs text-muted-foreground">
+          {destination.code}
+          {destination.provider_bank_id ? ' · Chapa ID ' + destination.provider_bank_id : ''}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        {destination.provider_available
+          ? <Badge variant="positive"><Trans message="Available at Chapa" /></Badge>
+          : <Badge variant="outline"><Trans message="Unavailable at Chapa" /></Badge>}
+        <Switch
+          aria-label={destination.name + ' payouts'}
+          checked={destination.enabled}
+          disabled={busyCode !== null || !destination.provider_available}
+          onCheckedChange={enabled => void toggle(destination, enabled)}
+        />
+      </div>
+    </div>
+  );
 
   if (loading) return <TabLoadingSpinner />;
 
   return (
-    <div className="space-y-4">
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <Card.Root>
-        <Card.Header>
-          <Card.Title><Trans message="Withdrawal providers" /></Card.Title>
-          <Card.Description>
-            <Trans message="Only CBE Birr, Commercial Bank of Ethiopia, M-Pesa, telebirr and YaYaWallet can be offered. Sellers see a provider only if it is enabled here and active in the Chapa v1 bank list." />
-          </Card.Description>
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-            <p className="text-xs text-muted-foreground">
-              <Trans message="Configure Chapa Transfer Approval URL in your merchant dashboard:" /> <code>/api/v1/chapa/transfer-approval</code>
-            </p>
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods/legacy" />}>
-              <Trans message="Manage provider limits" />
-            </Button>
+    <Card.Root>
+      <Card.Header>
+        <Card.Title><Trans message="Chapa payout destinations" /></Card.Title>
+        <Card.Description>
+          <Trans message="Enable each supported bank or wallet individually. Sellers only see methods active at Chapa and enabled here. Chapa bank IDs come from your current merchant environment." />
+        </Card.Description>
+      </Card.Header>
+      <Card.Content className="space-y-5">
+        {providerUnavailable && (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans message="Chapa bank availability could not be checked. No unavailable destination can be enabled until the catalog recovers." />
+          </p>
+        )}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <div>
+          <h3 className="mb-1 text-sm font-semibold"><Trans message="Banks" /></h3>
+          <div className="border-t border-border">
+            {destinations.filter(row => row.method === 'bank_transfer').map(renderRow)}
           </div>
-        </Card.Header>
-        <Card.Content>
-          <Table.Root>
-            <Table.Header>
-              <Table.Row>
-                <Table.Head><Trans message="Provider" /></Table.Head>
-                <Table.Head><Trans message="Minimum" /></Table.Head>
-                <Table.Head><Trans message="Maximum" /></Table.Head>
-                <Table.Head><Trans message="Enabled" /></Table.Head>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {methods.map(m => (
-                <Table.Row key={m.id}>
-                  <Table.Cell className="font-medium">{m.name}</Table.Cell>
-                  <Table.Cell>{formatMoney(m.minimum_amount_cents ?? 0, 'ETB')}</Table.Cell>
-                  <Table.Cell>{m.maximum_amount_cents ? formatMoney(m.maximum_amount_cents, 'ETB') : 'Unlimited'}</Table.Cell>
-                  <Table.Cell>
-                    <Switch
-                      checked={m.is_active}
-                      disabled={busyId !== null}
-                      onCheckedChange={enabled => void toggleMethod(m, enabled)}
-                      aria-label={m.name + ' payouts'}
-                    />
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-              {methods.length === 0 && (
-                <Table.Row><Table.Cell colSpan={4}><Trans message="No supported Chapa payout methods available." /></Table.Cell></Table.Row>
-              )}
-            </Table.Body>
-          </Table.Root>
-        </Card.Content>
-      </Card.Root>
-
-    </div>
+        </div>
+        <div>
+          <h3 className="mb-1 text-sm font-semibold"><Trans message="Mobile money wallets" /></h3>
+          <div className="border-t border-border">
+            {destinations.filter(row => row.method !== 'bank_transfer').map(renderRow)}
+          </div>
+        </div>
+        {destinations.length === 0 && <p className="text-sm text-muted-foreground"><Trans message="No Chapa payout destinations are configured." /></p>}
+        <p className="text-xs text-muted-foreground">
+          <Trans message="Payout hold days and the global minimum withdrawal amount are configured in Commissions & policy. Approval and verified settlement remain mandatory." />
+        </p>
+      </Card.Content>
+    </Card.Root>
   );
 }
 

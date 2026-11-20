@@ -49,11 +49,6 @@ function FinancialDesktopNav() {
             pathname === item.to ||
             (item.to === '/admin/financial/general' &&
               (pathname === '/admin/financial' || pathname === '/admin/financial/')) ||
-            (item.to === '/admin/financial/withdrawal-methods' &&
-              pathname.startsWith('/admin/financial/withdrawal-methods') &&
-              !pathname.includes('/legacy')) ||
-            (item.to === '/admin/financial/withdrawal-methods/legacy' &&
-              pathname.includes('/legacy')) ||
             (item.to === '/admin/financial/withdrawals' &&
               (pathname.startsWith('/admin/financial/withdrawals') ||
                 pathname.startsWith('/admin/withdrawals'))) ||
@@ -106,11 +101,6 @@ export function FinancialMobileNav() {
         pathname === item.to ||
         (item.to === '/admin/financial/general' &&
           (pathname === '/admin/financial' || pathname === '/admin/financial/')) ||
-        (item.to === '/admin/financial/withdrawal-methods' &&
-          pathname.startsWith('/admin/financial/withdrawal-methods') &&
-          !pathname.includes('/legacy')) ||
-        (item.to === '/admin/financial/withdrawal-methods/legacy' &&
-          pathname.includes('/legacy')) ||
         (item.to === '/admin/financial/withdrawals' &&
           (pathname.startsWith('/admin/financial/withdrawals') ||
             pathname.startsWith('/admin/withdrawals'))) ||

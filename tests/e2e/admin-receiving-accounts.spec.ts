@@ -40,7 +40,7 @@ test.describe('Admin receiving accounts', () => {
     await expect(page).toHaveURL(/login|signin|auth/i, {timeout: 30000});
   });
 
-  test('search, filter, review dialog, and legacy separation', async ({
+  test('search, filter, and review receiving accounts', async ({
     page,
   }) => {
     await loginAsAdmin(page);
@@ -49,13 +49,6 @@ test.describe('Admin receiving accounts', () => {
     await expect(page.getByText('Receiving accounts').first()).toBeVisible({
       timeout: 30000,
     });
-    await expect(
-      page.getByText(/legacy creator withdrawal destinations/i),
-    ).toBeVisible();
-    const legacyLink = page
-      .getByRole('link', {name: /legacy payout methods/i})
-      .or(page.getByRole('button', {name: /legacy payout methods/i}));
-    await expect(legacyLink).toBeVisible();
 
     await page.getByLabel('Search').fill('admin@admin.com');
     await expect
@@ -93,15 +86,6 @@ test.describe('Admin receiving accounts', () => {
       await page.keyboard.press('Escape');
     }
 
-    await legacyLink.first().click();
-    await expect(page).toHaveURL(/\/withdrawal-methods\/legacy/);
-    await expect(
-      page.getByText(/creator withdrawal methods/i).first(),
-    ).toBeVisible({timeout: 30000});
-    await expect(
-      page.getByRole('button', {name: /^Receiving accounts$/i}).first(),
-    ).toBeVisible();
-    await expect(page.getByText(/verify\.et method catalog/i)).toHaveCount(0);
   });
 
 
@@ -207,24 +191,18 @@ test.describe('Admin receiving accounts', () => {
   });
 
   for (const width of [320, 360, 390] as const) {
-    test(`legacy withdrawal table has no page overflow at ${width}px`, async ({
+    test(`Chapa payout settings have no overflow at ${width}px`, async ({
       page,
     }) => {
       await loginAsAdmin(page);
       await page.setViewportSize({width, height: 844});
-      await page.goto('/admin/financial/withdrawal-methods/legacy');
-      await expect(
-        page.getByText(/legacy payout destinations are for creator withdrawals/i),
-      ).toBeVisible({timeout: 30000});
+      await page.goto('/admin/financial/general');
+      await page.getByRole('tab', {name: /Payout methods/i}).click();
+      await expect(page.getByText('Chapa payout destinations')).toBeVisible({timeout: 30000});
+      await expect(page.getByText('Awash Bank')).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(width + 2);
-      await expect(
-        page.getByText(/Withdrawal destinations/i).first(),
-      ).toBeVisible();
-      await expect(page.getByRole('button', {name: /^Actions$/i}).first()).toBeVisible({
-        timeout: 15000,
-      });
     });
   }
 });
