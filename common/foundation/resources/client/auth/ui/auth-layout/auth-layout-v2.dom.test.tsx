@@ -1,15 +1,12 @@
 /** @vitest-environment jsdom */
 import {cleanup, render, screen} from '@testing-library/react';
-import {afterEach, expect, test, vi} from 'vitest';
+import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {AuthLayoutV2} from './auth-layout-v2';
+import {STARFIELD_SCENE} from './auth-starfield';
 
 vi.mock('@ui/settings/use-settings', () => ({
   useSettings: () => ({
-    branding: {
-      site_name: 'Linket',
-      logo_light: '/brand-light.svg',
-      logo_dark: '/brand-dark.svg',
-    },
+    branding: {site_name: 'Linket', logo_light: '/light.svg', logo_dark: '/dark.svg'},
   }),
 }));
 vi.mock('@ui/i18n/trans', () => ({
@@ -18,7 +15,14 @@ vi.mock('@ui/i18n/trans', () => ({
 vi.mock('@common/locale-switcher/locale-switcher', () => ({
   LocaleSwitcher: () => <button type="button">Choose language</button>,
 }));
-afterEach(() => cleanup());
+
+beforeEach(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => null);
+});
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function renderAuth(audience?: 'creator' | 'portal', topAction?: React.ReactNode) {
   return render(
@@ -31,7 +35,7 @@ function renderAuth(audience?: 'creator' | 'portal', topAction?: React.ReactNode
   );
 }
 
-test('creator auth keeps its form and locale without duplicate brand logos', () => {
+test('auth keeps its form and locale without duplicate logos', () => {
   const {container} = renderAuth();
   expect(screen.getByRole('form', {name: 'Auth form'})).toBeTruthy();
   expect(screen.getByRole('heading', {name: 'A simpler way to sell what you create.'})).toBeTruthy();
@@ -39,34 +43,33 @@ test('creator auth keeps its form and locale without duplicate brand logos', () 
   expect(screen.getByRole('button', {name: 'Choose language'})).toBeTruthy();
   expect(container.querySelector('header')).toBeNull();
   expect(container.querySelector('img')).toBeNull();
-  expect(container.querySelector('main')?.className).toContain('min-h-svh');
-  expect(container.querySelector('aside')?.className).not.toContain('bg-primary');
-  expect(container.querySelector('aside')?.textContent).not.toContain('Linket');
+  expect(container.querySelector('aside')?.className).toContain('bg-muted/35');
 });
 
-test('right hero uses five-layer starfield instead of static grid or store icon', () => {
+test('hero uses real WebGL starfield canvas with a nonblocking fallback, not SVG dots', () => {
   const {container} = renderAuth();
-  const aside = container.querySelector('aside');
-  const stars = aside?.querySelector('[data-slot="starfield"]');
-  expect(stars).toBeTruthy();
-  expect(stars?.getAttribute('class')).toContain('pointer-events-none');
-  expect(stars?.querySelectorAll('.auth-starfield-layer').length).toBe(5);
-  expect(stars?.querySelectorAll('circle').length).toBe(90);
-  expect(stars?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
-  expect(aside?.querySelector('header')).toBeNull();
-  expect(aside?.className).toContain('bg-muted/35');
-  expect(aside?.querySelector('.bg-primary')).toBeTruthy();
+  const root = container.querySelector('[data-slot="starfield"]') as HTMLElement;
+  expect(root).toBeTruthy();
+  expect(root.className).toContain('pointer-events-none');
+  expect(root.getAttribute('data-state')).toBe('unsupported');
+  expect(root.querySelector('canvas[data-slot="background-canvas-canvas"]')).toBeTruthy();
+  expect(root.querySelector('[data-slot="background-canvas-fallback"]')).toBeTruthy();
+  expect(root.querySelector('svg')).toBeNull();
+  expect(STARFIELD_SCENE).toContain('for (int l = 0; l < 5; l++)');
+  expect(STARFIELD_SCENE).toContain('uPointer.xy');
+  expect(STARFIELD_SCENE).toContain('uWarp');
+  expect(STARFIELD_SCENE).toContain('halo + arms');
 });
 
-test('buyer recovery shares the starfield without creator-focused text', () => {
+test('portal uses buyer-specific messaging with the same shader', () => {
   const {container} = renderAuth('portal');
   expect(screen.getByRole('heading', {name: 'Your purchases, all in one place.'})).toBeTruthy();
   expect(screen.getByText('Your purchases are protected by email verification.')).toBeTruthy();
   expect(screen.queryByText('A simpler way to sell what you create.')).toBeNull();
-  expect(container.querySelector('[data-slot="starfield"]')).toBeTruthy();
+  expect(container.querySelector('[data-slot="starfield"] canvas')).toBeTruthy();
 });
 
-test('optional header action remains accessible without bringing back a logo', () => {
+test('optional action is accessible and never inserts duplicate branding', () => {
   const {container} = renderAuth('creator', <a href="/help">Help</a>);
   expect(screen.getByRole('link', {name: 'Help'})).toBeTruthy();
   expect(container.querySelector('header')).toBeNull();

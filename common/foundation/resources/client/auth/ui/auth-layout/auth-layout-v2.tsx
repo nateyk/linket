@@ -4,6 +4,8 @@ import {useSettings} from '@ui/settings/use-settings';
 import {type ReactNode} from 'react';
 import {Starfield} from './auth-starfield';
 
+const AUTH_STARFIELD_HAZE = ['var(--primary)', 'var(--foreground)'] as const;
+
 interface AuthLayoutV2Props {
   children: ReactNode;
   topAction?: ReactNode;
@@ -45,7 +47,20 @@ export function AuthLayoutV2({
           aria-label={isPortal ? 'Purchase access' : 'About Linket'}
           className="relative hidden min-h-svh min-w-0 overflow-hidden border-l border-border bg-muted/35 text-foreground lg:flex"
         >
-          <Starfield className="pointer-events-none absolute inset-0" />
+          <Starfield
+            className="pointer-events-none absolute inset-0"
+            color="var(--foreground)"
+            hazeColors={AUTH_STARFIELD_HAZE}
+            density={1.5}
+            depth={0.9}
+            glow={0.9}
+            haze={0.38}
+            intensity={1.15}
+            twinkle={0.6}
+            warp={0.3}
+            quality={0.8}
+            interactive
+          />
           <div className="relative z-10 mx-auto flex w-full max-w-xl flex-col px-12 py-12 xl:px-16 xl:py-16">
             <div className="flex flex-1 items-center">
               <div className="max-w-lg">
