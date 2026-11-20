@@ -33,6 +33,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useId,
 } from 'react';
 import Cropper, {type Area} from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
@@ -97,6 +98,7 @@ function ImageSelectorDialogContent({
 }: ImageSelectorDialogContentProps) {
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
   const {trans} = useTrans();
+  const cropInstructionsId = useId();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [crop, setCrop] = useState<CropPosition>({x: 0, y: 0});
@@ -211,7 +213,7 @@ function ImageSelectorDialogContent({
                 role="group"
                 tabIndex={0}
                 aria-label={trans(message('Image crop area'))}
-                aria-describedby="upload-image-crop-hint"
+                aria-describedby={cropInstructionsId}
                 style={cropStageBoxStyle(cropDimensions.width / cropDimensions.height)}
                 className="image-crop-stage relative overflow-hidden rounded-input bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onKeyDown={event => {
@@ -229,7 +231,7 @@ function ImageSelectorDialogContent({
                   setCrop(current => ({x: current.x + offset.x, y: current.y + offset.y}));
                 }}
               >
-                <span id="upload-image-crop-hint" className="sr-only">
+                <span id={cropInstructionsId} className="sr-only">
                   <Trans message="Drag to reposition the image, or use arrow keys. Hold Shift for larger steps." />
                 </span>
                 <Cropper
