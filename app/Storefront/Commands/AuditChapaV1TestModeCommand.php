@@ -200,13 +200,17 @@ final class AuditChapaV1TestModeCommand extends Command
         if (is_array($data) && array_is_list($data)) {
             $this->line('Chapa verification returned '.count($data).' record(s).');
             $first = $data[0] ?? null;
-            $recognized = is_array($first)
-                ? array_values(array_intersect(
-                    ['status', 'reference', 'tx_ref', 'merchant_reference', 'amount', 'currency', 'account_number'],
-                    array_keys($first),
-                ))
-                : [];
-            $this->line('Recognized record fields: '.($recognized ? implode(', ', $recognized) : 'none'));
+            if (is_string($first)) {
+                $this->line('Recognized record fields: reference (queued string)');
+            } else {
+                $recognized = is_array($first)
+                    ? array_values(array_intersect(
+                        ['status', 'reference', 'tx_ref', 'merchant_reference', 'amount', 'currency', 'account_number'],
+                        array_keys($first),
+                    ))
+                    : [];
+                $this->line('Recognized record fields: '.($recognized ? implode(', ', $recognized) : 'none'));
+            }
         }
 
         $payload = ChapaV1TransferVerificationGuard::verifiedTransferDetails($response);
@@ -232,6 +236,9 @@ final class AuditChapaV1TestModeCommand extends Command
             $currency = strtoupper((string) ($payload['currency'] ?? ''));
             $status = strtolower((string) ($payload['status'] ?? ''));
             if ($amount !== $expectedCents || $currency !== 'ETB' || $status !== 'success') {
+                if (in_array($status, ['queued', 'pending'], true)) {
+                    $this->warn('Transfer reference matches and is queued in Chapa Test Mode, but has not settled.');
+                }
                 throw new RuntimeException('Chapa test transfer has not passed settlement verification.');
             }
             $this->line('TEST transfer settlement verified by reference, ETB amount and success status.');

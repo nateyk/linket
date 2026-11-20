@@ -39,11 +39,25 @@ final class ChapaV1TransferVerificationGuard
         }
 
         $data = $response['data'] ?? null;
-        if (is_array($data) && array_is_list($data)) {
+        while (is_array($data) && array_is_list($data)) {
             if (count($data) !== 1) {
                 throw new RuntimeException('Chapa did not return one unambiguous transfer record.');
             }
             $data = $data[0];
+        }
+
+        if (is_string($data) && trim($data) !== '') {
+            return [
+                'reference' => trim($data),
+                'status' => 'queued',
+            ];
+        }
+
+        if (is_array($data)) {
+            $nested = $data['transfers'] ?? $data['transfer'] ?? null;
+            if (is_array($nested) && array_is_list($nested) && count($nested) === 1) {
+                $data = $nested[0];
+            }
         }
 
         if (!is_array($data) || array_is_list($data)) {
@@ -60,8 +74,16 @@ final class ChapaV1TransferVerificationGuard
         $amount = (string) ($data['amount'] ?? '');
         $currency = strtoupper((string) ($data['currency'] ?? ''));
 
-        if (!hash_equals((string) $intent->merchant_reference, $reference)
-            || $currency !== strtoupper((string) $intent->currency)) {
+        if (!hash_equals((string) $intent->merchant_reference, $reference)) {
+            throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
+        }
+
+        $status = strtolower(trim((string) ($data['status'] ?? '')));
+        if (in_array($status, ['pending', 'queued', 'processing'], true) && $amount === '' && $currency === '') {
+            return;
+        }
+
+        if ($currency !== strtoupper((string) $intent->currency)) {
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
 

@@ -243,6 +243,63 @@ class ChapaV1ReadOnlyTestAuditCommandTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function testQueuedTransferStringInListMatchesReferenceWithoutSettlement(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        Http::fake([
+            'https://api.chapa.co/v1/banks' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    ['id' => 855, 'slug' => 'telebirr', 'currency' => 'ETB', 'is_active' => 1, 'active' => 1],
+                ],
+            ]),
+            'https://api.chapa.co/v1/balances' => Http::response([
+                'status' => 'success',
+                'data' => [['currency' => 'ETB', 'available_balance' => 0, 'ledger_balance' => 0]],
+            ]),
+            'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
+                'status' => 'success',
+                'data' => ['lk-sim-1795115964-22952'],
+            ]),
+        ]);
+
+        $this->assertSame(0, Artisan::call('chapa:v1:audit-test', [
+            '--reference' => 'lk-sim-1795115964-22952',
+        ]));
+        $output = Artisan::output();
+        $this->assertStringContainsString('reference matches', $output);
+        $this->assertStringContainsString('yes', $output);
+        $this->assertStringContainsString('queued', $output);
+    }
+
+    public function testQueuedTransferStringWithAmountWarnsWithoutCrashing(): void
+    {
+        $this->withSecret('CHASECK_TEST-fixture');
+        Http::fake([
+            'https://api.chapa.co/v1/banks' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    ['id' => 855, 'slug' => 'telebirr', 'currency' => 'ETB', 'is_active' => 1, 'active' => 1],
+                ],
+            ]),
+            'https://api.chapa.co/v1/balances' => Http::response([
+                'status' => 'success',
+                'data' => [['currency' => 'ETB', 'available_balance' => 0, 'ledger_balance' => 0]],
+            ]),
+            'https://api.chapa.co/v1/transfers/verify/*' => Http::response([
+                'status' => 'success',
+                'data' => ['lk-sim-1795115964-22952'],
+            ]),
+        ]);
+
+        $this->assertSame(1, Artisan::call('chapa:v1:audit-test', [
+            '--reference' => 'lk-sim-1795115964-22952',
+            '--transfer-amount-cents' => '100',
+        ]));
+        $output = Artisan::output();
+        $this->assertStringContainsString('queued in Chapa Test Mode', $output);
+    }
+
     public function testUnexpectedProviderShapeFailsWithoutTransferSubmission(): void
     {
         $this->withSecret('CHASECK_TEST-fake');
