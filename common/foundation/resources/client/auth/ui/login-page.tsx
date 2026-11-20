@@ -78,8 +78,6 @@ export function LoginPage({
     </div>
   );
 
-  const isInvalid = !!Object.keys(form.formState.errors).length;
-
   return (
     <AuthLayoutV2>
       <StaticPageTitle>
@@ -88,8 +86,8 @@ export function LoginPage({
 
       {children}
 
-      <div className="space-y-2 text-center">
-        <h1 className="font-medium text-3xl">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           {isWorkspaceLogin ? heading : <Trans message="Login to your account" />}
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -99,11 +97,7 @@ export function LoginPage({
         </p>
       </div>
 
-      <div className="space-y-4">
-        <SocialAuthSection
-          dividerMessage={<Trans message="Or continue with" />}
-        />
-
+      <div className="space-y-5">
         <HookForm.Root
           form={form}
           onSubmit={payload => {
@@ -119,7 +113,7 @@ export function LoginPage({
           <Field.Group className="gap-4">
             <HookForm.Field
               name="email"
-              invalid={isInvalid ? true : undefined}
+              invalid={!!form.formState.errors.email || undefined}
               disabled={!!searchParamsEmail}
             >
               <Field.Label htmlFor="login-email">
@@ -143,7 +137,7 @@ export function LoginPage({
 
             <HookForm.Field
               name="password"
-              invalid={isInvalid ? true : undefined}
+              invalid={!!form.formState.errors.password || undefined}
             >
               <div className="flex items-center justify-between gap-4">
                 <Field.Label htmlFor="login-password">
@@ -152,7 +146,6 @@ export function LoginPage({
                 <Link
                   className="inline-flex min-h-6 items-center text-sm hover:underline"
                   to="/forgot-password"
-                  tabIndex={-1}
                 >
                   <Trans message="Forgot your password?" />
                 </Link>
@@ -187,10 +180,13 @@ export function LoginPage({
             </Button>
           </Field.Group>
         </HookForm.Root>
+        <SocialAuthSection
+          dividerMessage={<Trans message="Or continue with" />}
+        />
       </div>
 
       {messages && (
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground">
           {messages}
         </div>
       )}
@@ -207,7 +203,6 @@ function InvalidCredentialsMessage() {
           <Link
             className="font-semibold underline"
             to="/forgot-password"
-            tabIndex={-1}
           >
             {text}
           </Link>
