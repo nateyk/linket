@@ -81,10 +81,29 @@ final class ChapaV1TransferVerificationGuard
             return;
         }
 
+        $amountCents = EtbMajorAmount::cents($data['amount'] ?? null);
         if ($currency !== strtoupper((string) $intent->currency)
-            || EtbMajorAmount::cents($amount) !== (int) $intent->amount_cents) {
+            || ($amountCents !== $intent->amount_cents && !$this->matchesFailedAmountWithCharge($intent, $data, $status, $amountCents))) {
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
+    }
+
+    /** @param array<string, mixed> $data */
+    private function matchesFailedAmountWithCharge(StorefrontPayoutIntent $intent, array $data, string $status, ?int $amountCents): bool
+    {
+        if ($status !== 'failed/cancelled' || $amountCents === null || $amountCents <= 0
+            || !isset($data['account_number'])
+            || ($data['tx_ref'] ?? null) !== $intent->merchant_reference) {
+            return false;
+        }
+
+        $chargeCents = EtbMajorAmount::cents($data['charge'] ?? null);
+        $mode = $data['mode'] ?? null;
+
+        return $chargeCents !== null && $chargeCents > 0
+            && $amountCents + $chargeCents === $intent->amount_cents
+            && in_array($mode, ['test', 'live'], true)
+            && $mode === app(ChapaV1PayoutMode::class)->mode();
     }
 
     /** @param array<string, mixed> $data */

@@ -32,6 +32,7 @@ use Illuminate\Support\Str;
 use Nateyk\Chapa\ChapaClient;
 use Nateyk\Chapa\Http\RawResponse;
 use Nateyk\Chapa\Http\Transport;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class CentralizedMarketplaceLifecycleTest extends TestCase
@@ -275,12 +276,18 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         $this->assertSame(0, $finalBalances['available']);
     }
 
-    public function testFailedPayoutReleasesFundsBackToAvailableBalance(): void
+    #[TestWith(['failed', 5.00, 0.00])]
+    #[TestWith(['failed/cancelled', 5.00, 0.00])]
+    #[TestWith(['failed/cancelled', 4.90, 0.10])]
+    public function testFailedPayoutReleasesFundsBackToAvailableBalance(string $providerStatus, float $amount, float $charge): void
     {
         $creatorId = 99;
         $workspaceId = 1;
-        $amountCents = 75000;
+        $amountCents = 500;
         $this->seedCreator($creatorId, 'creator99@test.com');
+        $manager = $this->createStub(LinketChapaManager::class);
+        $manager->method('platformSecret')->willReturn('CHASECK-fixture');
+        $this->app->instance(LinketChapaManager::class, $manager);
 
         $ledgerService = new CreatorLedgerService(new JournalPostingService());
         $this->seedMaturedSale($creatorId, $amountCents, $ledgerService);
@@ -292,7 +299,7 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             'amount_cents' => $amountCents,
             'currency' => 'ETB',
             'status' => 'processing',
-            'payout_destination' => 'CBE:100099999999',
+            'payout_destination' => '0900000001',
         ]);
         $ledgerService->reserveForPayout($payout, $amountCents);
 
@@ -306,7 +313,10 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         );
         $provider->method('verifyTransfer')->willReturnCallback(fn (string $ref): array => [
             'status' => 'success',
-            'data' => ['status' => 'failed', 'reference' => $ref, 'amount' => '750.00', 'currency' => 'ETB'],
+            'data' => [
+                'status' => $providerStatus, 'tx_ref' => $ref, 'amount' => $amount, 'currency' => 'ETB',
+                'charge' => $charge, 'account_number' => '251900000001', 'mode' => 'live',
+            ],
         ]);
         $processingService = new StorefrontPayoutProcessingService(
             creatorLedger: $ledgerService,
@@ -322,6 +332,7 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
 
         $processingService->verifyPayout($intent);
         $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $intent->fresh()->status);
+        $processingService->verifyPayout($intent->fresh());
         $this->assertSame('rejected', $payout->fresh()->status);
 
         $this->assertSame(0, $ledgerService->getBalances($query)['reserved']);

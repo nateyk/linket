@@ -18,6 +18,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
+use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -520,11 +521,24 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $intent->fresh()->status);
     }
 
-    public function testListVerificationWithWrongAmountCannotDisburse(): void
+    #[TestWith(['success', 1, '1000123456789', 'live'])]
+    #[TestWith(['failed/cancelled', 0.99, '1000123456789', 'live'])]
+    #[TestWith(['failed/cancelled', 1, null, 'live'])]
+    #[TestWith(['failed/cancelled', 1, '1000123456789', 'test'])]
+    public function testListVerificationWithWrongAmountKeepsFundsReserved(string $status, float $charge, ?string $account, string $mode): void
     {
+        $manager = $this->createStub(\App\Payments\Chapa\LinketChapaManager::class);
+        $manager->method('platformSecret')->willReturn('CHASECK-fixture');
+        $this->app->instance(\App\Payments\Chapa\LinketChapaManager::class, $manager);
         $provider = Mockery::mock(ChapaPayoutService::class);
-        $record = $this->verified()['data'];
+        $record = $this->verified($status)['data'];
         $record['amount'] = '499.00';
+        $record['charge'] = $charge;
+        $record['mode'] = $mode;
+        $record['tx_ref'] = $record['reference'];
+        if ($account !== null) {
+            $record['account_number'] = $account;
+        }
         $provider->shouldReceive('verifyTransfer')->once()->andReturn([
             'status' => 'success', 'data' => [$record],
         ]);
