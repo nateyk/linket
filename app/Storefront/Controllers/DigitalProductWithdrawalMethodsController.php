@@ -43,6 +43,114 @@ class DigitalProductWithdrawalMethodsController extends Controller
             ->orderBy('position')->get());
     }
 
+    /**
+     * One row per Chapa-supported ETB bank/wallet (including unavailable ones).
+     * This is admin configuration; seller discovery uses availableBankOptions().
+     */
+    public function chapaDestinations(): JsonResponse
+    {
+        Gate::authorize('admin.access');
+
+        $methods = DigitalProductWithdrawalMethod::query()
+            ->whereIn('code', ['bank_transfer', ...ChapaPayoutService::WALLET_CODES])
+            ->get()->keyBy('code');
+        $provider = [];
+        $providerError = false;
+
+        try {
+            foreach (app(ChapaPayoutService::class)->getBanks() as $bank) {
+                if (!is_array($bank)) {
+                    continue;
+                }
+                $code = ChapaPayoutService::canonicalBankCode((string) ($bank['slug'] ?? ''))
+                    ?? ChapaPayoutService::canonicalBankCode((string) ($bank['name'] ?? ''));
+                if ($code !== null && !isset($provider[$code])
+                    && !empty($bank['active']) && !empty($bank['is_active'])
+                    && strtoupper((string) ($bank['currency'] ?? '')) === 'ETB'
+                    && filter_var($bank['id'] ?? null, FILTER_VALIDATE_INT)) {
+                    $provider[$code] = (int) $bank['id'];
+                }
+            }
+        } catch (\Throwable) {
+            $providerError = true;
+        }
+
+        $rows = [];
+        foreach (ChapaPayoutService::PAYOUT_BANK_OPTIONS as $code => $option) {
+            $method = $methods->get($option['method']);
+            $configured = $option['method'] === 'bank_transfer'
+                ? ChapaPayoutService::bankEnabled($code)
+                : (bool) ($method?->is_active ?? false);
+            $available = isset($provider[$code]);
+
+            $rows[] = [
+                'code' => $code,
+                'name' => $option['name'],
+                'type' => $option['type'],
+                'method' => $option['method'],
+                'provider_available' => $available,
+                'provider_bank_id' => $provider[$code] ?? null,
+                'admin_enabled' => $configured && ($method?->is_active ?? false),
+                'enabled' => $configured && ($method?->is_active ?? false) && $available,
+                'minimum_amount_cents' => $method?->minimum_amount_cents,
+                'maximum_amount_cents' => $method?->maximum_amount_cents,
+            ];
+        }
+
+        return response()->json([
+            'data' => $rows,
+            'provider_unavailable' => $providerError,
+        ]);
+    }
+
+    public function updateChapaDestination(Request $request, string $code): JsonResponse
+    {
+        Gate::authorize('admin.access');
+        if (!isset(ChapaPayoutService::PAYOUT_BANK_OPTIONS[$code])) {
+            throw ValidationException::withMessages(['code' => __('Unsupported Chapa payout bank or wallet.')]);
+        }
+        $data = $request->validate(['enabled' => ['required', 'boolean']]);
+        $enabled = (bool) $data['enabled'];
+        $option = ChapaPayoutService::PAYOUT_BANK_OPTIONS[$code];
+        $method = DigitalProductWithdrawalMethod::query()->where('code', $option['method'])->first();
+        if (!$method) {
+            throw ValidationException::withMessages(['code' => __('The payout method has not been configured.')]);
+        }
+
+        if ($enabled) {
+            // Never activate a destination Chapa does not currently offer.
+            try {
+                $banks = app(ChapaPayoutService::class)->getBanks();
+                $active = collect($banks)->contains(function ($bank) use ($code): bool {
+                    if (!is_array($bank)) return false;
+                    $providerCode = ChapaPayoutService::canonicalBankCode((string) ($bank['slug'] ?? ''))
+                        ?? ChapaPayoutService::canonicalBankCode((string) ($bank['name'] ?? ''));
+                    return $providerCode === $code && !empty($bank['active'])
+                        && !empty($bank['is_active']) && strtoupper((string) ($bank['currency'] ?? '')) === 'ETB'
+                        && filter_var($bank['id'] ?? null, FILTER_VALIDATE_INT) !== false;
+                });
+                if (!$active) {
+                    throw new \RuntimeException('Unavailable provider');
+                }
+            } catch (\Throwable) {
+                throw ValidationException::withMessages([
+                    'enabled' => __('Chapa does not currently offer this ETB payout destination.'),
+                ]);
+            }
+        }
+
+        if ($option['method'] === 'bank_transfer') {
+            settings()->save(['marketplace.payout_bank.'.$code.'.enabled' => $enabled ? 1 : 0]);
+            if ($enabled && !$method->is_active) {
+                $method->update(['is_active' => true]);
+            }
+        } else {
+            $method->update(['is_active' => $enabled]);
+        }
+
+        return response()->json(['data' => ['code' => $code, 'admin_enabled' => $enabled]]);
+    }
+
     public function store(Request $request): DigitalProductWithdrawalMethodResource
     {
         Gate::authorize('admin.access');
