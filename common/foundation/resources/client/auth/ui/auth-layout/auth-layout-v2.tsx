@@ -4,7 +4,21 @@ import {useSettings} from '@ui/settings/use-settings';
 import {type ReactNode} from 'react';
 import {Starfield} from './auth-starfield';
 
-const AUTH_STARFIELD_HAZE = ['var(--primary)', 'var(--foreground)'] as const;
+// Keep the Linket brand blue as the anchor; let cyan and teal gently
+// emerge toward the far side of the hero instead of introducing rainbow hues.
+const AUTH_STARFIELD_HAZE = [
+  'var(--primary)',
+  '#006BE4',
+  '#0097CC',
+  '#00B585',
+] as const;
+
+const AUTH_STARFIELD_STARS = [
+  'var(--primary)',
+  '#0092F6',
+  '#00CBE9',
+  '#00A7AA',
+] as const;
 
 interface AuthLayoutV2Props {
   children: ReactNode;
@@ -51,13 +65,15 @@ export function AuthLayoutV2({
             className="pointer-events-none absolute inset-0"
             color="var(--foreground)"
             hazeColors={AUTH_STARFIELD_HAZE}
-            density={1.5}
+            starColors={AUTH_STARFIELD_STARS}
+            density={1.35}
             depth={0.9}
-            glow={0.9}
-            haze={0.38}
-            intensity={1.15}
-            twinkle={0.6}
-            warp={0.3}
+            glow={0.8}
+            haze={0.42}
+            intensity={1.05}
+            twinkle={0.52}
+            warmth={0.68}
+            warp={0.25}
             quality={0.8}
             interactive
           />
