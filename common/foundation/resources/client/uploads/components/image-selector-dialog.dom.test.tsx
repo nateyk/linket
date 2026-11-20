@@ -116,8 +116,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.validate.mockReturnValue(null);
   mocks.encode.mockResolvedValue(new File(['cropped-data'], 'cover.webp', {type: 'image/webp'}));
-  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-image');
-  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  Object.assign(URL, {
+    createObjectURL: vi.fn(() => 'blob:test-image'),
+    revokeObjectURL: vi.fn(),
+  });
 });
 
 afterEach(() => {
