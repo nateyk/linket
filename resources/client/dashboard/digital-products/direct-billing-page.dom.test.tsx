@@ -8,6 +8,11 @@ vi.mock('@common/http/query-client', () => ({apiClient: api}));
 vi.mock('@common/http/errors/parsed-api-error', () => ({
   getApiErrorMessage: () => 'Unable to load orders',
 }));
+vi.mock('@ui/i18n/use-trans', () => ({
+  useTrans: () => ({
+    trans: ({message}: {message: string}) => message,
+  }),
+}));
 vi.mock('@ui/i18n/trans', () => ({
   Trans: ({message, values}: {message: string; values?: Record<string, string | number>}) =>
     Object.entries(values ?? {}).reduce((text, [key, value]) => text.replace(`:${key}`, String(value)), message),
@@ -29,6 +34,20 @@ vi.mock('@ui/i18n/formatted-date', () => ({
     <span>{date ?? ''}</span>
   ),
 }));
+vi.mock('@ui/i18n/formatted-relative-time', () => ({
+  FormattedRelativeTime: ({date}: {date?: string | null}) => (
+    <span>{date ?? ''}</span>
+  ),
+}));
+vi.mock('@shadcn/avatar/avatar', () => ({
+  Avatar: Object.assign(
+    ({children}: {children?: React.ReactNode}) => <span>{children}</span>,
+    {
+      Fallback: ({children}: {children?: React.ReactNode}) => <span>{children}</span>,
+      initials: (value?: string | null) => value?.slice(0, 1) ?? '',
+    },
+  ),
+}));
 vi.mock('react-router', () => ({Link: 'a', useSearchParams: () => [new URLSearchParams(window.location.search)]}));
 vi.mock('@common/ui/dashboard/dashboard-layout', () => ({
   DashboardLayout: {
@@ -47,6 +66,7 @@ vi.mock('@shadcn/card/card', () => ({
     Content: 'div',
     Description: 'p',
     Footer: 'footer',
+    Action: 'div',
   },
 }));
 vi.mock('@shadcn/item/item', () => ({
@@ -89,6 +109,17 @@ vi.mock('@shadcn/button/button', () => ({
 }));
 vi.mock('@shadcn/skeleton/skeleton', () => ({
   Skeleton: () => <span data-testid="skeleton" />,
+}));
+vi.mock('@shadcn/tooltip/tooltip', () => ({
+  Tooltip: Object.assign(
+    ({children}: {children?: React.ReactNode}) => <>{children}</>,
+    {
+      Provider: ({children}: {children?: React.ReactNode}) => <>{children}</>,
+      Root: ({children}: {children?: React.ReactNode}) => <>{children}</>,
+      Trigger: ({render}: {render?: React.ReactNode}) => <>{render}</>,
+      Content: () => null,
+    },
+  ),
 }));
 vi.mock('@shadcn/table/table', () => ({
   Table: {
@@ -159,7 +190,7 @@ vi.mock('@shadcn/forms/select/select', () => ({
       <select
         value={value}
         name={name}
-        aria-label={name?.includes('per-page') ? 'Rows per page' : 'Status'}
+        aria-label={name === 'orders-gateway' ? 'Payment source' : name?.includes('per-page') ? 'Rows per page' : 'Status'}
         onChange={event => onValueChange(event.target.value)}
       >
         {children}
@@ -201,6 +232,13 @@ it('applies redirected order filters to the controls and request', async () => {
 const summary = {
   verified_sales_count: 2,
   verified_revenue_cents: 25000,
+  net_sales_cents: 25000,
+  paid_orders_count: 2,
+  gross_profit_cents: 20000,
+  gross_profit_margin_percent: 80,
+  average_order_cents: 12500,
+  creator_earnings_cents: 20000,
+  platform_fee_cents: 5000,
   pending_count: 1,
   manual_review_count: 1,
   rejected_count: 1,
@@ -290,8 +328,9 @@ const baseOrder = {
   transaction_reference: 'REF-ONE',
   gross_amount_cents: 10000,
   currency: 'ETB',
-  payment_method: 'cbe',
-  account_ending: '6789',
+  payment_gateway: 'chapa',
+  payment_method: 'chapa',
+  account_ending: null,
   created_at: '2026-10-29T10:00:00Z',
   product: {id: 1, title: 'Workbook', status: 'approved'},
 };
@@ -302,19 +341,29 @@ it('shows summary and orders, and sends status, search and page filters to the s
 
   expect((await screen.findAllByText('Workbook')).length).toBeGreaterThan(0);
   expect(screen.getAllByText('25000 ETB').length).toBeGreaterThan(0);
-  expect(screen.getByText('Verified sales')).toBeTruthy();
-  expect(screen.getByText('Creator earnings')).toBeTruthy();
-  expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
-  expect(screen.getByText('Track buyer payments and delivery. Only verified payments count as sales.')).toBeTruthy();
+  expect(screen.getByText('Net sales')).toBeTruthy();
+  expect(screen.getAllByText('Orders').length).toBeGreaterThan(0);
+  expect(screen.getByText('Gross profit · 80.0%')).toBeTruthy();
+  expect(screen.getByText('Average order')).toBeTruthy();
+  expect(screen.getByText('12500 ETB')).toBeTruthy();
+  expect(screen.queryByText('Chapa payments only · lifetime')).toBeNull();
+  expect(screen.queryByText('Pending & Review')).toBeNull();
+  expect(screen.queryByRole('tab', {name: 'Transactions'})).toBeNull();
+  expect(screen.queryByRole('tab', {name: /Manual review/})).toBeNull();
+  expect(screen.queryByText('After platform fees · before product costs')).toBeNull();
+  expect(screen.queryByRole('columnheader', {name: 'Payment method'})).toBeNull();
+  expect(screen.getByRole('table', {name: 'Orders'})).toBeTruthy();
+  expect(screen.getByText('Orders and payment status. Only paid orders count as sales.')).toBeTruthy();
 
+  expect(screen.queryByLabelText('Payment source')).toBeNull();
   fireEvent.change(screen.getByLabelText('Status'), {
-    target: {value: 'manual_review'},
+    target: {value: 'paid'},
   });
   await waitFor(() =>
     expect(api.get).toHaveBeenCalledWith(
       '/api/v1/storefront/direct-orders',
       expect.objectContaining({
-        params: expect.objectContaining({status: 'manual_review'}),
+        params: expect.objectContaining({status: 'paid', gateway: 'chapa'}),
       }),
     ),
   );
@@ -396,101 +445,6 @@ it('offers direct page navigation while keeping previous and next controls', asy
   expect(screen.getByRole('button', {name: 'Next'})).toBeTruthy();
 });
 
-it('opens the read-only order detail with masked account and delivery state', async () => {
-  mockApi({
-    orders: [{...baseOrder, status: 'manual_review'}],
-    detail: {
-      ...baseOrder,
-      status: 'manual_review',
-      buyer_email: 'buyer@example.test',
-      platform_fee_cents: 500,
-      creator_earnings_cents: 9500,
-      verification: {
-        status: 'manual_review',
-        provider: 'cbe',
-        amount_cents: 10000,
-        currency: 'ETB',
-        attempts: 2,
-        error_code: 'receipt_mismatch',
-        history: [
-          {
-            reference: 'REF-ONE',
-            status: 'manual_review',
-            attempt: 2,
-            created_at: '2026-10-29T10:00:00Z',
-          },
-        ],
-      },
-      delivery: {
-        status: 'pending',
-        entitlements_count: 1,
-        downloaded_count: 0,
-        download_limit: 10,
-        files: [
-          {
-            name: 'workbook.pdf',
-            download_count: 0,
-            download_limit: 10,
-          },
-        ],
-      },
-      manual_review: {
-        reason_code: 'receipt_mismatch',
-        submitted_at: '2026-10-29T10:00:00Z',
-      },
-    },
-  });
-  render(<Component />);
-
-  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
-
-  expect(await screen.findByText('Order details')).toBeTruthy();
-  expect(screen.getByText('Payment information')).toBeTruthy();
-  expect(screen.getAllByText('REF-ONE').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('•••• 6789')).toHaveLength(2);
-  expect(screen.getByText('buyer@example.test', {exact: false})).toBeTruthy();
-  expect(screen.getByText('Payment needs support review')).toBeTruthy();
-  expect(screen.getByText('On hold — payment review')).toBeTruthy();
-  expect(screen.getByText('Buyer downloads remain locked until the payment is verified.')).toBeTruthy();
-  expect(screen.getByText('Submitted at')).toBeTruthy();
-  expect(screen.getByRole('button', {name: 'Refresh status'})).toBeTruthy();
-  expect(screen.getByText('workbook.pdf')).toBeTruthy();
-  expect(screen.queryByRole('button', {name: /mark.*paid/i})).toBeNull();
-  expect(api.get).toHaveBeenCalledWith(
-    '/api/v1/storefront/direct-orders/order-1',
-  );
-});
-
-it('explains missing recipient evidence without suggesting payment is verified', async () => {
-  mockApi({
-    orders: [{...baseOrder, status: 'manual_review'}],
-    detail: {
-      ...baseOrder,
-      status: 'manual_review',
-      verification: {
-        status: 'manual_review', provider: 'dashen', attempts: 1,
-        error_code: 'recipient_evidence_missing',
-        created_at: '2026-11-02T15:02:33Z',
-        history: [{reference: '247WDTS26292000E', status: 'manual_review', attempt: 1}],
-      },
-      manual_review: {reason_code: 'recipient_evidence_missing'},
-      delivery: {status: 'unknown', entitlements_count: 0, downloaded_count: 0, download_limit: 0, files: []},
-    },
-  });
-  render(<Component />);
-  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
-  expect(await screen.findByText('Receiving account could not be confirmed')).toBeTruthy();
-  expect(screen.getByText('On hold — payment review')).toBeTruthy();
-  expect(screen.getByText(/Verify.et did not provide enough evidence/)).toBeTruthy();
-  expect(screen.getByText('Buyer downloads remain locked until the payment is verified.')).toBeTruthy();
-  expect(screen.queryByText('0 of 0 downloads used across 0 files')).toBeNull();
-  expect(screen.getByRole('list', {name: 'Verification attempts'})).toBeTruthy();
-  expect(screen.getAllByText('247WDTS26292000E').length).toBeGreaterThan(0);
-  expect(screen.getByText('Submitted at')).toBeTruthy();
-  expect(screen.queryByText('Verified at')).toBeNull();
-  expect(screen.queryByRole('button', {name: /mark.*paid/i})).toBeNull();
-});
-
 it('refreshes read-only order status without submitting a verification', async () => {
   mockApi({orders: [baseOrder], detail: {...baseOrder}});
   render(<Component />);
@@ -521,54 +475,44 @@ for (const [status, label] of [
   });
 }
 
-it('loads transactions and manual review in separate tabs', async () => {
-  mockApi({
-    orders: [baseOrder],
-    transactions: [
-      {
-        id: 9,
-        reference: 'TX-REF',
-        status: 'success',
-        provider: 'cbe',
-        amount_cents: 10000,
-        currency: 'ETB',
-        attempt: 1,
-        created_at: '2026-10-29T10:00:00Z',
-        order_uuid: 'order-1',
-        order_status: 'paid',
-        product_title: 'Workbook',
-        buyer_name: 'Buyer One',
-      },
-    ],
-    manualOrders: [{...baseOrder, uuid: 'order-2', status: 'manual_review'}],
-  });
+it('keeps Orders Chapa-only even for bookmarked retired gateway filters', async () => {
+  window.history.replaceState({}, '', '/dashboard/orders?gateway=verify_et&status=manual_review');
+  mockApi({orders: [baseOrder]});
   render(<Component />);
   await screen.findAllByText('Workbook');
-
-  fireEvent.click(screen.getByRole('tab', {name: 'Transactions'}));
-  expect((await screen.findAllByText('TX-REF')).length).toBeGreaterThan(0);
-  expect(screen.getByRole('list', {name: 'Transactions'})).toBeTruthy();
   expect(api.get).toHaveBeenCalledWith(
-    '/api/v1/storefront/direct-orders/transactions',
-    expect.any(Object),
+    '/api/v1/storefront/direct-orders',
+    expect.objectContaining({params: expect.objectContaining({gateway: 'chapa'})}),
   );
+  expect(screen.queryByLabelText('Payment source')).toBeNull();
+  expect(screen.queryByText('Chapa payments only · lifetime')).toBeNull();
+  expect((screen.getByLabelText('Status') as HTMLSelectElement).value).toBe('all');
+  expect(screen.queryByRole('tab', {name: 'Transactions'})).toBeNull();
+  expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/direct-orders/transactions', expect.anything());
+});
 
-  fireEvent.click(screen.getByRole('tab', {name: /Manual review/}));
-  await waitFor(() =>
-    expect(api.get).toHaveBeenCalledWith(
-      '/api/v1/storefront/direct-orders',
-      expect.objectContaining({
-        params: expect.objectContaining({status: 'manual_review'}),
-      }),
-    ),
-  );
-  expect(
-    await screen.findByText(
-      'These payments could not be verified automatically. Review is read-only and Linket support resolves them. You cannot mark an order as paid.',
-    ),
-  ).toBeTruthy();
-
-  expect(screen.queryByRole('tab', {name: 'Billing'})).toBeNull();
+it('shows Chapa status without obsolete provider verification panels', async () => {
+  mockApi({
+    orders: [baseOrder],
+    detail: {
+      ...baseOrder,
+      paid_at: '2026-11-17T08:00:00Z',
+      creator_earnings_cents: 9000,
+      platform_fee_cents: 1000,
+      verification: null,
+      delivery: {status: 'paid', entitlements_count: 0, downloaded_count: 0, download_limit: 0, files: []},
+    },
+  });
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
+  expect(await screen.findByText('Chapa payment status')).toBeTruthy();
+  expect(screen.getByText('Paid at')).toBeTruthy();
+  expect(screen.getByText('Payment gateway')).toBeTruthy();
+  expect(screen.queryByText('Verification history')).toBeNull();
+  expect(screen.queryByText('Historical verification evidence')).toBeNull();
+  expect(screen.queryByText('Historical receiving account')).toBeNull();
+  expect(screen.queryByText('No provider verification has been recorded for this order.')).toBeNull();
+  expect(screen.getByText(/Payment status reflects Linket/)).toBeTruthy();
 });
 
 it('surfaces order loading errors', async () => {
@@ -588,7 +532,11 @@ it('clearly breaks down free downloads from paid orders in summary', async () =>
           summary: {
             verified_sales_count: 3,
             verified_revenue_cents: 0,
+            net_sales_cents: 0,
             paid_orders_count: 0,
+            gross_profit_cents: 0,
+            gross_profit_margin_percent: 0,
+            average_order_cents: 0,
             free_orders_count: 3,
             creator_earnings_cents: 0,
             platform_fee_cents: 0,
@@ -607,8 +555,10 @@ it('clearly breaks down free downloads from paid orders in summary', async () =>
 
   render(<Component />);
 
-  expect(await screen.findByText('Verified sales')).toBeTruthy();
-  expect(screen.getByText('3 free orders (0 paid)')).toBeTruthy();
-  expect(screen.getByText('Creator earnings')).toBeTruthy();
-  expect(screen.getByText('Net platform earnings')).toBeTruthy();
+  expect(await screen.findByText('Net sales')).toBeTruthy();
+  expect(screen.getAllByText('Orders').length).toBeGreaterThan(0);
+  expect(screen.getByText('Gross profit · 0.0%')).toBeTruthy();
+  expect(screen.getByText('Average order')).toBeTruthy();
+  expect(screen.getAllByText('0 ETB').length).toBeGreaterThanOrEqual(2);
+  expect(screen.queryByText('Net platform earnings')).toBeNull();
 });

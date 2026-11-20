@@ -4,8 +4,6 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
-import {Field} from '@shadcn/forms/field';
-import {Input} from '@shadcn/forms/input/input';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Table} from '@shadcn/table/table';
@@ -17,7 +15,6 @@ import {
   CheckCircle2Icon,
   CircleAlertIcon,
   CoinsIcon,
-  CopyIcon,
   CreditCardIcon,
   PlayIcon,
   ScaleIcon,
@@ -25,41 +22,27 @@ import {
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
 import {CurrencySettingsCard} from './currency-settings-card';
+import {ChapaPayoutReadinessCard} from './chapa-payout-readiness-card';
+import {ChapaEnvironmentManagerCard} from './chapa-environment-manager-card';
 
 type Tab = 'chapa' | 'currency' | 'payout-methods' | 'commission' | 'reconciliation';
 
-type GatewayConfig = {
-  gateway: string;
-  secret_configured: boolean;
-  public_key_masked: string | null;
-  webhook_secret_configured: boolean;
-  webhook_url: string;
-};
-
-type WithdrawalMethod = {
-  id: number;
-  name: string;
+type PayoutDestination = {
   code: string;
-  destination_label?: string | null;
-  minimum_amount_cents?: number | null;
-  maximum_amount_cents?: number | null;
-  is_active: boolean;
+  name: string;
+  type: string;
+  method: string;
+  provider_available: boolean;
+  provider_bank_id: number | null;
+  admin_enabled: boolean;
+  enabled: boolean;
+  minimum_amount_cents: number | null;
+  maximum_amount_cents: number | null;
 };
 
-const subscriptionGatewayUrl = '/api/v1/admin/billing/subscription-gateway';
 const financialSummaryUrl = '/api/v1/admin/marketplace/financial-summary';
 const reconcileUrl = '/api/v1/admin/marketplace/reconcile';
-
-function canSaveChapaCredentials(publicKey: string, secretKey: string, webhookSecret: string): boolean {
-  const hasPublic = publicKey.trim() !== '';
-  const hasSecret = secretKey.trim() !== '';
-  const hasWebhook = webhookSecret.trim() !== '';
-  if (hasPublic !== hasSecret) {
-    return false;
-  }
-
-  return (hasPublic && hasSecret) || hasWebhook;
-}
+const payoutPolicyUrl = '/api/v1/admin/marketplace/payout-policy';
 
 type ReconciliationData = {
   ledger_audit: {
@@ -86,25 +69,26 @@ export function Component() {
 
   return (
     <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader>
+      <DashboardLayout.SectionHeader className="max-sm:h-14 max-sm:gap-2 max-sm:px-3">
         <DashboardLayout.SidebarToggle />
         <div className="flex-1 min-w-0">
           <DashboardLayout.SectionTitle>
-            <Trans message="Financial settings & operations" />
+            <span className="sm:hidden"><Trans message="Financial settings" /></span>
+            <span className="hidden sm:inline"><Trans message="Financial settings & operations" /></span>
           </DashboardLayout.SectionTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p className="mt-0.5 hidden text-sm text-muted-foreground lg:block">
             <Trans message="Manage platform payments, currency formatting, withdrawal rules, commission policies, and ledger reconciliation." />
           </p>
         </div>
-        <Button variant="outline" nativeButton={false} render={<Link to="/admin/withdrawals" />}>
+        <Button variant="outline" className="shrink-0 max-sm:size-9 max-sm:p-0" nativeButton={false} render={<Link to="/admin/withdrawals" aria-label="Withdrawals dashboard" />}>
           <CreditCardIcon />
-          <Trans message="Withdrawals dashboard" />
+          <span className="max-sm:hidden"><Trans message="Withdrawals dashboard" /></span>
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-5">
+        <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 px-3 py-4 sm:px-4 sm:py-5">
           <Tabs.Root value={tab} onValueChange={v => setTab(v as Tab)} className="gap-6">
-            <div className="min-w-0 overflow-x-auto border-b border-border">
+            <div className="max-w-full min-w-0 overflow-x-auto border-b border-border">
               <Tabs.List variant="line" className="w-max justify-start">
                 <Tabs.Tab value="chapa" className="flex-none">
                   <CreditCardIcon className="size-4" />
@@ -152,273 +136,219 @@ export function Component() {
 }
 
 function ChapaPlatformGatewayTab() {
-  const [config, setConfig] = useState<GatewayConfig>();
-  const [publicKey, setPublicKey] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-  const [webhookSecret, setWebhookSecret] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{type: 'error' | 'success'; text: string}>();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient.get(subscriptionGatewayUrl);
-      setConfig(res.data.data);
-    } catch {
-      setStatusMsg({type: 'error', text: 'Unable to load Chapa gateway configuration.'});
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSaveChapaCredentials(publicKey, secretKey, webhookSecret)) {
-      return;
-    }
-    setSaving(true);
-    setStatusMsg(undefined);
-    try {
-      const payload: Record<string, string> = {gateway: 'chapa'};
-      if (publicKey.trim() && secretKey.trim()) {
-        payload.public_key = publicKey.trim();
-        payload.secret_key = secretKey.trim();
-      }
-      if (webhookSecret.trim()) payload.webhook_secret = webhookSecret.trim();
-
-      const res = await apiClient.put(subscriptionGatewayUrl, payload);
-      setConfig(res.data.data);
-      setPublicKey('');
-      setSecretKey('');
-      setWebhookSecret('');
-      setStatusMsg({type: 'success', text: 'Chapa credentials validated and saved.'});
-    } catch (reason) {
-      setStatusMsg({type: 'error', text: getApiErrorMessage(reason)});
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const copyWebhookUrl = () => {
-    if (!config?.webhook_url) return;
-    void navigator.clipboard.writeText(config.webhook_url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (loading) return <TabLoadingSpinner />;
+  const [revision, setRevision] = useState(0);
 
   return (
-    <Card.Root>
-      <Card.Header>
-        <div className="flex items-center justify-between">
-          <div>
-            <Card.Title><Trans message="Platform Chapa Merchant Gateway" /></Card.Title>
-            <Card.Description>
-              <Trans message="All buyer orders and subscriptions flow into this platform merchant account. Individual creators do not need Chapa keys." />
-            </Card.Description>
-          </div>
-          <Badge variant={config?.secret_configured ? 'positive' : 'destructive'}>
-            {config?.secret_configured ? <Trans message="Connected" /> : <Trans message="Not configured" />}
-          </Badge>
-        </div>
-      </Card.Header>
-      <Card.Content className="space-y-6">
-        {statusMsg && (
-          <div role={statusMsg.type === 'error' ? 'alert' : 'status'} className={`flex items-center gap-2 rounded-input border p-3 text-sm ${statusMsg.type === 'error' ? 'border-destructive/40 bg-destructive/5 text-destructive' : 'border-positive/40 bg-positive/5 text-positive'}`}>
-            {statusMsg.type === 'error' ? <CircleAlertIcon className="size-4 shrink-0" /> : <CheckCircle2Icon className="size-4 shrink-0" />}
-            <span>{statusMsg.text}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field.Root>
-              <Field.Label><Trans message="Public key" /></Field.Label>
-              <Input
-                value={publicKey}
-                onChange={e => setPublicKey(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={config?.public_key_masked ?? 'CHAPUBK_TEST-...'}
-              />
-              <Field.Description><Trans message="Your Chapa public key. Test keys start with CHAPUBK_TEST- and live keys start with CHAPUBK-." /></Field.Description>
-            </Field.Root>
-
-            <Field.Root>
-              <Field.Label><Trans message="Secret key" /></Field.Label>
-              <Input
-                type="password"
-                value={secretKey}
-                onChange={e => setSecretKey(e.target.value)}
-                autoComplete="new-password"
-                spellCheck={false}
-                placeholder={config?.secret_configured ? '••••••••••••••••' : 'CHASECK_TEST-...'}
-              />
-              <Field.Description><Trans message="Secret key from the same page. Chapa checks it before saving." /></Field.Description>
-            </Field.Root>
-          </div>
-
-          <Field.Root>
-            <Field.Label><Trans message="Webhook signing secret (optional)" /></Field.Label>
-            <Input
-              type="password"
-              value={webhookSecret}
-              onChange={e => setWebhookSecret(e.target.value)}
-              autoComplete="new-password"
-              spellCheck={false}
-              placeholder={config?.webhook_secret_configured ? '••••••••••••••••' : 'Enter webhook secret...'}
-            />
-            <Field.Description><Trans message="Used to verify HMAC-SHA256 signatures on inbound Chapa webhooks." /></Field.Description>
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label><Trans message="Webhook callback URL" /></Field.Label>
-            <div className="flex gap-2">
-              <Input readOnly value={config?.webhook_url ?? ''} className="font-mono text-xs" />
-              <Button type="button" variant="outline" onClick={copyWebhookUrl}>
-                <CopyIcon />
-                {copied ? <Trans message="Copied" /> : <Trans message="Copy" />}
-              </Button>
-            </div>
-            <Field.Description><Trans message="Register this endpoint in your Chapa Merchant Dashboard." /></Field.Description>
-          </Field.Root>
-
-          {(publicKey.trim() !== '') !== (secretKey.trim() !== '') && (
-            <p role="alert" className="text-sm text-destructive">
-              <Trans message="Enter the public key and the secret key together." />
-            </p>
-          )}
-
-          <Button type="submit" color="primary" disabled={saving || !canSaveChapaCredentials(publicKey, secretKey, webhookSecret)}>
-            {saving ? <Trans message="Saving & validating..." /> : <Trans message="Save Chapa credentials" />}
-          </Button>
-        </form>
-      </Card.Content>
-    </Card.Root>
+    <div className="space-y-4">
+      <ChapaEnvironmentManagerCard onUpdated={() => setRevision(current => current + 1)} />
+      <ChapaPayoutReadinessCard key={revision} />
+    </div>
   );
 }
 
 function PayoutMethodsTab() {
-  const [methods, setMethods] = useState<WithdrawalMethod[]>([]);
+  const [destinations, setDestinations] = useState<PayoutDestination[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyCode, setBusyCode] = useState<string | null>(null);
+  const [providerUnavailable, setProviderUnavailable] = useState(false);
+  const [error, setError] = useState<string>();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/api/v1/admin/financial/withdrawal-methods');
-      setMethods(res.data.data ?? []);
-    } catch {
-      // ignore
+      const response = await apiClient.get('/api/v1/admin/financial/chapa-payout-destinations');
+      const rows = response.data?.data;
+      if (!Array.isArray(rows)) throw new Error('Invalid Chapa payout catalog response');
+      setDestinations(rows);
+      setProviderUnavailable(!!response.data?.provider_unavailable);
+      setError(undefined);
+    } catch (reason: unknown) {
+      setError(getApiErrorMessage(reason));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
+
+  const toggle = async (destination: PayoutDestination, enabled: boolean) => {
+    setBusyCode(destination.code);
+    setError(undefined);
+    try {
+      await apiClient.put(
+        '/api/v1/admin/financial/chapa-payout-destinations/' + destination.code,
+        {enabled},
+      );
+      await load();
+    } catch (reason: unknown) {
+      setError(getApiErrorMessage(reason));
+    } finally {
+      setBusyCode(null);
+    }
+  };
+
+  const renderRow = (destination: PayoutDestination) => (
+    <div key={destination.code} className="flex min-w-0 flex-wrap items-center gap-3 border-b border-border/70 py-3 last:border-b-0 sm:flex-nowrap">
+      <div className="min-w-0 flex-1">
+        <div className="font-medium">{destination.name}</div>
+        <div className="text-xs text-muted-foreground">
+          {destination.code}
+          {destination.provider_bank_id ? ' · Chapa ID ' + destination.provider_bank_id : ''}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        {destination.provider_available
+          ? <Badge variant="positive"><Trans message="Available at Chapa" /></Badge>
+          : <Badge variant="outline"><Trans message="Unavailable at Chapa" /></Badge>}
+        <Switch
+          aria-label={destination.name + ' payouts'}
+          checked={destination.enabled}
+          disabled={busyCode !== null || !destination.provider_available}
+          onCheckedChange={enabled => void toggle(destination, enabled)}
+        />
+      </div>
+    </div>
+  );
 
   if (loading) return <TabLoadingSpinner />;
 
   return (
     <Card.Root>
       <Card.Header>
-        <div className="flex items-center justify-between">
-          <div>
-            <Card.Title><Trans message="Supported withdrawal methods" /></Card.Title>
-            <Card.Description>
-              <Trans message="Banks and mobile wallets available for creator withdrawals with configured limits." />
-            </Card.Description>
-          </div>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods" />}>
-            <Trans message="Creator receiving accounts" />
-          </Button>
-        </div>
+        <Card.Title><Trans message="Chapa payout destinations" /></Card.Title>
+        <Card.Description>
+          <Trans message="Enable each supported bank or wallet individually. Sellers only see methods active at Chapa and enabled here. Chapa bank IDs come from your current merchant environment." />
+        </Card.Description>
       </Card.Header>
-      <Card.Content>
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head><Trans message="Method" /></Table.Head>
-              <Table.Head><Trans message="Code" /></Table.Head>
-              <Table.Head><Trans message="Min withdrawal" /></Table.Head>
-              <Table.Head><Trans message="Max withdrawal" /></Table.Head>
-              <Table.Head><Trans message="Status" /></Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {methods.length === 0 ? (
-              <Table.Row>
-                <Table.Cell colSpan={5} className="text-center py-6 text-muted-foreground">
-                  <Trans message="No withdrawal methods configured." />
-                </Table.Cell>
-              </Table.Row>
-            ) : (
-              methods.map(m => (
-                <Table.Row key={m.id}>
-                  <Table.Cell className="font-medium">{m.name}</Table.Cell>
-                  <Table.Cell className="font-mono text-xs text-muted-foreground">{m.code}</Table.Cell>
-                  <Table.Cell>{m.minimum_amount_cents ? formatMoney(m.minimum_amount_cents, 'ETB') : '100.00 ETB'}</Table.Cell>
-                  <Table.Cell>{m.maximum_amount_cents ? formatMoney(m.maximum_amount_cents, 'ETB') : 'Unlimited'}</Table.Cell>
-                  <Table.Cell>
-                    <Badge variant={m.is_active ? 'positive' : 'outline'}>
-                      {m.is_active ? <Trans message="Active" /> : <Trans message="Inactive" />}
-                    </Badge>
-                  </Table.Cell>
-                </Table.Row>
-              ))
-            )}
-          </Table.Body>
-        </Table.Root>
+      <Card.Content className="space-y-5">
+        {providerUnavailable && (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans message="Chapa bank availability could not be checked. No unavailable destination can be enabled until the catalog recovers." />
+          </p>
+        )}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <div>
+          <h3 className="mb-1 text-sm font-semibold"><Trans message="Banks" /></h3>
+          <div className="border-t border-border">
+            {destinations.filter(row => row.method === 'bank_transfer').map(renderRow)}
+          </div>
+        </div>
+        <div>
+          <h3 className="mb-1 text-sm font-semibold"><Trans message="Mobile money wallets" /></h3>
+          <div className="border-t border-border">
+            {destinations.filter(row => row.method !== 'bank_transfer').map(renderRow)}
+          </div>
+        </div>
+        {destinations.length === 0 && <p className="text-sm text-muted-foreground"><Trans message="No Chapa payout destinations are configured." /></p>}
+        <p className="text-xs text-muted-foreground">
+          <Trans message="Payout hold days and the global minimum withdrawal amount are configured in Commissions & policy. Approval and verified settlement remain mandatory." />
+        </p>
       </Card.Content>
     </Card.Root>
   );
 }
 
 function CommissionPoliciesTab() {
+  const [holdDays, setHoldDays] = useState('');
+  const [minimumEtb, setMinimumEtb] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string>();
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.get(payoutPolicyUrl)
+      .then(response => {
+        if (!active) return;
+        const policy = response.data.data as {payout_hold_days: number; minimum_payout_cents: number};
+        setHoldDays(String(policy.payout_hold_days));
+        setMinimumEtb((policy.minimum_payout_cents / 100).toFixed(2));
+      })
+      .catch(reason => { if (active) setError(getApiErrorMessage(reason)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const save = async () => {
+    const days = Number(holdDays);
+    const cents = Math.round(Number(minimumEtb) * 100);
+    if (!Number.isInteger(days) || days < 0 || days > 30 ||
+        !Number.isFinite(cents) || cents < 100 || cents > 100000000) {
+      setError('Enter a hold between 0 and 30 days and a minimum of at least 1.00 ETB.');
+      return;
+    }
+
+    setSaving(true);
+    setSaved(false);
+    setError(undefined);
+    try {
+      const response = await apiClient.put(payoutPolicyUrl, {
+        payout_hold_days: days,
+        minimum_payout_cents: cents,
+      });
+      const policy = response.data.data as {payout_hold_days: number; minimum_payout_cents: number};
+      setHoldDays(String(policy.payout_hold_days));
+      setMinimumEtb((policy.minimum_payout_cents / 100).toFixed(2));
+      setSaved(true);
+    } catch (reason) {
+      setError(getApiErrorMessage(reason));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Card.Root>
       <Card.Header>
         <Card.Title><Trans message="Marketplace commission & settlement policy" /></Card.Title>
         <Card.Description>
-          <Trans message="Platform monetization, escrow hold periods, and withdrawal rules." />
+          <Trans message="Configure when verified earnings become withdrawable and the minimum payout request." />
         </Card.Description>
       </Card.Header>
-      <Card.Content className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-input border p-4 space-y-1">
-            <p className="text-xs text-muted-foreground"><Trans message="Escrow hold period" /></p>
-            <p className="text-xl font-bold">7 <span className="text-sm font-normal text-muted-foreground"><Trans message="days" /></span></p>
-            <p className="text-xs text-muted-foreground"><Trans message="Sales clear hold before becoming available for withdrawal." /></p>
-          </div>
-          <div className="rounded-input border p-4 space-y-1">
-            <p className="text-xs text-muted-foreground"><Trans message="Minimum withdrawal" /></p>
-            <p className="text-xl font-bold">100.00 <span className="text-sm font-normal text-muted-foreground">ETB</span></p>
-            <p className="text-xs text-muted-foreground"><Trans message="Minimum balance required to submit a withdrawal request." /></p>
-          </div>
-          <div className="rounded-input border p-4 space-y-1">
-            <p className="text-xs text-muted-foreground"><Trans message="Monetization model" /></p>
-            <p className="text-xl font-bold"><Trans message="Platform Chapa" /></p>
-            <p className="text-xs text-muted-foreground"><Trans message="Buyers pay Linket merchant; platform disburses net earnings." /></p>
-          </div>
-        </div>
-
-        <div className="rounded-input border bg-muted/20 p-4 space-y-2 text-sm">
-          <p className="font-semibold"><Trans message="Single-Profile Marketplace Principles" /></p>
-          <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
-            <li><Trans message="Zero seller gateway keys: creators never provide personal Chapa API secrets." /></li>
-            <li><Trans message="Double-entry ledger: every buyer sale, fee deduction, and withdrawal is recorded in immutable journal entries." /></li>
-            <li><Trans message="Three-stage payout operations: admin approval, automated transfer dispatch, and verified settlement." /></li>
-            <li><Trans message="Single-profile UX: creator finance is personal and never exposes workspaces or workspace switchers." /></li>
-          </ul>
-        </div>
+      <Card.Content className="space-y-5">
+        {loading ? <TabLoadingSpinner /> : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <label htmlFor="payout-hold-days" className="text-sm font-medium">
+                  <Trans message="Earnings hold (days)" />
+                </label>
+                <input id="payout-hold-days" type="number" min="0" max="30" step="1"
+                  value={holdDays} onChange={event => { setHoldDays(event.target.value); setSaved(false); }}
+                  className="h-10 w-full rounded-input border border-border bg-background px-3 text-sm" />
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="0 means verified sales are released immediately. Existing held sales follow the updated policy during reconciliation." />
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="minimum-withdrawal-etb" className="text-sm font-medium">
+                  <Trans message="Minimum withdrawal (ETB)" />
+                </label>
+                <input id="minimum-withdrawal-etb" type="number" min="1" max="1000000" step="0.01"
+                  value={minimumEtb} onChange={event => { setMinimumEtb(event.target.value); setSaved(false); }}
+                  className="h-10 w-full rounded-input border border-border bg-background px-3 text-sm" />
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="The selected payout provider can require a higher minimum." />
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium"><Trans message="Collection model" /></p>
+                <p className="font-semibold"><Trans message="Platform Chapa" /></p>
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="Only verified platform-collected sales fund withdrawals. Admin approval is still required." />
+                </p>
+              </div>
+            </div>
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            {saved && <p role="status" className="text-sm text-positive"><Trans message="Payout policy saved." /></p>}
+            <div className="flex justify-end">
+              <Button color="primary" disabled={saving} onClick={() => void save()}>
+                {saving ? <Trans message="Saving…" /> : <Trans message="Save payout policy" />}
+              </Button>
+            </div>
+          </>
+        )}
       </Card.Content>
     </Card.Root>
   );

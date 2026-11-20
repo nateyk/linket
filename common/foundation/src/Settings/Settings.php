@@ -73,6 +73,12 @@ class Settings
         'uploading',
         'billing.chapa.webhook_secret',
         'billing.chapa.secret_key',
+        'billing.chapa.profile.test.secret_key',
+        'billing.chapa.profile.live.secret_key',
+        'billing.chapa.profile.test.webhook_secret',
+        'billing.chapa.profile.live.webhook_secret',
+        'billing.chapa.transfer_approval_secret.test',
+        'billing.chapa.transfer_approval_secret.live',
     ];
 
     public function __construct()
@@ -258,6 +264,16 @@ class Settings
     {
         $value = Setting::select('name', 'value')
             ->where('name', '!=', 'billing.verify_et')
+            ->whereNotIn('name', [
+                'billing.chapa.secret_key',
+                'billing.chapa.webhook_secret',
+                'billing.chapa.profile.test.secret_key',
+                'billing.chapa.profile.live.secret_key',
+                'billing.chapa.profile.test.webhook_secret',
+                'billing.chapa.profile.live.webhook_secret',
+                'billing.chapa.transfer_approval_secret.test',
+                'billing.chapa.transfer_approval_secret.live',
+            ])
             ->get()
             ->mapWithKeys(
                 fn($setting) => [

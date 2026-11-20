@@ -58,6 +58,13 @@ return [
     'chapa' => [
         'secret' => env('CHAPA_SECRET_KEY'),
         'webhook_secret' => env('CHAPA_WEBHOOK_SECRET'),
+        'transfer_approval_secret' => env('CHAPA_TRANSFER_APPROVAL_SECRET'),
+        'payouts_enabled' => (bool) env('CHAPA_V1_PAYOUTS_ENABLED', false),
+        // Test-only dispatch uses CHASECK_TEST credentials and is never a live switch.
+        'test_payouts_enabled' => (bool) env('CHAPA_V1_TEST_PAYOUTS_ENABLED', true),
+        'test_transfer_status' => env('CHAPA_V1_TEST_TRANSFER_STATUS', ''),
+        'admin_payout_step_up_required' => (bool) env('CHAPA_ADMIN_PAYOUT_STEP_UP_REQUIRED', false),
+        'live_mode_switch_allowed' => (bool) env('CHAPA_LIVE_MODE_SWITCH_ALLOWED', false),
     ],
 
     'verify_et' => [
@@ -67,16 +74,6 @@ return [
         'webhook_previous_secret' => env('VERIFY_ET_WEBHOOK_PREVIOUS_SECRET'),
         'webhook_previous_secret_rotated_at' => env('VERIFY_ET_WEBHOOK_PREVIOUS_SECRET_ROTATED_AT'),
         'webhook_previous_secret_expires_at' => env('VERIFY_ET_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT'),
-        'experiment_webhook_enabled' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_ENABLED', false),
-        'experiment_webhook_secret' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_SECRET'),
-        'experiment_webhook_previous_secret' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_PREVIOUS_SECRET'),
-        'experiment_webhook_rotated_at' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_ROTATED_AT'),
-        'experiment_receiver_id' => env('VERIFY_ET_EXPERIMENT_RECEIVER_ID'),
-        'experiment_webhook_url' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_URL'),
-        'experiment_webhook_test_event_id' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_TEST_EVENT_ID'),
-        'experiment_destination_confirmed' => env('VERIFY_ET_EXPERIMENT_DESTINATION_CONFIRMED', false),
-        'experiment_public_reachability_confirmed' => env('VERIFY_ET_EXPERIMENT_PUBLIC_REACHABILITY_CONFIRMED', false),
-        'image_processing_enabled' => env('VERIFY_ET_IMAGE_PROCESSING_ENABLED', false),
         'corporate_account' => env('VERIFY_ET_CORPORATE_ACCOUNT'),
         'corporate_bank_code' => env('VERIFY_ET_CORPORATE_BANK_CODE', 'cbe'),
         'alert_email' => env('VERIFY_ET_ALERT_EMAIL'),

@@ -41,10 +41,16 @@ function renderAppearanceTab() {
 
 const trigger = (name: string) => screen.getByRole('button', {name});
 
-test('appearance accordion uses separated rows with clear card boundaries', () => {
+test('appearance sections use compact, theme-aware collapsible cards', () => {
   renderAppearanceTab();
-  const root = document.querySelector('[data-slot="accordion"]');
-  expect(root?.getAttribute('data-variant')).toBe('separated');
+  const sections = document.querySelectorAll('[data-slot="collapsible"]');
+  // Branding is disabled for this test fixture, leaving three editing sections.
+  expect(sections).toHaveLength(3);
+  for (const section of sections) {
+    expect(section.classList.contains('rounded-card-sm')).toBe(true);
+    expect(section.classList.contains('border-border')).toBe(true);
+    expect(section.classList.contains('bg-card')).toBe(true);
+  }
 });
 
 test('appearance sections start collapsed (single-open default is closed)', () => {
@@ -62,6 +68,18 @@ test('opening one appearance section closes the one already open', () => {
   fireEvent.click(trigger('Buttons'));
   expect(trigger('Background').getAttribute('aria-expanded')).toBe('false');
   expect(trigger('Buttons').getAttribute('aria-expanded')).toBe('true');
+});
+
+test('appearance collapsible controls can each open and close on repeated activation', () => {
+  renderAppearanceTab();
+  for (const name of ['Background', 'Buttons', 'Text']) {
+    const button = trigger(name);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+  }
 });
 
 test('appearance row titles use the shared section label (truncating title)', () => {

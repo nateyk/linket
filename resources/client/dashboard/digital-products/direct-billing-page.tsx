@@ -1,6 +1,7 @@
 import {apiClient} from '@common/http/query-client';
 import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
@@ -12,17 +13,23 @@ import {Popover} from '@shadcn/popover/popover';
 import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
-import {Tabs} from '@shadcn/tabs/tabs';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
+import {FormattedRelativeTime} from '@ui/i18n/formatted-relative-time';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {
-  EyeIcon,
-  PackageCheckIcon,
   CalendarDaysIcon,
-  SearchIcon,
+  ChartNoAxesCombinedIcon,
+  ChevronRightIcon,
+  CircleDollarSignIcon,
+  LandmarkIcon,
+  PackageCheckIcon,
   ReceiptTextIcon,
   RefreshCwIcon,
+  SearchIcon,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   ReactNode,
@@ -34,8 +41,6 @@ import {
 import {useSearchParams} from 'react-router';
 import {PaymentStatusLabel} from './payment-status-badge';
 
-type Tab = 'orders' | 'transactions' | 'manual-review';
-
 type Pagination = {
   current_page: number;
   last_page: number;
@@ -46,7 +51,11 @@ type Pagination = {
 type Summary = {
   verified_sales_count: number;
   verified_revenue_cents: number;
+  net_sales_cents: number;
   paid_orders_count?: number;
+  gross_profit_cents: number;
+  gross_profit_margin_percent: number;
+  average_order_cents: number;
   free_orders_count?: number;
   creator_earnings_cents?: number;
   platform_fee_cents?: number;
@@ -61,6 +70,7 @@ type Order = {
   uuid: string;
   status: string;
   buyer_name?: string | null;
+  buyer_email?: string | null;
   transaction_reference?: string | null;
   payment_reference?: string | null;
   chapa_tx_ref?: string | null;
@@ -75,29 +85,12 @@ type Order = {
   delivery_status?: string;
   created_at?: string;
   paid_at?: string;
-  product?: {id: number; title: string; status: string} | null;
-};
-
-type VerificationSummary = {
-  status: string;
-  provider?: string | null;
-  amount_cents: number;
-  currency: string;
-  attempts: number;
-  verified_at?: string | null;
-  created_at?: string | null;
-  error_code?: string | null;
-  history?: Array<{
-    reference?: string | null;
+  product?: {
+    id: number;
+    title: string;
     status: string;
-    provider?: string | null;
-    amount_cents: number;
-    currency?: string;
-    attempt: number;
-    verified_at?: string | null;
-    created_at?: string | null;
-    error_code?: string | null;
-  }>;
+    cover_url?: string | null;
+  } | null;
 };
 
 type OrderDetail = Order & {
@@ -105,7 +98,6 @@ type OrderDetail = Order & {
   buyer_country?: string | null;
   platform_fee_cents?: number;
   creator_earnings_cents?: number;
-  verification?: VerificationSummary | null;
   delivery?: {
     status: string;
     entitlements_count: number;
@@ -125,24 +117,6 @@ type OrderDetail = Order & {
   } | null;
 };
 
-type Transaction = {
-  id: number;
-  attempt_uuid?: string | null;
-  reference?: string | null;
-  status: string;
-  provider?: string | null;
-  amount_cents: number;
-  currency?: string;
-  attempt: number;
-  error_code?: string | null;
-  verified_at?: string | null;
-  created_at?: string | null;
-  order_uuid?: string | null;
-  order_status?: string | null;
-  product_title?: string | null;
-  buyer_name?: string | null;
-};
-
 const PAGE_SIZE_OPTIONS = [15, 25, 50] as const;
 
 const emptyPagination: Pagination = {
@@ -155,28 +129,14 @@ const emptyPagination: Pagination = {
 const orderStatusOptions = [
   {value: 'all', label: <Trans message="All statuses" />},
   {value: 'pending_payment', label: <Trans message="Payment pending" />},
-  {value: 'verifying', label: <Trans message="Awaiting provider verification" />},
+  {value: 'verifying', label: <Trans message="Payment processing" />},
   {value: 'paid', label: <Trans message="Payment verified" />},
   {value: 'fulfilled', label: <Trans message="Fulfilled" />},
-  {value: 'manual_review', label: <Trans message="Manual review" />},
-  {value: 'failed_verification', label: <Trans message="Verification rejected" />},
   {value: 'expired', label: <Trans message="Expired" />},
-];
-
-const transactionStatusOptions = [
-  {value: 'all', label: <Trans message="All statuses" />},
-  {value: 'pending', label: <Trans message="Pending" />},
-  {value: 'verifying', label: <Trans message="Verifying" />},
-  {value: 'success', label: <Trans message="Verified" />},
-  {value: 'manual_approved', label: <Trans message="Manually approved" />},
-  {value: 'manual_review', label: <Trans message="Manual review" />},
-  {value: 'mismatch', label: <Trans message="Mismatch" />},
-  {value: 'failed', label: <Trans message="Failed" />},
 ];
 
 export function Component() {
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>('orders');
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -186,7 +146,11 @@ export function Component() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string>();
 
-  const [orderStatus, setOrderStatus] = useState(() => orderStatusOptions.some(option => option.value === searchParams.get('status')) ? searchParams.get('status')! : 'all');
+  const [orderStatus, setOrderStatus] = useState(() =>
+    orderStatusOptions.some(option => option.value === searchParams.get('status'))
+      ? searchParams.get('status')!
+      : 'all',
+  );
   const [orderSearch, setOrderSearch] = useState(() => (searchParams.get('search') ?? '').slice(0, 100));
   const [orderFrom, setOrderFrom] = useState(() => searchParams.get('from') ?? '');
   const [orderTo, setOrderTo] = useState(() => searchParams.get('to') ?? '');
@@ -199,43 +163,18 @@ export function Component() {
   );
   const debouncedOrderSearch = useDebouncedValue(orderSearch, 300);
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [transactionsPagination, setTransactionsPagination] =
-    useState<Pagination>(emptyPagination);
-  const [transactionsLoading, setTransactionsLoading] = useState(false);
-  const [transactionsError, setTransactionsError] = useState<string>();
-  const [transactionStatus, setTransactionStatus] = useState('all');
-  const [transactionSearch, setTransactionSearch] = useState('');
-  const [transactionFrom, setTransactionFrom] = useState('');
-  const [transactionTo, setTransactionTo] = useState('');
-  const [transactionPage, setTransactionPage] = useState(1);
-  const [transactionPerPage, setTransactionPerPage] = useState<number>(
-    PAGE_SIZE_OPTIONS[0],
-  );
-  const debouncedTransactionSearch = useDebouncedValue(transactionSearch, 300);
-
-  const [manualOrders, setManualOrders] = useState<Order[]>([]);
-  const [manualPagination, setManualPagination] =
-    useState<Pagination>(emptyPagination);
-  const [manualLoading, setManualLoading] = useState(false);
-  const [manualError, setManualError] = useState<string>();
-  const [manualPage, setManualPage] = useState(1);
-  const [manualPerPage, setManualPerPage] = useState<number>(
-    PAGE_SIZE_OPTIONS[0],
-  );
-
   const [detailUuid, setDetailUuid] = useState<string>();
 
   const ordersRequest = useRef(0);
-  const transactionsRequest = useRef(0);
-  const manualRequest = useRef(0);
 
   const loadOrders = useCallback(async () => {
     const sequence = ++ordersRequest.current;
     setOrdersLoading(true);
+    setSummary(undefined);
     try {
       const response = await apiClient.get('/api/v1/storefront/direct-orders', {
         params: {
+          gateway: 'chapa',
           status: orderStatus === 'all' ? undefined : orderStatus,
           search: debouncedOrderSearch || undefined,
           from: orderFrom || undefined,
@@ -265,88 +204,14 @@ export function Component() {
     orderPerPage,
   ]);
 
-  const loadTransactions = useCallback(async () => {
-    if (tab !== 'transactions') return;
-    const sequence = ++transactionsRequest.current;
-    setTransactionsLoading(true);
-    try {
-      const response = await apiClient.get(
-        '/api/v1/storefront/direct-orders/transactions',
-        {
-          params: {
-            status: transactionStatus === 'all' ? undefined : transactionStatus,
-            search: debouncedTransactionSearch || undefined,
-            from: transactionFrom || undefined,
-            to: transactionTo || undefined,
-            page: transactionPage,
-            per_page: transactionPerPage,
-          },
-        },
-      );
-      if (sequence !== transactionsRequest.current) return;
-      setTransactions(response.data.data?.data ?? []);
-      setTransactionsPagination(paginationFrom(response.data.data));
-      setTransactionsError(undefined);
-    } catch (reason) {
-      if (sequence === transactionsRequest.current) {
-        setTransactionsError(getApiErrorMessage(reason));
-      }
-    } finally {
-      if (sequence === transactionsRequest.current) {
-        setTransactionsLoading(false);
-      }
-    }
-  }, [
-    tab,
-    transactionStatus,
-    debouncedTransactionSearch,
-    transactionFrom,
-    transactionTo,
-    transactionPage,
-    transactionPerPage,
-  ]);
-
-  const loadManualOrders = useCallback(async () => {
-    if (tab !== 'manual-review') return;
-    const sequence = ++manualRequest.current;
-    setManualLoading(true);
-    try {
-      const response = await apiClient.get('/api/v1/storefront/direct-orders', {
-        params: {
-          status: 'manual_review',
-          page: manualPage,
-          per_page: manualPerPage,
-        },
-      });
-      if (sequence !== manualRequest.current) return;
-      setManualOrders(response.data.data?.data ?? []);
-      setManualPagination(paginationFrom(response.data.data));
-      setManualError(undefined);
-    } catch (reason) {
-      if (sequence === manualRequest.current) {
-        setManualError(getApiErrorMessage(reason));
-      }
-    } finally {
-      if (sequence === manualRequest.current) setManualLoading(false);
-    }
-  }, [tab, manualPage, manualPerPage]);
-
   useEffect(() => {
     void loadOrders();
   }, [loadOrders, refreshKey]);
 
-  useEffect(() => {
-    void loadTransactions();
-  }, [loadTransactions, refreshKey]);
-
-  useEffect(() => {
-    void loadManualOrders();
-  }, [loadManualOrders, refreshKey]);
-
   const refresh = () => setRefreshKey(key => key + 1);
 
   return (
-    <DashboardLayout.MainSection>
+    <DashboardLayout.MainSection className="min-h-0 overflow-hidden">
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
@@ -355,13 +220,13 @@ export function Component() {
         <Button
           variant="outline"
           onClick={refresh}
-          disabled={ordersLoading || transactionsLoading || manualLoading}
-          aria-busy={ordersLoading || transactionsLoading || manualLoading}
+          disabled={ordersLoading}
+          aria-busy={ordersLoading}
         >
           <RefreshCwIcon
             aria-hidden="true"
             className={
-              ordersLoading || transactionsLoading || manualLoading
+              ordersLoading
                 ? 'animate-spin'
                 : undefined
             }
@@ -369,47 +234,18 @@ export function Component() {
           <Trans message="Refresh" />
         </Button>
       </DashboardLayout.SectionHeader>
-      <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5 px-3 py-4 sm:px-5">
+      <DashboardLayout.SectionContent className="min-h-0 overflow-y-auto overscroll-y-contain">
+        <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5">
           <SummaryCards summary={summary} />
 
-          <Tabs.Root
-            value={tab}
-            onValueChange={value => setTab(value as Tab)}
-            className="gap-4"
-          >
-            <div className="min-w-0 overflow-x-auto border-b border-border">
-              <Tabs.List variant="line" className="w-max justify-start">
-              <Tabs.Tab value="orders" className="flex-none">
-                <Trans message="Orders" />
-              </Tabs.Tab>
-              <Tabs.Tab value="transactions" className="flex-none">
-                <Trans message="Transactions" />
-              </Tabs.Tab>
-              <Tabs.Tab value="manual-review" className="flex-none">
-                <Trans message="Manual review" />
-                {!!summary?.manual_review_count && (
-                  <Badge variant="outline" className="bg-warning/10 text-warning">
-                    {summary.manual_review_count}
-                  </Badge>
-                )}
-              </Tabs.Tab>
-              </Tabs.List>
-            </div>
-
-            <Tabs.Panel value="orders" className="flex flex-col gap-4">
-              <div className="space-y-3">
-                <div className="space-y-1">
+          <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
                   <h2 className="text-base font-medium">
                     <Trans message="Orders" />
-                    {ordersPagination.total > 0 ? (
-                      <span className="ms-1 text-muted-foreground tabular-nums">
-                        ({ordersPagination.total})
-                      </span>
-                    ) : null}
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    <Trans message="Track buyer payments and delivery. Only verified payments count as sales." />
+                    <Trans message="Orders and payment status. Only paid orders count as sales." />
                   </p>
                 </div>
                 <OrderFilters
@@ -463,110 +299,7 @@ export function Component() {
                   </Card.Footer>
                 )}
               </Card.Root>
-            </Tabs.Panel>
-
-            <Tabs.Panel value="transactions" className="flex flex-col gap-4">
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <h2 className="text-base font-medium"><Trans message="Transactions" /></h2>
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="Verification attempts for payments sent to your receiving accounts. Provider evidence stays private." />
-                  </p>
-                </div>
-                <TransactionFilters
-                    status={transactionStatus}
-                    search={transactionSearch}
-                    from={transactionFrom}
-                    to={transactionTo}
-                    onStatusChange={value => {
-                      setTransactionStatus(value);
-                      setTransactionPage(1);
-                    }}
-                    onSearchChange={value => {
-                      setTransactionSearch(value);
-                      setTransactionPage(1);
-                    }}
-                    onFromChange={value => {
-                      setTransactionFrom(value);
-                      setTransactionPage(1);
-                    }}
-                    onToChange={value => {
-                      setTransactionTo(value);
-                      setTransactionPage(1);
-                    }}
-                  />
-              </div>
-              <Card.Root size="sm" className="rounded-card-sm">
-                <Card.Content className="px-0">
-                  <TransactionsTable
-                    transactions={transactions}
-                    loading={transactionsLoading}
-                    error={transactionsError}
-                    onViewOrder={setDetailUuid}
-                    onRetry={() => void loadTransactions()}
-                  />
-                </Card.Content>
-                {transactionsPagination.total > 0 && (
-                  <Card.Footer className="border-t pt-4">
-                    <Pagination
-                      page={transactionsPagination.current_page}
-                      lastPage={transactionsPagination.last_page}
-                      total={transactionsPagination.total}
-                      perPage={transactionsPagination.per_page}
-                      pageSizeName="transactions-per-page"
-                      onChange={setTransactionPage}
-                      onPerPageChange={value => {
-                        setTransactionPerPage(value);
-                        setTransactionPage(1);
-                      }}
-                    />
-                  </Card.Footer>
-                )}
-              </Card.Root>
-            </Tabs.Panel>
-
-            <Tabs.Panel value="manual-review" className="flex flex-col gap-4">
-              <Card.Root size="sm" className="rounded-card-sm">
-                <Card.Header className="border-b">
-                  <Card.Title>
-                    <Trans message="Manual review" />
-                  </Card.Title>
-                  <Card.Description>
-                    <Trans message="These payments could not be verified automatically. Review is read-only and Linket support resolves them. You cannot mark an order as paid." />
-                  </Card.Description>
-                </Card.Header>
-                <Card.Content className="px-0">
-                  <OrdersTable
-                    orders={manualOrders}
-                    loading={manualLoading}
-                    error={manualError}
-                    onView={setDetailUuid}
-                    onRetry={() => void loadManualOrders()}
-                    emptyMessage={
-                      <Trans message="No orders are waiting for manual review." />
-                    }
-                  />
-                </Card.Content>
-                {manualPagination.total > 0 && (
-                  <Card.Footer className="border-t pt-4">
-                    <Pagination
-                      page={manualPagination.current_page}
-                      lastPage={manualPagination.last_page}
-                      total={manualPagination.total}
-                      perPage={manualPagination.per_page}
-                      pageSizeName="manual-review-per-page"
-                      onChange={setManualPage}
-                      onPerPageChange={value => {
-                        setManualPerPage(value);
-                        setManualPage(1);
-                      }}
-                    />
-                  </Card.Footer>
-                )}
-              </Card.Root>
-            </Tabs.Panel>
-
-          </Tabs.Root>
+          </div>
         </div>
       </DashboardLayout.SectionContent>
 
@@ -579,149 +312,74 @@ export function Component() {
 }
 
 function SummaryCards({summary}: {summary?: Summary}) {
-  const getVerifiedDetail = () => {
-    if (!summary) return null;
-    if (summary.free_orders_count !== undefined && summary.paid_orders_count !== undefined) {
-      if (summary.free_orders_count > 0 && summary.paid_orders_count === 0) {
-        return (
-          <Trans
-            message=":freeCount free orders (0 paid)"
-            values={{freeCount: summary.free_orders_count}}
-          />
-        );
-      }
-      if (summary.free_orders_count > 0 && summary.paid_orders_count > 0) {
-        return (
-          <Trans
-            message=":paidCount paid, :freeCount free"
-            values={{
-              paidCount: summary.paid_orders_count,
-              freeCount: summary.free_orders_count,
-            }}
-          />
-        );
-      }
-    }
-    return (
-      <Trans
-        message=":count verified orders"
-        values={{count: summary.verified_sales_count}}
-      />
-    );
-  };
+  const metrics: Array<{
+    key: string;
+    icon: LucideIcon;
+    label: ReactNode;
+    value: ReactNode;
+  }> = [
+    {
+      key: 'net-sales',
+      icon: LandmarkIcon,
+      label: <Trans message="Net sales" />,
+      value: summary ? (
+        <FormattedCurrency valueInCents={summary.net_sales_cents} currency={summary.currency} />
+      ) : '—',
+    },
+    {
+      key: 'orders',
+      icon: ReceiptTextIcon,
+      label: <Trans message="Orders" />,
+      value: summary?.paid_orders_count ?? '—',
+    },
+    {
+      key: 'profit',
+      icon: ChartNoAxesCombinedIcon,
+      label: (
+        <>
+          <Trans message="Gross profit" />
+          {summary ? ` · ${summary.gross_profit_margin_percent.toFixed(1)}%` : null}
+        </>
+      ),
+      value: summary ? (
+        <FormattedCurrency valueInCents={summary.gross_profit_cents} currency={summary.currency} />
+      ) : '—',
+    },
+    {
+      key: 'average',
+      icon: CircleDollarSignIcon,
+      label: <Trans message="Average order" />,
+      value: summary ? (
+        <FormattedCurrency valueInCents={summary.average_order_cents} currency={summary.currency} />
+      ) : '—',
+    },
+  ];
 
   return (
-    <Card.Root size="sm" className="gap-0 rounded-card-sm py-0">
-      <Card.Content className="grid grid-cols-2 p-0 sm:grid-cols-4">
-        <SummaryMetric
-          className="border-e border-b sm:border-b-0"
-          label={<Trans message="Verified sales" />}
-          value={
-            summary ? (
-              <FormattedCurrency
-                valueInCents={summary.verified_revenue_cents}
-                currency={summary.currency}
-              />
-            ) : (
-              '—'
-            )
-          }
-          detail={getVerifiedDetail()}
-        />
-        <SummaryMetric
-          className="border-b sm:border-e sm:border-b-0"
-          label={<Trans message="Creator earnings" />}
-          value={
-            summary ? (
-              <FormattedCurrency
-                valueInCents={
-                  summary.creator_earnings_cents !== undefined
-                    ? summary.creator_earnings_cents
-                    : summary.verified_revenue_cents
-                }
-                currency={summary.currency}
-              />
-            ) : (
-              '—'
-            )
-          }
-          detail={
-            summary?.platform_fee_cents ? (
-              <Trans
-                message="Net after :fee fee"
-                values={{
-                  fee: `${(summary.platform_fee_cents / 100).toFixed(2)} ${summary.currency}`,
-                }}
-              />
-            ) : (
-              <Trans message="Net platform earnings" />
-            )
-          }
-        />
-        <SummaryMetric
-          className="border-e"
-          label={<Trans message="Pending & Review" />}
-          value={
-            summary
-              ? summary.pending_count + summary.manual_review_count
-              : '—'
-          }
-          detail={
-            summary?.manual_review_count ? (
-              <Trans
-                message=":pending pending, :review review"
-                values={{
-                  pending: summary.pending_count,
-                  review: summary.manual_review_count,
-                }}
-              />
-            ) : (
-              <Trans message="Awaiting verification" />
-            )
-          }
-          tone={summary?.manual_review_count ? 'warning' : undefined}
-        />
-        <SummaryMetric
-          label={<Trans message="Rejected payments" />}
-          value={summary?.rejected_count ?? '—'}
-          detail={<Trans message="Excluded from sales" />}
-        />
-      </Card.Content>
-    </Card.Root>
-  );
-}
-
-function SummaryMetric({
-  className,
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  className?: string;
-  label: ReactNode;
-  value: ReactNode;
-  detail: ReactNode;
-  tone?: 'warning';
-}) {
-  return (
-    <div className={`min-w-0 p-4 ${className ?? ''}`}>
-      <p
-        className={
-          tone === 'warning'
-            ? 'text-sm text-warning'
-            : 'text-sm text-muted-foreground'
-        }
-      >
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
-        {value}
-      </p>
-      <p className="mt-1 text-xs leading-snug text-muted-foreground">
-        {detail}
-      </p>
-    </div>
+    <section aria-label="Sales summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {metrics.map(metric => {
+        const Icon = metric.icon;
+        return (
+          <Card.Root key={metric.key} size="sm" className="min-h-32 min-w-0 gap-3">
+            <Card.Header>
+              <Card.Title className="truncate text-sm font-normal text-muted-foreground">
+                {metric.label}
+              </Card.Title>
+              <Card.Action>
+                <span className="flex size-9 items-center justify-center rounded-card-sm bg-muted text-muted-foreground [&>svg]:size-4">
+                  <Icon aria-hidden="true" />
+                </span>
+              </Card.Action>
+            </Card.Header>
+            <Card.Content>
+              <p className="truncate text-2xl font-bold tracking-tight tabular-nums">
+                {metric.value}
+              </p>
+            </Card.Content>
+          </Card.Root>
+        );
+      })}
+    </section>
   );
 }
 
@@ -821,100 +479,6 @@ function OrderFilters({
   );
 }
 
-function TransactionFilters({
-  status,
-  search,
-  from,
-  to,
-  onStatusChange,
-  onSearchChange,
-  onFromChange,
-  onToChange,
-}: {
-  status: string;
-  search: string;
-  from: string;
-  to: string;
-  onStatusChange: (value: string) => void;
-  onSearchChange: (value: string) => void;
-  onFromChange: (value: string) => void;
-  onToChange: (value: string) => void;
-}) {
-  const isFiltered = status !== 'all' || !!search || !!from || !!to;
-  return (
-    <div className="flex flex-col gap-2 md:flex-row md:items-center">
-      <div className="relative min-w-0 flex-1">
-        <SearchIcon aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          bindToHookForm={false}
-          className="ps-9"
-          aria-label="Search transactions"
-          placeholder="Search reference, buyer or product"
-          value={search}
-          onChange={event => onSearchChange(event.target.value)}
-        />
-      </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
-        <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
-          <Select.Trigger aria-label="Transaction status" className="w-full md:w-52">
-            <Select.Value placeholder={<Trans message="All statuses" />}>
-              {transactionStatusOptions.find(option => option.value === status)?.label ?? <Trans message="All statuses" />}
-            </Select.Value>
-          </Select.Trigger>
-          <Select.Content>
-            <Select.Group>
-              {transactionStatusOptions.map(option => (
-                <Select.Item key={option.value} value={option.value}>
-                  {option.label}
-                </Select.Item>
-              ))}
-            </Select.Group>
-          </Select.Content>
-        </Select.Root>
-        <Popover.Root>
-          <Popover.Trigger render={
-            <Button variant="outline" className="shrink-0" aria-label="Filter transactions by date">
-              <CalendarDaysIcon />
-              <Trans message="Dates" />
-              {(from || to) && <span aria-hidden="true" className="size-1.5 rounded-full bg-primary" />}
-            </Button>
-          } />
-          <Popover.Portal>
-            <Popover.Content align="end" className="w-[min(20rem,calc(100vw-2rem))] rounded-card-sm">
-              <Popover.Header>
-                <Popover.Title><Trans message="Date range" /></Popover.Title>
-              </Popover.Header>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex min-w-0 flex-col gap-1.5 text-sm">
-                  <Trans message="From" />
-                  <Input bindToHookForm={false} aria-label="Transactions from date" type="date" value={from} max={to || undefined} onChange={event => onFromChange(event.target.value)} />
-                </label>
-                <label className="flex min-w-0 flex-col gap-1.5 text-sm">
-                  <Trans message="To" />
-                  <Input bindToHookForm={false} aria-label="Transactions to date" type="date" value={to} min={from || undefined} onChange={event => onToChange(event.target.value)} />
-                </label>
-              </div>
-              <Button variant="ghost" size="sm" className="self-end" disabled={!from && !to} onClick={() => {onFromChange(''); onToChange('');}}>
-                <Trans message="Clear dates" />
-              </Button>
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-      </div>
-      {isFiltered && (
-        <Button variant="ghost" size="sm" className="self-start md:self-auto" onClick={() => {
-          onStatusChange('all');
-          onSearchChange('');
-          onFromChange('');
-          onToChange('');
-        }}>
-          <Trans message="Clear filters" />
-        </Button>
-      )}
-    </div>
-  );
-}
-
 function OrdersTable({
   orders,
   loading,
@@ -930,6 +494,7 @@ function OrdersTable({
   onRetry?: () => void;
   emptyMessage?: ReactNode;
 }) {
+  const {trans} = useTrans();
   if (loading) return <TableLoading />;
   if (error) {
     return (
@@ -968,78 +533,29 @@ function OrdersTable({
   }
 
   return (
-    <>
-      <ul className="divide-y lg:hidden" aria-label="Orders">
-        {orders.map(order => (
-          <li key={order.uuid}>
-            <Item.Root
-              size="sm"
-              render={<button type="button" />}
-              className="min-h-14 w-full min-w-0 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              onClick={() => onView(order.uuid)}
-              aria-label={`View details for ${
-                order.product?.title ?? 'Deleted product'
-              }`}
-            >
-            <Item.Media
-              align="center"
-              variant="icon"
-              className="size-10 rounded-card-xs bg-muted text-muted-foreground"
-            >
-              <ReceiptTextIcon />
-            </Item.Media>
-            <Item.Content className="gap-1.5">
-              <Item.Row className="items-start justify-between gap-3">
-                <Item.Title className="min-w-0 flex-1 break-words">
-                  {order.product?.title ?? <Trans message="Deleted product" />}
-                </Item.Title>
-                <span className="shrink-0 font-medium tabular-nums">
-                  <FormattedCurrency
-                    valueInCents={order.gross_amount_cents}
-                    currency={order.currency ?? 'ETB'}
-                  />
-                </span>
-              </Item.Row>
-              <Item.Row className="justify-between text-xs text-muted-foreground">
-                <span className="min-w-0 truncate">
-                  {order.buyer_name || <Trans message="Guest buyer" />}
-                </span>
-                <span className="shrink-0">
-                  <FormattedDate preset="short" date={order.created_at} />
-                </span>
-              </Item.Row>
-              <Item.Row>
-                <OrderStatusBadge status={order.status} />
-              </Item.Row>
-              </Item.Content>
-            </Item.Root>
-          </li>
-        ))}
-      </ul>
-
-      <div className="hidden min-w-0 overflow-x-auto lg:block">
-        <Table.Root>
+    <div className="min-w-0 overflow-x-auto">
+        <Table.Root
+          aria-label={trans({message: 'Orders'})}
+          className="w-max min-w-full"
+        >
           <Table.Header>
-            <Table.Row>
-              <Table.Head className="ps-6">
+            <Table.Row className="hover:bg-transparent">
+              <Table.Head className="h-12 min-w-56 px-4">
                 <Trans message="Product" />
               </Table.Head>
-              <Table.Head>
+              <Table.Head className="h-12 min-w-44 px-4">
                 <Trans message="Buyer" />
               </Table.Head>
-              <Table.Head className="text-end">
+              <Table.Head className="h-12 min-w-28 px-4 text-end">
                 <Trans message="Amount" />
               </Table.Head>
-              <Table.Head>
+              <Table.Head className="h-12 min-w-36 px-4">
                 <Trans message="Date" />
               </Table.Head>
-              <Table.Head className="hidden xl:table-cell">
-                <Trans message="Payment method" />
-              </Table.Head>
-              <Table.Head>
+              <Table.Head className="h-12 min-w-28 px-4">
                 <Trans message="Status" />
               </Table.Head>
-              <Table.Head className="pe-6">
+              <Table.Head className="h-12 w-12 px-4">
                 <span className="sr-only">
                   <Trans message="Actions" />
                 </span>
@@ -1049,277 +565,82 @@ function OrdersTable({
           <Table.Body>
             {orders.map(order => (
               <Table.Row key={order.uuid}>
-                <Table.Cell className="max-w-52 ps-6">
-                  <span
-                    className="block truncate font-medium"
-                    title={order.product?.title ?? undefined}
-                  >
-                    {order.product?.title ?? (
-                      <Trans message="Deleted product" />
-                    )}
-                  </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {order.transaction_reference ?? order.uuid}
+                <Table.Cell className="min-w-56 px-4 py-3 align-middle whitespace-normal">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <OrderMark order={order} />
+                    <span className="min-w-0">
+                      <span
+                        className="block truncate font-medium"
+                        title={order.product?.title ?? undefined}
+                      >
+                        {order.product?.title ?? (
+                          <Trans message="Deleted product" />
+                        )}
+                      </span>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                        #{order.uuid.slice(0, 8)}
+                        {order.transaction_reference
+                          ? ` · ${order.transaction_reference}`
+                          : ''}
+                      </span>
+                    </span>
                   </span>
                 </Table.Cell>
-                <Table.Cell className="max-w-44">
-                  <span className="block truncate">
+                <Table.Cell className="min-w-44 px-4 py-3 align-middle whitespace-normal">
+                  <span className="block truncate leading-5">
                     {order.buyer_name || (
                       <span className="text-muted-foreground">
                         <Trans message="Guest buyer" />
                       </span>
                     )}
                   </span>
+                  <span className="block h-4 truncate text-xs text-muted-foreground">
+                    {order.buyer_email}
+                  </span>
                 </Table.Cell>
-                <Table.Cell className="text-end font-medium tabular-nums">
+                <Table.Cell className="min-w-28 px-4 py-3 text-end align-middle font-medium tabular-nums">
                   <FormattedCurrency
                     valueInCents={order.gross_amount_cents}
                     currency={order.currency ?? 'ETB'}
                   />
                 </Table.Cell>
-                <Table.Cell className="text-muted-foreground">
-                  <FormattedDate preset="short" date={order.created_at} />
-                </Table.Cell>
-                <Table.Cell className="hidden xl:table-cell">
-                  <PaymentMethod order={order} />
-                </Table.Cell>
-                <Table.Cell>
-                  <OrderStatusBadge status={order.status} />
-                </Table.Cell>
-                <Table.Cell className="whitespace-nowrap pe-6 text-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onView(order.uuid)}
-                  >
-                    <EyeIcon />
-                    <Trans message="View details" />
-                  </Button>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
-      </div>
-    </>
-  );
-}
-
-function TransactionsTable({
-  transactions,
-  loading,
-  error,
-  onViewOrder,
-  onRetry,
-}: {
-  transactions: Transaction[];
-  loading: boolean;
-  error?: string;
-  onViewOrder: (uuid: string) => void;
-  onRetry?: () => void;
-}) {
-  if (loading) return <TableLoading />;
-  if (error) {
-    return (
-      <div
-        className="flex flex-col items-start gap-3 px-6 py-8"
-        role="alert"
-      >
-        <p className="text-sm text-destructive">{error}</p>
-        {onRetry && (
-          <Button variant="outline" size="sm" onClick={onRetry}>
-            <RefreshCwIcon aria-hidden="true" />
-            <Trans message="Try again" />
-          </Button>
-        )}
-      </div>
-    );
-  }
-  if (!transactions.length) {
-    return (
-      <Empty.Root>
-        <Empty.Header>
-          <Empty.Media variant="icon">
-            <ReceiptTextIcon />
-          </Empty.Media>
-          <Empty.Title>
-            <Trans message="No transactions found" />
-          </Empty.Title>
-          <Empty.Description>
-            <Trans message="Provider verification attempts will appear here once buyers submit payment references." />
-          </Empty.Description>
-        </Empty.Header>
-      </Empty.Root>
-    );
-  }
-
-  return (
-    <>
-      <ul className="divide-y xl:hidden" aria-label="Transactions">
-        {transactions.map(transaction => (
-          <li key={transaction.id}>
-            <Item.Root
-              size="sm"
-              render={
-                transaction.order_uuid ? <button type="button" /> : undefined
-              }
-              className="min-h-14 w-full min-w-0 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              onClick={
-                transaction.order_uuid
-                  ? () => onViewOrder(transaction.order_uuid!)
-                  : undefined
-              }
-              aria-label={
-                transaction.order_uuid
-                  ? `View order for ${
-                      transaction.product_title ?? 'Deleted product'
-                    }`
-                  : undefined
-              }
-            >
-              <Item.Media
-                align="center"
-                variant="icon"
-                className="size-10 rounded-card-xs bg-muted text-muted-foreground"
-              >
-                <ReceiptTextIcon />
-              </Item.Media>
-              <Item.Content className="gap-1.5">
-                <Item.Row className="items-start justify-between gap-3">
-                  <Item.Title className="min-w-0 flex-1">
-                    {transaction.product_title ?? (
-                      <Trans message="Deleted product" />
-                    )}
-                  </Item.Title>
-                  <span className="shrink-0 font-medium tabular-nums">
-                    <FormattedCurrency
-                      valueInCents={transaction.amount_cents}
-                      currency={transaction.currency ?? 'ETB'}
-                    />
-                  </span>
-                </Item.Row>
-                <Item.Row className="justify-between text-xs text-muted-foreground">
-                  <span className="min-w-0 truncate">
-                    {transaction.reference ?? transaction.order_uuid ?? '—'}
-                  </span>
-                  <span className="shrink-0">
-                    <FormattedDate
-                      preset="short"
-                      date={transaction.verified_at ?? transaction.created_at}
-                    />
-                  </span>
-                </Item.Row>
-                <Item.Row className="justify-between">
-                  <TransactionStatusBadge status={transaction.status} />
-                  <span className="text-xs text-muted-foreground">
-                    <Trans
-                      message="Attempt :attempt"
-                      values={{attempt: transaction.attempt}}
-                    />
-                  </span>
-                </Item.Row>
-              </Item.Content>
-            </Item.Root>
-          </li>
-        ))}
-      </ul>
-
-      <div className="hidden min-w-0 overflow-x-auto xl:block">
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head className="ps-6">
-                <Trans message="Reference" />
-              </Table.Head>
-              <Table.Head>
-                <Trans message="Order" />
-              </Table.Head>
-              <Table.Head className="text-end">
-                <Trans message="Amount" />
-              </Table.Head>
-              <Table.Head>
-                <Trans message="Provider" />
-              </Table.Head>
-              <Table.Head>
-                <Trans message="Status" />
-              </Table.Head>
-              <Table.Head className="hidden 2xl:table-cell">
-                <Trans message="Date" />
-              </Table.Head>
-              <Table.Head className="pe-6">
-                <span className="sr-only">
-                  <Trans message="Actions" />
-                </span>
-              </Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {transactions.map(transaction => (
-              <Table.Row key={transaction.id}>
-                <Table.Cell className="max-w-48 ps-6">
-                  <span className="block truncate font-medium">
-                    {transaction.reference ?? '—'}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    <Trans
-                      message="Attempt :attempt"
-                      values={{attempt: transaction.attempt}}
-                    />
-                    {transaction.error_code
-                      ? ` · ${transaction.error_code}`
-                      : null}
-                  </span>
-                </Table.Cell>
-                <Table.Cell className="max-w-48">
+                <Table.Cell className="min-w-36 px-4 py-3 align-middle whitespace-normal text-muted-foreground">
                   <span className="block truncate">
-                    {transaction.product_title ?? (
-                      <Trans message="Deleted product" />
-                    )}
+                    <FormattedDate preset="short" date={order.created_at} />
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {transaction.buyer_name ?? transaction.order_uuid}
+                  <span className="block h-4 truncate text-xs">
+                    <FormattedRelativeTime date={order.paid_at ?? order.created_at} />
                   </span>
                 </Table.Cell>
-                <Table.Cell className="text-end font-medium tabular-nums">
-                  <FormattedCurrency
-                    valueInCents={transaction.amount_cents}
-                    currency={transaction.currency ?? 'ETB'}
-                  />
+                <Table.Cell className="min-w-28 px-4 py-3 align-middle">
+                  <OrderStatusBadge status={order.status} compact />
                 </Table.Cell>
-                <Table.Cell>
-                  {transaction.provider ? (
-                    <span className="uppercase">{transaction.provider}</span>
-                  ) : (
-                    '—'
-                  )}
-                </Table.Cell>
-                <Table.Cell>
-                  <TransactionStatusBadge status={transaction.status} />
-                </Table.Cell>
-                <Table.Cell className="hidden text-muted-foreground 2xl:table-cell">
-                  <FormattedDate
-                    preset="short"
-                    date={transaction.verified_at ?? transaction.created_at}
-                  />
-                </Table.Cell>
-                <Table.Cell className="pe-6 text-end">
-                  {transaction.order_uuid && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onViewOrder(transaction.order_uuid!)}
-                    >
-                      <EyeIcon />
-                      <Trans message="View order" />
-                    </Button>
-                  )}
+                <Table.Cell className="w-12 px-4 py-3 text-end align-middle">
+                  <Tooltip.Provider>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label={trans({message: 'View details'})}
+                            onClick={() => onView(order.uuid)}
+                          >
+                            <ChevronRightIcon />
+                          </Button>
+                        }
+                      />
+                      <Tooltip.Content>
+                        <Trans message="View details" />
+                      </Tooltip.Content>
+                    </Tooltip.Root>
+                  </Tooltip.Provider>
                 </Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>
         </Table.Root>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -1376,7 +697,7 @@ function OrderDetailDialog({
               <Trans message="Order details" />
             </Dialog.Title>
             <Dialog.Description>
-              <Trans message="Payment verification and delivery information for this order." />
+              <Trans message="Recorded payment status and delivery information for this order." />
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body className="min-w-0" aria-busy={loading}>
@@ -1425,7 +746,6 @@ function OrderDetailDialog({
 
 function OrderDetailContent({order}: {order: OrderDetail}) {
   const currency = order.currency ?? 'ETB';
-  const accountEnding = order.account_ending;
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -1483,19 +803,9 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
             label={<Trans message="Payment gateway" />}
             value={paymentMethodLabel(order)}
           />
-          <DetailRow
-            label={<Trans message="Receiving account" />}
-            value={
-              accountEnding ? (
-                <span className="font-mono">•••• {accountEnding}</span>
-              ) : (
-                '—'
-              )
-            }
-          />
           {(order.platform_fee_cents ?? 0) > 0 && (
             <DetailRow
-              label={<Trans message="Legacy platform fee" />}
+              label={<Trans message="Platform fee" />}
               value={
                 <FormattedCurrency
                   valueInCents={order.platform_fee_cents ?? 0}
@@ -1516,111 +826,21 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
           />
         </DetailSection>
 
-        <DetailSection title={<Trans message="Payment evidence" />}>
-          {order.verification ? (
-            <>
+        {order.payment_gateway === 'chapa' && (
+          <DetailSection title={<Trans message="Chapa payment status" />}>
+            <DetailRow label={<Trans message="Status" />} value={<OrderStatusBadge status={order.status} />} />
+            {order.paid_at && (
               <DetailRow
-                label={<Trans message="Status" />}
-                value={
-                  <TransactionStatusBadge status={order.verification.status} />
-                }
+                label={<Trans message="Paid at" />}
+                value={<FormattedDate preset="timestamp" date={order.paid_at} />}
               />
-              <DetailRow
-                label={<Trans message="Provider" />}
-                value={
-                  order.verification.provider ? (
-                    <span className="uppercase">
-                      {order.verification.provider}
-                    </span>
-                  ) : (
-                    '—'
-                  )
-                }
-              />
-              <DetailRow
-                label={<Trans message="Attempts" />}
-                value={order.verification.attempts}
-              />
-              <DetailRow
-                label={
-                  order.verification.verified_at &&
-                  ['success', 'manual_approved'].includes(order.verification.status) ? (
-                    <Trans message="Verified at" />
-                  ) : (
-                    <Trans message="Submitted at" />
-                  )
-                }
-                value={
-                  <FormattedDate
-                    preset="timestamp"
-                    date={
-                      order.verification.verified_at &&
-                      ['success', 'manual_approved'].includes(order.verification.status)
-                        ? order.verification.verified_at
-                        : order.verification.created_at
-                    }
-                  />
-                }
-              />
-              {order.verification.error_code && (
-                <DetailRow
-                  label={<Trans message="Reason" />}
-                  value={verificationReasonLabel(order.verification.error_code)}
-                />
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              <Trans message="No provider verification has been recorded for this order." />
+            )}
+            <p className="text-xs text-muted-foreground">
+              <Trans message="Payment status reflects Linket's recorded Chapa confirmation. Refunds and payouts are tracked separately." />
             </p>
-          )}
-        </DetailSection>
+          </DetailSection>
+        )}
       </div>
-
-      {!!order.verification?.history?.length && (
-        <DetailSection title={<Trans message="Verification history" />}>
-          <ul className="flex min-w-0 flex-col gap-2 sm:hidden" aria-label="Verification attempts">
-            {order.verification.history.map((entry, index) => (
-              <li key={[entry.reference, entry.attempt, index].join('-')} className="min-w-0 rounded-card-sm border border-border p-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    <Trans message="Attempt :number" values={{number: entry.attempt}} />
-                  </span>
-                  <TransactionStatusBadge status={entry.status} />
-                </div>
-                <p className="mt-2 break-all font-mono text-xs">{entry.reference ?? '—'}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  <FormattedDate preset="short" date={entry.verified_at ?? entry.created_at} />
-                </p>
-              </li>
-            ))}
-          </ul>
-          <div className="hidden min-w-0 overflow-x-auto sm:block">
-            <Table.Root>
-              <Table.Header>
-                <Table.Row>
-                  <Table.Head><Trans message="Reference" /></Table.Head>
-                  <Table.Head><Trans message="Status" /></Table.Head>
-                  <Table.Head><Trans message="Attempt" /></Table.Head>
-                  <Table.Head><Trans message="Date" /></Table.Head>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {order.verification.history.map((entry, index) => (
-                  <Table.Row key={[entry.reference, entry.attempt, index].join('-')}>
-                    <Table.Cell className="max-w-40 break-all font-mono text-xs">{entry.reference ?? '—'}</Table.Cell>
-                    <Table.Cell><TransactionStatusBadge status={entry.status} /></Table.Cell>
-                    <Table.Cell>{entry.attempt}</Table.Cell>
-                    <Table.Cell className="text-muted-foreground">
-                      <FormattedDate preset="short" date={entry.verified_at ?? entry.created_at} />
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Root>
-          </div>
-        </DetailSection>
-      )}
 
       <DetailSection title={<Trans message="Delivery" />}>
         <div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
@@ -1669,11 +889,6 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
           <p className="mt-1 text-muted-foreground">
             <Trans message="Linket support must resolve this payment. You cannot mark this order paid or release buyer downloads." />
           </p>
-          {order.manual_review.reason_code === 'recipient_evidence_missing' && (
-            <p className="mt-2 text-muted-foreground">
-              <Trans message="Verify.et did not provide enough evidence to confirm the intended receiving account. Do not ask the buyer to pay again until support reviews the payment." />
-            </p>
-          )}
           <a href="/help" className="mt-2 inline-flex min-h-9 items-center text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <Trans message="Open Help Center" />
           </a>
@@ -1843,46 +1058,66 @@ function DetailRow({
   );
 }
 
-function OrderStatusBadge({status}: {status: string}) {
-  return (
-    <Badge
-      variant={statusBadgeVariant(status)}
-      className={
-        status === 'manual_review' ? 'bg-warning/10 text-warning' : undefined
-      }
-    >
-      <PaymentStatusLabel status={status} />
-    </Badge>
-  );
-}
+function OrderMark({order}: {order: Order}) {
+  const title = order.product?.title;
+  const coverUrl = order.product?.cover_url;
 
-function TransactionStatusBadge({status}: {status: string}) {
-  const label = transactionStatusLabel(status);
-  if (!label) return <span className="text-muted-foreground">—</span>;
   return (
-    <Badge
-      variant={statusBadgeVariant(status)}
-      className={
-        status === 'manual_review' ? 'bg-warning/10 text-warning' : undefined
-      }
-    >
-      {label}
-    </Badge>
-  );
-}
-
-function PaymentMethod({order}: {order: Order}) {
-  const label = paymentMethodLabel(order);
-  return (
-    <div className="flex flex-col">
-      <span>{label}</span>
-      {order.account_ending && (
-        <span className="font-mono text-xs text-muted-foreground">
-          •••• {order.account_ending}
+    <span className="flex size-9 shrink-0 overflow-hidden rounded-card-sm bg-muted">
+      {coverUrl ? (
+        <img src={coverUrl} alt="" className="size-full object-cover" />
+      ) : (
+        <span className="flex size-full items-center justify-center text-xs font-medium text-muted-foreground">
+          {Avatar.initials(title) || 'P'}
         </span>
       )}
-    </div>
+    </span>
   );
+}
+
+function OrderStatusBadge({
+  status,
+  compact = false,
+}: {
+  status: string;
+  compact?: boolean;
+}) {
+  return (
+    <Badge
+      variant={statusBadgeVariant(status)}
+      className={
+        status === 'manual_review' ? 'bg-warning/10 text-warning' : undefined
+      }
+    >
+      {compact ? (
+        <OrderStatusShortLabel status={status} />
+      ) : (
+        <PaymentStatusLabel status={status} />
+      )}
+    </Badge>
+  );
+}
+
+function OrderStatusShortLabel({status}: {status: string}) {
+  switch (status) {
+    case 'pending':
+    case 'pending_payment':
+      return <Trans message="Pending" />;
+    case 'verifying':
+      return <Trans message="Verifying" />;
+    case 'paid':
+    case 'completed':
+    case 'fulfilled':
+      return <Trans message="Paid" />;
+    case 'failed_verification':
+      return <Trans message="Rejected" />;
+    case 'manual_review':
+      return <Trans message="Review" />;
+    case 'expired':
+      return <Trans message="Expired" />;
+    default:
+      return null;
+  }
 }
 
 function Pagination({
@@ -2071,6 +1306,7 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 }
 
 function paymentMethodLabel(order: Order): string {
+  if (order.payment_gateway === 'chapa') return 'Chapa';
   const method = order.payment_method || order.payment_gateway;
   switch (method) {
     case 'cbe':
@@ -2083,31 +1319,8 @@ function paymentMethodLabel(order: Order): string {
       return 'Telebirr';
     case 'chapa':
       return 'Chapa';
-    case 'verify_et':
-      return 'Verify.et';
     default:
       return method ? method.toUpperCase() : '—';
-  }
-}
-
-function transactionStatusLabel(status: string): ReactNode {
-  switch (status) {
-    case 'pending':
-      return <Trans message="Pending" />;
-    case 'verifying':
-      return <Trans message="Verifying" />;
-    case 'success':
-      return <Trans message="Verified" />;
-    case 'manual_approved':
-      return <Trans message="Manually approved" />;
-    case 'manual_review':
-      return <Trans message="Manual review" />;
-    case 'mismatch':
-      return <Trans message="Mismatch" />;
-    case 'failed':
-      return <Trans message="Failed" />;
-    default:
-      return null;
   }
 }
 
@@ -2130,21 +1343,6 @@ function statusBadgeVariant(
       return 'outline';
     default:
       return 'secondary';
-  }
-}
-
-function verificationReasonLabel(code: string): ReactNode {
-  switch (code) {
-    case 'recipient_evidence_missing':
-      return <Trans message="Receiving account could not be confirmed" />;
-    case 'confirmation_history_review':
-      return <Trans message="Transaction confirmation needs review" />;
-    case 'free_allowance_exhausted':
-      return <Trans message="Free verified-sales allowance exhausted" />;
-    case 'verification_evidence_mismatch':
-      return <Trans message="Payment details did not match" />;
-    default:
-      return <Trans message="Additional verification needed" />;
   }
 }
 

@@ -5,13 +5,14 @@ namespace App\Payments\Controllers;
 use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\ChapaGateway;
 use App\Payments\SubscriptionPaymentGateway;
+use App\Storefront\Services\ChapaV1PayoutMode;
+use App\Storefront\Services\ChapaTransferApprovalSecret;
 use Common\Settings\Models\Setting;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -30,14 +31,45 @@ final class AdminSubscriptionGatewayController extends Controller
         Gate::authorize('admin.access');
         Gate::authorize('update', Setting::class);
         $data = $request->validate([
-            'gateway' => ['sometimes', 'string', Rule::in(['verify_et', 'chapa'])],
+            'gateway' => ['sometimes', 'string', 'in:chapa'],
             'public_key' => ['sometimes', 'nullable', 'string', 'max:255'],
             'secret_key' => ['sometimes', 'nullable', 'string', 'max:255'],
             'webhook_secret' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'transfer_approval_secret' => ['sometimes', 'nullable', 'string', 'min:16', 'max:255'],
         ]);
         $publicKey = trim((string) ($data['public_key'] ?? ''));
         $secretKey = trim((string) ($data['secret_key'] ?? ''));
         $webhookSecret = trim((string) ($data['webhook_secret'] ?? ''));
+        $approvalSecret = (string) ($data['transfer_approval_secret'] ?? '');
+
+        $this->assertNoSpaces($publicKey, $secretKey, $webhookSecret);
+        if ($approvalSecret !== '') {
+            $this->assertApprovalSecretCanBeSaved($approvalSecret, $publicKey, $secretKey);
+        }
+
+        $this->saveMerchantKeys($publicKey, $secretKey);
+        if (isset($data['gateway'])) {
+            settings()->save([SubscriptionPaymentGateway::KEY => $data['gateway']]);
+        }
+        if ($webhookSecret !== '') {
+            if (in_array(settings()->get('billing.chapa.active_mode'), ['test', 'live'], true)) {
+                throw ValidationException::withMessages([
+                    'webhook_secret' => __('Use the environment-specific Chapa settings to rotate the webhook secret.'),
+                ]);
+            }
+            settings()->save(['billing.chapa.webhook_secret' => $webhookSecret]);
+        }
+        if ($approvalSecret !== '') {
+            settings()->save([
+                ChapaTransferApprovalSecret::settingKey(app(ChapaV1PayoutMode::class)->mode()) => $approvalSecret,
+            ]);
+        }
+
+        return $this->show();
+    }
+
+    private function assertNoSpaces(string $publicKey, string $secretKey, string $webhookSecret): void
+    {
         if ($this->containsWhitespace($publicKey) || $this->containsWhitespace($secretKey) || $this->containsWhitespace($webhookSecret)) {
             throw ValidationException::withMessages([
                 'public_key' => __('Chapa credentials cannot contain spaces.'),
@@ -45,53 +77,80 @@ final class AdminSubscriptionGatewayController extends Controller
                 'webhook_secret' => __('Chapa credentials cannot contain spaces.'),
             ]);
         }
-        if ($publicKey !== '' || $secretKey !== '') {
-            if ($publicKey === '' || $secretKey === '') {
-                throw ValidationException::withMessages([
-                    'public_key' => __('Enter the public key and the secret key.'),
-                    'secret_key' => __('Enter the public key and the secret key.'),
-                ]);
-            }
-            try {
-                $status = app(ChapaV2Client::class)->secretStatus($secretKey);
-            } catch (ConnectionException|RuntimeException $exception) {
-                Log::warning('Chapa credential validation could not reach Chapa.', [
-                    'exception' => $exception::class,
-                ]);
+    }
 
-                throw ValidationException::withMessages([
-                    'secret_key' => __('Chapa could not be reached to validate this secret key.'),
-                ]);
-            }
-            if ($status === 'environment_mismatch') {
-                throw ValidationException::withMessages([
-                    'secret_key' => __('This private key is for the other Chapa environment. Use the test key while the business is in test mode, or the live key while it is live.'),
-                ]);
-            }
-            if ($status !== 'accepted') {
-                throw ValidationException::withMessages([
-                    'secret_key' => __('Chapa did not accept this secret key.'),
-                ]);
-            }
-            settings()->save([
-                'billing.chapa.public_key' => $publicKey,
-                'billing.chapa.secret_key' => $secretKey,
+    private function assertApprovalSecretCanBeSaved(string $approvalSecret, string $publicKey, string $secretKey): void
+    {
+        if ($publicKey !== '' || $secretKey !== '') {
+            throw ValidationException::withMessages([
+                'transfer_approval_secret' => __('Save merchant keys separately before configuring transfer approval.'),
             ]);
         }
-        if (isset($data['gateway'])) {
-            settings()->save([SubscriptionPaymentGateway::KEY => $data['gateway']]);
+        if (trim($approvalSecret) !== $approvalSecret || preg_match('/[\\x00-\\x1F\\x7F]/', $approvalSecret)) {
+            throw ValidationException::withMessages([
+                'transfer_approval_secret' => __('The transfer approval secret must not contain control characters or surrounding spaces.'),
+            ]);
         }
-        if ($webhookSecret !== '') {
-            settings()->save(['billing.chapa.webhook_secret' => $webhookSecret]);
+        if (!in_array(app(ChapaV1PayoutMode::class)->mode(), ['test', 'live'], true)) {
+            throw ValidationException::withMessages([
+                'transfer_approval_secret' => __('Configure a valid Chapa merchant key before saving its approval secret.'),
+            ]);
+        }
+    }
+
+    private function saveMerchantKeys(string $publicKey, string $secretKey): void
+    {
+        if ($publicKey === '' && $secretKey === '') {
+            return;
+        }
+        if (in_array(settings()->get('billing.chapa.active_mode'), ['test', 'live'], true)) {
+            throw ValidationException::withMessages([
+                'secret_key' => __('Use Admin Finance environment profiles to rotate merchant credentials.'),
+            ]);
+        }
+        if ($publicKey === '' || $secretKey === '') {
+            throw ValidationException::withMessages([
+                'public_key' => __('Enter the public key and the secret key.'),
+                'secret_key' => __('Enter the public key and the secret key.'),
+            ]);
+        }
+        try {
+            $status = app(ChapaV2Client::class)->secretStatus($secretKey);
+        } catch (ConnectionException|RuntimeException $exception) {
+            Log::warning('Chapa credential validation could not reach Chapa.', [
+                'exception' => $exception::class,
+            ]);
+            throw ValidationException::withMessages([
+                'secret_key' => __('Chapa could not be reached to validate this secret key.'),
+            ]);
+        }
+        if ($status === 'environment_mismatch') {
+            throw ValidationException::withMessages([
+                'secret_key' => __('This private key is for the other Chapa environment. Use the test key while the business is in test mode, or the live key while it is live.'),
+            ]);
+        }
+        if ($status !== 'accepted') {
+            throw ValidationException::withMessages([
+                'secret_key' => __('Chapa did not accept this secret key.'),
+            ]);
         }
 
-        return $this->show();
+        settings()->save([
+            'billing.chapa.public_key' => $publicKey,
+            'billing.chapa.secret_key' => $secretKey,
+        ]);
     }
 
     /** @return array<string, mixed> */
     private function payload(): array
     {
-        $publicKey = settings()->get('billing.chapa.public_key');
+        $profiles = app(\App\Payments\Chapa\ChapaMerchantProfiles::class);
+        $publicKey = $profiles->active(\App\Payments\Chapa\ChapaProfileField::PublicKey);
+        // Before an explicit TEST/LIVE selection, preserve the legacy settings
+        // form's public-key display. Never cross modes once a profile is selected.
+        if ($profiles->activeMode() === 'unconfigured') {
+            $publicKey = (string) settings()->get('billing.chapa.public_key', '');
+        }
 
         return [
             'gateway' => SubscriptionPaymentGateway::current(),

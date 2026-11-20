@@ -217,7 +217,7 @@ describe('the service form shell', () => {
     expect(steps.querySelector('li > span[aria-hidden="true"]')?.className)
       .toContain('start-1/2 -end-1/2 top-6');
     expect(steps.querySelector('li > [data-slot="separator"]')?.className)
-      .toContain('top-7 -bottom-7');
+      .toContain('top-8 bottom-0');
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');
@@ -234,7 +234,7 @@ describe('the service form shell', () => {
     const basicsHeader = screen.getByRole('heading', {name: 'Basics'}).closest('header');
     expect(basicsHeader?.className).toContain('border-b');
     expect(basicsHeader?.className).toContain('border-border');
-    expect(basicsHeader?.className).toContain('pb-3');
+    expect(basicsHeader?.className).toContain('py-3');
     expect(basicsHeader?.parentElement?.className).toContain('rounded-card-sm');
     expect(basicsHeader?.nextElementSibling?.className).toContain('pt-4');
     expect(basicsHeader?.querySelector('span[aria-hidden="true"]')).toBeNull();
@@ -244,7 +244,7 @@ describe('the service form shell', () => {
     expect(titleField?.className).toContain('focus-visible:not([aria-invalid=true])');
     expect(titleField?.className).toContain('outline-primary');
     expect(titleField?.className).toContain('gap-2');
-    expect(screen.getByText('A clear name, for example Logo design.')).toBeTruthy();
+    expect(screen.queryByText('A clear name, for example Logo design.')).toBeNull();
     // Step changes are announced once by the page-level status region.
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
@@ -287,11 +287,34 @@ describe('the service form shell', () => {
     expect(screen.getByText('0/3000')).toBeTruthy();
 
     await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'FAQ'}));
     await user.click(screen.getByRole('button', {name: 'Add FAQ'}));
     expect(screen.getByRole('textbox', {name: 'Answer'}).getAttribute('maxlength')).toBe('3000');
 
+    await user.click(screen.getByRole('button', {name: 'Contact buttons'}));
     await user.click(screen.getByRole('button', {name: 'Add contact button'}));
     expect(screen.getByRole('textbox', {name: 'Value'}).getAttribute('maxlength')).toBe('300');
+  });
+
+  test('optional settings stay compact until requested', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    const faq = screen.getByRole('button', {name: 'FAQ'});
+    const buyerQuestions = screen.getByRole('button', {name: 'Questions for buyers'});
+    const contacts = screen.getByRole('button', {name: 'Contact buttons'});
+    expect(faq.getAttribute('aria-expanded')).toBe('false');
+    expect(buyerQuestions.getAttribute('aria-expanded')).toBe('false');
+    expect(contacts.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', {name: 'Add FAQ'})).toBeNull();
+    await user.click(faq);
+    expect(faq.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('button', {name: 'Add FAQ'})).toBeTruthy();
+    expect(screen.queryByRole('button', {name: 'Add question'})).toBeNull();
+    await user.click(buyerQuestions);
+    expect(screen.getByRole('button', {name: 'Add question'})).toBeTruthy();
   });
 
   test('creator edits up to three optional buyer questions without writes', async () => {
@@ -300,6 +323,7 @@ describe('the service form shell', () => {
     await waitForForm();
 
     await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'Questions for buyers'}));
     const add = screen.getByRole('button', {name: 'Add question'});
     for (let index = 0; index < 3; index += 1) {
       await user.click(add);
@@ -330,6 +354,7 @@ describe('the service form shell', () => {
     await waitForForm();
     await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
 
+    await user.click(screen.getByRole('button', {name: 'FAQ'}));
     const addFaq = screen.getByRole('button', {name: 'Add FAQ'});
     for (let index = 0; index < 20; index += 1) {
       await user.click(addFaq);
@@ -337,6 +362,7 @@ describe('the service form shell', () => {
     expect(addFaq).toHaveProperty('disabled', true);
     expect(screen.getByText('Maximum 20 FAQs reached.')).toBeTruthy();
 
+    await user.click(screen.getByRole('button', {name: 'Contact buttons'}));
     const addContact = screen.getByRole('button', {name: 'Add contact button'});
     for (let index = 0; index < 6; index += 1) {
       await user.click(addContact);
@@ -393,7 +419,7 @@ describe('the service form shell', () => {
     expect(api.put).not.toHaveBeenCalled();
   });
 
-  test('Continue and Previous step move through the same stage sequence', async () => {
+  test('Continue and Back move through the same stage sequence', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
     await waitForForm();
@@ -402,7 +428,7 @@ describe('the service form shell', () => {
     const mediaStep = screen.getByRole('button', {name: 'Media, step 2 of 4'});
     expect(mediaStep.getAttribute('aria-current')).toBe('step');
     expect(document.activeElement).toBe(mediaStep);
-    await user.click(screen.getByRole('button', {name: 'Previous step'}));
+    await user.click(screen.getByRole('button', {name: 'Back'}));
     expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current')).toBe('step');
     expect(api.post).not.toHaveBeenCalled();
   });
@@ -799,8 +825,9 @@ describe('saving', () => {
     await user.click(screen.getByRole('button', {name: 'Publish service'}));
 
     expect(screen.getByText('A title is required.')).toBeTruthy();
-    // Errors should not hide the guidance required to correct the field.
-    expect(screen.getByText('A clear name, for example Logo design.')).toBeTruthy();
+    // The concise title example stays in the field itself, next to the error.
+    expect(titleInput().getAttribute('placeholder')).toBe('Logo design');
+    expect(titleInput().getAttribute('aria-invalid')).toBe('true');
     expect(api.post).not.toHaveBeenCalled();
   });
 });

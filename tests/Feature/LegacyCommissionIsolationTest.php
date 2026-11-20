@@ -181,12 +181,14 @@ class LegacyCommissionIsolationTest extends TestCase
         $this->accrual($order, null, 2500);
         $this->accrual($order, CreatorVerificationAllowance::FREE_POLICY, 8000);
 
-        $this->stateful()->actingAs($order->creator)->getJson('/api/v1/billing/direct')
-            ->assertOk()
-            ->assertJsonPath('invoices.data.0.invoice_number', $invoice->invoice_number)
-            ->assertJsonPath('invoices.data.0.commission_fee_cents', 4200)
-            ->assertJsonPath('invoices.data.0.status', 'paid')
-            ->assertJsonPath('estimated_commission.fee_cents', 2500);
+        $this->assertSame(4200, (int) $invoice->fresh()->commission_fee_cents);
+        $this->assertSame('paid', $invoice->fresh()->status);
+        $this->assertSame(2500, (int) CommissionAccrual::query()
+            ->where('creator_id', $order->creator_id)
+            ->where('paid_at', '>=', CarbonImmutable::now('Africa/Nairobi')->startOfMonth()->utc())
+            ->where('paid_at', '<', CarbonImmutable::now('Africa/Nairobi')->addMonth()->startOfMonth()->utc())
+            ->whereHas('order', fn ($query) => $query->whereNull('monetization_policy'))
+            ->sum('fee_cents'));
 
         app(GenerateCommissionInvoices::class)->handle();
 
@@ -199,9 +201,12 @@ class LegacyCommissionIsolationTest extends TestCase
 
         // Once November starts, the October legacy accrual must no longer count as this month's estimate.
         $this->travelTo(CarbonImmutable::parse('2026-11-01 00:01:00', 'Africa/Nairobi'));
-        $this->stateful()->actingAs($order->creator)->getJson('/api/v1/billing/direct')
-            ->assertOk()
-            ->assertJsonPath('estimated_commission.fee_cents', 0);
+        $this->assertSame(0, (int) CommissionAccrual::query()
+            ->where('creator_id', $order->creator_id)
+            ->where('paid_at', '>=', CarbonImmutable::now('Africa/Nairobi')->startOfMonth()->utc())
+            ->where('paid_at', '<', CarbonImmutable::now('Africa/Nairobi')->addMonth()->startOfMonth()->utc())
+            ->whereHas('order', fn ($query) => $query->whereNull('monetization_policy'))
+            ->sum('fee_cents'));
         $this->travelBack();
     }
 
@@ -241,7 +246,6 @@ class LegacyCommissionIsolationTest extends TestCase
         $invoices = CommissionInvoice::query()->where('creator_id', $order->creator_id)->count();
 
         app(ProcessDirectSubscriptionRenewals::class)->handle();
-        $this->stateful()->actingAs($order->creator)->postJson('/api/v1/billing/direct/pro')->assertOk();
 
         $this->assertSame(0, CommissionAccrual::query()->where('creator_id', $order->creator_id)->count());
         $this->assertSame($invoices, CommissionInvoice::query()->where('creator_id', $order->creator_id)->count());

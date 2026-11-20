@@ -53,6 +53,9 @@ use App\Webhooks\Controllers\WebhooksController;
 use App\Tags\Controllers\TagsController;
 use Common\Domains\CustomDomainsController;
 use App\Storefront\Controllers\AdminPayoutRequestsController;
+use App\Storefront\Controllers\ChapaPayoutReadinessController;
+use App\Storefront\Controllers\ChapaV1TransferApprovalController;
+use App\Storefront\Controllers\DigitalProductPayoutMethodController;
 use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
 use App\Storefront\Controllers\WorkspacePayoutConfigController;
 use Illuminate\Support\Facades\Route;
@@ -64,6 +67,15 @@ use App\Stores\Controllers\StoreAppearanceController;
 use App\Stores\Controllers\StoreWidgetsController;
 
 Route::group(['prefix' => 'v1'], function() {
+
+    // Server-only Chapa v1 transfer approval, authenticated by Chapa-Signature.
+    Route::post('chapa/transfer-approval', ChapaV1TransferApprovalController::class)
+        ->middleware('throttle:30,1')
+        ->withoutMiddleware([
+            EnsureFrontendRequestsAreStateful::class,
+            VerifyCsrfToken::class,
+            VerifyApiAccessMiddleware::class,
+        ]);
 
     // LANDING
     Route::get('landing-page-data', [LandingPageController::class, 'show']);
@@ -299,7 +311,15 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('admin/withdrawals/{payoutRequest}/verify-settlement', [AdminPayoutRequestsController::class, 'verifySettlement'])->name('admin.withdrawals.verify-settlement');
         Route::delete('admin/withdrawals/{payoutRequest}', [AdminPayoutRequestsController::class, 'destroy'])->name('admin.withdrawals.destroy');
 
+        // Approve or reject creator payout accounts independently of withdrawal requests.
+        Route::get('admin/financial/payout-accounts', [DigitalProductPayoutMethodController::class, 'adminIndex']);
+        Route::post('admin/financial/payout-accounts/{payoutMethod}/review', [DigitalProductPayoutMethodController::class, 'review']);
+
         // ADMIN WITHDRAWAL METHODS
+        Route::get('admin/financial/chapa-payout-readiness', ChapaPayoutReadinessController::class);
+        Route::get('admin/financial/chapa-payout-destinations', [DigitalProductWithdrawalMethodsController::class, 'chapaDestinations']);
+        Route::put('admin/financial/chapa-payout-destinations/{code}', [DigitalProductWithdrawalMethodsController::class, 'updateChapaDestination'])
+            ->where('code', '[a-z]+');
         Route::get('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'adminIndex'])->name('admin.withdrawal-methods.index');
         Route::post('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'store'])->name('admin.withdrawal-methods.store');
         Route::put('admin/financial/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update'])->name('admin.withdrawal-methods.update');

@@ -18,6 +18,11 @@ grep -Eq '^ +scp .*deploy/secure-storage.php ' "$d"
 grep -Eq '^ +scp .*deploy/release-artifact-secrets.php ' "$d"
 grep -Fq -- '--expected-sha=' "$d"
 grep -Fq 'verify-release-artifact.sh' "$f"
+# PDF invoices need PHP intl; fail deployment before the release symlink switches.
+grep -Fq 'for ext in pdo_mysql mbstring openssl fileinfo curl zip bcmath intl; do' "$f"
+grep -Fq 'class_exists("NumberFormatter")' "$f"
+# Both CI PHP environments explicitly provide the same runtime requirement.
+test "$(grep -cF 'extensions: mbstring, pdo_mysql, gd, zip, bcmath, intl,' "$ci")" -eq 2
 grep -Fq 'mysqldump is required before production migration' "$f"
 grep -Fq 'Backup failure blocks deployment' "$f"
 grep -Fq 'gzip -t' "$f"

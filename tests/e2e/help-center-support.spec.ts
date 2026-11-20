@@ -213,8 +213,31 @@ test.describe('isolated Help Center + support', () => {
 
     await allConversations.click();
     await expect(page).toHaveURL(/\/agent\/conversations/);
-    await expect(page.getByRole('link', {name: 'Admin dashboard'})).toBeVisible();
-    await page.getByRole('link', {name: 'Admin dashboard'}).click();
+    const sharedSidebar = page.locator('[data-slot="sidebar"]');
+    await expect(sharedSidebar.getByRole('link', {name: 'Insights'})).toBeVisible();
+    await expect(sharedSidebar.getByRole('link', {name: 'Support', exact: true}))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('[data-menu-id="agent-dashboard-sidebar"]'))
+      .toHaveCount(0);
+    await expect(page.locator('.inbox-views-sidebar')).toBeVisible();
+    await expect(page.locator('.inbox-views-sidebar')).toHaveCSS('width', '224px');
+    await expect(page.getByRole('link', {name: 'Overview'}))
+      .toHaveAttribute('href', '/admin/support');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(1280);
+
+    // The All conversations route may asynchronously select its first chat.
+    // Test mobile pointer navigation from the stable search route so a late
+    // chat redirect does not close the drawer during Playwright's click.
+    await page.goto('/agent/conversations/search');
+    await expect(page).toHaveURL('/agent/conversations/search');
+    await page.setViewportSize({width: 390, height: 844});
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveCount(0);
+    const mobileSidebar = page.getByRole('navigation', {name: 'Main navigation'});
+    await page.locator('[data-slot="sidebar-toggle-button"]').first().click();
+    await expect(mobileSidebar.getByRole('link', {name: 'Support', exact: true}))
+      .toBeVisible();
+    await mobileSidebar.getByRole('link', {name: 'Support', exact: true}).click();
     await expect(page).toHaveURL('/admin/support');
   });
 });

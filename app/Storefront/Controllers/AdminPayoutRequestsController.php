@@ -8,8 +8,11 @@ use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\PayoutRequestService;
 use App\Storefront\Resources\AdminPayoutRequestResource;
+use App\Storefront\Services\AdminPayoutTransferStatusFilter;
+use App\Storefront\Services\AdminPayoutStepUp;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -21,21 +24,33 @@ class AdminPayoutRequestsController extends Controller
     public function index()
     {
         Gate::authorize('admin.access');
+        request()->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'date_from' => ['nullable', 'date_format:Y-m-d'],
+            'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+            'creator' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', 'in:requested,processing,paid,rejected,cancelled'],
+            'withdrawal_method' => ['nullable', 'string', 'max:190'],
+            'transfer_status' => ['nullable', 'in:not_started,submitted,provider_pending,requires_action,successful,failed'],
+            'perPage' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
 
         $withdrawalMethods = DigitalProductWithdrawalMethod::all();
 
         $payouts = PayoutRequest::query()
-            ->with(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])
+            ->with(['creator', 'withdrawalMethod', 'latestPayoutIntent'])
             ->latest('id');
 
         if (request()->filled('search')) {
-            $searchTerm = '%' . request('search') . '%';
-            $payouts->where(function ($query) use ($searchTerm) {
+            $searchTerm = '%'.addcslashes((string) request('search'), '%_\\').'%';
+            $payouts->where(function (Builder $query) use ($searchTerm): void {
                 $query->where('id', 'like', $searchTerm)
                     ->orWhere('creator_id', 'like', $searchTerm)
                     ->orWhere('payout_method_label', 'like', $searchTerm)
                     ->orWhere('withdrawal_method_name', 'like', $searchTerm)
-                    ->orWhere('payout_destination', 'like', $searchTerm);
+                    ->orWhereHas('creator', fn (Builder $creator) => $creator
+                        ->where('name', 'like', $searchTerm)
+                        ->orWhere('email', 'like', $searchTerm));
             });
         }
 
@@ -61,33 +76,14 @@ class AdminPayoutRequestsController extends Controller
             $payouts->where('withdrawal_method_name', request('withdrawal_method'));
         }
 
-        $filteredPayouts = $payouts->get();
+        if (request()->filled('transfer_status')) {
+            AdminPayoutTransferStatusFilter::apply($payouts, (string) request('transfer_status'));
+        }
 
-        $counters = [
-            'requested' => [
-                'total' => $filteredPayouts->where('status', 'requested')->count(),
-                'amount' => $filteredPayouts->where('status', 'requested')->sum('amount_cents'),
-            ],
-            'processing' => [
-                'total' => $filteredPayouts->where('status', 'processing')->count(),
-                'amount' => $filteredPayouts->where('status', 'processing')->sum('amount_cents'),
-            ],
-            'paid' => [
-                'total' => $filteredPayouts->where('status', 'paid')->count(),
-                'amount' => $filteredPayouts->where('status', 'paid')->sum('amount_cents'),
-            ],
-            'rejected' => [
-                'total' => $filteredPayouts->where('status', 'rejected')->count(),
-                'amount' => $filteredPayouts->where('status', 'rejected')->sum('amount_cents'),
-            ],
-            'cancelled' => [
-                'total' => $filteredPayouts->where('status', 'cancelled')->count(),
-                'amount' => $filteredPayouts->where('status', 'cancelled')->sum('amount_cents'),
-            ],
-        ];
+        $counters = $this->withdrawalCounters($payouts);
 
         $paginated = $payouts->paginate((int) request('perPage', 50));
-        $paginated->appends(request()->only(['search', 'date_from', 'date_to', 'creator', 'status', 'withdrawal_method']));
+        $paginated->appends(request()->only(['search', 'date_from', 'date_to', 'creator', 'status', 'withdrawal_method', 'transfer_status']));
 
         return AdminPayoutRequestResource::collection($paginated)->additional([
             'meta' => [
@@ -95,6 +91,36 @@ class AdminPayoutRequestsController extends Controller
                 'withdrawal_methods' => $withdrawalMethods,
             ],
         ]);
+    }
+
+    /**
+     * Aggregate the filtered queue in SQL without loading every financial row
+     * or adding together different currencies.
+     *
+     * @param Builder<PayoutRequest> $query
+     * @return array<string, array{total: int, amounts_by_currency: array<string, int>}>
+     */
+    private function withdrawalCounters(Builder $query): array
+    {
+        $rows = (clone $query)
+            ->withoutEagerLoads()
+            ->reorder()
+            ->selectRaw('status, currency, COUNT(*) AS request_count, SUM(amount_cents) AS total_cents')
+            ->groupBy('status', 'currency')
+            ->get();
+
+        $counters = [];
+        foreach (['requested', 'processing', 'paid', 'rejected', 'cancelled'] as $status) {
+            $matching = $rows->where('status', $status);
+            $counters[$status] = [
+                'total' => (int) $matching->sum('request_count'),
+                'amounts_by_currency' => $matching
+                    ->mapWithKeys(fn ($row): array => [(string) $row->currency => (int) $row->total_cents])
+                    ->all(),
+            ];
+        }
+
+        return $counters;
     }
 
     public function review(PayoutRequest $payoutRequest): AdminPayoutRequestResource
@@ -148,12 +174,17 @@ class AdminPayoutRequestsController extends Controller
     public function submitTransfer(Request $request, PayoutRequest $payoutRequest): JsonResponse
     {
         Gate::authorize('admin.access');
+        app(AdminPayoutStepUp::class)->confirm($request, $payoutRequest);
 
         try {
             $intent = app(PayoutRequestService::class)->submitChapaPayout($payoutRequest, $request->user()->id);
 
             return response()->json([
-                'message' => __('Payout transfer submitted to Chapa.'),
+                'message' => match ($intent->status) {
+                    'provider_pending' => __('Chapa queued the transfer; verify settlement before marking it paid.'),
+                    'submitted' => __('Transfer submission is uncertain. Verify this reference with Chapa; do not resend.'),
+                    default => __('Payout transfer status requires administrator review.'),
+                },
                 'data' => new AdminPayoutRequestResource($payoutRequest->fresh(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])),
                 'intent_id' => $intent->id,
                 'merchant_reference' => $intent->merchant_reference,

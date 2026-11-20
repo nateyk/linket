@@ -6,6 +6,7 @@ namespace Tests\Unit;
 
 use App\Models\User;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\Exceptions\InsufficientBalanceException;
@@ -61,6 +62,17 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'maximum_amount_cents' => 1000000,
             'is_active' => true,
         ]);
+        $this->app->instance(ChapaPayoutService::class, new class extends ChapaPayoutService {
+            public function getBanks(): array
+            {
+                return [
+                    ['id' => 202, 'slug' => 'cbe_bank', 'name' => 'Commercial Bank of Ethiopia', 'currency' => 'ETB', 'active' => 1, 'is_active' => 1],
+                    ['id' => 855, 'slug' => 'telebirr', 'name' => 'telebirr', 'currency' => 'ETB', 'active' => 1, 'is_active' => 1],
+                    ['id' => 207, 'slug' => 'awash_bank', 'name' => 'Awash Bank', 'currency' => 'ETB', 'active' => 1, 'is_active' => 1],
+                    ['id' => 208, 'slug' => 'hibret_bank', 'name' => 'Hibret Bank', 'currency' => 'ETB', 'active' => 1, 'is_active' => 0],
+                ];
+            }
+        });
     }
 
     protected function tearDown(): void
@@ -68,6 +80,54 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         Mockery::close();
         $this->dropDatabaseSchema();
         parent::tearDown();
+    }
+
+    public function testCreatorCannotCreateUnrelatedBankAccountEvenWhenGenericBankMethodIsEnabled(): void
+    {
+        $controller = new DigitalProductPayoutMethodController();
+
+        try {
+            $controller->store($this->makePayoutRequest([
+                'bank_code' => 'madeupbank',
+                'bank_name' => 'Unsupported bank',
+                'destination' => '1234567890123',
+            ]));
+            $this->fail('Unsupported bank must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_code', $exception->errors());
+        }
+
+        $this->assertSame(0, DigitalProductPayoutMethod::query()->count());
+    }
+
+    public function testCreatorCanUseActiveAwashBankWithGenericBankTransferMethod(): void
+    {
+        $response = (new DigitalProductPayoutMethodController())->store($this->makePayoutRequest([
+            'withdrawal_method_id' => $this->bankMethod->id,
+            'bank_code' => 'awash',
+            'bank_name' => 'Awash Bank',
+            'destination' => '1234567890123',
+        ]));
+
+        $this->assertSame(201, $response->getStatusCode());
+        $this->assertSame('awash', DigitalProductPayoutMethod::query()->firstOrFail()->bank_code);
+    }
+
+    public function testCreatorCannotSaveChapaInactiveBankEvenIfItIsInTheCuratedDirectory(): void
+    {
+        try {
+            (new DigitalProductPayoutMethodController())->store($this->makePayoutRequest([
+                'withdrawal_method_id' => $this->bankMethod->id,
+                'bank_code' => 'hibret',
+                'bank_name' => 'Hibret Bank',
+                'destination' => '1234567890123',
+            ]));
+            $this->fail('Inactive Chapa bank must not be saved.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_code', $exception->errors());
+        }
+
+        $this->assertSame(0, DigitalProductPayoutMethod::query()->count());
     }
 
     public function testCreatorCanSaveMultipleDestinationsAndFirstIsDefault(): void
@@ -100,6 +160,42 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $index = $controller->index($this->makePayoutRequest([]))->response()->getData(true)['data'];
         $this->assertCount(2, $index);
         $this->assertTrue($index[0]['is_default']);
+    }
+
+    public function testReceivingAccountNormalizesBankAndRecipientBeforeApproval(): void
+    {
+        $response = (new DigitalProductPayoutMethodController())->store($this->makePayoutRequest([
+            'withdrawal_method_id' => $this->telebirrMethod->id,
+            'bank_code' => '  TeLeBiRr  ',
+            'bank_name' => '  Telebirr Wallet  ',
+            'account_holder' => '  Abebe Bikila  ',
+            'destination' => ' +251911223344 ',
+        ]));
+
+        $this->assertSame(201, $response->getStatusCode());
+        $account = DigitalProductPayoutMethod::query()->firstOrFail();
+        $this->assertSame('telebirr', $account->bank_code);
+        $this->assertSame('Abebe Bikila', $account->account_holder);
+        $this->assertSame('+251911223344', $account->destination);
+        $this->assertSame('telebirr', $account->bank_name);
+        $this->assertSame(DigitalProductPayoutMethod::STATUS_PENDING, $account->status);
+    }
+
+    public function testAccountHolderCannotPassLengthValidationWithOnlyPadding(): void
+    {
+        $controller = new DigitalProductPayoutMethodController();
+        try {
+            $controller->store($this->makePayoutRequest([
+                'withdrawal_method_id' => $this->bankMethod->id,
+                'bank_code' => 'cbe',
+                'account_holder' => 'A  ',
+            ]));
+            $this->fail('Short account holder must be rejected after trimming.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('account_holder', $exception->errors());
+        }
+
+        $this->assertSame(0, DigitalProductPayoutMethod::query()->count());
     }
 
     public function testDefaultDestinationLifecycleAndFallback(): void
@@ -171,7 +267,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         }
     }
 
-    public function testMarkPaidRequiresExplicitReferenceWhenManual(): void
+    public function testAutomatedBankPayoutCannotBeMarkedPaidWithoutVerification(): void
     {
         $payout = $this->createTestPayoutRequest('processing');
         $service = new PayoutRequestService();
@@ -180,28 +276,29 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             $service->transition($payout, 'mark_paid', 1, ['transfer_reference' => '   ']);
             $this->fail('Expected ValidationException for blank reference.');
         } catch (ValidationException $e) {
-            $this->assertArrayHasKey('transfer_reference', $e->errors());
+            $this->assertArrayHasKey('status', $e->errors());
         }
 
         $this->assertEquals('processing', $payout->fresh()->status);
     }
 
-    public function testMarkPaidDisbursesLedgerWithoutSwallowingExceptions(): void
+    public function testAutomatedBankPayoutDoesNotDisburseWithAnUnverifiedReference(): void
     {
         $payout = $this->createTestPayoutRequest('processing');
 
         $ledgerMock = Mockery::mock(CreatorLedgerService::class);
-        $ledgerMock->shouldReceive('disbursePayout')->once()->with(Mockery::type(PayoutRequest::class));
+        $ledgerMock->shouldNotReceive('disbursePayout');
         $this->app->instance(CreatorLedgerService::class, $ledgerMock);
 
-        $updated = (new PayoutRequestService())->transition($payout, 'mark_paid', 1, [
-            'transfer_reference' => 'CBE-TX-998877',
-            'note' => 'Paid via counter transfer',
-        ]);
-
-        $this->assertEquals('paid', $updated->status);
-        $this->assertEquals('CBE-TX-998877', $updated->transfer_reference);
-        $this->assertNotNull($updated->paid_at);
+        try {
+            (new PayoutRequestService())->transition($payout, 'mark_paid', 1, [
+                'transfer_reference' => 'UNVERIFIED-EXTERNAL-REF',
+            ]);
+            $this->fail('Expected unverified payment to be rejected.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('status', $e->errors());
+        }
+        $this->assertSame('processing', $payout->fresh()->status);
     }
 
     private function createTestPayoutMethod(array $overrides = []): DigitalProductPayoutMethod
@@ -219,6 +316,9 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'display_label' => 'CBE (•••• 6789)',
             'is_active' => true,
             'is_default' => true,
+            'status' => 'active',
+            'approved_at' => now(),
+            'approved_by' => 1,
         ], $overrides));
     }
 
@@ -230,6 +330,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'amount_cents' => 20000,
             'currency' => 'ETB',
             'status' => $status,
+            'withdrawal_method_id' => $this->bankMethod->id,
         ]);
     }
 
@@ -257,6 +358,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->createAuthSchema();
         $this->createPayoutDestinationSchema();
         $this->createPayoutRequestSchema();
+        (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
     }
 
     private function createAuthSchema(): void
@@ -331,6 +433,9 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             $t->boolean('is_active')->default(true);
             $t->boolean('is_default')->default(false);
             $t->string('status', 32)->default('active');
+            $t->unsignedBigInteger('approved_by')->nullable();
+            $t->timestamp('approved_at')->nullable();
+            $t->text('review_note')->nullable();
             $t->json('metadata')->nullable();
             $t->timestamps();
         });
@@ -347,6 +452,8 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             $t->string('payout_method_label')->nullable();
             $t->string('withdrawal_method_name')->nullable();
             $t->text('payout_destination')->nullable();
+            $t->string('account_holder_snapshot')->nullable();
+            $t->string('bank_code_snapshot')->nullable();
             $t->string('currency', 12)->default('ETB');
             $t->unsignedBigInteger('amount_cents');
             $t->string('status', 32)->default('requested');
@@ -385,7 +492,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'permissionables', 'permissions', 'roles', 'user_sessions',
             'workspace_user', 'workspaces', 'users',
             'digital_product_payout_request_activities',
-            'digital_product_earnings_ledger', 'payout_requests',
+            'digital_product_earnings_ledger', 'storefront_payout_intents', 'payout_requests',
             'digital_product_payout_methods', 'digital_product_withdrawal_methods',
         ];
         foreach ($tables as $table) {

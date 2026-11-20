@@ -100,11 +100,11 @@ export function Component() {
       data={biolink}
       key={`${biolink.id}-${biolink.builder_mode}`}
     >
-      <DashboardLayout.MainSection>
+      <DashboardLayout.MainSection variant="default">
         <h1 className="sr-only">{biolink.name}</h1>
         <EditorHeaderWithGuard baseUrl={baseUrl} />
-        <section className="flex min-h-0 flex-auto flex-col overflow-x-hidden overflow-y-auto bg-muted/30 lg:flex-row lg:overflow-hidden">
-          <div className="flex min-w-0 shrink-0 flex-col bg-card lg:min-h-0 lg:flex-auto lg:overflow-hidden lg:border-r lg:border-border/60">
+        <section className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-background lg:flex-row lg:overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background lg:overflow-hidden lg:border-r lg:border-border/60">
             {!isInsightsTab && (
               <Tabs.Root
                 value={selectedTab}
@@ -116,7 +116,7 @@ export function Component() {
                   }
                 }}
               >
-                <div className="w-full max-w-3xl px-4 py-2 sm:px-6 lg:px-8">
+                <div className="w-full px-4 py-2 sm:px-6 lg:px-8">
                   <Tabs.List
                     variant="default"
                     className="w-full justify-start rounded-card-sm"
@@ -147,7 +147,7 @@ export function Component() {
                 className={
                   isInsightsTab
                     ? 'mx-auto flex w-full max-w-7xl flex-col p-4 sm:p-6 lg:p-8'
-                    : 'w-full max-w-3xl p-4 sm:p-6 lg:p-8'
+                    : 'w-full p-4 sm:p-6 lg:p-8'
                 }
               >
                 <AdHost slot="dashboard" className="mb-6" />
@@ -568,7 +568,7 @@ export function BiolinkContentTab() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="w-full">
       <div className="flex flex-col gap-4">
         <div className="min-w-0">
           <h2 className="text-xl leading-7 font-semibold tracking-tight">
@@ -615,7 +615,7 @@ export function BiolinkAboutTab() {
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 py-2">
+    <div className="flex w-full flex-col gap-4 py-2">
       <div>
         <h2 className="text-xl leading-7 font-semibold tracking-tight">
           <Trans message="About" />

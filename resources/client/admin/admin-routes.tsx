@@ -145,7 +145,7 @@ export const adminRoutes: RouteObject[] = [
 
       commonAdminSettingsRoutes(
         [
-          {path: 'payment-gateways', loader: () => redirect('/admin/financial/payment-gateways')},
+          {path: 'payment-gateways', loader: () => redirect('/admin/financial/general')},
           {path: 'financial', loader: () => redirect('/admin/financial/general')},
           {
             path: 'search',
@@ -232,7 +232,7 @@ export const adminRoutes: RouteObject[] = [
       },
       {
         path: 'items/payment-methods',
-        lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+        loader: () => redirect('/admin/financial/general'),
       },
       {
         path: 'items/:productId/reviews',
@@ -254,13 +254,24 @@ export const adminRoutes: RouteObject[] = [
           import('@app/admin/kyc/admin-kyc-verifications-page'),
       },
       {
+        path: 'payout-accounts',
+        lazy: () => import('@app/admin/financial/admin-payout-accounts-page'),
+      },
+      {
+        path: 'payout-acc',
+        loader: () => redirect('/admin/payout-accounts'),
+      },
+      {
+        path: 'withdrawal-methods',
+        loader: () => redirect('/admin/payout-accounts'),
+      },
+      {
         path: 'withdrawals',
-        loader: () => redirect('/admin/financial/withdrawals'),
+        lazy: () => import('@app/admin/withdrawals/admin-withdrawals-page'),
       },
       {
         path: 'withdrawals/:withdrawalId/review',
-        loader: ({params}) =>
-          redirect(`/admin/financial/withdrawals/${params.withdrawalId}/review`),
+        lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
       },
       {
         path: 'financial',
@@ -277,31 +288,33 @@ export const adminRoutes: RouteObject[] = [
           },
           {
             path: 'payment-gateways',
-            lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawal-methods',
-            lazy: () => import('@app/admin/financial/admin-receiving-accounts-page'),
+            loader: () => redirect('/admin/payout-accounts'),
           },
+          // Old editor pages no longer exist; keep safe redirects for bookmarks.
           {
             path: 'withdrawal-methods/legacy',
-            lazy: () => import('@app/admin/financial/admin-withdrawal-methods-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawal-methods/create',
-            lazy: () => import('@app/admin/financial/admin-withdrawal-method-create-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawal-methods/:methodId/edit',
-            lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
+            loader: () => redirect('/admin/financial/general'),
           },
           {
             path: 'withdrawals',
-            lazy: () => import('@app/admin/withdrawals/admin-withdrawals-page'),
+            loader: () => redirect('/admin/withdrawals'),
           },
           {
             path: 'withdrawals/:withdrawalId/review',
-            lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
+            loader: ({params}) =>
+              redirect(`/admin/withdrawals/${params.withdrawalId}/review`),
           },
           {
             path: 'payment-activity',

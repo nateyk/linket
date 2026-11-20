@@ -9,7 +9,7 @@ return [
     'download_days' => 7,
     'download_limit' => 10,
     'free_verified_sales_default' => env('FREE_VERIFIED_SALES_DEFAULT', 10),
-    'payout_hold_days' => env('DIGITAL_PRODUCTS_PAYOUT_HOLD_DAYS', 7),
+    'payout_hold_days' => env('DIGITAL_PRODUCTS_PAYOUT_HOLD_DAYS', 0),
     // Deprecated alias: derived from the single source of truth so it can
     // never drift from the capability definition again. New code must use
     // App\Storefront\ProductFileFormats directly.

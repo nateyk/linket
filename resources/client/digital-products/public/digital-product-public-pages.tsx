@@ -17,7 +17,6 @@ import {ProductCreatorCard} from '@app/digital-products/public/product-page/prod
 import {ProductOverview} from '@app/digital-products/public/product-page/product-overview';
 import {ProductPricingCard} from '@app/digital-products/public/product-page/product-pricing-card';
 import {isSuccessfulFreeCheckoutResponse} from './free-checkout-response';
-import {DirectPaymentModal, type DirectCheckout} from '@app/digital-products/public/direct-payment-modal';
 import {ProductSummary} from '@app/digital-products/public/product-page/product-summary';
 import {
   ProductTabs,
@@ -81,9 +80,7 @@ export type PublicDigitalProduct = {
   learning_outcomes?: string[] | null;
   price_cents: number;
   can_buy?: boolean;
-  verification_quota_exhausted?: boolean;
   payment_mode?: 'direct' | 'free' | 'unavailable';
-  receiving_accounts?: Array<{id: number; provider: string; account_ending: string; account_name: string}>;
   currency: string;
   type?: string;
   is_course?: boolean;
@@ -168,10 +165,8 @@ export function PublicDigitalProductPage({
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
-  const [paymentMethodId, setPaymentMethodId] = useState<number | undefined>();
   const [buyerError, setBuyerError] = useState<'name' | 'email'>();
   const [checkoutFailed, setCheckoutFailed] = useState(false);
-  const [directCheckout, setDirectCheckout] = useState<DirectCheckout | null>(null);
   const [reviewsSummary, setReviewsSummary] = useState<ProductReviewsSummary>();
   const checkoutCancelled =
     new URLSearchParams(window.location.search).get('checkout') === 'cancelled';
@@ -211,10 +206,6 @@ export function PublicDigitalProductPage({
       setCheckoutFailed(true);
       return;
     }
-    if (data.product.payment_mode === 'direct' && (data.product.receiving_accounts?.length ?? 0) > 1 && !paymentMethodId) {
-      setCheckoutFailed(true);
-      return;
-    }
 
     setSubmitting(true);
     setCheckoutFailed(false);
@@ -228,14 +219,11 @@ export function PublicDigitalProductPage({
           buyer_name: buyerName.trim(),
           buyer_email: buyerEmail.trim(),
           buyer_phone: buyerPhone.trim() || undefined,
-          creator_payment_method_id: paymentMethodId,
         },
       );
       const payload = response.data;
 
-      // The server fulfills free orders before returning HTTP 200, even if
-      // Verify.et response fields still contain legacy "pending_payment"
-      // instructions. Free buyers should not enter the paid verification UI.
+      // Free orders are fulfilled on the server. Never redirect free buyers to a hosted checkout.
       if (data.product.payment_mode === 'free') {
         if (!isSuccessfulFreeCheckoutResponse(data.product.payment_mode, payload)) {
           throw new Error('Free checkout response missing order id.');
@@ -247,13 +235,6 @@ export function PublicDigitalProductPage({
       }
 
       const checkoutUrl = payload?.checkout_url ?? payload?.data?.checkout_url;
-      if (payload?.reference_endpoint && payload?.access_token) {
-        setDirectCheckout(payload as DirectCheckout);
-        setBuyerDialogOpen(false);
-        setSubmitting(false);
-        return;
-      }
-
       if (typeof checkoutUrl !== 'string') {
         throw new Error('Checkout could not be started.');
       }
@@ -455,9 +436,7 @@ export function PublicDigitalProductPage({
               ) : (
                 <LockKeyholeIcon aria-hidden="true" />
               )}
-              {data.product.verification_quota_exhausted ? (
-                <Trans message="Creator cannot accept additional verified sales right now" />
-              ) : data.product.can_buy === false ? (
+              {data.product.can_buy === false ? (
                 <Trans message="Temporarily unavailable" />
               ) : data.product.payment_mode === 'free' ? (
                 <Trans message="Get for free" />
@@ -478,16 +457,13 @@ export function PublicDigitalProductPage({
         name={buyerName}
         email={buyerEmail}
         phone={buyerPhone}
-        paymentMethodId={paymentMethodId}
         error={buyerError}
         onOpenChange={setBuyerDialogOpen}
         onNameChange={setBuyerName}
         onEmailChange={setBuyerEmail}
         onPhoneChange={setBuyerPhone}
-        onPaymentMethodChange={setPaymentMethodId}
         onSubmit={() => void beginCheckout()}
       />
-      <DirectPaymentModal checkout={directCheckout} onClose={() => setDirectCheckout(null)} />
     </PublicProductShell>
   );
 }
@@ -539,28 +515,25 @@ export function PublicDigitalProductOrderSuccessPage({
           className={cn(
             'border-b border-[var(--biolink-border)] px-5 py-5 sm:px-6',
             paid
-              ? 'bg-positive/10'
+              ? 'bg-[var(--biolink-surface-strong)] px-6 py-8 sm:py-9'
               : 'bg-[color-mix(in_srgb,var(--biolink-accent,var(--color-primary))_12%,transparent)]',
           )}
         >
           {paid ? (
-            <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-button bg-positive/10 text-positive">
-                <CheckCircle2Icon className="size-5" />
+            <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 text-center">
+              <span className="grid size-14 place-items-center rounded-button bg-positive/10 text-positive">
+                <CheckCircle2Icon className="size-7" aria-hidden="true" />
               </span>
-              <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="text-xl font-semibold tracking-tight">
-                  {isCourse ? (
-                    <Trans message="Your course is ready" />
-                  ) : (
-                    <Trans message="Your download is ready" />
-                  )}
+              <div className="flex flex-col gap-1.5">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  <Trans message="Payment successful!" />
                 </h1>
-                <p className="text-sm text-[var(--biolink-muted-text)]">
-                  <Trans
-                    message="Thanks for your purchase of :product."
-                    values={{product: data.product.title}}
-                  />
+                <p className="text-sm leading-6 text-[var(--biolink-muted-text)]">
+                  {isCourse ? (
+                    <Trans message="Your course is ready. Access it in My Portal." />
+                  ) : (
+                    <Trans message="Your payment is confirmed. Your downloads are ready below." />
+                  )}
                 </p>
               </div>
             </div>
@@ -585,7 +558,7 @@ export function PublicDigitalProductOrderSuccessPage({
           {order.buyer_email && (
             <p className="text-sm text-[var(--biolink-muted-text)]">
               <Trans
-                message="Your receipt is being sent to :email."
+                message={paid ? 'A receipt will be sent to :email.' : 'Your receipt is being sent to :email.'}
                 values={{email: order.buyer_email}}
               />
             </p>
@@ -606,32 +579,26 @@ export function PublicDigitalProductOrderSuccessPage({
                   downloads={order.downloads ?? []}
                 />
               )}
-              {isCourse ? (
+              <div className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-5">
                 <Button
-                  variant="ghost"
-                  className={cn('w-fit', buttonAppearance.className)}
+                  className={cn('min-h-11 w-full', buttonAppearance.className)}
                   style={buttonAppearance.style}
                   render={<a href="/my-portal" />}
                 >
-                  <Trans message="Open My Portal" />
+                  {isCourse ? <BookOpenIcon aria-hidden="true" /> : <ShoppingBagIcon aria-hidden="true" />}
+                  <Trans message={isCourse ? 'Open My Portal' : 'View my purchases'} />
                 </Button>
-              ) : (
-                <p className="text-sm text-[var(--biolink-muted-text)]">
-                  <Trans
-                    message="Find this purchase later in :link."
-                    values={{
-                      link: (
-                        <a
-                          href="/my-portal"
-                          className="font-medium text-[var(--biolink-text)] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
-                        >
-                          <Trans message="My Portal" />
-                        </a>
-                      ),
-                    }}
-                  />
-                </p>
-              )}
+                {data.back_url && (
+                  <Button
+                    variant="outline"
+                    className="min-h-11 w-full border-[var(--biolink-border)] bg-transparent text-[var(--biolink-text)]"
+                    render={<a href={data.back_url} />}
+                  >
+                    <ArrowLeftIcon aria-hidden="true" />
+                    <Trans message="Return to store" />
+                  </Button>
+                )}
+              </div>
             </>
           ) : (
             <PendingOrderState
@@ -656,13 +623,11 @@ function BuyerDetailsDialog({
   name,
   email,
   phone,
-  paymentMethodId,
   error,
   onOpenChange,
   onNameChange,
   onEmailChange,
   onPhoneChange,
-  onPaymentMethodChange,
   onSubmit,
 }: {
   appearance?: BiolinkAppearanceConfig | null;
@@ -674,13 +639,11 @@ function BuyerDetailsDialog({
   name: string;
   email: string;
   phone: string;
-  paymentMethodId?: number;
   error?: 'name' | 'email';
   onOpenChange: (open: boolean) => void;
   onNameChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
-  onPaymentMethodChange: (value: number | undefined) => void;
   onSubmit: () => void;
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
@@ -889,15 +852,6 @@ function BuyerDetailsDialog({
                   )}
                 </Field.Description>
               </Field.Root>
-              {product.payment_mode === 'direct' && (product.receiving_accounts?.length ?? 0) > 1 && (
-                <Field.Root>
-                  <Field.Label><Trans message="Payment destination" /></Field.Label>
-                  <select className="h-10 rounded-input border border-[var(--biolink-border)] bg-[var(--biolink-surface)] px-3 text-sm text-[var(--biolink-text)]" value={paymentMethodId ?? ''} onChange={event => onPaymentMethodChange(event.target.value ? Number(event.target.value) : undefined)}>
-                    <option value=""><Trans message="Choose an account" /></option>
-                    {product.receiving_accounts?.map(account => <option key={account.id} value={account.id}>{account.provider.toUpperCase()} · {account.account_name} · {account.account_ending}</option>)}
-                  </select>
-                </Field.Root>
-              )}
               <ul className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-4 text-sm text-[var(--biolink-muted-text)]">
                 <li className="flex items-start gap-2">
                   <CheckCircle2Icon
@@ -1207,6 +1161,7 @@ function DownloadList({
   downloads: DigitalProductDownload[];
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const {trans} = useTrans();
 
   if (!downloads.length) {
     return (
@@ -1264,7 +1219,7 @@ function DownloadList({
               size="sm"
               style={buttonAppearance.style}
               variant="ghost"
-              render={<a href={download.url} />}
+              render={<a href={download.url} aria-label={trans({message: 'Download :name', values: {name: download.name}})} />}
             >
               <DownloadIcon />
               <Trans message="Download" />

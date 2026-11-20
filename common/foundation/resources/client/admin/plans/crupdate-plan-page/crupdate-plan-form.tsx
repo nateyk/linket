@@ -305,7 +305,6 @@ function CommerceSection() {
         <Trans message="Commerce" />
       </FieldSet.Legend>
       <Field.Group>
-        <FreeVerifiedSalesField />
         <LimitField
           name="storefront_benefits.max_free_products"
           label={<Trans message="Free products" />}
@@ -501,35 +500,5 @@ function AdvancedSection() {
         </Accordion.Content>
       </Accordion.Item>
     </Accordion.Root>
-  );
-}
-
-function FreeVerifiedSalesField() {
-  const {watch, setValue} = useFormContext<CrupdatePlanFormValues>();
-  return (
-    <HookForm.Field name="storefront_benefits.free_verified_sales">
-      <Field.Label>
-        <Trans message="Lifetime Free verified sales" />
-      </Field.Label>
-      <Input
-        bindToHookForm={false}
-        type="number"
-        min={0}
-        max={100000}
-        step={1}
-        value={watch('storefront_benefits.free_verified_sales') ?? 0}
-        onChange={event =>
-          setValue(
-            'storefront_benefits.free_verified_sales',
-            Number(event.target.value),
-            {shouldDirty: true},
-          )
-        }
-      />
-      <Field.Description>
-        <Trans message="Applies to the Free plan only. Pro has no Free allowance limit. New sales have no commission." />
-      </Field.Description>
-      <Field.Error />
-    </HookForm.Field>
   );
 }

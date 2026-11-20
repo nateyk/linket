@@ -25,11 +25,8 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
-import awash from './bank-logos/awash.svg';
-import boa from './bank-logos/boa.svg';
 import cbe from './bank-logos/cbe.svg';
 import cbebirr from './bank-logos/cbebirr.svg';
-import dashen from './bank-logos/dashen.svg';
 import telebirr from './bank-logos/telebirr.svg';
 
 export type PayoutAccount = {
@@ -45,6 +42,7 @@ export type PayoutAccount = {
   is_active: boolean;
   is_default: boolean;
   status: string;
+  approved_at?: string | null;
   created_at?: string;
 };
 
@@ -54,21 +52,23 @@ export type BankOption = {
   type: string;
 };
 
+// Names are display fallbacks; seller availability is loaded from authenticated
+// Chapa v1 /banks and filtered by Linket's enabled payout methods server-side.
 export const ETHIOPIAN_BANKS: BankOption[] = [
-  {code: 'telebirr', name: 'Telebirr (Ethio Telecom)', type: 'telebirr'},
-  {code: 'cbe', name: 'Commercial Bank of Ethiopia (CBE)', type: 'bank_transfer'},
-  {code: 'boa', name: 'Bank of Abyssinia (BOA)', type: 'bank_transfer'},
-  {code: 'dashen', name: 'Dashen Bank', type: 'bank_transfer'},
   {code: 'awash', name: 'Awash Bank', type: 'bank_transfer'},
-  {code: 'cbebirr', name: 'CBE Birr', type: 'telebirr'},
-  {code: 'coop', name: 'Cooperative Bank of Oromia', type: 'bank_transfer'},
+  {code: 'boa', name: 'Bank of Abyssinia', type: 'bank_transfer'},
+  {code: 'cbebirr', name: 'CBEBirr', type: 'cbebirr'},
+  {code: 'cbe', name: 'Commercial Bank of Ethiopia (CBE)', type: 'bank_transfer'},
+  {code: 'dashen', name: 'Dashen Bank', type: 'bank_transfer'},
   {code: 'hibret', name: 'Hibret Bank', type: 'bank_transfer'},
-  {code: 'wegagen', name: 'Wegagen Bank', type: 'bank_transfer'},
+  {code: 'mpesa', name: 'M-Pesa', type: 'mpesa'},
+  {code: 'nib', name: 'Nib International Bank', type: 'bank_transfer'},
+  {code: 'telebirr', name: 'telebirr', type: 'telebirr'},
+  {code: 'yaya', name: 'YaYaWallet', type: 'yaya'},
   {code: 'zemen', name: 'Zemen Bank', type: 'bank_transfer'},
-  {code: 'other', name: 'Other Bank / Account', type: 'bank_transfer'},
 ];
 
-const logos: Record<string, string> = {awash, boa, cbe, cbebirr, dashen, telebirr};
+const logos: Record<string, string> = {cbe, cbebirr, telebirr};
 
 function BankLogo({
   code,
@@ -114,12 +114,15 @@ function isValidAccountNumber(number: string, bankCode: string): boolean {
   const trimmed = number.trim();
   const normalized = trimmed.replace(/[\s-]+/g, '');
   if (!/^[0-9+ -]{8,100}$/.test(trimmed)) return false;
-  if (bankCode === 'telebirr' || bankCode === 'cbebirr') {
+  if (['telebirr', 'cbebirr', 'mpesa'].includes(bankCode)) {
     return /^(?:0\d{9}|\+251\d{9})$/.test(normalized);
   }
+  if (bankCode === 'yaya') return /^\d{12}$/.test(normalized);
   if (bankCode === 'cbe') return /^\d{13}$/.test(normalized);
-  if (bankCode === 'boa') return /^(?:\d{8}|\d{10}|\d{16})$/.test(normalized);
-  return true;
+  // Account-length conventions for banks vary; validate digits locally
+  // and let provider-side account checks/approval enforce the final format.
+  if (bankCode === 'boa') return /^\d{8,20}$/.test(normalized);
+  return /^\d{8,20}$/.test(normalized);
 }
 
 function PayoutAccountsInfo() {
@@ -162,6 +165,8 @@ function PayoutAccountCard({
     b => b.code.toLowerCase() === (account.bank_code ?? account.type).toLowerCase()
   );
   const displayName = account.bank_name || bankOption?.name || account.display_label || 'Bank Account';
+  const isSupported = !!bankOption;
+  const isApproved = isSupported && account.is_active && account.status === 'active' && !!account.approved_at;
   const maskedNumber = account.masked_account_number || (account.account_number_last_four ? `•••• ${account.account_number_last_four}` : '••••');
 
   return (
@@ -175,6 +180,20 @@ function PayoutAccountCard({
                 <h2 className="min-w-0 truncate text-sm font-semibold text-foreground">
                   {displayName}
                 </h2>
+                {!isSupported && <Badge variant="outline" className="text-xs">Unsupported for payouts</Badge>}
+                {isSupported && !isApproved && (
+                  <Badge variant="outline" className="text-xs">
+                    {account.status === 'pending_verification'
+                      ? 'Awaiting approval'
+                      : account.status === 'active' ? 'Admin approval required' : 'Needs review'}
+                  </Badge>
+                )}
+                {isApproved && (
+                  <Badge variant="outline" className="text-xs">
+                    <CheckIcon className="size-3" />
+                    <Trans message="Approved" />
+                  </Badge>
+                )}
                 {account.is_default && (
                   <Badge variant="positive" className="gap-1 text-xs font-medium">
                     <CheckIcon className="size-3" />
@@ -201,16 +220,16 @@ function PayoutAccountCard({
               <MoreHorizontalIcon className="size-4" />
             </Dropdown.Trigger>
             <Dropdown.Content align="end">
-              {!account.is_default && (
+              {isSupported && !account.is_default && (
                 <Dropdown.Item disabled={busy} onClick={() => onSetDefault(account)}>
                   <StarIcon className="size-4" />
                   <Trans message="Set as default" />
                 </Dropdown.Item>
               )}
-              <Dropdown.Item disabled={busy} onClick={() => onEdit(account)}>
+              {isSupported && <Dropdown.Item disabled={busy} onClick={() => onEdit(account)}>
                 <PencilIcon className="size-4" />
                 <Trans message="Edit account" />
-              </Dropdown.Item>
+              </Dropdown.Item>}
               <Dropdown.Item disabled={busy} onClick={() => onDelete(account)} className="text-destructive">
                 <Trash2Icon className="size-4" />
                 <Trans message="Remove account" />
@@ -225,6 +244,7 @@ function PayoutAccountCard({
 
 export function Component() {
   const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
+  const [availableBanks, setAvailableBanks] = useState<BankOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [actionError, setActionError] = useState(false);
@@ -239,36 +259,43 @@ export function Component() {
   const [accountHolder, setAccountHolder] = useState('');
   const [isDefault, setIsDefault] = useState(false);
 
-  const selectedBank = ETHIOPIAN_BANKS.find(b => b.code === bankCode);
+  const selectedBank = availableBanks.find(b => b.code === bankCode)
+    ?? ETHIOPIAN_BANKS.find(b => b.code === bankCode);
   const validNumber = isValidAccountNumber(accountNumber, bankCode);
   const invalidNumber = accountNumber.trim().length > 0 && !validNumber;
   const invalidName = accountHolder.trim().length > 0 && accountHolder.trim().length < 3;
   const canSubmit = !!bankCode && validNumber && accountHolder.trim().length >= 3 && !busy;
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await apiClient.get('/api/items/payout-methods');
-      setAccounts(response.data.data ?? []);
+      const [methodsResponse, accountsResponse] = await Promise.all([
+        apiClient.get('/api/v1/items/payout-banks'),
+        apiClient.get('/api/v1/items/payout-methods'),
+      ]);
+      const methods = methodsResponse.data?.data;
+      const destinations = accountsResponse.data?.data;
+      if (!Array.isArray(methods) || !Array.isArray(destinations)) {
+        throw new Error('Invalid payout methods response');
+      }
+
+      // Fail closed if Chapa is unavailable or returns no verified ETB providers.
+      setAvailableBanks(methods.flatMap((method: BankOption & {is_active?: boolean}) => {
+        const fallback = ETHIOPIAN_BANKS.find(bank => bank.code === method.code);
+        if (!fallback || method.is_active === false) return [];
+        return [{
+          ...fallback,
+          name: method.name || fallback.name,
+          type: fallback.type,
+        }];
+      }));
+      setAccounts(destinations);
       setLoadError(false);
     } catch {
-      try {
-        const fallback = await apiClient.get('/api/v1/storefront/payment-methods');
-        const list = (fallback.data.data ?? []).map((item: Record<string, unknown>) => ({
-          id: item.id as number,
-          type: (item.provider as string) ?? 'bank_transfer',
-          bank_code: (item.provider as string) ?? null,
-          account_holder: (item.account_name as string) ?? '',
-          account_number_last_four: (item.account_ending as string) ?? '',
-          masked_account_number: item.account_ending ? `•••• ${item.account_ending}` : '••••',
-          is_active: (item.is_active as boolean) ?? true,
-          is_default: (item.is_default as boolean) ?? true,
-          status: (item.status as string) ?? 'active',
-        }));
-        setAccounts(list);
-        setLoadError(false);
-      } catch {
-        setLoadError(true);
-      }
+      // Do not substitute checkout receiving methods or present a blank select as valid.
+      setAvailableBanks([]);
+      setAccounts([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -304,14 +331,14 @@ export function Component() {
   };
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || !selectedBank || !availableBanks.some(b => b.code === bankCode)) return;
     setBusy(true);
     setFormError(false);
     setSaved(false);
 
     try {
       const payload = {
-        type: selectedBank?.type ?? 'bank_transfer',
+        type: selectedBank.type,
         bank_code: bankCode,
         bank_name: selectedBank?.name,
         account_holder: accountHolder.trim(),
@@ -320,9 +347,9 @@ export function Component() {
       };
 
       if (editingAccount) {
-        await apiClient.put(`/api/items/payout-methods/${editingAccount.id}`, payload);
+        await apiClient.put(`/api/v1/items/payout-methods/${editingAccount.id}`, payload);
       } else {
-        await apiClient.post('/api/items/payout-methods', payload);
+        await apiClient.post('/api/v1/items/payout-methods', payload);
       }
 
       setOpen(false);
@@ -341,7 +368,7 @@ export function Component() {
     setBusy(true);
     setActionError(false);
     try {
-      await apiClient.post(`/api/items/payout-methods/${account.id}/default`);
+      await apiClient.post(`/api/v1/items/payout-methods/${account.id}/default`);
       await load();
     } catch {
       setActionError(true);
@@ -355,7 +382,7 @@ export function Component() {
     setBusy(true);
     setActionError(false);
     try {
-      await apiClient.delete(`/api/items/payout-methods/${account.id}`);
+      await apiClient.delete(`/api/v1/items/payout-methods/${account.id}`);
       await load();
     } catch {
       setActionError(true);
@@ -374,7 +401,7 @@ export function Component() {
       }
       headerRightContent={
         <Button
-          disabled={loading || busy}
+          disabled={loading || busy || loadError || availableBanks.length === 0}
           onClick={openNewAccount}
           className="gap-1.5"
         >
@@ -387,7 +414,17 @@ export function Component() {
         {loading && <Spinner />}
         {loadError && (
           <p role="alert" className="text-sm text-destructive">
-            <Trans message="Unable to load payout accounts. Try again." />
+            <Trans message="Unable to load Chapa payout destinations or accounts. Retry to continue." />
+          </p>
+        )}
+        {loadError && (
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+            <Trans message="Retry loading payout destinations" />
+          </Button>
+        )}
+        {!loading && !loadError && availableBanks.length === 0 && (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans message="No Chapa payout destinations are currently available. Check with Linket support." />
           </p>
         )}
         {actionError && (
@@ -397,7 +434,7 @@ export function Component() {
         )}
         {saved && (
           <p role="status" className="text-sm font-medium text-positive">
-            <Trans message="Payout account saved successfully." />
+            <Trans message="Payout account submitted for admin review." />
           </p>
         )}
 
@@ -448,7 +485,7 @@ export function Component() {
                 )}
               </Dialog.Title>
               <Dialog.Description>
-                <Trans message="Your Linket earnings will be disbursed to this verified destination." />
+                <Trans message="Admin approval is required before Linket can send earnings to this destination." />
               </Dialog.Description>
             </Dialog.Header>
 
@@ -460,7 +497,7 @@ export function Component() {
                   </label>
                   <Select.Root
                     value={bankCode}
-                    disabled={busy}
+                    disabled={busy || availableBanks.length === 0}
                     onValueChange={value => {
                       setBankCode(value ?? '');
                       setAccountNumber('');
@@ -479,27 +516,29 @@ export function Component() {
                         </span>
                       )}
                     </Select.Trigger>
-                    <Select.Content
-                      align="start"
-                      className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
-                    >
-                      <Select.Group>
-                        {ETHIOPIAN_BANKS.map(bank => (
-                          <Select.Item key={bank.code} value={bank.code} className="min-h-12">
-                            <span className="flex min-w-0 items-center gap-2.5 py-1">
-                              <BankLogo code={bank.code} name={bank.name} compact decorative />
-                              <span className="min-w-0 whitespace-normal font-medium">{bank.name}</span>
-                            </span>
-                          </Select.Item>
-                        ))}
-                      </Select.Group>
-                    </Select.Content>
+                    {availableBanks.length > 0 && (
+                      <Select.Content
+                        align="start"
+                        className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
+                      >
+                        <Select.Group>
+                          {availableBanks.map(bank => (
+                            <Select.Item key={bank.code} value={bank.code} className="min-h-12">
+                              <span className="flex min-w-0 items-center gap-2.5 py-1">
+                                <BankLogo code={bank.code} name={bank.name} compact decorative />
+                                <span className="min-w-0 whitespace-normal font-medium">{bank.name}</span>
+                              </span>
+                            </Select.Item>
+                          ))}
+                        </Select.Group>
+                      </Select.Content>
+                    )}
                   </Select.Root>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="payout-account-number" className="text-sm font-medium">
-                    {bankCode === 'telebirr' || bankCode === 'cbebirr' ? (
+                    {['telebirr', 'cbebirr', 'mpesa'].includes(bankCode) ? (
                       <Trans message="Phone number (e.g. 0911223344)" />
                     ) : (
                       <Trans message="Account number" />
@@ -510,7 +549,7 @@ export function Component() {
                     id="payout-account-number"
                     aria-label="Account or wallet number"
                     className="h-11 font-mono"
-                    inputMode={bankCode === 'telebirr' || bankCode === 'cbebirr' ? 'tel' : 'numeric'}
+                    inputMode={['telebirr', 'cbebirr', 'mpesa', 'yaya'].includes(bankCode) ? 'tel' : 'numeric'}
                     autoComplete="off"
                     value={accountNumber}
                     disabled={busy}

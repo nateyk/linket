@@ -3,7 +3,7 @@
 namespace App\Storefront\Controllers;
 
 use App\Models\User;
-use App\Payments\VerifyEt\EthiopianNameNormalizer;
+use App\Storefront\Support\EthiopianNameNormalizer;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DirectPaymentMethod;
 use Common\Workspaces\ActiveWorkspace;
@@ -31,7 +31,6 @@ final class CreatorPaymentMethodsController extends Controller
     {
         $catalog = DirectPaymentMethod::query()->get()->keyBy('code');
         $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
-        $creatorBlocker = $availability->creatorBlocker($request->user());
         return [
             'data' => CreatorPaymentMethod::query()
                 ->where('workspace_id', ActiveWorkspace::get()->id)
@@ -40,8 +39,9 @@ final class CreatorPaymentMethodsController extends Controller
                     ...$this->resource($method),
                     'account_configured' => $method->isAvailable(),
                     'account_ready' => $availability->accountIsReady($method, $catalog->get($method->provider)),
-                    'checkout_eligible' => ! $creatorBlocker && $availability->accountIsReady($method, $catalog->get($method->provider)),
-                    'checkout_blocker' => $creatorBlocker ?? ($availability->accountIsReady($method, $catalog->get($method->provider)) ? null : 'account_unavailable'),
+                    // Archived direct-collection accounts remain inspectable, not a new checkout method.
+                    'checkout_eligible' => false,
+                    'checkout_blocker' => 'verification_unavailable',
                 ])->all(),
             'available_methods' => DirectPaymentMethod::query()
                 ->whereIn('code', DirectPaymentMethod::SELLER_RECEIVING_BANKS)
@@ -481,9 +481,6 @@ final class CreatorPaymentMethodsController extends Controller
     {
         $catalog ??= DirectPaymentMethod::query()->get()->keyBy('code');
         $providerCatalog = $catalog->get($method->provider);
-        $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
-        $creatorBlocker = $method->creator ? $availability->creatorBlocker($method->creator) : 'creator_restricted';
-        $checkoutEligible = ! $creatorBlocker && $availability->accountIsReady($method, $providerCatalog);
 
         return [
             ...$this->resource($method),
@@ -493,8 +490,8 @@ final class CreatorPaymentMethodsController extends Controller
             'provider_display_name' => $providerCatalog?->display_name ?? strtoupper($method->provider),
             'linket_approved' => $method->status === 'approved',
             'verify_et_registered' => $method->provider_registration_status === 'registered',
-            'checkout_eligible' => $checkoutEligible,
-            'checkout_blockers' => array_values(array_filter([...$this->checkoutBlockers($method, $providerCatalog), $creatorBlocker])),
+            'checkout_eligible' => false,
+            'checkout_blockers' => [...$this->checkoutBlockers($method, $providerCatalog), 'verification_unavailable'],
             'submitted_at' => $method->created_at?->toIso8601String(),
             'reviewed_at' => $method->verified_at?->toIso8601String(),
             'reviewed_by' => $method->reviewed_by,

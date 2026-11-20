@@ -8,6 +8,6 @@ final class SubscriptionPaymentGateway
 
     public static function current(): string
     {
-        return settings()->get(self::KEY, 'verify_et') === 'chapa' ? 'chapa' : 'verify_et';
+        return 'chapa';
     }
 }

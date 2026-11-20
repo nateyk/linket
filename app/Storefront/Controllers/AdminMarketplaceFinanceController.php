@@ -9,6 +9,8 @@ use App\Storefront\Models\StorefrontJournalLine;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Services\MarketplacePayoutPolicy;
+use Common\Settings\Models\Setting;
 use App\Storefront\Services\MarketplaceReconciliationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -27,7 +29,7 @@ class AdminMarketplaceFinanceController extends Controller
 
         $staleAttemptCutoff = Carbon::now()->subMinutes(15);
         $stalePayoutCutoff = Carbon::now()->subMinutes(5);
-        $holdDays = (int) config('store.payout_hold_days', 7);
+        $holdDays = app(MarketplacePayoutPolicy::class)->holdDays();
         $escrowCutoff = Carbon::now()->subDays($holdDays);
 
         $stalePaymentsCount = StorefrontPaymentAttempt::query()
@@ -42,7 +44,8 @@ class AdminMarketplaceFinanceController extends Controller
 
         $maturedEscrowOrdersCount = StorefrontOrder::query()
             ->where('status', 'paid')
-            ->where('monetization_policy', 'marketplace_v2')
+            ->where('collection_owner', StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA)
+            ->where('creator_earnings_cents', '>', 0)
             ->where('paid_at', '<=', $escrowCutoff)
             ->whereDoesntHave('journalEntries', fn ($q) => $q->where('event_type', 'funds_available'))
             ->count();
@@ -73,6 +76,38 @@ class AdminMarketplaceFinanceController extends Controller
                 ],
             ],
         ];
+    }
+
+    public function payoutPolicy(): array
+    {
+        Gate::authorize('admin.access');
+        Gate::authorize('update', Setting::class);
+
+        return ['data' => app(MarketplacePayoutPolicy::class)->toArray()];
+    }
+
+    public function updatePayoutPolicy(Request $request): array
+    {
+        Gate::authorize('admin.access');
+        Gate::authorize('update', Setting::class);
+
+        $data = $request->validate([
+            'payout_hold_days' => ['required', 'integer', 'min:0', 'max:30'],
+            'minimum_payout_cents' => ['required', 'integer', 'min:100', 'max:100000000'],
+        ]);
+
+        settings()->save([
+            MarketplacePayoutPolicy::HOLD_DAYS_KEY => (int) $data['payout_hold_days'],
+            MarketplacePayoutPolicy::MINIMUM_CENTS_KEY => (int) $data['minimum_payout_cents'],
+        ]);
+
+        Log::info('admin.marketplace.payout_policy_updated', [
+            'admin_id' => $request->user()->id,
+            'payout_hold_days' => $data['payout_hold_days'],
+            'minimum_payout_cents' => $data['minimum_payout_cents'],
+        ]);
+
+        return $this->payoutPolicy();
     }
 
     public function reconcile(Request $request): array

@@ -3,23 +3,6 @@
 use Illuminate\Foundation\Application;
 use Symfony\Component\Console\Input\ArgvInput;
 
-register_shutdown_function('fatal_handler');
-
-function fatal_handler()
-{
-  $errfile = 'unknown file';
-  $errstr = 'shutdown';
-  $errno = E_CORE_ERROR;
-  $errline = 0;
-
-  $error = error_get_last();
-
-  if ($error !== null) {
-    var_dump($error);
-    die();
-  }
-}
-
 define('LARAVEL_START', microtime(true));
 
 // Register the Composer autoloader...

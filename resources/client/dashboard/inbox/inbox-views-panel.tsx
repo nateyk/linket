@@ -6,10 +6,7 @@ import {useQuery} from '@tanstack/react-query';
 import {IconButton} from '@ui/buttons/icon-button';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {Trans} from '@ui/i18n/trans';
-import {AddIcon} from '@ui/icons/material/Add';
-import {KeyboardArrowRightIcon} from '@ui/icons/material/KeyboardArrowRight';
-import {SearchIcon} from '@ui/icons/material/Search';
-import {TuneIcon} from '@ui/icons/material/Tune';
+import {ChevronRightIcon, PlusIcon, SearchIcon, InboxIcon, MessageCircleIcon} from 'lucide-react';
 import {Tooltip} from '@ui/tooltip/tooltip';
 import {useLocalStorage} from '@ui/utils/hooks/local-storage';
 import clsx from 'clsx';
@@ -38,31 +35,22 @@ export function InboxViewsPanel() {
   return (
     <Fragment>
       <Toolbar />
-      <div className="compact-scrollbar flex-auto overflow-y-auto pl-3">
+      <div className="compact-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto px-3 pb-3">
         <ViewList views={pinnedViews} />
-        <Section
-          name="views"
-          actions={
-            <IconButton
-              size="xs"
-              iconSize="sm"
-              elementType={Link}
-              to="/agent/views"
-              target="_blank"
-            >
-              <TuneIcon />
-            </IconButton>
-          }
-        >
+        <Section name="views">
           <Trans message="Views" />
-          <ViewList views={views} className="pl-4" />
-        </Section>
-        <Section name="groups">
-          <Trans message="Groups" />
-          {groupViews.length > 0 ? (
-            <ViewList views={groupViews} className="pl-4" />
+          {views.length ? (
+            <ViewList views={views} />
+          ) : pinnedViews.length === 0 ? (
+            <DefaultInboxViews />
           ) : null}
         </Section>
+        {groupViews.length > 0 && (
+          <Section name="groups">
+            <Trans message="Groups" />
+            <ViewList views={groupViews} />
+          </Section>
+        )}
       </div>
     </Fragment>
   );
@@ -70,56 +58,107 @@ export function InboxViewsPanel() {
 
 function Toolbar() {
   return (
-    <InboxSectionHeader showSeparator={false} padding="pl-6 pr-3">
-      <Trans message="Inbox" />
+    <InboxSectionHeader
+      showSeparator
+      padding="px-3"
+      className="min-w-0"
+    >
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold"><Trans message="Inbox" /></span>
       <Tooltip label={<Trans message="Search conversations" />}>
         <IconButton
+          aria-label="Search conversations"
           elementType={Link}
           to="/agent/conversations/search"
           size="sm"
           radius="rounded-full"
-          className="ml-auto text-muted"
+          className="text-muted-foreground"
         >
-          <SearchIcon />
+          <SearchIcon className="size-4" aria-hidden="true" />
         </IconButton>
       </Tooltip>
       <Tooltip label={<Trans message="New conversation" />}>
         <IconButton
+          aria-label="New conversation"
           elementType={Link}
           to="/agent/conversations/new"
           size="sm"
           radius="rounded-full"
-          className="text-muted"
+          className="text-muted-foreground"
         >
-          <AddIcon />
+          <PlusIcon className="size-4" aria-hidden="true" />
         </IconButton>
       </Tooltip>
     </InboxSectionHeader>
   );
 }
 
+function DefaultInboxViews() {
+  const [params] = useSearchParams();
+  const current = params.get('viewId') ?? 'all';
+
+  return (
+    <nav aria-label="Default conversation views" className="flex min-w-0 flex-col gap-0.5">
+      <DefaultInboxView to="all" active={current === 'all'} icon={<InboxIcon className="size-4" />}>
+        <Trans message="All conversations" />
+      </DefaultInboxView>
+      <DefaultInboxView to="mine" active={current === 'mine'} icon={<MessageCircleIcon className="size-4" />}>
+        <Trans message="Assigned to me" />
+      </DefaultInboxView>
+    </nav>
+  );
+}
+
+function DefaultInboxView({
+  to,
+  active,
+  icon,
+  children,
+}: {
+  to: string;
+  active: boolean;
+  icon: ReactElement;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      to={`/agent/conversations?viewId=${to}`}
+      aria-current={active ? 'page' : undefined}
+      className={clsx(
+        'flex min-h-9 min-w-0 items-center gap-2 rounded-button px-2.5 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring',
+        active
+          ? 'bg-sidebar-accent font-medium text-accent-foreground'
+          : 'hover:bg-sidebar-accent hover:text-accent-foreground',
+      )}
+    >
+      <span className="shrink-0" aria-hidden="true">{icon}</span>
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+    </Link>
+  );
+}
+
 interface SectionProps {
   name: string;
   children: [ReactElement, ReactElement | null];
-  actions?: ReactNode;
 }
-function Section({name, children, actions}: SectionProps) {
+function Section({name, children}: SectionProps) {
   const [isExpanded, setIsExpanded] = useLocalStorage(
     `inbox-${name}-expanded`,
     true,
   );
   return (
     <Fragment>
-      <div className="group mb-2 flex items-center gap-2 pl-2.5 pr-3.5 pt-5">
-        <div className="mr-auto text-sm font-semibold">{children[0]}</div>
-        <div className="hidden group-hover:block">{actions}</div>
+      <div className="group mb-1 flex items-center gap-2 px-2 pt-4">
+        <div className="mr-auto text-sm font-medium text-muted-foreground">{children[0]}</div>
         <IconButton
           size="xs"
           iconSize="sm"
+          aria-label={`Toggle ${name} views`}
+          aria-expanded={isExpanded}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <KeyboardArrowRightIcon
-            className={clsx('transition-transform', isExpanded && 'rotate-90')}
+          <ChevronRightIcon
+            className={clsx('size-4 transition-transform', isExpanded && 'rotate-90')}
+            aria-hidden="true"
           />
         </IconButton>
       </div>
@@ -134,7 +173,7 @@ interface ViewListProps {
 }
 function ViewList({views, className}: ViewListProps) {
   return (
-    <div className={clsx('cursor-pointer text-sm', className)}>
+    <div className={clsx('flex flex-col gap-0.5 text-sm', className)}>
       {views.map(view => (
         <ViewListItem view={view} key={view.id} />
       ))}
@@ -153,20 +192,20 @@ function ViewListItem({view}: ViewListItemProps) {
   return (
     <Link
       className={clsx(
-        'mr-3 flex h-10 items-center justify-between gap-2 rounded-lg px-3',
+        'flex min-h-9 min-w-0 items-center gap-2 rounded-button px-2.5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-ring',
         isActive
-          ? 'bg-primary/10 font-semibold hover:bg-primary/12'
-          : 'hover:bg-hover',
+          ? 'bg-sidebar-accent font-medium text-accent-foreground'
+          : 'text-foreground hover:bg-sidebar-accent hover:text-accent-foreground',
       )}
       to={`/agent/conversations?viewId=${view.key ?? view.id}`}
       aria-current={isActive ? 'page' : undefined}
     >
       <DashboardIcon name={view.icon as DashboardIconName} size="xs" />
-      <span className="text-overflow-ellipsis mr-3 block min-w-0 flex-auto overflow-hidden whitespace-nowrap">
+      <span className="block min-w-0 flex-1 truncate">
         <Trans message={view.name} />
       </span>
       {view.count ? (
-        <div className="ml-auto text-[11px] text-muted">
+        <div className="ms-auto shrink-0 text-xs text-muted-foreground">
           <FormattedNumber value={view.count} />
         </div>
       ) : null}

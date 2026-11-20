@@ -27,16 +27,21 @@ export function Component() {
 
       <Header />
 
-      <main className="mx-auto max-w-6xl px-6">
-        <h1 className="mt-7.5 mb-7.5 text-center text-3xl font-normal md:mt-15 md:text-4xl md:font-medium">
-          <Trans message="Choose the right plan for you" />
-        </h1>
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-2xl pt-12 text-center md:pt-20">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            <Trans message="Choose the right plan for you" />
+          </h1>
+          <p className="mt-3 text-base text-muted-foreground">
+            <Trans message="Start for free, then upgrade when you're ready to grow." />
+          </p>
+        </div>
 
         <BillingCycleRadio
           products={query.data?.data}
           selectedCycle={selectedCycle}
           onChange={setSelectedCycle}
-          className="mb-10 flex justify-center md:mb-17.5"
+          className="my-8 md:mb-12"
         />
 
         <PricingTable

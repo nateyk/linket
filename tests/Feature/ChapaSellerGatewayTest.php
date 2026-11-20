@@ -156,18 +156,17 @@ class ChapaSellerGatewayTest extends TestCase
         $this->assertSame(0, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
     }
 
-    public function testSwitchingCollectorsBlocksTheOtherCheckoutAndKeepsSavedAccounts(): void
+    public function testRetiredCollectorCannotBeReactivatedAndSavedAccountsRemain(): void
     {
         Queue::fake();
         [$creator, $product] = $this->seller();
         $this->activatePro($creator);
-        config()->set('services.verify_et.enabled', true);
         $account = CreatorPaymentMethod::query()->create([
             'workspace_id' => $product->workspace_id,
             'user_id' => $creator->id,
             'provider' => 'cbe',
             'account_number' => '1000123456789',
-            'account_fingerprint' => hash('sha256', 'collector-switch-'.$creator->id),
+            'account_fingerprint' => hash('sha256', 'retired-collector-'.$creator->id),
             'account_name_raw' => 'Abebe Kebede',
             'account_name_normalized' => 'abebe kebede',
             'status' => 'approved',
@@ -190,34 +189,24 @@ class ChapaSellerGatewayTest extends TestCase
         $this->browser()->actingAs($creator)->putJson('/api/v1/storefront/payment-collector', [
             'collector' => 'chapa',
         ])->assertOk();
-        $chapaOrder = app(StorefrontCheckout::class)->create($product->fresh()->load('creator'), null, [
-            'name' => 'Buyer',
-            'email' => 'buyer@example.test',
-        ]);
-        $this->assertSame('chapa', $chapaOrder->payment_gateway);
 
         $this->browser()->actingAs($creator)->putJson('/api/v1/storefront/payment-collector', [
             'collector' => 'verify_et',
-        ])->assertOk();
-        $bankOrder = app(StorefrontCheckout::class)->create($product->fresh()->load('creator'), null, [
-            'name' => 'Buyer',
-            'email' => 'buyer@example.test',
-        ]);
+        ])->assertUnprocessable();
 
-        $this->assertSame('verify_et', $bankOrder->payment_gateway);
-        $this->assertSame($account->id, $bankOrder->creator_payment_method_id);
-        $this->assertSame('seller-secret', CreatorChapaGateway::query()->where('workspace_id', $product->workspace_id)->firstOrFail()->secret_key);
+        $this->assertSame('chapa', $product->workspace->fresh()->active_payment_collector);
         $this->assertModelExists($account);
+        $this->assertSame('seller-secret', CreatorChapaGateway::query()
+            ->where('workspace_id', $product->workspace_id)->firstOrFail()->secret_key);
 
-        $this->browser()->actingAs($creator)->putJson('/api/v1/storefront/payment-collector', [
-            'collector' => 'chapa',
-        ])->assertOk();
-        $nextOrder = app(StorefrontCheckout::class)->create($product->fresh()->load('creator'), null, [
+        $order = app(StorefrontCheckout::class)->create($product->fresh()->load('creator'), null, [
             'name' => 'Buyer',
             'email' => 'buyer@example.test',
         ]);
-        $this->assertSame('chapa', $nextOrder->payment_gateway);
-        $this->assertNull($nextOrder->creator_payment_method_id);
+        $this->assertSame('chapa', $order->payment_gateway);
+        $this->assertNull($order->creator_payment_method_id);
+        $this->assertSame(0, \App\Payments\Models\DirectPaymentVerification::query()
+            ->where('payable_id', $order->id)->count());
     }
 
     public function testReturnFulfillsOnceAndStillFulfillsAfterProLapses(): void

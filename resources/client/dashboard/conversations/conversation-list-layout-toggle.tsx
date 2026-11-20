@@ -30,7 +30,7 @@ export function ConversationListLayoutToggle({className, size = 'xs'}: Props) {
         }
       }}
     >
-      <IconButton className={className} size={size}>
+      <IconButton className={className} size={size} aria-label="Change conversation layout">
         <DashboardIcon />
       </IconButton>
       <Menu>

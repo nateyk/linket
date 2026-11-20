@@ -6,6 +6,8 @@ namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
+use App\Storefront\Models\PayoutRequest;
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\Resources\DigitalProductPayoutMethodResource;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +17,8 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class DigitalProductPayoutMethodController extends Controller
 {
@@ -97,7 +101,7 @@ class DigitalProductPayoutMethodController extends Controller
                 'display_label' => $displayLabel,
                 'is_active' => true,
                 'is_default' => $isDefault,
-                'status' => DigitalProductPayoutMethod::STATUS_ACTIVE,
+                'status' => DigitalProductPayoutMethod::STATUS_PENDING,
             ]);
         });
 
@@ -126,6 +130,7 @@ class DigitalProductPayoutMethodController extends Controller
     public function updateMethod(Request $request, DigitalProductPayoutMethod $payoutMethod): DigitalProductPayoutMethodResource
     {
         abort_unless($payoutMethod->creator_id === $request->user()->id, 404);
+        $this->assertNoPendingWithdrawals($payoutMethod);
 
         $data = $this->validatePayload($request);
         $withdrawalMethod = $this->resolveWithdrawalMethod(
@@ -158,6 +163,10 @@ class DigitalProductPayoutMethodController extends Controller
                 'destination' => $data['destination'],
                 'account_number_last_four' => $lastFour,
                 'display_label' => $displayLabel,
+                'status' => DigitalProductPayoutMethod::STATUS_PENDING,
+                'approved_by' => null,
+                'approved_at' => null,
+                'review_note' => null,
                 'is_default' => $request->has('is_default') ? $request->boolean('is_default') : $payoutMethod->is_default,
             ]);
         });
@@ -184,6 +193,7 @@ class DigitalProductPayoutMethodController extends Controller
     public function destroy(Request $request, DigitalProductPayoutMethod $payoutMethod): Response
     {
         abort_unless($payoutMethod->creator_id === $request->user()->id, 404);
+        $this->assertNoPendingWithdrawals($payoutMethod);
 
         DB::transaction(function () use ($payoutMethod): void {
             $wasDefault = $payoutMethod->is_default;
@@ -211,31 +221,140 @@ class DigitalProductPayoutMethodController extends Controller
      */
     private function validatePayload(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'withdrawal_method_id' => 'nullable|integer|exists:digital_product_withdrawal_methods,id',
             'type' => 'nullable|string|max:64',
-            'bank_code' => 'nullable|string|max:64',
+            'bank_code' => 'required|string|max:64',
             'bank_name' => 'nullable|string|max:160',
-            'account_holder' => 'required|string|max:160',
-            'destination' => 'required|string|max:500',
+            'account_holder' => 'required|string|min:3|max:160',
+            'destination' => ['required', 'string', 'max:100', 'regex:/^[0-9+ -]+$/'],
             'is_default' => 'nullable|boolean',
         ]);
-    }
 
-    private function resolveWithdrawalMethod(?int $withdrawalMethodId, ?string $type, ?string $bankCode): ?DigitalProductWithdrawalMethod
-    {
-        if ($withdrawalMethodId) {
-            return DigitalProductWithdrawalMethod::query()->active()->find($withdrawalMethodId);
+        $code = strtolower(trim((string) $data['bank_code']));
+        $data['bank_code'] = match ($code) {
+            'm-pesa' => 'mpesa',
+            'cbe_birr' => 'cbebirr',
+            'yaya_wallet' => 'yaya',
+            default => $code,
+        };
+        $data['account_holder'] = trim((string) $data['account_holder']);
+        $data['destination'] = trim((string) $data['destination']);
+        if (mb_strlen($data['account_holder']) < 3) {
+            throw ValidationException::withMessages([
+                'account_holder' => __('Enter the full payout account holder name.'),
+            ]);
+        }
+        if (isset($data['bank_name'])) {
+            $data['bank_name'] = trim((string) $data['bank_name']);
         }
 
-        $code = match (strtolower((string) ($bankCode ?: $type))) {
-            'telebirr' => 'telebirr',
-            'paypal' => 'paypal',
-            default => 'bank_transfer',
+        $code = $data['bank_code'];
+        if (!array_key_exists($code, ChapaPayoutService::PAYOUT_BANK_OPTIONS)) {
+            throw ValidationException::withMessages([
+                'bank_code' => __('Select a supported Chapa v1 bank or wallet.'),
+            ]);
+        }
+        // Labels come from our curated Chapa mapping, not arbitrary seller input.
+        $data['bank_name'] = ChapaPayoutService::PAYOUT_BANK_OPTIONS[$code]['name'];
+        $number = preg_replace('/[\s-]/', '', (string) $data['destination']);
+        $valid = match ($code) {
+            'telebirr', 'cbebirr', 'mpesa' => (bool) preg_match('/^(?:0[79]\d{8}|(?:\+?251)[79]\d{8})$/', $number),
+            'yaya' => (bool) preg_match('/^\d{12}$/', $number),
+            'cbe' => (bool) preg_match('/^\d{13}$/', $number),
+            'boa' => (bool) preg_match('/^(?:\d{8}|\d{10}|\d{16})$/', $number),
+            'other', 'coop' => false,
+            default => (bool) preg_match('/^\d{8,20}$/', $number),
         };
+        if (!$valid) {
+            throw ValidationException::withMessages([
+                'destination' => __('Enter a valid account or wallet number for the selected provider.'),
+            ]);
+        }
 
-        return DigitalProductWithdrawalMethod::query()->active()->where('code', $code)->first()
-            ?? DigitalProductWithdrawalMethod::query()->active()->first();
+        return $data;
+    }
+
+    private function resolveWithdrawalMethod(?int $withdrawalMethodId, ?string $type, ?string $bankCode): DigitalProductWithdrawalMethod
+    {
+        $bankCode = strtolower(trim((string) $bankCode));
+        $option = ChapaPayoutService::PAYOUT_BANK_OPTIONS[$bankCode] ?? null;
+        if (!$option) {
+            throw ValidationException::withMessages(['bank_code' => __('Select a supported Chapa v1 bank or wallet.')]);
+        }
+        $code = $option['method'];
+
+        $query = DigitalProductWithdrawalMethod::query()->active()->where('code', $code);
+        $method = $query->first();
+        if (!$method || ($withdrawalMethodId !== null && $method->id !== $withdrawalMethodId)) {
+            throw ValidationException::withMessages(['withdrawal_method_id' => __('This payout method is unavailable.')]);
+        }
+
+        try {
+            $available = app(ChapaPayoutService::class)->availableBankOptions();
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'bank_code' => __('Unable to confirm this payout destination with Chapa. Retry when the provider is available.'),
+            ]);
+        }
+        if (!in_array($bankCode, array_column($available, 'code'), true)) {
+            throw ValidationException::withMessages([
+                'bank_code' => __('This bank or wallet is currently unavailable for Chapa ETB payouts.'),
+            ]);
+        }
+
+        return $method;
+    }
+
+    public function adminIndex(): AnonymousResourceCollection
+    {
+        Gate::authorize('admin.access');
+
+        return DigitalProductPayoutMethodResource::collection(
+            DigitalProductPayoutMethod::query()
+                ->with(['creator', 'withdrawalMethod'])
+                ->latest('id')
+                ->paginate(50),
+        );
+    }
+
+    public function review(Request $request, DigitalProductPayoutMethod $payoutMethod): DigitalProductPayoutMethodResource
+    {
+        Gate::authorize('admin.access');
+
+        $data = $request->validate([
+            'decision' => 'required|in:approve,reject',
+            'note' => 'nullable|string|max:1000',
+        ]);
+        abort_unless($payoutMethod->is_active, 422, __('Inactive account cannot be approved.'));
+        $this->assertNoPendingWithdrawals($payoutMethod);
+        abort_unless($payoutMethod->withdrawalMethod?->is_active, 422, __('This withdrawal provider is disabled.'));
+        abort_unless(ChapaPayoutService::canonicalBankCode((string) $payoutMethod->bank_code) !== null, 422, __('This legacy bank is not a Chapa payout destination.'));
+        abort_unless($payoutMethod->status !== DigitalProductPayoutMethod::STATUS_DEACTIVATED, 422);
+
+        $approved = $data['decision'] === 'approve';
+        $payoutMethod->update([
+            'status' => $approved ? DigitalProductPayoutMethod::STATUS_ACTIVE : DigitalProductPayoutMethod::STATUS_REJECTED,
+            'approved_by' => $approved ? $request->user()->id : null,
+            'approved_at' => $approved ? now() : null,
+            'review_note' => $data['note'] ?? null,
+        ]);
+
+        return new DigitalProductPayoutMethodResource($payoutMethod->fresh('withdrawalMethod'));
+    }
+
+    private function assertNoPendingWithdrawals(DigitalProductPayoutMethod $method): void
+    {
+        $hasPending = PayoutRequest::query()
+            ->where('digital_product_payout_method_id', $method->id)
+            ->whereIn('status', ['requested', 'processing'])
+            ->exists();
+
+        if ($hasPending) {
+            throw ValidationException::withMessages([
+                'payout_method' => __('This account has an unsettled withdrawal. Wait for verified settlement before modifying it.'),
+            ]);
+        }
     }
 
     private function extractLastFour(string $destination): string

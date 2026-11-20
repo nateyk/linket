@@ -5,6 +5,8 @@ namespace App\Payments;
 use App\Payments\Models\PaymentTransaction;
 use App\Payments\Notifications\ChapaProActivatedNotification;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Models\StorefrontPaymentAttempt;
+use App\Storefront\Services\StorefrontPaymentVerificationService;
 use App\Storefront\StorefrontWebhookHandler;
 use Carbon\Carbon;
 use Common\Billing\Invoices\Invoice;
@@ -12,6 +14,7 @@ use Common\Billing\Models\Price;
 use Common\Billing\Subscription;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -23,7 +26,14 @@ class ChapaPaymentFulfillment
      */
     public function syncPendingStorefrontOrder(StorefrontOrder $order): void
     {
-        if ($order->status === 'paid' || blank($order->chapa_tx_ref) || !$this->acceptsLegacyChapaFulfillment($order)) {
+        if ($order->status === 'paid' || blank($order->chapa_tx_ref)) {
+            return;
+        }
+        if ($order->isPlatformCollected()) {
+            $this->syncPlatformOrder($order);
+            return;
+        }
+        if (!$this->acceptsLegacyChapaFulfillment($order)) {
             return;
         }
 
@@ -47,6 +57,27 @@ class ChapaPaymentFulfillment
             $this->recordVerificationFailure($transaction, $e);
         } catch (\Throwable) {
             // Still pending — success page will poll again.
+        }
+    }
+
+    private function syncPlatformOrder(StorefrontOrder $order): void
+    {
+        if (!$order->isPending()) {
+            return;
+        }
+        $attempt = StorefrontPaymentAttempt::query()
+            ->where('order_id', $order->id)
+            ->where('merchant_reference', $order->chapa_tx_ref)
+            ->first();
+        if (!$attempt || $attempt->isSuccessful() || !Cache::add('marketplace:buyer-verification:'.$attempt->id, true, 10)) {
+            return;
+        }
+
+        try {
+            app(StorefrontPaymentVerificationService::class)->verifyAndFulfill($attempt->merchant_reference);
+        } catch (\Throwable) {
+            // Only verified provider evidence can release the purchased files.
+            // A temporarily unavailable or mismatched response remains unpaid.
         }
     }
 

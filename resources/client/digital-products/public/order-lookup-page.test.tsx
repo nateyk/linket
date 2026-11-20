@@ -13,7 +13,7 @@ const library = read('my-portal-library.tsx');
 const recovery = read('portal-recovery.tsx');
 const review = read('portal-review-dialog.tsx');
 const libraryUi = read('my-portal-library-ui.tsx');
-const directPayment = read('direct-payment-modal.tsx');
+const publicCheckout = read('digital-product-public-pages.tsx');
 
 describe('my-portal recovery', () => {
   test('requests and verifies codes through the shared API client', () => {
@@ -53,24 +53,16 @@ describe('my-portal protected actions', () => {
   });
 });
 
-describe('direct buyer payment tracking', () => {
-  test('offers a safe recheck and explains pending and rejected states', () => {
-    expect(directPayment).toContain('/api/v1/public/direct-orders/${checkout.order_id}/recheck');
-    expect(directPayment).toContain('<Trans message="Check payment status" />');
-    expect(directPayment).toContain('Access stays locked until verification is complete.');
-    expect(directPayment).toContain('Check that the reference is correct and the exact amount was sent');
-    expect(directPayment).toContain('Your purchased files are ready to download.');
-    expect(directPayment).toContain('If a download is interrupted, return here or to your purchase library and try again.');
-    expect(directPayment).toContain('data-testid="buyer-payment-status"');
-    expect(directPayment).toContain('<Trans message="Pending payment" />');
-    expect(directPayment).toContain('<Trans message="Verifying" />');
-    expect(directPayment).toContain('<Trans message="Manual review" />');
-    expect(directPayment).toContain('<Trans message="Rejected" />');
-    expect(directPayment).toContain('<Trans message="Paid" />');
-    expect(directPayment).toContain('Bank confirmations can take a few minutes');
-    expect(directPayment).toContain('Common causes: wrong recipient account');
-    expect(directPayment).toContain('max-h-[min(100dvh,40rem)]');
-    expect(directPayment).toContain('w-[calc(100vw-1.5rem)]');
+describe('Chapa checkout and historic order recovery isolation', () => {
+  test('new paid checkouts use hosted Chapa only; My Portal retains verified recovery', () => {
+    expect(publicCheckout).toContain('window.location.assign(checkoutUrl)');
+    expect(publicCheckout).toContain('isSuccessfulFreeCheckoutResponse');
+    expect(publicCheckout).not.toContain('DirectPaymentModal');
+    expect(publicCheckout).not.toContain('reference_endpoint');
+    expect(publicCheckout).not.toContain('Payment destination');
+    expect(recovery).toContain('/api/v1/public/my-portal/request-code');
+    expect(recovery).toContain('/api/v1/public/my-portal/verify-code');
+    expect(library).toContain('PortalOrdersTable');
   });
 });
 

@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Storefront\Ledger\AccountCodes;
+use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\Exceptions\InsufficientBalanceException;
 use App\Storefront\Ledger\JournalEntryData;
@@ -126,7 +127,15 @@ class CreatorLedgerServiceTest extends TestCase
             )
             ->willReturn(new StorefrontJournalEntry());
 
-        $service = new CreatorLedgerService($postingServiceMock);
+        // This is a posting-shape test; provide a synthetic cleared journal
+        // balance without relying on the database, while production always
+        // derives the balance from actual journal entries.
+        $service = new class($postingServiceMock) extends CreatorLedgerService {
+            public function getWithdrawableBalance(BalanceQuery $query): int
+            {
+                return 50000;
+            }
+        };
 
         $payout = new PayoutRequest([
             'creator_id' => 42,

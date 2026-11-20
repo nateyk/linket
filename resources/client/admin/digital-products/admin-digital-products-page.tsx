@@ -13,6 +13,7 @@ import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {GenericTable} from '@shadcn/table/generic-table';
+import {Tabs} from '@shadcn/tabs/tabs';
 import {TablePagination} from '@shadcn/table/utils/table-pagination';
 import {Input} from '@shadcn/forms/input/input';
 import {toast} from '@shadcn/toast/toast';
@@ -181,9 +182,9 @@ export function Component() {
           </Tooltip.Provider>
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
-          <Button variant="outline" nativeButton={false} render={<Link to="/admin/items/payment-methods" />}>
+          <Button variant="outline" nativeButton={false} render={<Link to="/admin/financial/general" />}>
             <LandmarkIcon />
-            <Trans message="Receiving accounts" />
+            <Trans message="Chapa settings" />
           </Button>
           <Button
             variant="outline"
@@ -198,9 +199,32 @@ export function Component() {
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl space-y-5 py-6">
+          <Tabs.Root
+            value={scope === 'updated' ? 'updated' : 'all'}
+            onValueChange={value =>
+              setQueryState(
+                {scope: value === 'updated' ? 'updated' : null, status: null},
+                {resetPage: true},
+              )
+            }
+          >
+            <div className="border-b">
+              <Tabs.List
+                variant="line"
+                aria-label={trans({message: 'Item views'})}
+              >
+                <Tabs.Tab value="all">
+                  <Trans message="All items" />
+                </Tabs.Tab>
+                <Tabs.Tab value="updated">
+                  <Trans message="Updated" />
+                </Tabs.Tab>
+              </Tabs.List>
+            </div>
+          </Tabs.Root>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <MetricCard
-              label="All products"
+              label="All items"
               value={String(total)}
               icon={<PackageIcon />}
               active={!statusFilter && !scope}
@@ -243,13 +267,6 @@ export function Component() {
               value={String(updated)}
               icon={<RefreshCwIcon />}
               tone={updated > 0 ? 'warning' : 'default'}
-              active={scope === 'updated'}
-              onClick={() =>
-                setQueryState(
-                  {scope: scope === 'updated' ? null : 'updated', status: null},
-                  {resetPage: true},
-                )
-              }
             />
           </div>
 
@@ -257,7 +274,7 @@ export function Component() {
             <Card.Header className="gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <Card.Title>
-                  <Trans message="Products" />
+                  <Trans message="Items" />
                 </Card.Title>
                 <Card.Description>
                   <Trans message="Moderate creator submissions and manage their lifecycle." />

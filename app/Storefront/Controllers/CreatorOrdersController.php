@@ -2,9 +2,10 @@
 
 namespace App\Storefront\Controllers;
 
-use App\Payments\Models\DirectPaymentVerification;
 use App\Storefront\Models\DigitalProduct;
+use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Models\StorefrontOrderItem;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -22,22 +23,13 @@ final class CreatorOrdersController extends Controller
         'expired',
     ];
 
-    private const TRANSACTION_STATUSES = [
-        'pending',
-        'verifying',
-        'success',
-        'mismatch',
-        'manual_review',
-        'manual_approved',
-        'failed',
-    ];
-
     private const VERIFIED_ORDER_STATUSES = ['paid', 'fulfilled'];
 
     public function index(Request $request): array
     {
         $filters = $request->validate([
             'status' => ['nullable', 'in:'.implode(',', self::ORDER_STATUSES)],
+            'gateway' => ['nullable', 'in:chapa,verify_et,all'],
             'search' => ['nullable', 'string', 'max:100'],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
@@ -46,6 +38,11 @@ final class CreatorOrdersController extends Controller
         ]);
 
         $base = $this->creatorOrdersQuery($request);
+        // Filter the dashboard and its totals together so legacy Verify.et
+        // cases never inflate the Chapa revenue or pending-payment widgets.
+        if (! empty($filters['gateway']) && $filters['gateway'] !== 'all') {
+            $base->where('payment_gateway', $filters['gateway']);
+        }
         $summary = $this->orderSummary($base);
         $trendQuery = (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->where('currency', 'ETB')->whereNotNull('paid_at');
         if (!empty($filters['from'])) {
@@ -86,8 +83,7 @@ final class CreatorOrdersController extends Controller
 
         $orders = $query
             ->with([
-                'product' => fn ($product) => $product->withTrashed(),
-                'latestDirectPaymentVerification',
+                'product' => fn ($product) => $product->withTrashed()->with('cover'),
                 'entitlements',
             ])
             ->latest()
@@ -109,14 +105,11 @@ final class CreatorOrdersController extends Controller
         $order = $this->creatorOrdersQuery($request)
             ->where('uuid', $order)
             ->with([
-                'product' => fn ($product) => $product->withTrashed(),
+                'product' => fn ($product) => $product->withTrashed()->with('cover'),
                 'items',
                 'entitlements.file',
-                'directPaymentVerifications' => fn ($verification) => $verification->latest('id'),
             ])
             ->firstOrFail();
-
-        $latestVerification = $order->directPaymentVerifications->first();
 
         return [
             'data' => [
@@ -126,27 +119,6 @@ final class CreatorOrdersController extends Controller
                 'platform_fee_cents' => (int) $order->platform_fee_cents,
                 'creator_earnings_cents' => (int) $order->creator_earnings_cents,
                 'payment_gateway' => $order->payment_gateway,
-                'verification' => $latestVerification ? [
-                    'status' => $latestVerification->status,
-                    'provider' => $latestVerification->bank_code,
-                    'amount_cents' => (int) $latestVerification->amount_cents,
-                    'currency' => $latestVerification->currency,
-                    'attempts' => (int) $latestVerification->attempt,
-                    'verified_at' => $latestVerification->verified_at?->toIso8601String(),
-                    'created_at' => $latestVerification->created_at?->toIso8601String(),
-                    'error_code' => $latestVerification->latest_error_code,
-                    'history' => $order->directPaymentVerifications->map(fn (DirectPaymentVerification $verification): array => [
-                        'reference' => $verification->reference,
-                        'status' => $verification->status,
-                        'provider' => $verification->bank_code,
-                        'amount_cents' => (int) $verification->amount_cents,
-                        'currency' => $verification->currency,
-                        'attempt' => (int) $verification->attempt,
-                        'verified_at' => $verification->verified_at?->toIso8601String(),
-                        'created_at' => $verification->created_at?->toIso8601String(),
-                        'error_code' => $verification->latest_error_code,
-                    ])->values(),
-                ] : null,
                 'delivery' => [
                     'status' => $this->deliveryStatus($order),
                     'entitlements_count' => $order->entitlements->count(),
@@ -161,91 +133,10 @@ final class CreatorOrdersController extends Controller
                     ])->values(),
                 ],
                 'manual_review' => $order->status === 'manual_review' ? [
-                    'reason_code' => $latestVerification?->latest_error_code,
-                    'submitted_at' => $latestVerification?->created_at?->toIso8601String(),
+                    'reason_code' => 'payment_under_review',
                 ] : null,
             ],
         ];
-    }
-
-    public function transactions(Request $request): array
-    {
-        $filters = $request->validate([
-            'status' => ['nullable', 'in:'.implode(',', self::TRANSACTION_STATUSES)],
-            'search' => ['nullable', 'string', 'max:100'],
-            'from' => ['nullable', 'date_format:Y-m-d'],
-            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
-            'page' => ['nullable', 'integer', 'min:1'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-        ]);
-
-        $base = $this->creatorTransactionsQuery($request);
-        $counts = (clone $base)
-            ->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status')
-            ->map(fn ($count): int => (int) $count)
-            ->all();
-
-        $query = clone $base;
-        if (!empty($filters['status'])) {
-            $query->where('direct_payment_verifications.status', $filters['status']);
-        }
-        if (!empty($filters['from'])) {
-            $query->whereDate('direct_payment_verifications.created_at', '>=', $filters['from']);
-        }
-        if (!empty($filters['to'])) {
-            $query->whereDate('direct_payment_verifications.created_at', '<=', $filters['to']);
-        }
-        if (!empty($filters['search'])) {
-            $term = '%'.addcslashes($filters['search'], '%_\\').'%';
-            $query->where(fn (Builder $q) => $q
-                ->where('direct_payment_verifications.reference', 'like', $term)
-                ->orWhereHasMorph('payable', [StorefrontOrder::class], fn (Builder $payable) => $payable
-                    ->where(fn (Builder $order) => $order
-                        ->where('uuid', 'like', $term)
-                        ->orWhere('payment_reference', 'like', $term)
-                        ->orWhere('buyer_name', 'like', $term)
-                        ->orWhere('buyer_email', 'like', $term)
-                        ->orWhereHas('product', fn (Builder $product) => $product->withTrashed()->where('title', 'like', $term)))));
-        }
-
-        $transactions = $query
-            ->with(['payable' => fn ($morph) => $morph->morphWith([
-                StorefrontOrder::class => ['product' => fn ($product) => $product->withTrashed(), 'items'],
-            ])])
-            ->latest('direct_payment_verifications.id')
-            ->paginate($filters['per_page'] ?? 25)
-            ->withQueryString()
-            ->through(function (DirectPaymentVerification $verification): array {
-                /** @var StorefrontOrder|null $order */
-                $order = $verification->payable;
-
-                return [
-                    'id' => $verification->id,
-                    'attempt_uuid' => $verification->attempt_uuid,
-                    'reference' => $verification->reference,
-                    'status' => $verification->status,
-                    'provider' => $verification->bank_code,
-                    'amount_cents' => (int) $verification->amount_cents,
-                    'currency' => $verification->currency,
-                    'attempt' => (int) $verification->attempt,
-                    'error_code' => $verification->latest_error_code,
-                    'verified_at' => $verification->verified_at?->toIso8601String(),
-                    'created_at' => $verification->created_at?->toIso8601String(),
-                    'order_uuid' => $order?->uuid,
-                    'order_status' => $order?->status,
-                    'product_title' => $order?->product?->title ?? $order?->items->first()?->title,
-                    'buyer_name' => $order?->buyer_name,
-                ];
-            });
-
-        return ['data' => $transactions, 'counts' => $counts];
-    }
-
-    public function manualApprove(Request $request, string $order): array
-    {
-        abort(403, __('Creator receipt confirmation cannot bypass provider verification.'));
     }
 
     private function creatorOrdersQuery(Request $request): Builder
@@ -263,15 +154,6 @@ final class CreatorOrdersController extends Controller
             ->whereIn('digital_product_id', $productIds);
     }
 
-    private function creatorTransactionsQuery(Request $request): Builder
-    {
-        $orderIds = $this->creatorOrdersQuery($request)->select('id');
-
-        return DirectPaymentVerification::query()
-            ->where('payable_type', StorefrontOrder::class)
-            ->whereIn('payable_id', $orderIds);
-    }
-
     /** @return array<string, mixed> */
     private function orderSummary(Builder $base): array
     {
@@ -283,12 +165,10 @@ final class CreatorOrdersController extends Controller
             ->all();
 
         return [
+            ...$this->commerceMetrics($base),
             'verified_sales_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->count(),
-            'verified_revenue_cents' => (int) (clone $base)->where('currency', 'ETB')->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('gross_amount_cents'),
-            'paid_orders_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->where('gross_amount_cents', '>', 0)->count(),
-            'free_orders_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->where('gross_amount_cents', '<=', 0)->count(),
-            'creator_earnings_cents' => (int) (clone $base)->where('currency', 'ETB')->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('creator_earnings_cents'),
-            'platform_fee_cents' => (int) (clone $base)->where('currency', 'ETB')->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('platform_fee_cents'),
+            'free_orders_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)
+                ->where('gross_amount_cents', '<=', 0)->count(),
             'pending_count' => (clone $base)->whereIn('status', ['pending_payment', 'verifying'])->count(),
             'manual_review_count' => (clone $base)->where('status', 'manual_review')->count(),
             'rejected_count' => (clone $base)->where('status', 'failed_verification')->count(),
@@ -297,26 +177,77 @@ final class CreatorOrdersController extends Controller
         ];
     }
 
+    /**
+     * Lifetime commerce KPIs use settled ETB sales, never pending payments or
+     * another creator's orders. A full refund leaves the paid-order cohort;
+     * completed partial refunds reduce revenue and the snapshotted fees.
+     *
+     * @return array<string, int|float>
+     */
+    private function commerceMetrics(Builder $base): array
+    {
+        $paid = (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)
+            ->where('currency', 'ETB');
+        $paidOrders = (clone $paid)->where('gross_amount_cents', '>', 0);
+        $ordersCount = (clone $paidOrders)->count();
+        $gross = (int) (clone $paid)->sum('gross_amount_cents');
+        $fees = (int) (clone $paid)->sum('platform_fee_cents');
+        $earnings = (int) (clone $paid)->sum('creator_earnings_cents');
+        $refunds = DigitalProductPaymentRefund::query()
+            ->whereIn('storefront_order_id', (clone $paid)->select('id'))
+            ->where('status', DigitalProductPaymentRefund::STATUS_COMPLETED)
+            ->where('currency', 'ETB')
+            ->selectRaw('COALESCE(SUM(amount_cents), 0) AS gross_reversed')
+            ->selectRaw('COALESCE(SUM(creator_earnings_reversal_cents), 0) AS earnings_reversed')
+            ->selectRaw('COALESCE(SUM(platform_fee_reversal_cents), 0) AS fees_reversed')
+            ->first();
+
+        $netSales = max(0, $gross - (int) $refunds->gross_reversed);
+        $netFees = max(0, $fees - (int) $refunds->fees_reversed);
+        $afterFees = max(0, $netSales - $netFees);
+
+        return [
+            'verified_revenue_cents' => $gross,
+            'paid_orders_count' => $ordersCount,
+            'creator_earnings_cents' => max(0, $earnings - (int) $refunds->earnings_reversed),
+            'platform_fee_cents' => $fees,
+            'net_sales_cents' => $netSales,
+            // This is an after-platform-fee estimate, not true profit after product costs.
+            'gross_profit_cents' => $afterFees,
+            'gross_profit_margin_percent' => $netSales > 0 ? round($afterFees / $netSales * 100, 1) : 0.0,
+            'items_sold_count' => $this->itemsSold($paidOrders),
+            'average_order_cents' => $ordersCount > 0 ? intdiv($netSales + intdiv($ordersCount, 2), $ordersCount) : 0,
+        ];
+    }
+
+    private function itemsSold(Builder $paidOrders): int
+    {
+        // Current checkout stores quantities on order items. A historical paid
+        // order without items still represents one purchased digital product.
+        $units = (int) StorefrontOrderItem::query()
+            ->whereIn('storefront_order_id', (clone $paidOrders)->select('id'))
+            ->sum('quantity');
+        $missingItems = (clone $paidOrders)->whereDoesntHave('items')->count();
+
+        return $units + $missingItems;
+    }
+
     /** @return array<string, mixed> */
     private function orderPayload(StorefrontOrder $order): array
     {
-        $account = $order->payment_account_snapshot;
-
         return [
             'uuid' => $order->uuid,
             'status' => $order->status,
             'buyer_name' => $order->buyer_name,
+            'buyer_email' => $order->buyer_email,
             'transaction_reference' => $order->payment_reference ?: $order->chapa_tx_ref,
             'payment_reference' => $order->payment_reference,
             'chapa_tx_ref' => $order->chapa_tx_ref,
             'gross_amount_cents' => (int) $order->gross_amount_cents,
             'currency' => $order->currency,
             'payment_gateway' => $order->payment_gateway,
-            'payment_method' => $order->payment_provider_snapshot ?: $order->payment_gateway,
-            'payment_provider' => $order->payment_provider_snapshot,
-            'account_ending' => is_string($account) && $account !== '' ? substr($account, -4) : null,
-            'verification_status' => $order->latestDirectPaymentVerification?->status,
-            'verification_error_code' => $order->latestDirectPaymentVerification?->latest_error_code,
+            'payment_method' => $order->payment_gateway,
+            'payment_provider' => $order->payment_gateway,
             'delivery_status' => $this->deliveryStatus($order),
             'created_at' => $order->created_at?->toIso8601String(),
             'paid_at' => $order->paid_at?->toIso8601String(),
@@ -324,6 +255,7 @@ final class CreatorOrdersController extends Controller
                 'id' => $order->product->id,
                 'title' => $order->product->title,
                 'status' => $order->product->status,
+                'cover_url' => $order->product->cover?->url,
             ] : null,
         ];
     }

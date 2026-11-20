@@ -10,6 +10,10 @@ use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\WorkspacePayoutConfig;
 use App\Storefront\DigitalProductFinance;
+use App\Storefront\Ledger\AccountCodes;
+use App\Storefront\Ledger\JournalEntryData;
+use App\Storefront\Ledger\JournalLineData;
+use App\Storefront\Ledger\JournalPostingService;
 use App\Storefront\PayoutRequestService;
 use Common\Permissions\Models\Permission;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -34,7 +38,7 @@ class PayoutSystemTest extends TestCase
         Storage::fake('local');
         Notification::fake();
         // Payouts are gated by the storefront currency + hold days config.
-        config()->set('storefront.payout_hold_days', 0);
+        config()->set('store.payout_hold_days', 0);
         config()->set('storefront.currency', 'ETB');
     }
 
@@ -66,6 +70,61 @@ class PayoutSystemTest extends TestCase
             'entry_type' => 'payout_reserved',
             'amount_cents' => -4000,
         ]);
+    }
+
+    public function testUnbackedLegacyEarningsCannotBeWithdrawnWithoutChapaJournalFunds(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->createPayoutMethod($creator, $workspaceId);
+
+        // Simulate an older earnings record without a Chapa settlement journal.
+        app(DigitalProductFinance::class)->record(
+            $workspaceId,
+            $creator->id,
+            'legacy-unreconciled:' . $creator->id,
+            'sale',
+            25000,
+            'ETB',
+            ['available_at' => now()],
+        );
+
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
+        $this->assertSame(0, $summary['available_for_payout_cents']);
+        $this->assertTrue($summary['balance_reconciliation_required']);
+
+        try {
+            app(PayoutRequestService::class)->create($creator->id, $workspaceId, 1000);
+            $this->fail('Unbacked earnings must not authorize a withdrawal.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+        $this->assertDatabaseMissing('payout_requests', ['creator_id' => $creator->id]);
+    }
+
+    public function testAvailableBalanceUsesCanonicalUppercaseCurrencyAndJournal(): void
+    {
+        config()->set('storefront.currency', 'etb');
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->createPayoutMethod($creator, $workspaceId);
+        $this->creditSale($creator, 10000);
+        // A separate currency must not inflate the ETB earnings or produce
+        // a false mismatch on the Chapa balance summary.
+        app(DigitalProductFinance::class)->record(
+            $workspaceId, $creator->id, 'foreign-currency:' . $creator->id,
+            'sale', 50000, 'USD', ['available_at' => now()]
+        );
+
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
+        $this->assertSame('ETB', $summary['currency']);
+        $this->assertSame(10000, $summary['available_for_payout_cents']);
+        $this->assertFalse($summary['balance_reconciliation_required']);
+
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 3000);
+        $this->assertSame('ETB', $payout->currency);
+        $this->assertSame(7000, app(DigitalProductFinance::class)
+            ->summary($creator->id, $workspaceId)['available_for_payout_cents']);
     }
 
     /**
@@ -169,6 +228,130 @@ class PayoutSystemTest extends TestCase
         }
     }
 
+    public function testPlatformWideMinimumOverridesAWeakerWithdrawalMethodMinimum(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 10000);
+        $this->createPayoutMethod($creator, $workspaceId, minimum: 100);
+
+        settings()->set('marketplace.minimum_payout_cents', 5000);
+        try {
+            app(PayoutRequestService::class)->create($creator->id, $workspaceId, 4000);
+            $this->fail('Expected validation against the platform payout minimum.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 6000);
+        $this->assertSame(6000, $payout->amount_cents);
+
+        settings()->set('marketplace.minimum_payout_cents', 7000);
+        try {
+            app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+            $this->fail('A raised policy minimum must also block old pending withdrawals.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+    }
+
+    /**
+     * A zero-valued administrator minimum cannot create a payout Chapa v1
+     * would refuse to transfer (minimum 1.00 ETB).
+     */
+    public function testZeroProviderMinimumStillRequiresOneEtb(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 5000);
+        $this->createPayoutMethod($creator, $workspaceId, minimum: 0);
+
+        foreach ([0, 99] as $cents) {
+            try {
+                app(PayoutRequestService::class)->create($creator->id, $workspaceId, $cents);
+                $this->fail('Expected the effective 1.00 ETB minimum to reject this amount.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('amount_cents', $exception->errors());
+            }
+        }
+
+        $this->assertSame(0, PayoutRequest::query()->where('creator_id', $creator->id)->count());
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 100);
+        $this->assertSame(100, $payout->amount_cents);
+    }
+
+    public function testFinanceLimitChangeBlocksApprovalOfAnExistingWithdrawal(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 30000);
+        $account = $this->createPayoutMethod($creator, $workspaceId, maximum: 20000);
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 10000);
+
+        DigitalProductWithdrawalMethod::query()->findOrFail($account->withdrawal_method_id)
+            ->update(['maximum_amount_cents' => 5000]);
+
+        try {
+            app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+            $this->fail('A withdrawal beyond the current maximum must not be approved.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $this->assertSame('requested', $payout->fresh()->status);
+    }
+
+    public function testIncreasedProviderMinimumBlocksOldWithdrawalApproval(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 10000);
+        $account = $this->createPayoutMethod($creator, $workspaceId, minimum: 100);
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 1000);
+
+        DigitalProductWithdrawalMethod::query()->findOrFail($account->withdrawal_method_id)
+            ->update(['minimum_amount_cents' => 1500]);
+
+        try {
+            app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+            $this->fail('An outdated withdrawal below the new minimum must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $this->assertSame('requested', $payout->fresh()->status);
+    }
+
+    public function testFinanceLimitChangeBlocksDispatchAfterAdminApproval(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 30000);
+        $account = $this->createPayoutMethod($creator, $workspaceId, maximum: 20000);
+        $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 10000);
+        app(PayoutRequestService::class)->transition($payout, 'start_processing', $creator->id);
+
+        DigitalProductWithdrawalMethod::query()->findOrFail($account->withdrawal_method_id)
+            ->update(['maximum_amount_cents' => 5000]);
+        config()->set('services.chapa.secret', 'CHASECK_TEST-fixture-limit');
+        config()->set('services.chapa.test_payouts_enabled', true);
+        config()->set('services.chapa.payouts_enabled', false);
+        Http::fake();
+
+        try {
+            app(PayoutRequestService::class)->submitChapaPayout($payout->fresh(), $creator->id);
+            $this->fail('A withdrawal beyond the current maximum must not be dispatched.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+
+        $this->assertSame('processing', $payout->fresh()->status);
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId, false);
+        $this->assertSame(10000, $summary['reserved_payout_cents']);
+        $this->assertDatabaseMissing('storefront_payout_intents', ['payout_request_id' => $payout->id]);
+        Http::assertNothingSent();
+    }
+
     /**
      * Requesting above the withdrawal method maximum is rejected.
      */
@@ -212,7 +395,7 @@ class PayoutSystemTest extends TestCase
      * Full admin state-machine flow: requested -> processing -> paid releases
      * the reservation, marks paid, and records a debit statement-like entry.
      */
-    public function testAdminCanProcessAndPayOutRequest(): void
+    public function testAdminCannotMarkChapaWithdrawalPaidWithoutVerification(): void
     {
         [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
 
@@ -221,15 +404,19 @@ class PayoutSystemTest extends TestCase
         $this->assertNotNull($updated->processing_at);
         $this->assertStringContainsString('Looks good', $updated->activities->last()->note);
 
-        $paid = app(PayoutRequestService::class)->transition($updated, 'mark_paid', $admin->id, ['transfer_reference' => 'CHAPA-1234']);
-        $this->assertSame('paid', $paid->status);
-        $this->assertNotNull($paid->paid_at);
-        $this->assertSame('CHAPA-1234', $paid->transfer_reference);
+        try {
+            app(PayoutRequestService::class)->transition($updated, 'mark_paid', $admin->id, [
+                'transfer_reference' => 'UNVERIFIED',
+            ]);
+            $this->fail('Manual status update must not settle a Chapa withdrawal.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('status', $e->errors());
+        }
 
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertNull($payout->fresh()->paid_at);
         $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
-        $this->assertSame(0, $summary['reserved_payout_cents']);
-        $this->assertSame(0, $summary['pending_payout_cents']);
-        $this->assertSame($paid->amount_cents, $summary['paid_out_cents']);
+        $this->assertSame($payout->amount_cents, $summary['reserved_payout_cents']);
     }
 
     /**
@@ -272,10 +459,10 @@ class PayoutSystemTest extends TestCase
     {
         [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
         $processing = app(PayoutRequestService::class)->transition($payout, 'start_processing', $admin->id, ['note' => 'ok']);
-        $paid = app(PayoutRequestService::class)->transition($processing, 'mark_paid', $admin->id, ['transfer_reference' => 'ref']);
+        $processing->update(['status' => 'paid', 'paid_at' => now()]);
 
         $this->expectException(ValidationException::class);
-        app(PayoutRequestService::class)->transition($paid, 'reject', $admin->id, ['reason' => 'no']);
+        app(PayoutRequestService::class)->transition($processing->fresh(), 'reject', $admin->id, ['reason' => 'no']);
     }
 
     /**
@@ -365,10 +552,38 @@ class PayoutSystemTest extends TestCase
             'note' => 'Processing',
         ])->assertOk();
 
-        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'transfer_reference' => 'CHAPA-REF-999',
-        ])->assertOk()->assertJsonPath('data.status', 'paid');
-        $this->assertSame('CHAPA-REF-999', $response->json('data.transfer_reference'));
+        ])->assertStatus(422);
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertNull($payout->fresh()->paid_at);
+    }
+
+    public function testAdminCanSavePayoutPolicyAndValidationRejectsUnsafeMinimum(): void
+    {
+        $admin = $this->createAdmin();
+        $admin->permissions()->attach(Permission::query()->firstOrCreate(['name' => 'settings.update']));
+
+        $this->stateful()->actingAs($admin);
+        $this->getJson('/api/v1/admin/marketplace/payout-policy')
+            ->assertOk()
+            ->assertJsonPath('data.payout_hold_days', 0)
+            ->assertJsonPath('data.minimum_payout_cents', 100);
+
+        $this->putJson('/api/v1/admin/marketplace/payout-policy', [
+            'payout_hold_days' => 2,
+            'minimum_payout_cents' => 5000,
+        ])->assertOk()
+            ->assertJsonPath('data.payout_hold_days', 2)
+            ->assertJsonPath('data.minimum_payout_cents', 5000);
+
+        $this->assertSame(2, app(\App\Storefront\Services\MarketplacePayoutPolicy::class)->holdDays());
+        $this->assertSame(5000, app(\App\Storefront\Services\MarketplacePayoutPolicy::class)->minimumWithdrawalCents());
+
+        $this->putJson('/api/v1/admin/marketplace/payout-policy', [
+            'payout_hold_days' => -1,
+            'minimum_payout_cents' => 0,
+        ])->assertUnprocessable();
     }
 
     public function testNonAdminCannotAccessAdminPayoutRoutes(): void
@@ -495,9 +710,9 @@ class PayoutSystemTest extends TestCase
 
         $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
-        ])->assertOk()->assertJsonPath('data.status', 'paid');
+        ])->assertStatus(422);
 
-        $this->assertStringStartsWith('CHAPA-TX-', $response->json('data.transfer_reference'));
+        $this->assertSame('processing', $payout->fresh()->status);
     }
 
     /**
@@ -530,95 +745,86 @@ class PayoutSystemTest extends TestCase
 
         $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
-        ])->assertOk()->assertJsonPath('data.status', 'paid');
+        ])->assertStatus(422);
 
-        $this->assertStringStartsWith('CHAPA-TX-', $response->json('data.transfer_reference'));
+        $this->assertSame('processing', $payout->fresh()->status);
     }
 
-    public function testChapaPayoutLogsNeverContainSensitiveGatewayData(): void
+    public function testChapaV1PayoutDoesNotLogRecipientOrGatewaySecret(): void
     {
-        settings()->save(['kyc.enabled' => true]);
         [$creator, $workspaceId, $payout] = $this->seedPendingPayout(withAdmin: false);
         $destination = '+251911223344';
-        $responseSecret = 'gateway-secret-account-value';
-        $telebirrMethod = DigitalProductWithdrawalMethod::query()
-            ->where('code', 'telebirr')
-            ->firstOrFail();
+        $secret = 'gateway-secret-account-value';
+        $method = DigitalProductWithdrawalMethod::query()->where('code', 'telebirr')->firstOrFail();
 
         $payout->update([
-            'withdrawal_method_id' => $telebirrMethod->id,
-            'withdrawal_method_name' => $telebirrMethod->name,
+            'status' => 'processing',
+            'withdrawal_method_id' => $method->id,
+            'withdrawal_method_name' => $method->name,
             'payout_destination' => $destination,
+            'account_holder_snapshot' => 'Test Creator',
+            'bank_code_snapshot' => 'telebirr',
         ]);
         $payout->payoutMethod()->update([
-            'withdrawal_method_id' => $telebirrMethod->id,
+            'withdrawal_method_id' => $method->id,
             'type' => 'telebirr',
+            'bank_code' => 'telebirr',
             'destination' => $destination,
         ]);
-        config(['services.chapa.secret' => 'platform-secret']);
+
+        config(['services.chapa.secret' => 'CHASECK_TEST-log-fixture',
+            'services.chapa.test_payouts_enabled' => true,
+            'services.chapa.test_transfer_status' => 'failed',
+            'services.chapa.transfer_approval_secret' => 'synthetic-approval-fixture',
+            'services.chapa.payouts_enabled' => false]);
+        Cache::flush();
         Http::fake([
-            'https://api.chapa.global/v2/payouts' => Http::response([
+            'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'success',
-                'data' => [
-                    'chapa_reference' => 'CP_T_safe',
-                    'status' => 'PENDING',
-                    'account_number' => $responseSecret,
-                ],
+                'data' => [['id' => 855, 'slug' => 'telebirr', 'is_active' => 1, 'active' => 1, 'currency' => 'ETB']],
+            ]),
+            'https://api.chapa.co/v1/transfers' => Http::response([
+                'status' => 'success', 'data' => $secret,
             ]),
         ]);
+
         $logger = new class extends AbstractLogger {
             public array $records = [];
 
             public function log($level, string|\Stringable $message, array $context = []): void
             {
-                $this->records[] = [
-                    'level' => $level,
-                    'message' => (string) $message,
-                    'context' => $context,
-                ];
+                $this->records[] = ['message' => (string) $message, 'context' => $context];
             }
         };
-        $originalLogger = Log::getFacadeRoot();
+        $original = Log::getFacadeRoot();
         Log::swap($logger);
-
         try {
-            app(ChapaPayoutService::class)->createTransfer(
-                $payout->fresh(['withdrawalMethod', 'payoutMethod', 'creator']),
-            );
+            $intent = app(\App\Storefront\Services\StorefrontPayoutProcessingService::class)
+                ->prepareIntent($payout, 'telebirr');
+            app(ChapaPayoutService::class)->createTransfer($intent);
         } finally {
-            Log::swap($originalLogger);
+            Log::swap($original);
         }
 
-        $initiated = collect($logger->records)->firstWhere(
-            'message',
-            'Initiating Chapa Telebirr transfer',
-        );
-        $this->assertNotNull($initiated);
-        $this->assertSame([
-            'payout_id',
-            'reference',
-            'amount',
-            'currency',
-            'bank_code',
-        ], array_keys($initiated['context']));
-
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/v1/transfers')
+            && $request->data()['status'] === 'failed'
+            && $request->data()['currency'] === 'ETB');
         $logged = json_encode($logger->records);
         $this->assertStringNotContainsString($destination, $logged);
-        $this->assertStringNotContainsString(
-            preg_replace('/\D/', '', $destination),
-            $logged,
-        );
-        $this->assertStringNotContainsString($responseSecret, $logged);
+        $this->assertStringNotContainsString('251911223344', $logged);
+        $this->assertStringNotContainsString($secret, $logged);
     }
 
     /**
      * Auto-transfer falls back to manual reference for unsupported methods (paypal, other).
      */
-    public function testAutoTransferFallsBackToManualForPaypal(): void
+    public function testLegacyPaypalCannotEnterChapaPayoutProcessing(): void
     {
         settings()->save(['kyc.enabled' => true]);
         [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
 
+        // Retained for historical records, but not eligible for any new
+        // Chapa payout approval or transfer (including the old manual path).
         $paypalMethod = \App\Storefront\Models\DigitalProductWithdrawalMethod::query()->where('code', 'paypal')->firstOrFail();
 
         $payout->update([
@@ -630,19 +836,21 @@ class PayoutSystemTest extends TestCase
             'withdrawal_method_id' => $paypalMethod->id,
             'type' => 'paypal',
             'destination' => 'test@example.com',
-            'withdrawal_method_id' => $paypalMethod->id,
         ]);
 
         $this->stateful()->actingAs($admin);
         $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/processing", [
             'note' => 'Processing',
-        ])->assertOk();
+        ])->assertStatus(422)->assertJsonValidationErrors(['payout_method']);
 
-        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
+        $this->assertSame('requested', $payout->fresh()->status);
+
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
-        ])->assertOk()->assertJsonPath('data.status', 'paid');
+        ])->assertStatus(422);
 
-        $this->assertStringStartsWith('MANUAL-', $response->json('data.transfer_reference'));
+        // The rejected legacy path must not mark any funds as disbursed.
+        $this->assertSame('requested', $payout->fresh()->status);
     }
 
     /**
@@ -669,7 +877,7 @@ class PayoutSystemTest extends TestCase
         Cache::flush();
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
-            'https://api.chapa.global/v2/payouts/banks' => Http::response([
+            'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'success',
                 'data' => [
                     ['id' => 946, 'slug' => 'cbe_bank', 'swift' => 'CBETETAA', 'name' => 'Commercial Bank of Ethiopia', 'active' => 1, 'currency' => 'ETB'],
@@ -678,7 +886,7 @@ class PayoutSystemTest extends TestCase
                     ['id' => 0, 'slug' => 'telebirr', 'swift' => 'TELEBIRR', 'name' => 'Telebirr', 'active' => 1, 'currency' => 'ETB'],
                 ],
             ]),
-            'https://api.chapa.global/v2/payouts' => Http::response([
+            'https://api.chapa.co/v1/transfers' => Http::response([
                 'status' => 'success',
                 'data' => ['chapa_reference' => 'CP_T_test', 'status' => 'PENDING'],
             ]),
@@ -761,15 +969,25 @@ class PayoutSystemTest extends TestCase
 
     private function creditSale(User $creator, int $cents): void
     {
-        // A verified sale ledger entry, immediately available for payout.
+        $workspaceId = $creator->workspaces()->first()->id;
+        // Synthetic, balanced test funding: neither an unbacked earnings row
+        // nor a pending provider payment may authorize a withdrawal.
         app(DigitalProductFinance::class)->record(
-            $creator->workspaces()->first()->id,
+            $workspaceId,
             $creator->id,
             'sale:' . $creator->id . ':' . $cents,
             'sale',
             $cents,
-            config('storefront.currency'),
-            ['available_at' => now(), 'description' => 'Verified sale'],
+            'ETB',
+            ['available_at' => now(), 'description' => 'Synthetic verified sale'],
+        );
+        $context = ['creator_id' => $creator->id, 'workspace_id' => $workspaceId];
+        app(JournalPostingService::class)->post(
+            new JournalEntryData('test_funding', $creator->id, 'sale_' . $cents, 'ETB', $context),
+            [
+                new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, $cents, 0, 'ETB', $context),
+                new JournalLineData(AccountCodes::CREATOR_AVAILABLE, 0, $cents, 'ETB', $context),
+            ],
         );
     }
 
@@ -792,6 +1010,11 @@ class PayoutSystemTest extends TestCase
             'creator_id' => $creator->id,
             'withdrawal_method_id' => $withdrawalMethod->id,
             'type' => $withdrawalMethod->code,
+            'bank_code' => 'cbe',
+            'is_active' => true,
+            'status' => 'active',
+            'approved_at' => now(),
+            'approved_by' => $creator->id,
             'account_holder' => 'Test Creator',
             'destination' => '1234567890',
             'display_label' => 'Bank transfer ending in 7890',
@@ -871,7 +1094,7 @@ public function testChapaServiceCanValidateBankCodes(): void
     {
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
-            'https://api.chapa.global/v2/payouts/test_ref_123/verify' => Http::response([
+            'https://api.chapa.co/v1/transfers/verify/test_ref_123' => Http::response([
                 'status' => 'success',
                 'data' => [
                     'status' => 'SUCCESS',
@@ -887,8 +1110,8 @@ public function testChapaServiceCanValidateBankCodes(): void
 
         $result = $service->verifyTransfer('test_ref_123');
 
-        $this->assertSame('SUCCESS', $result['status']);
-        $this->assertSame('test_ref_123', $result['merchant_reference']);
+        $this->assertSame('SUCCESS', $result['data']['status']);
+        $this->assertSame('test_ref_123', $result['data']['merchant_reference']);
     }
 
     /**
@@ -924,7 +1147,7 @@ public function testChapaServiceCanValidateBankCodes(): void
             'auto_transfer' => true,
         ]);
 
-        $response->assertStatus(500); // RuntimeException for invalid bank code
+        $response->assertStatus(422); // Unverified automatic-paid shortcuts are forbidden
     }
 
     /**
@@ -935,7 +1158,7 @@ public function testChapaServiceCanValidateBankCodes(): void
         Cache::flush();
         config(['services.chapa.secret' => 'platform-secret']);
         Http::fake([
-            'https://api.chapa.global/v2/payouts/banks' => Http::response([
+            'https://api.chapa.co/v1/banks' => Http::response([
                 'status' => 'success',
                 'data' => [
                     [

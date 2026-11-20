@@ -16,6 +16,10 @@ import {
   UnplugIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
+import {
+  IntegrationHeading,
+  TelegramIcon,
+} from '@app/account-settings/integration-marks';
 
 type PreferenceKey =
   | 'verified_sales'
@@ -66,11 +70,6 @@ const preferenceRows: {key: PreferenceKey; label: string; description: string}[]
     key: 'receiving_accounts',
     label: 'Receiving accounts',
     description: 'Know when Linket reviews, registers, suspends or restores a receiving account.',
-  },
-  {
-    key: 'free_sales_quota',
-    label: 'Free sales allowance',
-    description: 'Receive milestone alerts as you approach your free verified-sale limit.',
   },
   {
     key: 'payment_review',
@@ -193,16 +192,17 @@ export function Component() {
       <AccountSettingsPanel
         id="telegram"
         title={
-          <span className="flex items-center gap-2">
-            <SendIcon className="size-4" />
-            <Trans message="Telegram" />
-          </span>
+          <IntegrationHeading
+            icon={TelegramIcon}
+            title="Telegram"
+            description="Creator notifications in a private chat."
+          />
         }
         titleSuffix={
           telegram ? (
             <Badge
               variant={
-                telegram.enabled && telegram.connected ? 'positive' : 'secondary'
+                telegram.enabled && telegram.connected ? 'positive' : 'outline'
               }
             >
               {telegram.enabled && telegram.connected ? (
@@ -215,13 +215,26 @@ export function Component() {
             </Badge>
           ) : null
         }
+        actions={
+          telegram?.enabled && telegram.connected ? (
+            <Button
+              variant="outline"
+              color="danger"
+              disabled={busy}
+              onClick={() => setDisconnectOpen(true)}
+            >
+              <UnplugIcon />
+              <Trans message="Disconnect Telegram" />
+            </Button>
+          ) : null
+        }
       >
         {loading ? (
           <div className="flex min-h-28 items-center justify-center">
             <Spinner />
           </div>
         ) : error && !telegram ? (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <p role="alert" className="text-sm text-destructive">
               <Trans message="Unable to load Telegram settings. Try again." />
             </p>
@@ -231,21 +244,21 @@ export function Component() {
             </Button>
           </div>
         ) : telegram ? (
-          <div className="space-y-6">
+          <div className="flex flex-col gap-5">
             {!telegram.enabled ? (
               <p className="text-sm text-muted-foreground">
                 <Trans message="Telegram notifications are not available right now." />
               </p>
             ) : telegram.connected ? (
               <>
-                <div className="flex flex-col gap-4 rounded-card-sm border bg-secondary/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
+                <div className="flex flex-col gap-4 rounded-card-sm border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <p className="text-sm font-semibold">
                       {telegram.username
                         ? `@${telegram.username}`
                         : <Trans message="Telegram account connected" />}
                     </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       <Trans message="Linket can send creator notifications to this private Telegram chat." />
                     </p>
                   </div>
@@ -277,9 +290,10 @@ export function Component() {
                   </div>
                 </div>
 
-                <div className="rounded-card-sm border p-4">
-                  <p className="text-sm font-semibold"><Trans message="Delivery status" /></p>
-                  <p className="mt-1 text-sm font-medium">
+                <div className="flex flex-col gap-3 rounded-card-sm border p-4">
+                  <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium"><Trans message="Delivery status" /></p>
+                  <p className="text-sm">
                     {telegram.delivery_status === 'healthy' ? (
                       <Trans message="Last recorded delivery succeeded" />
                     ) : telegram.delivery_status === 'attention_required' ? (
@@ -288,7 +302,7 @@ export function Component() {
                       <Trans message="No delivery recorded yet" />
                     )}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {telegram.delivery_status === 'healthy' ? (
                       <Trans message="The most recent recorded Telegram delivery succeeded." />
                     ) : telegram.delivery_status === 'attention_required' ? (
@@ -297,11 +311,12 @@ export function Component() {
                       <Trans message="Send a test to check that Telegram can receive messages." />
                     )}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     <Trans message="Delivery history may include a previously connected chat." />
                   </p>
+                  </div>
                   {(telegram.last_delivery_at || telegram.last_failed_at) ? (
-                    <dl className="mt-4 space-y-2 text-sm">
+                    <dl className="flex flex-col gap-2 border-t pt-3 text-sm">
                       {telegram.last_delivery_at ? (
                         <div className="flex flex-wrap justify-between gap-2">
                           <dt className="text-muted-foreground"><Trans message="Last successful delivery" /></dt>
@@ -368,37 +383,25 @@ export function Component() {
                     <Trans message="Unable to update Telegram. Try again." />
                   </p>
                 ) : null}
-
-                <div className="flex justify-end border-t pt-5">
-                  <Button
-                    variant="outline"
-                    color="danger"
-                    disabled={busy}
-                    onClick={() => setDisconnectOpen(true)}
-                  >
-                    <UnplugIcon />
-                    <Trans message="Disconnect Telegram" />
-                  </Button>
-                </div>
               </>
             ) : (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 {error ? (
                   <p role="alert" className="text-sm text-destructive">
                     <Trans message="Unable to open Telegram right now. Try again." />
                   </p>
                 ) : null}
-                <div className="flex flex-col gap-4 rounded-card-sm border bg-secondary/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
+                <div className="flex flex-col gap-4 rounded-card-sm border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <p className="text-sm font-semibold">
                       <Trans message="Connect your Telegram account" />
                     </p>
-                    <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                    <p className="max-w-2xl text-sm text-muted-foreground">
                       <Trans message="Link your private Telegram chat to receive verified sale, inquiry, moderation, dispute and Pro billing notifications." />
                     </p>
                   </div>
                   <Button disabled={busy} onClick={() => void connect()}>
-                    <SendIcon />
+                    <TelegramIcon />
                     <Trans message="Connect Telegram" />
                   </Button>
                 </div>
@@ -454,11 +457,11 @@ function PreferenceRow({
 }) {
   return (
     <div className="flex items-start justify-between gap-5 p-4">
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-1">
         <p className="text-sm font-medium">
           <Trans message={label} />
         </p>
-        <p className="mt-1 text-sm leading-5 text-muted-foreground">
+        <p className="text-sm leading-5 text-muted-foreground">
           <Trans message={description} />
         </p>
       </div>

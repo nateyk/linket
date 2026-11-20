@@ -2,7 +2,6 @@
 
 namespace App\Storefront;
 
-use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Biolinks\Models\Biolink;
 use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
@@ -24,18 +23,13 @@ class StorefrontCheckout
 
         $collector = \Common\Workspaces\Models\Workspace::query()
             ->whereKey($product->workspace_id)
-            ->value('active_payment_collector') ?? 'verify_et';
+            ->value('active_payment_collector') ?? 'unavailable';
 
         if ((int) $product->price_cents > 0) {
-            if ($collector === 'chapa' || ($chapaEnabled && ($paymentMethodId === null || ! VerifyEtSettings::get('enabled')))) {
-                return app(\App\Storefront\Services\ChapaStorefrontCheckout::class)->create($product, $biolink, $buyer);
-            }
-
-            if (VerifyEtSettings::get('enabled')) {
-                return app(\App\Storefront\Services\DirectStorefrontCheckout::class)->create($product, $biolink, $buyer, $paymentMethodId);
-            }
-
-            if ($chapaEnabled) {
+            // Platform Chapa takes precedence for new paid orders, including
+            // requests carrying an obsolete creator receiving-account ID.
+            // Preserve creator-managed Chapa checkout when platform Chapa is off.
+            if ($chapaEnabled || $collector === 'chapa') {
                 return app(\App\Storefront\Services\ChapaStorefrontCheckout::class)->create($product, $biolink, $buyer);
             }
 

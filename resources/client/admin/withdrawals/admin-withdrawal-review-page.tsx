@@ -60,6 +60,7 @@ export type Payout = {
   withdrawalMethod?: {
     id?: number;
     name?: string;
+    code?: string;
     destination_label?: string | null;
     instructions?: string | null;
     minimum_amount_cents?: number | null;
@@ -72,6 +73,13 @@ export type Payout = {
     display_label?: string | null;
   } | null;
   latest_payout_intent?: PayoutIntent | null;
+  admin_step_up_required?: boolean;
+  payout_mode?: {
+    mode: 'test' | 'live' | 'unconfigured';
+    enabled: boolean;
+    approval_configured: boolean;
+    test_only: boolean;
+  };
   activities?: {
     id: number;
     action: string;
@@ -102,6 +110,7 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
     try {
       const res = await apiClient.get(`/api/v1/admin/withdrawals/${withdrawalId}/review`);
       setPayout(res.data.data);
+      setError(undefined);
     } catch {
       setError('Unable to load withdrawal request.');
     } finally {
@@ -121,8 +130,10 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
       const msg = await fn();
       setSuccess(msg);
       await load();
+      return true;
     } catch (e: unknown) {
       setError(getApiErrorMessage(e));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -134,9 +145,17 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
       return 'Withdrawal approved and moved to processing.';
     });
 
-  const handleSubmitTransfer = () =>
+  const handleSubmitTransfer = (adminPassword?: string) =>
     mutate(async () => {
-      const res = await apiClient.post(`/api/v1/admin/withdrawals/${payout!.id}/submit-transfer`);
+      const url = `/api/v1/admin/withdrawals/${payout!.id}/submit-transfer`;
+      const body = adminPassword === undefined ? undefined : {
+        admin_password: adminPassword,
+        confirmation_id: payout!.id,
+        confirmation_amount_cents: payout!.amount_cents,
+        confirmation_currency: payout!.currency,
+        confirmation_destination_label: payout!.payout_method_label ?? '',
+      };
+      const res = body ? await apiClient.post(url, body) : await apiClient.post(url);
       return res.data.message || 'Payout transfer submitted to Chapa.';
     });
 
@@ -169,6 +188,7 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
 
   return {
     payout,
+    reload: load,
     loading,
     saving,
     error,
@@ -186,6 +206,7 @@ function useAdminWithdrawalReview(withdrawalId?: string) {
 export function Component() {
   const {withdrawalId} = useParams();
   const state = useAdminWithdrawalReview(withdrawalId);
+  const [stepUpOpen, setStepUpOpen] = useState(false);
 
   if (state.loading) {
     return (
@@ -197,7 +218,33 @@ export function Component() {
     );
   }
 
-  if (!state.payout) return null;
+  if (!state.payout) {
+    return (
+      <DashboardLayout.MainSection>
+        <DashboardLayout.SectionHeader>
+          <DashboardLayout.SidebarToggle />
+          <DashboardLayout.SectionTitle>
+            <Trans message="Withdrawal review" />
+          </DashboardLayout.SectionTitle>
+          <Button variant="outline" nativeButton={false} render={<Link to="/admin/withdrawals" />}>
+            <ArrowLeftIcon aria-hidden="true" />
+            <Trans message="Withdrawals" />
+          </Button>
+        </DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionContent className="p-4">
+          <div className="mx-auto flex max-w-3xl flex-col items-start gap-4 py-8">
+            <p role="alert" className="flex items-center gap-2 text-sm text-destructive">
+              <CircleAlertIcon className="size-4 shrink-0" aria-hidden="true" />
+              {state.error ?? <Trans message="Withdrawal request was not found." />}
+            </p>
+            <Button variant="outline" onClick={() => void state.reload()}>
+              <Trans message="Try again" />
+            </Button>
+          </div>
+        </DashboardLayout.SectionContent>
+      </DashboardLayout.MainSection>
+    );
+  }
 
   return (
     <DashboardLayout.MainSection>
@@ -233,7 +280,7 @@ export function Component() {
             payout={state.payout}
             saving={state.saving}
             onApprove={() => void state.handleApprove()}
-            onSubmitTransfer={() => void state.handleSubmitTransfer()}
+            onSubmitTransfer={() => state.payout?.admin_step_up_required ? setStepUpOpen(true) : void state.handleSubmitTransfer()}
             onVerifySettlement={() => void state.handleVerifySettlement()}
             onOpenReject={() => state.setRejectOpen(true)}
             onManualPaid={(ref, note) => void state.handleManualPaid(ref, note)}
@@ -244,8 +291,15 @@ export function Component() {
           <RejectWithdrawalDialog
             open={state.rejectOpen}
             onOpenChange={state.setRejectOpen}
-            onConfirm={state.handleRejectConfirm}
+            onConfirm={async (reason, note) => { await state.handleRejectConfirm(reason, note); }}
             saving={state.saving}
+          />
+          <TransferStepUpDialog
+            open={stepUpOpen}
+            onOpenChange={setStepUpOpen}
+            payout={state.payout}
+            saving={state.saving}
+            onConfirm={state.handleSubmitTransfer}
           />
         </div>
       </DashboardLayout.SectionContent>
@@ -409,7 +463,7 @@ function Stage1Section({
       <div className="flex items-center justify-between">
         <div>
           <p className="font-semibold text-sm"><Trans message="Stage 1: Approval & Reservation" /></p>
-          <p className="text-xs text-muted-foreground"><Trans message="Approving transitions status to Processing and locks creator funds in ledger." /></p>
+          <p className="text-xs text-muted-foreground"><Trans message="Funds were reserved when the seller requested withdrawal. Approval moves it into Processing." /></p>
         </div>
         {payout.status === 'processing' && <Badge variant="positive"><Trans message="Approved" /></Badge>}
       </div>
@@ -438,27 +492,54 @@ function Stage2Section({
   saving: boolean;
   onSubmitTransfer: () => void;
 }) {
-  const hasSuccessfulIntent = payout.latest_payout_intent && payout.latest_payout_intent.status !== 'failed';
+  const intent = payout.latest_payout_intent;
+  const isManual = payout.withdrawalMethod?.code === 'other';
+  const mode = payout.payout_mode;
+  const canSubmit = Boolean(mode?.enabled && mode?.approval_configured);
+  const intentLabel: Record<string, string> = {
+    prepared: 'Prepared',
+    submitted: 'Submission unconfirmed',
+    provider_pending: 'Queued — awaiting settlement',
+    successful: 'Settled',
+    failed: 'Transfer failed',
+  };
+
   return (
     <div className="rounded-input border p-4 space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="font-semibold text-sm"><Trans message="Stage 2: Submit Transfer (Chapa v2)" /></p>
-          <p className="text-xs text-muted-foreground"><Trans message="Dispatches disbursement request to Chapa platform API." /></p>
+          <p className="font-semibold text-sm"><Trans message="Stage 2: Submit Transfer (Chapa v1)" /></p>
+          <p className="text-xs text-muted-foreground"><Trans message="Sends a transfer request through the Linket platform Chapa account." /></p>
         </div>
-        {payout.latest_payout_intent && (
-          <Badge variant={payout.latest_payout_intent.status === 'success' ? 'positive' : 'outline'}>
-            {payout.latest_payout_intent.status}
+        {intent && (
+          <Badge variant={intent.status === 'successful' ? 'positive' : 'outline'}>
+            {intentLabel[intent.status] ?? intent.status.replaceAll('_', ' ')}
           </Badge>
         )}
       </div>
-      {!hasSuccessfulIntent && (
-        <div className="pt-2">
-          <Button color="primary" disabled={saving} onClick={onSubmitTransfer}>
-            <SendIcon />
-            <Trans message="Submit transfer to Chapa" />
-          </Button>
-        </div>
+      {mode?.test_only && (
+        <p role="status" className="text-xs text-muted-foreground">
+          <Trans message="Chapa test mode · simulated transfer, no real money" />
+        </p>
+      )}
+      {mode && (!mode.enabled || !mode.approval_configured) && (
+        <p role="alert" className="text-xs text-destructive">
+          <Trans message="Chapa payout dispatch is unavailable. Configure test credentials and the transfer approval secret." />
+        </p>
+      )}
+      {payout.status === 'processing' && !intent && !isManual && (
+        <Button color="primary" disabled={saving || !canSubmit} onClick={onSubmitTransfer}>
+          <SendIcon />
+          <Trans message="Submit transfer to Chapa" />
+        </Button>
+      )}
+      {intent?.status === 'submitted' && (
+        <p role="status" className="text-xs text-muted-foreground">
+          <Trans message="Transfer outcome is uncertain. Do not resubmit; verify the existing Chapa reference." />
+        </p>
+      )}
+      {intent?.status === 'submitted' && intent.last_error && (
+        <p className="text-xs text-muted-foreground">{intent.last_error}</p>
       )}
     </div>
   );
@@ -478,26 +559,31 @@ function Stage3Section({
   const [manualRef, setManualRef] = useState('');
   const [manualNote, setManualNote] = useState('');
   const [showManual, setShowManual] = useState(false);
+  const status = payout.latest_payout_intent?.status;
+  const canVerify = payout.status === 'processing' &&
+    (status === 'submitted' || status === 'provider_pending');
+  const canSettleManually = payout.status === 'processing' &&
+    payout.withdrawalMethod?.code === 'other' && !payout.latest_payout_intent;
 
   return (
     <div className="rounded-input border p-4 space-y-3">
       <div>
         <p className="font-semibold text-sm"><Trans message="Stage 3: Confirm Verified Settlement" /></p>
-        <p className="text-xs text-muted-foreground"><Trans message="Verify transfer status directly with Chapa or record manual transfer reference." /></p>
+        <p className="text-xs text-muted-foreground"><Trans message="Only Chapa-confirmed settlement marks a wallet or bank payout paid." /></p>
       </div>
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        {payout.latest_payout_intent && (
+        {canVerify && (
           <Button color="primary" disabled={saving} onClick={onVerifySettlement}>
             <ShieldCheckIcon />
             <Trans message="Verify settlement with Chapa" />
           </Button>
         )}
-        <Button variant="outline" onClick={() => setShowManual(!showManual)}>
+        {canSettleManually && <Button variant="outline" onClick={() => setShowManual(!showManual)}>
           <Trans message="Record manual settlement" />
-        </Button>
+        </Button>}
       </div>
 
-      {showManual && (
+      {showManual && canSettleManually && (
         <div className="mt-4 rounded-input border border-muted bg-muted/20 p-4 space-y-3">
           <Field.Root>
             <Field.Label><Trans message="Manual transfer reference" /></Field.Label>
@@ -526,6 +612,59 @@ function Stage3Section({
         </div>
       )}
     </div>
+  );
+}
+
+function TransferStepUpDialog({
+  open, onOpenChange, payout, saving, onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  payout: Payout;
+  saving: boolean;
+  onConfirm: (password: string) => Promise<boolean>;
+}) {
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) return;
+    if (await onConfirm(password)) {
+      setPassword('');
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Backdrop />
+        <Dialog.Content className="gap-4 rounded-card-sm sm:max-w-md">
+          <Dialog.Header>
+            <Dialog.Title><Trans message="Confirm Chapa transfer" /></Dialog.Title>
+            <Dialog.Description>
+              <Trans message="Verify the exact withdrawal and enter your Linket admin password. Never enter a Chapa secret here." />
+            </Dialog.Description>
+          </Dialog.Header>
+          <p className="text-sm font-medium">#{payout.id} · {formatMoney(payout.amount_cents, payout.currency)} · {payout.payout_method_label}</p>
+          <form id="chapa-step-up-form" onSubmit={handleSubmit}>
+            <Field.Root>
+              <Field.Label htmlFor="admin-payout-step-up-password"><Trans message="Linket admin password" /></Field.Label>
+              <Input id="admin-payout-step-up-password" type="password" autoComplete="current-password" value={password}
+                onChange={e => setPassword(e.target.value)} required />
+            </Field.Root>
+          </form>
+          <Dialog.Footer className="mt-2 flex justify-end gap-2">
+            <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
+              <Trans message="Cancel" />
+            </Button>
+            <Button type="submit" form="chapa-step-up-form" disabled={saving || !password}>
+              <Trans message="Confirm and submit transfer" />
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 

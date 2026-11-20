@@ -26,7 +26,7 @@ class EntitlementSystemTest extends TestCase
         parent::setUp();
         $this->seed(RolesTableSeeder::class);
         config()->set('storefront.currency', 'ETB');
-        config()->set('storefront.payout_hold_days', 0);
+        config()->set('store.payout_hold_days', 0);
         settings()->save(['billing.enable' => true]);
 
         if (!Product::where('is_default', true)->exists()) {
@@ -511,8 +511,8 @@ class EntitlementSystemTest extends TestCase
         $this->assertContains('5 free products', $data['pricing_features']);
         $this->assertContains('5 paid products', $data['pricing_features']);
         $this->assertContains('1 GB storage', $data['pricing_features']);
-        $this->assertContains('No commission on new sales', $data['pricing_features']);
-        $this->assertContains('10 lifetime verified sales', $data['pricing_features']);
+        $this->assertNotContains('No commission on new sales', $data['pricing_features']);
+        $this->assertNotContains('10 lifetime verified sales', $data['pricing_features']);
 
         // Guard the 0% commission contract in the stored plan, not only the display text.
         $benefits = $plan->storefront_benefits;

@@ -110,28 +110,42 @@ class BuildTrackedEventsReport
 
     protected function getCountriesMetric(): array
     {
-        $metric = $this->getPartitionMetric('location');
+        // Resolve the full set of ISO countries before calculating shares.
+        // The default top-10 partition makes smaller countries disappear and
+        // misleadingly inflates percentages for the remaining categories.
+        $metric = $this->getPartitionMetric('location', 256);
 
         $countries = app(ValueLists::class)->countries();
-        $metric['data'] = array_map(function ($location) use (
-            $countries,
-            $metric,
-        ) {
-            // only short country code is stored in DB, get and return full country name as well
-            $location['code'] = strtolower($location['label']);
-            $location['label'] =
-                Arr::first(
-                    $countries,
-                    fn($country) => $country['code'] === $location['code'],
-                )['name'] ?? $location['label'];
+        $metric['data'] = array_map(function ($location) use ($countries) {
+            $code = strtolower(trim((string) ($location['label'] ?? '')));
+            $country = Arr::first(
+                $countries,
+                fn ($item) => $item['code'] === $code,
+            );
+
+            // Unknown / null must never be drawn as a real country.
+            $location['code'] = $country ? $code : '';
+            $location['label'] = $country['name'] ?? __('Unknown location');
+
             return $location;
         }, $metric['data']);
+
+        $metric['data'] = array_slice($metric['data'], 0, 10);
 
         return $metric;
     }
 
     protected function getCitiesMetric(): array
     {
+        // The country drill-down is an explicit, server-side filter; do not
+        // return all global cities when a country was clicked on the map.
+        $country = strtoupper(trim((string) ($this->params['country'] ?? '')));
+        if (!preg_match('/^[A-Z]{2}$/', $country)) {
+            return ['data' => []];
+        }
+
+        $this->builder->where('tracked_events.location', $country);
+
         return $this->getPartitionMetric('city');
     }
 

@@ -97,8 +97,6 @@ class AppServiceProvider extends ServiceProvider
         $this->app->booted(function (): void {
             if (app()->bound('clockwork')) {
                 app('clockwork')->shouldCollect()->except([
-                    '/billing/verify-et/webhook',
-                    '/api/v1/admin/storefront/verify-et-settings',
                     '/api/v1/storefront/payment-methods(?:/.*)?',
                     '/api/v1/public/direct-orders/[^/]+(?:/.*)?',
                     '/api/v1/billing/direct(?:/.*)?',
@@ -299,6 +297,8 @@ class AppServiceProvider extends ServiceProvider
             \App\Storefront\Commands\GenerateCommissionInvoices::class,
             \App\Storefront\Commands\EnforceCommissionRestrictions::class,
             \App\Storefront\Commands\ReconcileMarketplaceFinancesCommand::class,
+            \App\Storefront\Commands\AuditIndependentMarketplaceFinancesCommand::class,
+            \App\Storefront\Commands\AuditChapaV1TestModeCommand::class,
         ]);
 
         $this->app->singleton(Agent::class, function () {

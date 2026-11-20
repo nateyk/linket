@@ -31,10 +31,10 @@ it('renders creator-owned Pro payment amount, date, reference and status', async
   api.get.mockResolvedValue({data: {
     pro_plan: {monthly_price_cents: 50000, currency: 'ETB'},
     pro_subscription: {status: 'active', renews_at: '2026-11-29T00:00:00Z', can_renew: true, pending_payment: {status: 'pending_payment', amount_cents: 50000}, payments: [
-      {payment_id: 'mine', amount_cents: 50000, currency: 'ETB', status: 'manual_review', transaction_reference: 'CREATOR-REF', created_at: '2026-10-29T00:00:00Z'},
-      {payment_id: 'pending', amount_cents: 50000, currency: 'ETB', status: 'pending_verification', transaction_reference: 'PENDING-REF', created_at: '2026-10-28T00:00:00Z'},
-      {payment_id: 'paid', amount_cents: 50000, currency: 'ETB', status: 'paid', transaction_reference: 'PAID-REF', paid_at: '2026-10-27T00:00:00Z', receipt_number: 'LINKET-RECEIPT-1', receipt_url: '/api/v1/billing/direct/pro/paid/receipt'},
-      {payment_id: 'rejected', amount_cents: 50000, currency: 'ETB', status: 'rejected', transaction_reference: 'REJECTED-REF', created_at: '2026-10-26T00:00:00Z'},
+      {payment_id: 'mine', amount_cents: 50000, currency: 'ETB', status: 'pending_payment', transaction_reference: 'CREATOR-REF', created_at: '2026-10-29T00:00:00Z'},
+      {payment_id: 'pending', amount_cents: 50000, currency: 'ETB', status: 'pending_payment', transaction_reference: 'PENDING-REF', created_at: '2026-10-28T00:00:00Z'},
+      {payment_id: 'paid', amount_cents: 50000, currency: 'ETB', status: 'paid', transaction_reference: 'PAID-REF', paid_at: '2026-10-27T00:00:00Z'},
+      {payment_id: 'failed', amount_cents: 50000, currency: 'ETB', status: 'failed', transaction_reference: 'FAILED-REF', created_at: '2026-10-26T00:00:00Z'},
     ]},
     invoices: {data: [{uuid: 'invoice-1', invoice_number: 'CM-202610-1', commission_fee_cents: 2000, status: 'paid', sales_count: 2}]},
   }});
@@ -42,14 +42,14 @@ it('renders creator-owned Pro payment amount, date, reference and status', async
   render(<QueryClientProvider client={client}><SubscriptionBillingHistory /></QueryClientProvider>);
 
   expect(await screen.findByText(/CREATOR-REF/)).toBeTruthy();
-  expect(screen.getByText('Manual review')).toBeTruthy();
-  expect(screen.getByText('Pending verification')).toBeTruthy();
+  expect(screen.getAllByText('Pending payment').length).toBeGreaterThanOrEqual(1);
   expect(screen.getByText('Paid')).toBeTruthy();
-  expect(screen.getByText('Rejected')).toBeTruthy();
+  expect(screen.getByText('Failed')).toBeTruthy();
   expect(screen.getByText('Monthly price')).toBeTruthy();
-  expect(screen.getByText('Pending payment')).toBeTruthy();
+  expect(screen.getAllByText('Pending payment').length).toBeGreaterThanOrEqual(1);
   expect(screen.getByRole('button', {name: 'Renew Pro'})).toBeTruthy();
-  expect(screen.getByRole('link', {name: 'Download receipt'}).getAttribute('href')).toBe('/api/v1/billing/direct/pro/paid/receipt');
+  expect(screen.queryByRole('link', {name: 'Download receipt'})).toBeNull();
+  expect(api.get).toHaveBeenCalledWith('/api/v1/billing/chapa/history');
   expect(screen.getAllByText('50000 ETB').length).toBeGreaterThanOrEqual(4);
   expect(screen.getByText('2026-10-29T00:00:00Z')).toBeTruthy();
   expect(screen.getByText('Recent Pro payments')).toBeTruthy();
@@ -70,23 +70,25 @@ it('starts a Chapa checkout when Pro upgrades use Chapa', async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
   render(<QueryClientProvider client={client}><SubscriptionBillingHistory /></QueryClientProvider>);
   expect(await screen.findByText('Upgrade or renew Pro with Chapa.')).toBeTruthy();
-  await userEvent.click(screen.getByRole('button', {name: 'Upgrade to Pro'}));
+  await userEvent.click(await screen.findByRole('button', {name: 'Upgrade to Pro'}));
   expect(api.post).toHaveBeenCalledWith('/api/v1/billing/chapa/checkout', {product_id: 4, price_id: 9});
   expect(assign).toHaveBeenCalledWith('https://checkout.chapa.global/CHPRO1');
   expect(screen.queryByText('Pro payment reference')).toBeNull();
 });
 
-it('initiates renewal through the existing Verify.et billing endpoint', async () => {
+it('renews with Chapa when the gateway preference is omitted', async () => {
+  const assign = vi.fn();
+  vi.stubGlobal('location', {...window.location, assign});
   api.get.mockResolvedValue({data: {
-    pro_plan: {monthly_price_cents: 50000, currency: 'ETB'},
+    pro_plan: {monthly_price_cents: 50000, currency: 'ETB', product_id: 4, price_id: 9},
     pro_subscription: {status: 'past_due', renews_at: '2026-10-20T00:00:00Z', can_renew: true, payments: []},
-    invoices: {data: []},
   }});
-  api.post.mockResolvedValue({data: {payment_id: 'renew-1', amount_cents: 50000, currency: 'ETB'}});
+  api.post.mockResolvedValue({data: {checkout_url: 'https://checkout.chapa.global/RENEW1'}});
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
   render(<QueryClientProvider client={client}><SubscriptionBillingHistory /></QueryClientProvider>);
   await screen.findByRole('button', {name: 'Renew Pro'});
   await userEvent.click(screen.getByRole('button', {name: 'Renew Pro'}));
-  expect(api.post).toHaveBeenCalledWith('/api/v1/billing/direct/pro');
-  expect(await screen.findByText(/Pro payment created for 50000 ETB/)).toBeTruthy();
+  expect(api.post).toHaveBeenCalledWith('/api/v1/billing/chapa/checkout', {product_id: 4, price_id: 9});
+  expect(assign).toHaveBeenCalledWith('https://checkout.chapa.global/RENEW1');
+  expect(screen.queryByText('Pro payment reference')).toBeNull();
 });

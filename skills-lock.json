@@ -18,13 +18,14 @@
       "source": "shadcn/ui",
       "sourceType": "github",
       "skillPath": "skills/shadcn/SKILL.md",
-      "computedHash": "c60d0a14a6c6f798b07e51093d9627917ca3425b92f5d419eaa57b9b15be89de"
+      "computedHash": "f615de216e085a84e31593ad0fa9062232adc40cd87b7c7ab2b8e49abf6500be"
     },
     "verify-et-api": {
       "source": "NegusNati/verify-et-api",
       "sourceType": "github",
       "skillPath": "skills/verify-et-api/SKILL.md",
       "computedHash": "0b131ec1b5b4441c5e392d4509d2d4555e9f5065897cdc014dcf0c5dbb48821a"
+    }
     }
   }
 }

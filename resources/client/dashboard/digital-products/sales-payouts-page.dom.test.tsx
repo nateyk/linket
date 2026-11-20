@@ -4,7 +4,7 @@
 import {apiClient} from '@common/http/query-client';
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {beforeEach, expect, test, vi} from 'vitest';
 import {Component} from './sales-payouts-page';
@@ -86,6 +86,51 @@ test('empty tables render a plain message, not a card inside the table card', as
   }
 });
 
+test('caps legacy withdraw-all to the approved Chapa method maximum', async () => {
+  vi.mocked(apiClient.post).mockResolvedValue({data: {status: 'success'}} as never);
+  vi.mocked(apiClient.get).mockImplementation(((url: string) => {
+    if (url === '/api/v1/items/sales') {
+      return Promise.resolve({
+        data: {summary: {...summary, available_for_payout_cents: 250000}, orders: {data: []}},
+      });
+    }
+    if (url.includes('/payout-requests')) {
+      return Promise.resolve({data: {data: [], links: [], meta: {current_page: 1, last_page: 1, per_page: 10, total: 0}}});
+    }
+    if (url === '/api/v1/items/payout-method') {
+      return Promise.resolve({data: {data: {
+        id: 42,
+        type: 'telebirr',
+        account_holder: 'Test Seller',
+        display_label: 'Telebirr (•••• 3344)',
+        status: 'active',
+        approved_at: '2026-11-16T10:00:00Z',
+        withdrawal_method: {
+          code: 'telebirr',
+          is_active: true,
+          minimum_amount_cents: 100,
+          maximum_amount_cents: 100000,
+        },
+      }}});
+    }
+    return Promise.reject(new Error('unexpected url: ' + url));
+  }) as never);
+
+  renderPage();
+  const withdrawButton = await screen.findByRole('button', {name: 'Withdraw'});
+  await waitFor(() => {
+    expect((withdrawButton as HTMLButtonElement).disabled).toBe(false);
+  });
+  fireEvent.click(withdrawButton);
+  fireEvent.click(await screen.findByRole('button', {name: /Confirm withdrawal/i}));
+  await waitFor(() => {
+    expect(vi.mocked(apiClient.post)).toHaveBeenCalledWith('/api/v1/items/payout-requests', {
+      amount_cents: 100000,
+      payout_method_id: 42,
+    });
+  });
+});
+
 test('renders balance cards and settlement payout statuses', async () => {
   vi.mocked(apiClient.get).mockImplementation(((url: string) => {
     if (url === '/api/v1/items/sales') {
@@ -135,7 +180,7 @@ test('renders balance cards and settlement payout statuses', async () => {
   renderPage();
 
   expect(await screen.findByText('Available balance')).toBeTruthy();
-  expect(screen.getByText('Settling funds')).toBeTruthy();
+  expect(screen.queryByText('Settling funds')).toBeNull();
   expect(screen.getByText('Pending withdrawals')).toBeTruthy();
   expect(screen.getByText('Total withdrawn')).toBeTruthy();
   expect(await screen.findByText('Processing Settlement')).toBeTruthy();

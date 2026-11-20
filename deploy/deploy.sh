@@ -80,15 +80,25 @@ log "PHP $PHP_VER ($PHP_BIN)"
 if ! $PHP_BIN -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);' 2>&1; then
   fail "PHP $PHP_VER < 8.2 required"
 fi
-for ext in pdo_mysql mbstring openssl fileinfo curl zip bcmath; do
-  if ! $PHP_BIN -m 2>&1 | grep -qi "^${ext}\|^${ext} "; then
-    # case-insensitive fallback for gd naming
+# Read the complete module listing before matching individual extensions.
+# With pipefail enabled, piping php -m to grep -q can report SIGPIPE when
+# grep exits on the first match, falsely rejecting a healthy PHP install.
+if ! PHP_MODULES="$("$PHP_BIN" -m 2>&1)"; then
+  fail "Unable to inspect PHP extensions ($PHP_BIN -m)"
+fi
+for ext in pdo_mysql mbstring openssl fileinfo curl zip bcmath intl; do
+  if ! grep -Eqi "^${ext}([[:space:]]|$)" <<< "$PHP_MODULES"; then
+    # Preserve the existing fileinfo compatibility exception.
     if [[ "$ext" == "fileinfo" ]]; then continue; fi
-    if ! $PHP_BIN -m 2>&1 | grep -qi "$ext"; then
-      fail "PHP extension missing: $ext (php -m)"
-    fi
+    fail "PHP extension missing: $ext (php -m)"
   fi
 done
+
+# laraveldaily/laravel-invoices requires intl's NumberFormatter to render PDFs.
+# Check the deploy CLI here; operators must also enable intl for the web PHP handler.
+if ! "$PHP_BIN" -r 'exit(class_exists("NumberFormatter") ? 0 : 1);'; then
+  fail "PHP NumberFormatter unavailable ($PHP_BIN): enable the intl extension for the deploy PHP binary and the web PHP handler"
+fi
 
 if [[ ! -f "$SHARED/.env" ]]; then fail "Shared env missing: $SHARED/.env — create from env.example per docs/production-operations.md"; fi
 if [[ ! -e "$ARTIFACT" ]]; then fail "Artifact not found: $ARTIFACT"; fi
@@ -273,15 +283,11 @@ if [[ $MIGRATE_RC -eq 0 ]]; then
   UPLOAD_SEED_RC=$?
   if [[ $UPLOAD_SEED_RC -ne 0 ]]; then
     MIGRATE_RC=$UPLOAD_SEED_RC
-  else
-    log "Ensuring the ChatGPT verified Pro test creator when configured"
-    (cd "$RELEASE_DIR" && "$PHP_BIN" artisan creator-ai:seed-test-pro --no-interaction)
-    SEED_RC=$?
-    if [[ $SEED_RC -ne 0 ]]; then
-      MIGRATE_RC=$SEED_RC
-    fi
   fi
-  # Clear settings cache again after seeder updates settings
+  # Never provision optional test creators or synthetic Pro payment records
+  # during production deployment. These are separate, explicit test-only
+  # operations; an existing test-account email must not block a safe release.
+  # Clear settings cache again after deployment seeders update settings
   (cd "$RELEASE_DIR" && $PHP_BIN artisan cache:forget settings.public 2>&1 | tail -n 3 || true)
 fi
 set -e

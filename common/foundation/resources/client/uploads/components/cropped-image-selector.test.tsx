@@ -30,9 +30,9 @@ describe('cropped image selector', () => {
     expect(selectorSource).toContain('border-primary bg-primary/5');
   });
 
-  test('footer uses Dialog.Footer without overriding col-reverse', () => {
+  test('footer uses Dialog.Footer with a compact horizontal action row', () => {
     expect(selectorSource).toContain('<Dialog.Footer');
-    expect(selectorSource).toContain('variant="muted"');
+    expect(selectorSource).toContain('flex-row flex-wrap items-center');
     expect(selectorSource).not.toContain('flex items-center justify-end');
     expect(selectorSource).not.toContain('sm:justify-between');
     expect(selectorSource).not.toContain('ml-4');
@@ -72,8 +72,10 @@ describe('cropped image selector', () => {
     expect(selectorSource).toContain('validateEncodedImage');
   });
 
-  test('filled-state menu stays visible on coarse pointers', () => {
-    expect(selectorSource).toContain('pointer-coarse:opacity-100');
+  test('filled-state menu is discoverable even without hovering', () => {
+    expect(selectorSource).toContain('absolute opacity-100');
+    expect(selectorSource).toContain('size-8 rounded-full');
+    expect(selectorSource).not.toContain('group-hover:opacity-100');
   });
 
   test('cover dropzone and preview share the crop aspect ratio', () => {
@@ -86,13 +88,22 @@ describe('cropped image selector', () => {
 
   test('crop dialog body does not grow into empty whitespace', () => {
     expect(selectorSource).toContain('flex-none grow-0');
-    expect(selectorSource).toContain('gap-3');
+    expect(selectorSource).toContain('gap-2.5');
+    expect(selectorSource).toContain('max-h-[calc(100dvh-1rem)]');
+    expect(selectorSource).toContain('Dialog.Description className="sr-only"');
+  });
+
+  test('crop dialog actions remain on a single compact row when they fit', () => {
+    expect(selectorSource).toContain('flex-row flex-wrap items-center justify-end');
+    expect(selectorSource).toContain('className="mr-auto px-2"');
+    expect(selectorSource).toContain('Apply crop');
   });
 
   test('crop dialog width follows crop aspect (square tight, cover wide)', () => {
     expect(selectorSource).toContain('sm:max-w-sm');
     expect(selectorSource).toContain('sm:max-w-2xl');
     expect(selectorSource).toContain('sm:max-w-xl');
+    expect(selectorSource).toContain('p-3 sm:p-4');
     expect(selectorSource).toContain(
       "'max-w-[min(calc(100vw-2rem),24rem)] sm:max-w-sm'",
     );
@@ -128,5 +139,29 @@ describe('image crop stage chrome', () => {
   test('stage carries the themed crop class and Zoom thumb is named', () => {
     expect(cropSource).toContain('image-crop-stage');
     expect(cropSource).toContain('aria-label={trans(message(\'Zoom\'))}');
+  });
+});
+
+const legacySelectorSource = fs.readFileSync(
+  path.resolve('common/foundation/resources/client/uploads/components/image-selector-dialog.tsx'),
+  'utf8',
+);
+
+describe('image selector upload dialog', () => {
+  test('uses the shared aspect-aware stage instead of a fixed 320px crop box', () => {
+    expect(legacySelectorSource).toContain('cropStageBoxStyle');
+    expect(legacySelectorSource).toContain('image-crop-stage');
+    expect(legacySelectorSource).not.toContain('mb-4 h-80');
+    expect(legacySelectorSource).toContain('max-h-[calc(100dvh-1rem)]');
+  });
+
+  test('provides visible zoom, labelled controls and compact upload actions', () => {
+    expect(legacySelectorSource).toContain('HookForm.FieldContext.Provider');
+    expect(legacySelectorSource).toContain("aria-label={trans(message('Zoom'))}");
+    expect(legacySelectorSource).toContain('flex-row flex-wrap items-center');
+    expect(legacySelectorSource).toContain('Dialog.CloseButton');
+    expect(legacySelectorSource).toContain('onDrop={event =>');
+    expect(legacySelectorSource).toContain("aria-label={trans(message('Upload image'))}");
+    expect(legacySelectorSource).toContain("message('Image crop area')");
   });
 });

@@ -115,6 +115,54 @@ class MarketplaceRefundServiceTest extends TestCase
         ];
     }
 
+    public function testPartialRefundCannotReleaseOriginalGrossEscrowAsWithdrawable(): void
+    {
+        $creator = $this->seedUser(new User(['id' => 41, 'email' => 'creator_held_refund@test.com', 'name' => 'Creator']));
+        $admin = $this->seedUser(new User(['id' => 42, 'email' => 'admin_held_refund@test.com', 'name' => 'Admin']));
+        $order = $this->seedPlatformOrder($creator, $this->creatorLedger, Carbon::now()->subDays(8));
+
+        $this->refundService->refundPlatformOrder(
+            PlatformOrderRefundRequest::forOrder($order, 40000, 'Synthetic partial refund', $admin->id)
+                ->withoutProviderCall()
+        );
+
+        $query = BalanceQuery::for($creator->id, 'ETB', 1);
+        $this->assertSame(57000, $this->creatorLedger->getBalances($query)['held']);
+        $this->assertSame(1, app(MarketplaceReconciliationService::class)->releaseMaturedEscrow());
+
+        $balances = $this->creatorLedger->getBalances($query);
+        $this->assertSame(0, $balances['held']);
+        $this->assertSame(57000, $balances['available']);
+        $this->assertSame(57000, $this->creatorLedger->getWithdrawableBalance($query));
+        $this->assertTrue(app(MarketplaceReconciliationService::class)->auditLedgerIntegrity()->isBalanced);
+        $this->assertSame(0, app(MarketplaceReconciliationService::class)->releaseMaturedEscrow());
+    }
+
+    public function testRefundAfterHoldReleaseCannotConsumeAnotherOrdersHeldEscrow(): void
+    {
+        $creator = $this->seedUser(new User(['id' => 43, 'email' => 'creator_separate_escrow@test.com', 'name' => 'Creator']));
+        $admin = $this->seedUser(new User(['id' => 44, 'email' => 'admin_separate_escrow@test.com', 'name' => 'Admin']));
+        $first = $this->seedPlatformOrder($creator, $this->creatorLedger);
+        $this->creatorLedger->releaseHeldToAvailable($first);
+
+        $second = $this->seedPlatformOrder($creator, $this->creatorLedger, Carbon::now()->subDays(8));
+        $query = BalanceQuery::for($creator->id, 'ETB', 1);
+        $this->assertSame(95000, $this->creatorLedger->getBalances($query)['held']);
+        $this->assertSame(95000, $this->creatorLedger->getBalances($query)['available']);
+
+        $this->refundService->refundPlatformOrder(
+            PlatformOrderRefundRequest::forOrder($first, 100000, 'Refund matured sale', $admin->id)
+                ->withoutProviderCall()
+        );
+
+        $balances = $this->creatorLedger->getBalances($query);
+        $this->assertSame(95000, $balances['held']);
+        $this->assertSame(0, $balances['available']);
+        $this->assertSame(1, app(MarketplaceReconciliationService::class)->releaseMaturedEscrow());
+        $this->assertSame(95000, $this->creatorLedger->getWithdrawableBalance($query));
+        $this->assertTrue(app(MarketplaceReconciliationService::class)->auditLedgerIntegrity()->isBalanced);
+    }
+
     public function testRefundAfterPayoutDisbursementRoutesToDeficitReceivable(): void
     {
         $creator = $this->seedUser(new User(['id' => 5, 'email' => 'seller_disbursed@test.com', 'name' => 'Seller']));
