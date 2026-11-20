@@ -18,11 +18,12 @@ export default function OrderConfirmationEmail({
   orderId,
   amountLabel,
   storeName,
-  downloads,
+  downloads = [],
   expiresAtLabel,
   downloadLimitLabel,
 }: OrderConfirmationEmailProps) {
-  const primaryUrl = downloads[0]?.url;
+  const safeDownloads = Array.isArray(downloads) ? downloads : [];
+  const primaryUrl = safeDownloads[0]?.url;
 
   return (
     <LinketShell preview={`Your receipt for ${productName}`}>
@@ -43,10 +44,10 @@ export default function OrderConfirmationEmail({
           Download files
         </Button>
       ) : null}
-      {downloads.length > 0 ? (
+      {safeDownloads.length > 0 ? (
         <>
           <Text className="mt-6 mb-2 text-sm font-medium text-ink">Your downloads</Text>
-          {downloads.map((file) => (
+          {safeDownloads.map((file) => (
             <Text key={file.url} className="m-0 mb-1 text-sm">
               <Link href={file.url} className="text-brand no-underline">
                 {file.name}

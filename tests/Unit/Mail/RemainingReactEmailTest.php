@@ -90,6 +90,27 @@ class RemainingReactEmailTest extends TestCase
         $mailable->assertHasTo('ada@example.test');
     }
 
+    #[Test]
+    public function payment_dispute_status_changed_notification_uses_react_email(): void
+    {
+        $this->stubRenderer();
+        $notifiable = new User();
+        $notifiable->name = 'Ada';
+        $notifiable->email = 'ada@example.test';
+
+        $notification = new class(1, 'pending', 'under_review', 'customer', 'Checking records') extends \App\Storefront\Notifications\PaymentDisputeStatusChangedNotification {
+            protected function dispute(): ?\App\Storefront\Models\StorefrontPaymentDispute
+            {
+                return null;
+            }
+        };
+
+        $mailable = $notification->toMail($notifiable);
+        $this->assertInstanceOf(ReactEmailMailable::class, $mailable);
+        $this->assertStringContainsString('Payment dispute', $mailable->subjectLine);
+        $mailable->assertHasTo('ada@example.test');
+    }
+
     private function stubRenderer(): void
     {
         $this->app->instance(ReactEmailRenderer::class, new class

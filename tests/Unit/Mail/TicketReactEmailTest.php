@@ -61,25 +61,23 @@ class TicketReactEmailTest extends TestCase
 
     private function conversation(): Conversation
     {
-        $conversation = new Conversation([
-            'subject' => 'Need help',
-        ]);
+        $conversation = new Conversation();
+        $conversation->subject = 'Need help';
         $conversation->id = 42;
-        $conversation->setRelation('user', new User([
-            'name' => 'Ada',
-            'email' => 'ada@example.test',
-        ]));
+        $user = new User();
+        $user->name = 'Ada';
+        $user->email = 'ada@example.test';
+        $conversation->setRelation('user', $user);
 
         return $conversation;
     }
 
     private function reply(string $body): ConversationItem
     {
-        $reply = new ConversationItem([
-            'uuid' => 'reply-uuid',
-            'body' => $body,
-            'type' => 'message',
-        ]);
+        $reply = new ConversationItem();
+        $reply->uuid = 'reply-uuid';
+        $reply->body = $body;
+        $reply->type = 'message';
         $reply->id = 7;
 
         return $reply;
