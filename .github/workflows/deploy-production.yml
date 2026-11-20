@@ -129,12 +129,14 @@ jobs:
           SHA: ${{ needs.resolve.outputs.sha }}
           RELEASE_ID: ${{ needs.resolve.outputs.release_id }}
           PHP_BIN: ${{ vars.PHP_BINARY }}
+          NODE_BIN: ${{ vars.NODE_BINARY }}
           APP_URL: ${{ vars.APP_URL }}
         run: |
           set -euo pipefail
           PHP_BIN="${PHP_BIN:-php}"
+          NODE_BIN="${NODE_BIN:-}"
           [[ -n "$APP_URL" ]] || exit 1
-          printf -v command 'DEPLOY_PATH="$HOME/linket" PHP_BINARY=%q APP_URL=%q bash "$HOME/linket/deploy/deploy.sh" --release-id=%q --artifact=%q --expected-sha=%q --php-binary=%q --health-url=%q --keep-releases=5' "$PHP_BIN" "$APP_URL" "$RELEASE_ID" "releases/$ARTIFACT_BASE" "$SHA" "$PHP_BIN" "${APP_URL%/}/up"
+          printf -v command 'DEPLOY_PATH="$HOME/linket" PHP_BINARY=%q NODE_BINARY=%q APP_URL=%q bash "$HOME/linket/deploy/deploy.sh" --release-id=%q --artifact=%q --expected-sha=%q --php-binary=%q --node-binary=%q --health-url=%q --keep-releases=5' "$PHP_BIN" "$NODE_BIN" "$APP_URL" "$RELEASE_ID" "releases/$ARTIFACT_BASE" "$SHA" "$PHP_BIN" "$NODE_BIN" "${APP_URL%/}/up"
           ssh cpanel "$command"
       - name: Post-deploy public health
         env:

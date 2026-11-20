@@ -29,7 +29,11 @@ final class ReactEmailRenderer
             return $this->fallbackRender($props);
         }
 
-        $node = $this->nodeBinary ?? 'node';
+        $node = $this->resolveNodeBinary();
+        if ($node === null) {
+            return $this->fallbackRender($props);
+        }
+
         $script = $this->scriptPath ?? ($bundledScript ?? base_path('scripts/render-email.tsx'));
 
         $isBundledScript = str_ends_with($script, '.mjs') || str_ends_with($script, '.cjs');
@@ -47,10 +51,14 @@ final class ReactEmailRenderer
         try {
             $process->mustRun();
         } catch (ProcessFailedException $e) {
-            throw new ReactEmailRenderException(
-                'React Email render failed: '.$process->getErrorOutput(),
-                previous: $e,
-            );
+            if ($this->scriptPath !== null) {
+                throw new ReactEmailRenderException(
+                    'React Email render failed: '.$process->getErrorOutput(),
+                    previous: $e,
+                );
+            }
+
+            return $this->fallbackRender($props);
         }
 
         /** @var array{html?: mixed, text?: mixed} $decoded */
@@ -114,5 +122,60 @@ final class ReactEmailRenderer
                 $this->extractStrings($value, $lines);
             }
         }
+    }
+
+    private function resolveNodeBinary(): ?string
+    {
+        if ($this->nodeBinary !== null) {
+            return $this->nodeBinary;
+        }
+
+        $envNode = env('NODE_BINARY');
+        if (is_string($envNode) && $envNode !== '') {
+            return $envNode;
+        }
+
+        if (function_exists('config')) {
+            $configNode = config('mail.node_binary');
+            if (is_string($configNode) && $configNode !== '') {
+                return $configNode;
+            }
+        }
+
+        return $this->detectHostNode();
+    }
+
+    private function detectHostNode(): ?string
+    {
+        $candidates = [
+            'node',
+            base_path('../bin/node'),
+            '/opt/alt/alt-nodejs22/root/usr/bin/node',
+            '/opt/alt/alt-nodejs20/root/usr/bin/node',
+            '/opt/alt/alt-nodejs18/root/usr/bin/node',
+            '/opt/cpanel/ea-nodejs22/bin/node',
+            '/opt/cpanel/ea-nodejs20/bin/node',
+            '/opt/cpanel/ea-nodejs18/bin/node',
+            '/usr/local/bin/node',
+            '/usr/bin/node',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === 'node') {
+                $check = new Process(['node', '-v']);
+                $check->setTimeout(2);
+                $check->run();
+                if ($check->isSuccessful()) {
+                    return 'node';
+                }
+                continue;
+            }
+
+            if (is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 }
