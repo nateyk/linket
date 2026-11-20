@@ -47,17 +47,28 @@ final class ReactEmailMessage
     ): ReactEmailMailable {
         $mailable = self::make($subject, $preview, $heading, $lines, $actionLabel, $actionUrl, $note);
 
-        $address = null;
-        if (method_exists($notifiable, 'routeNotificationFor')) {
-            $address = $notifiable->routeNotificationFor('mail');
-        }
-        if (! is_string($address) || $address === '') {
-            $address = $notifiable->email ?? null;
-        }
-        if (is_string($address) && $address !== '') {
+        $address = self::resolveRecipientAddress($notifiable);
+        if ($address !== null) {
             $mailable->to($address);
         }
 
         return $mailable;
+    }
+
+    private static function resolveRecipientAddress(object $notifiable): ?string
+    {
+        if (method_exists($notifiable, 'routeNotificationFor')) {
+            $address = $notifiable->routeNotificationFor('mail');
+            if (is_string($address) && $address !== '') {
+                return $address;
+            }
+        }
+
+        $email = $notifiable->email ?? null;
+        if (is_string($email) && $email !== '') {
+            return $email;
+        }
+
+        return null;
     }
 }

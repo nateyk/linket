@@ -36,12 +36,24 @@ final class ChapaPayoutStatusNotification extends Notification implements Should
 
     public static function forPayout(PayoutRequest $payout, string $event): self
     {
-        $amount = number_format(((int) $payout->amount_cents) / 100, 2)
-            .' '.strtoupper((string) ($payout->currency ?: 'ETB'));
+        $cents = (int) $payout->amount_cents;
+        $currency = strtoupper((string) ($payout->currency ?: 'ETB'));
+        $amount = number_format($cents / 100, 2).' '.$currency;
         $reference = (string) ($payout->transfer_reference ?: $payout->getKey());
-        $reason = $event === 'failed' ? trim((string) $payout->rejection_reason) : '';
+        $reason = self::extractRejectionReason($payout, $event);
 
-        return new self($event, $amount, $reference, $reason !== '' ? $reason : null);
+        return new self($event, $amount, $reference, $reason);
+    }
+
+    private static function extractRejectionReason(PayoutRequest $payout, string $event): ?string
+    {
+        if ($event !== 'failed') {
+            return null;
+        }
+
+        $reason = trim((string) $payout->rejection_reason);
+
+        return $reason !== '' ? $reason : null;
     }
 
     public function via(object $notifiable): array
@@ -59,28 +71,49 @@ final class ChapaPayoutStatusNotification extends Notification implements Should
         $name = is_string($notifiable->name ?? null) && $notifiable->name !== ''
             ? $notifiable->name
             : __('there');
-        $sent = $this->event !== 'failed';
-        $subject = $sent
-            ? __('Your Linket payout was sent')
-            : __('Your Linket payout could not be sent');
-        $lines = [
-            $sent
-                ? __('We sent :amount to your receiving account.', ['amount' => $this->amountLabel])
-                : __('We could not send :amount.', ['amount' => $this->amountLabel]),
-        ];
-        if (! $sent && is_string($this->reason) && $this->reason !== '') {
-            $lines[] = __('Reason: :reason', ['reason' => $this->reason]);
-        }
-        $lines[] = __('Reference: :reference', ['reference' => $this->reference]);
+        $isSent = $this->event !== 'failed';
+        $subject = $this->subjectForEvent($isSent);
 
         return ReactEmailMessage::toNotifiable(
             $notifiable,
             $subject,
             $subject,
             __('Hello, :name', ['name' => $name]),
-            $lines,
+            $this->buildLines($isSent),
             __('Open payouts'),
             url('/dashboard/payouts'),
         );
+    }
+
+    private function subjectForEvent(bool $isSent): string
+    {
+        if ($isSent) {
+            return __('Your Linket payout was sent');
+        }
+
+        return __('Your Linket payout could not be sent');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildLines(bool $isSent): array
+    {
+        if ($isSent) {
+            return [
+                __('We sent :amount to your receiving account.', ['amount' => $this->amountLabel]),
+                __('Reference: :reference', ['reference' => $this->reference]),
+            ];
+        }
+
+        $lines = [
+            __('We could not send :amount.', ['amount' => $this->amountLabel]),
+        ];
+        if (is_string($this->reason) && $this->reason !== '') {
+            $lines[] = __('Reason: :reason', ['reason' => $this->reason]);
+        }
+        $lines[] = __('Reference: :reference', ['reference' => $this->reference]);
+
+        return $lines;
     }
 }

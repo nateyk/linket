@@ -14,8 +14,12 @@ final class SendWelcomeEmail
 
     public function send(object $user): void
     {
+        if (! method_exists($user, 'notify')) {
+            return;
+        }
+
         $email = $user->email ?? null;
-        if (! is_string($email) || $email === '' || ! method_exists($user, 'notify')) {
+        if (! is_string($email) || $email === '') {
             return;
         }
 
