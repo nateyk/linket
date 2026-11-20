@@ -18,12 +18,21 @@ final class ChapaPayoutStatusNotification extends Notification implements Should
     /** @var array<int, int> */
     public array $backoff = [60, 300, 900];
 
+    public string $event;
+    public string $amountLabel;
+    public string $reference;
+    public ?string $reason;
+
     public function __construct(
-        public string $event,
-        public string $amountLabel,
-        public string $reference,
-        public ?string $reason = null,
+        string $event,
+        string $amountLabel,
+        mixed $reference,
+        mixed $reason = null,
     ) {
+        $this->event = $event;
+        $this->amountLabel = $amountLabel;
+        $this->reference = (string) $reference;
+        $this->reason = is_string($reason) && $reason !== '' ? $reason : null;
         $this->onQueue('mail');
         $this->afterCommit();
     }
@@ -40,20 +49,9 @@ final class ChapaPayoutStatusNotification extends Notification implements Should
         $currency = strtoupper((string) ($payout->currency ?: 'ETB'));
         $amount = number_format($cents / 100, 2).' '.$currency;
         $reference = (string) ($payout->transfer_reference ?: $payout->getKey());
-        $reason = self::extractRejectionReason($payout, $event);
+        $reason = $event === 'failed' ? trim((string) $payout->rejection_reason) : null;
 
         return new self($event, $amount, $reference, $reason);
-    }
-
-    private static function extractRejectionReason(PayoutRequest $payout, string $event): ?string
-    {
-        if ($event !== 'failed') {
-            return null;
-        }
-
-        $reason = trim((string) $payout->rejection_reason);
-
-        return $reason !== '' ? $reason : null;
     }
 
     public function via(object $notifiable): array
@@ -72,7 +70,7 @@ final class ChapaPayoutStatusNotification extends Notification implements Should
             ? $notifiable->name
             : __('there');
         $isSent = $this->event !== 'failed';
-        $subject = $this->subjectForEvent($isSent);
+        $subject = $this->buildSubject($isSent);
 
         return ReactEmailMessage::toNotifiable(
             $notifiable,
@@ -85,7 +83,7 @@ final class ChapaPayoutStatusNotification extends Notification implements Should
         );
     }
 
-    private function subjectForEvent(bool $isSent): string
+    private function buildSubject(bool $isSent): string
     {
         if ($isSent) {
             return __('Your Linket payout was sent');
