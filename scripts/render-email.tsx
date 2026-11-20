@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { render } from 'react-email';
-import { createElement } from 'react';
+import { createElement, type ComponentType } from 'react';
 
 type TemplateModule = {
-  default: (props: Record<string, unknown>) => React.ReactElement;
+  default: ComponentType<any>;
 };
 
 const registry: Record<string, () => Promise<TemplateModule>> = {
