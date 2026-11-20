@@ -4,6 +4,8 @@ import {useSettings} from '@ui/settings/use-settings';
 import {type ReactNode} from 'react';
 import {Starfield} from './auth-starfield';
 
+const AUTH_STARFIELD_HAZE = ['var(--primary)', 'var(--foreground)'] as const;
+
 interface AuthLayoutV2Props {
   children: ReactNode;
   topAction?: ReactNode;
@@ -48,7 +50,7 @@ export function AuthLayoutV2({
           <Starfield
             className="pointer-events-none absolute inset-0"
             color="var(--foreground)"
-            hazeColors={['var(--primary)', 'var(--foreground)']}
+            hazeColors={AUTH_STARFIELD_HAZE}
             density={1.5}
             depth={0.9}
             glow={0.9}
