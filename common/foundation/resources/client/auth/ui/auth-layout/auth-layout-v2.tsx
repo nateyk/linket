@@ -1,97 +1,80 @@
-import {Separator} from '@shadcn/separator';
+import {LocaleSwitcher} from '@common/locale-switcher/locale-switcher';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
-import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
-import {getAssetUrl} from '@ui/utils/urls/get-asset-url';
-import {ReactNode} from 'react';
-import {Link} from 'react-router';
-import {Command, Globe} from 'lucide-react';
+import {type ReactNode} from 'react';
+import {Starfield} from './auth-starfield';
 
 interface AuthLayoutV2Props {
   children: ReactNode;
   topAction?: ReactNode;
+  /** Buyer recovery uses the same layout with purchase-specific messaging. */
+  audience?: 'creator' | 'portal';
 }
 
-export function AuthLayoutV2({children, topAction}: AuthLayoutV2Props) {
+/**
+ * Theme-native auth layout shared by login, registration, and buyer recovery.
+ * Brand identity comes from app colors and copy, not duplicate logos.
+ */
+export function AuthLayoutV2({
+  children,
+  topAction,
+  audience = 'creator',
+}: AuthLayoutV2Props) {
   const {branding} = useSettings();
-  const isDarkMode = useIsDarkMode();
+  const isPortal = audience === 'portal';
 
   return (
-    <main>
-      <div className="grid h-dvh justify-center p-2 lg:grid-cols-2">
-        {/* Right branding panel - hidden on mobile, strong UI with bg-primary respecting theme */}
-        <div className="relative order-2 hidden h-full rounded-3xl bg-primary lg:flex">
-          <div className="absolute top-10 space-y-1 px-10 text-primary-foreground">
-            <Command className="size-10" />
-            <h1 className="font-medium text-2xl">{branding.site_name}</h1>
-            <p className="text-sm text-primary-foreground/80">
-              <Trans message="Design. Build. Launch. Repeat." />
-            </p>
-          </div>
-
-          <div className="absolute bottom-10 flex w-full justify-between px-10">
-            <div className="flex-1 space-y-1 text-primary-foreground">
-              <h2 className="font-medium">
-                <Trans message="Ready to launch?" />
-              </h2>
-              <p className="text-sm text-primary-foreground/80">
-                <Trans message="Clone the repo, install dependencies, and your dashboard is live in minutes." />
-              </p>
-            </div>
-            <Separator orientation="vertical" className="mx-3 h-auto bg-primary-foreground/20" />
-            <div className="flex-1 space-y-1 text-primary-foreground">
-              <h2 className="font-medium">
-                <Trans message="Need help?" />
-              </h2>
-              <p className="text-sm text-primary-foreground/80">
-                <Trans message="Check out the docs or open an issue on GitHub, community support is just a click away." />
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Left form area */}
-        <div className="relative order-1 flex h-full flex-col">
-          {/* Top action link - hidden to avoid duplication, bottom keeps it */}
+    <main className="min-h-svh bg-background text-foreground">
+      <div className="grid min-h-svh grid-cols-1 lg:grid-cols-2">
+        <section className="flex min-h-svh min-w-0 flex-col">
           {topAction ? (
-            <div className="absolute top-5 flex w-full justify-end px-4 lg:px-10">
-              <div className="text-sm text-muted-foreground">{topAction}</div>
+            <div className="mx-auto flex w-full max-w-lg justify-end px-6 pt-6 text-sm text-muted-foreground sm:px-10">
+              {topAction}
             </div>
           ) : null}
+          <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-6 py-10 sm:px-10 sm:py-12">
+            <div className="w-full max-w-sm">{children}</div>
+          </div>
+          <footer className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-6 pb-6 text-xs text-muted-foreground sm:px-10 sm:pb-8">
+            <span>© {new Date().getFullYear()} {branding.site_name}</span>
+            <LocaleSwitcher />
+          </footer>
+        </section>
 
-          {/* Centered form */}
-          <div className="flex flex-1 items-center justify-center p-4 lg:p-8">
-            <div className="mx-auto flex w-full max-w-[350px] flex-col justify-center space-y-8">
-              {(isDarkMode ? branding.logo_light : branding.logo_dark) && (
-                <Link
-                  to="/"
-                  aria-label={branding.site_name}
-                  className="flex w-fit shrink-0 items-center"
-                >
-                  <img
-                    src={getAssetUrl(
-                      isDarkMode ? branding.logo_light : branding.logo_dark,
-                    )}
-                    alt=""
-                    className="block h-10 w-auto"
-                  />
-                </Link>
+        <aside
+          aria-label={isPortal ? 'Purchase access' : 'About Linket'}
+          className="relative hidden min-h-svh min-w-0 overflow-hidden border-l border-border bg-muted/35 text-foreground lg:flex"
+        >
+          <Starfield className="pointer-events-none absolute inset-0" />
+          <div className="relative z-10 mx-auto flex w-full max-w-xl flex-col px-12 py-12 xl:px-16 xl:py-16">
+            <div className="flex flex-1 items-center">
+              <div className="max-w-lg">
+                <div className="mb-5 h-1 w-10 rounded-full bg-primary" aria-hidden="true" />
+                <h2 className="text-4xl leading-tight font-semibold tracking-tight xl:text-5xl">
+                  {isPortal ? (
+                    <Trans message="Your purchases, all in one place." />
+                  ) : (
+                    <Trans message="A simpler way to sell what you create." />
+                  )}
+                </h2>
+                <p className="mt-5 max-w-md text-base leading-7 text-muted-foreground">
+                  {isPortal ? (
+                    <Trans message="Access your courses, downloads and receipts using the email you used at checkout." />
+                  ) : (
+                    <Trans message="Create your storefront, share your links and manage your digital products in one place." />
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="border-t border-border pt-5 text-sm text-muted-foreground">
+              {isPortal ? (
+                <Trans message="Your purchases are protected by email verification." />
+              ) : (
+                <Trans message="Your brand. Your storefront. Your business." />
               )}
-              {children}
             </div>
           </div>
-
-          {/* Bottom footer */}
-          <div className="absolute bottom-5 flex w-full justify-between px-4 lg:px-10">
-            <div className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()}, {branding.site_name}.
-            </div>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Globe className="size-4" />
-              ENG
-            </div>
-          </div>
-        </div>
+        </aside>
       </div>
     </main>
   );
