@@ -235,6 +235,7 @@ function mountBackground(
   let pointerTargetActive = 0;
   let start = performance.now();
   let pausedAt = 0;
+  let paletteDirty = true;
   const media = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   let reduced = !!media?.matches;
   const isActive = () => !disposed && visible && !document.hidden;
@@ -284,7 +285,10 @@ function mountBackground(
     pointerY += (pointerTargetY - pointerY) * 0.08;
     pointerActive += (pointerTargetActive - pointerActive) * 0.07;
     gl.useProgram(gpuProgram);
-    updatePalette();
+    if (paletteDirty) {
+      updatePalette();
+      paletteDirty = false;
+    }
     setFloat('uTime', nextTime);
     setFloat('uIntro', reduced ? 1 : Math.min(1, nowSeconds * 0.8));
     if (!uniforms.has('uPointer')) uniforms.set('uPointer', location('uPointer'));
@@ -332,7 +336,10 @@ function mountBackground(
     new ResizeObserver(schedule);
   resizeObserver?.observe(root);
   const themeObserver = typeof MutationObserver === 'undefined' ? null :
-    new MutationObserver(schedule);
+    new MutationObserver(() => {
+      paletteDirty = true;
+      schedule();
+    });
   themeObserver?.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['class', 'style', 'data-theme'],
