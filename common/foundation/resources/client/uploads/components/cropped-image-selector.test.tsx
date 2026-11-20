@@ -162,6 +162,6 @@ describe('image selector upload dialog', () => {
     expect(legacySelectorSource).toContain('Dialog.CloseButton');
     expect(legacySelectorSource).toContain('onDrop={event =>');
     expect(legacySelectorSource).toContain("aria-label={trans(message('Upload image'))}");
-    expect(legacySelectorSource).toContain('Crop image area');
+    expect(legacySelectorSource).toContain("message('Image crop area')");
   });
 });
