@@ -2,9 +2,9 @@
 
 namespace Common\Csv;
 
-use Common\Csv\CsvExport;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class CsvExportReadyNotif extends Notification
@@ -22,16 +22,22 @@ class CsvExportReadyNotif extends Notification
         return ['mail', 'database'];
     }
 
-    public function toMail($notifiable): MailMessage
+    public function toMail($notifiable): ReactEmailMailable
     {
-        return (new MailMessage())
-            ->line($this->primaryLine())
-            ->line(
-                __(
-                    'This download link will only work if you are logged in as user who has requested the export and it will expire in one day.',
-                ),
-            )
-            ->action('Download', $this->csvExport->downloadLink());
+        $subject = $this->primaryLine();
+
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            $subject,
+            [
+                $subject,
+                __('This download link will only work if you are logged in as user who has requested the export and it will expire in one day.'),
+            ],
+            __('Download'),
+            $this->csvExport->downloadLink(),
+        );
     }
 
     /**

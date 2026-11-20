@@ -344,6 +344,7 @@ jobs:
           set -euo pipefail
           test -s public/build/manifest.json
           test -d public/build/assets
+          test -s scripts/dist/render-email.cjs
 
       # Only main push runs need to transfer frontend assets to release job.
       # Short retention limits the cost of temporary cross-job artifacts.
@@ -352,7 +353,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: frontend-build-${{ github.sha }}
-          path: public/build/
+          path: |
+            public/build/
+            scripts/dist/render-email.cjs
           if-no-files-found: error
           retention-days: 1
 
@@ -455,13 +458,13 @@ jobs:
           COMPOSER_AUDIT_ABANDONED: ignore
 
       - name: Remove tracked or stale built assets before downloading
-        run: rm -rf public/build
+        run: rm -rf public/build scripts/dist
 
       - name: Download the frontend job's checked build
         uses: actions/download-artifact@v6
         with:
           name: frontend-build-${{ github.sha }}
-          path: public/build
+          path: .
 
       - name: Verify downloaded build
         shell: bash
@@ -469,6 +472,7 @@ jobs:
           set -euo pipefail
           test -s public/build/manifest.json
           test -d public/build/assets
+          test -s scripts/dist/render-email.cjs
           test -f vendor/autoload.php
 
       # Preserve the EXACT archive naming, SHA metadata, checksum, and artifact

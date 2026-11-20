@@ -3,7 +3,8 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 
 class ClickQuotaExhausted extends Notification
@@ -15,12 +16,19 @@ class ClickQuotaExhausted extends Notification
         return ['mail', 'database'];
     }
 
-    public function toMail(): MailMessage
+    public function toMail(object $notifiable): ReactEmailMailable
     {
-        return (new MailMessage)
-            ->line(__('You have exhausted your link click quota for this month.'))
-            ->line(__('You can increase it by upgrading your plan.'))
-            ->action('View plan options', url('/pricing'));
+        $subject = __('You have exhausted your link click quota for this month.');
+
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            $subject,
+            [__('You can increase it by upgrading your plan.')],
+            __('View plan options'),
+            url('/pricing'),
+        );
     }
 
     public function toArray(): array

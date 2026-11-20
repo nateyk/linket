@@ -2,6 +2,8 @@
 
 namespace App\Storefront\Jobs;
 
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailRenderer;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\DigitalProductOrderRecoveryDelivery;
 use Illuminate\Bus\Queueable;
@@ -56,14 +58,25 @@ class SendStorefrontReceipt implements ShouldQueue
                 'name' => $entitlement->file->getNameWithExtension(),
                 'url' => URL::temporarySignedRoute('storefront.download', $entitlement->expires_at, ['token' => $entitlement->token]),
             ]);
-            $downloads = $links->map(fn(array $link) => "- {$link['name']}: {$link['url']}")->implode("\n");
             $buyerName = $order->buyer_name ?: __('there');
             $total = number_format($order->gross_amount_cents / 100, 2) . " {$order->currency}";
 
-            Mail::raw(
-                "Hello {$buyerName},\n\nThank you for purchasing {$order->product->title}.\nOrder: {$order->uuid}\nTotal: {$total}\n\nYour protected downloads:\n{$downloads}\n\nThese links expire on " . $order->entitlements->min('expires_at')?->toDayDateTimeString() . '. Each file can be downloaded up to 10 times.',
-                fn($message) => $message->to($order->buyer_email)->subject(__('Your digital product receipt')),
-            );
+            $renderer = app(ReactEmailRenderer::class);
+            $rendered = $renderer->render('order-confirmation', [
+                'buyerName' => $buyerName,
+                'productName' => $order->product->title,
+                'orderId' => $order->uuid,
+                'amountLabel' => $total,
+                'downloads' => $links->values()->all(),
+                'expiresAtLabel' => $order->entitlements->min('expires_at')?->toDayDateTimeString(),
+                'downloadLimitLabel' => __('Each file can be downloaded up to 10 times.'),
+            ]);
+
+            Mail::to($order->buyer_email)->send(new ReactEmailMailable(
+                html: $rendered['html'],
+                text: $rendered['text'],
+                subjectLine: __('Your digital product receipt'),
+            ));
 
             $order->update(['receipt_sent_at' => now()]);
             $this->deliveryId && DigitalProductOrderRecoveryDelivery::query()

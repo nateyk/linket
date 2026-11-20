@@ -26,6 +26,8 @@
     "jsx": "react-jsx"
   },
   "include": [
+    "emails",
+    "scripts",
     "resources/client",
     "modules/ai/resources/client",
     "modules/livechat/resources/client",

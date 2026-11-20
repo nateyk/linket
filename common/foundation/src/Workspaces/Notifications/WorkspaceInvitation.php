@@ -5,7 +5,8 @@ namespace Common\Workspaces\Notifications;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 
 class WorkspaceInvitation extends Notification implements ShouldQueue
@@ -43,29 +44,30 @@ class WorkspaceInvitation extends Notification implements ShouldQueue
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return MailMessage
+     * @return ReactEmailMailable
      */
-    public function toMail($notifiable)
+    public function toMail($notifiable): ReactEmailMailable
     {
         $data = [
             'inviter' => ucfirst($this->inviterName),
             'workspace' => ucfirst($this->workspace->name),
             'siteName' => config('app.name'),
         ];
+        $subject = __(':inviter invited you to :siteName :workspace', $data);
 
-        return (new MailMessage())
-            ->subject(__(':inviter invited you to :siteName :workspace', $data))
-            ->line(__('Join your :workspace teammates on :siteName', $data))
-            ->action(
-                __('Join your team'),
-                url("workspace/join/{$this->joinCode}"),
-            )
-            ->line(__('This invitation link will expire in 3 days.'))
-            ->line(
-                __(
-                    'If you do not wish to join this workspace, no further action is required.',
-                ),
-            );
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            $subject,
+            [
+                __('Join your :workspace teammates on :siteName', $data),
+                __('This invitation link will expire in 3 days.'),
+                __('If you do not wish to join this workspace, no further action is required.'),
+            ],
+            __('Join your team'),
+            url("workspace/join/{$this->joinCode}"),
+        );
     }
 
     /**

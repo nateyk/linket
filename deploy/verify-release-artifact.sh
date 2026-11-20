@@ -79,7 +79,7 @@ for member in "${!members[@]}"; do
     [[ "${members[$parent]:-d}" == d ]] || fail 'archive file conflicts with a directory path'
   done
 done
-for required in RELEASE_SHA CI_META artisan public/build/manifest.json vendor/autoload.php; do
+for required in RELEASE_SHA CI_META artisan public/build/manifest.json scripts/dist/render-email.cjs vendor/autoload.php; do
   [[ "${members[$required]:-}" == '-' ]] || fail "required regular CI artifact member absent: $required"
 done
 scanner="$(dirname "$0")/release-artifact-secrets.php"

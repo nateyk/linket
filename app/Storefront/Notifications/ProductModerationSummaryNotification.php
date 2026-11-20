@@ -6,7 +6,8 @@ use App\Telegram\Support\TelegramNotificationChannels;
 use App\Telegram\Support\TelegramNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Telegram\TelegramMessage;
 
@@ -60,18 +61,22 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
         return count($this->titles) > 0;
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): ReactEmailMailable
     {
-        $mail = (new MailMessage())
-            ->subject($this->subject())
-            ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
-            ->line($this->summary());
-
+        $lines = [$this->summary()];
         if ($this->showsReason() && $this->reason) {
-            $mail->line(__('Reason: :reason', ['reason' => $this->reason]));
+            $lines[] = __('Reason: :reason', ['reason' => $this->reason]);
         }
 
-        return $mail->action($this->actionLabel(), url('/dashboard/items'));
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $this->subject(),
+            $this->subject(),
+            __('Hello, :name', ['name' => $notifiable->name]),
+            $lines,
+            $this->actionLabel(),
+            url('/dashboard/items'),
+        );
     }
 
     public function toTelegram(object $notifiable): TelegramMessage

@@ -4,6 +4,7 @@ namespace App\Payments\Commands;
 
 use App\Payments\Models\SubscriptionRenewalReminder;
 use App\Payments\Notifications\ChapaRenewalReminder;
+use App\Payments\Notifications\ChapaSubscriptionStatusNotification;
 use Common\Billing\Subscription;
 use Illuminate\Console\Command;
 
@@ -33,23 +34,34 @@ class ProcessChapaSubscriptionRenewals extends Command
         }
 
         Subscription::query()
+            ->with('user')
             ->where('gateway_name', 'chapa')
             ->whereNull('ends_at')
             ->whereNotNull('renews_at')
             ->where('renews_at', '<', now())
             ->where('renews_at', '>=', now()->subDays(7))
-            ->update(['gateway_status' => 'past_due']);
+            ->where(function ($query): void {
+                $query->whereNull('gateway_status')->orWhere('gateway_status', '!=', 'past_due');
+            })
+            ->each(function (Subscription $subscription): void {
+                $subscription->user?->notify(new ChapaSubscriptionStatusNotification('past_due'));
+                $subscription->update(['gateway_status' => 'past_due']);
+            });
 
         Subscription::query()
+            ->with('user')
             ->where('gateway_name', 'chapa')
             ->whereNull('ends_at')
             ->whereNotNull('renews_at')
             ->where('renews_at', '<', now()->subDays(7))
-            ->update([
-                'gateway_status' => 'expired',
-                'ends_at' => now(),
-                'renews_at' => null,
-            ]);
+            ->each(function (Subscription $subscription): void {
+                $subscription->user?->notify(new ChapaSubscriptionStatusNotification('expired'));
+                $subscription->update([
+                    'gateway_status' => 'expired',
+                    'ends_at' => now(),
+                    'renews_at' => null,
+                ]);
+            });
 
         return self::SUCCESS;
     }

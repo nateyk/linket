@@ -6,7 +6,8 @@ use App\Models\User;
 use Common\Billing\Invoices\Invoice;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 
 class NewInvoiceAvailable extends Notification implements ShouldQueue
@@ -22,14 +23,17 @@ class NewInvoiceAvailable extends Notification implements ShouldQueue
         return ['mail', 'database'];
     }
 
-    public function toMail(User $notifiable): MailMessage
+    public function toMail(User $notifiable): ReactEmailMailable
     {
-        return (new MailMessage())
-            ->subject($this->mainLine())
-            ->level('error')
-            ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
-            ->line($this->descriptionLine())
-            ->action(__('View receipt'), $this->mainAction());
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $this->mainLine(),
+            $this->mainLine(),
+            __('Hello, :name', ['name' => $notifiable->name]),
+            [$this->descriptionLine()],
+            __('View receipt'),
+            $this->mainAction(),
+        );
     }
 
     public function toArray(mixed $notifiable): array

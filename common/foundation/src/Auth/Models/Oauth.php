@@ -2,6 +2,7 @@
 
 namespace Common\Auth\Models;
 
+use App\Auth\Listeners\SendWelcomeEmail;
 use App\Models\User;
 use Carbon\Carbon;
 use Common\Auth\Actions\CreateUser;
@@ -127,12 +128,18 @@ class Oauth
         $user = User::where('email', $profile->email)->first();
 
         //create a new user if one does not exist with specified email
+        $created = false;
         if (!$user) {
             $user = (new CreateUser())->execute([
                 'email' => $profile->email,
                 'image' => $this->normalizeImageUrl($profile->avatar),
                 'email_verified_at' => now(),
             ]);
+            $created = true;
+        }
+
+        if ($created) {
+            app(SendWelcomeEmail::class)->send($user);
         }
 
         //save this social profile data, so we can log in the user easily next time

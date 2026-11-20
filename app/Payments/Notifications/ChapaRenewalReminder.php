@@ -6,7 +6,8 @@ use App\Models\User;
 use Common\Billing\Subscription;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 
 class ChapaRenewalReminder extends Notification implements ShouldQueue
@@ -35,17 +36,25 @@ class ChapaRenewalReminder extends Notification implements ShouldQueue
         ];
     }
 
-    public function toMail(User $notifiable): MailMessage
+    public function toMail(User $notifiable): ReactEmailMailable
     {
-        return (new MailMessage())
-            ->subject(__('Your subscription renewal is coming up'))
-            ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
-            ->line(__('Your :plan subscription renews in :days day(s).', [
-                'plan' => $this->subscription->product->name,
-                'days' => $this->daysBefore,
-            ]))
-            ->line(__('Renew through Chapa to keep your benefits active.'))
-            ->action(__('Renew subscription'), url('/billing'));
+        $subject = __('Your subscription renewal is coming up');
+
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $subject,
+            $subject,
+            __('Hello, :name', ['name' => $notifiable->name]),
+            [
+                __('Your :plan subscription renews in :days day(s).', [
+                    'plan' => $this->subscription->product->name,
+                    'days' => $this->daysBefore,
+                ]),
+                __('Renew through Chapa to keep your benefits active.'),
+            ],
+            __('Renew subscription'),
+            url('/billing'),
+        );
     }
 
     public function toArray(mixed $notifiable): array

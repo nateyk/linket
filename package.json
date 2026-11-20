@@ -1,7 +1,8 @@
 {
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:emails && vite build",
+    "build:emails": "esbuild scripts/render-email.tsx --bundle --platform=node --format=cjs --packages=bundle --outfile=scripts/dist/render-email.cjs",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006 --host 0.0.0.0 -c common/foundation/resources/client/.storybook",
     "extract": "node ./resources/scripts/extract-translations.js --write",
@@ -9,7 +10,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --project unit --coverage",
     "test:telegram": "vitest run resources/client/account-settings/integrations-page.dom.test.tsx resources/client/admin/settings/integrations-settings.dom.test.tsx",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "email": "email dev --dir emails --port 3000"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -93,6 +95,7 @@
     "react-colorful": "^5.6.1",
     "react-dom": "^19.1.0",
     "react-easy-crop": "^5.5.7",
+    "react-email": "^6.11.16",
     "react-error-boundary": "^6.1.0",
     "react-hook-form": "^7.79.0",
     "react-image-crop": "^11.1.2",

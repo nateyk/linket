@@ -2,13 +2,14 @@
 
 namespace App\Storefront\Notifications;
 
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use App\Storefront\Models\StorefrontPaymentDispute;
 use App\Storefront\Services\CreatePaymentDispute;
 use App\Telegram\Support\TelegramNotificationChannels;
 use App\Telegram\Support\TelegramNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Telegram\TelegramMessage;
 
@@ -66,19 +67,27 @@ class PaymentDisputeStatusChangedNotification extends Notification implements Sh
         return StorefrontPaymentDispute::query()->whereKey($this->disputeId)->exists();
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): ReactEmailMailable
     {
         $dispute = $this->dispute();
         $label = $dispute
             ? (CreatePaymentDispute::REASON_LABELS[$dispute->reason] ?? $dispute->reason)
             : __('Payment dispute');
 
-        return (new MailMessage())
-            ->subject($this->subject($label))
-            ->greeting(__('Hello, :name', ['name' => $notifiable->name ?? __('there')]))
-            ->line($this->summary($label))
-            ->when($this->note, fn (MailMessage $mail) => $mail->line(__('Note: :note', ['note' => $this->note])))
-            ->action(__('Open Linket'), url($this->actionPath($dispute)));
+        $lines = [$this->summary($label)];
+        if ($this->note) {
+            $lines[] = __('Note: :note', ['note' => $this->note]);
+        }
+
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            subject: $this->subject($label),
+            preview: $this->summary($label),
+            heading: __('Hello, :name', ['name' => $notifiable->name ?? __('there')]),
+            lines: $lines,
+            actionLabel: __('Open Linket'),
+            actionUrl: url($this->actionPath($dispute)),
+        );
     }
 
     public function toTelegram(object $notifiable): TelegramMessage
@@ -122,7 +131,7 @@ class PaymentDisputeStatusChangedNotification extends Notification implements Sh
         ];
     }
 
-    private function dispute(): ?StorefrontPaymentDispute
+    protected function dispute(): ?StorefrontPaymentDispute
     {
         return StorefrontPaymentDispute::query()
             ->with('order')

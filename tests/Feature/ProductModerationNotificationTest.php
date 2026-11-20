@@ -12,7 +12,7 @@ use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -172,7 +172,7 @@ class ProductModerationNotificationTest extends TestCase
             'Nope',
         );
 
-        $this->assertInstanceOf(MailMessage::class, $notification->toMail($creator));
+        $this->assertInstanceOf(ReactEmailMailable::class, $notification->toMail($creator));
         $this->assertTrue($notification->shouldSend($creator, 'database'));
 
         $payload = $notification->toDatabase($creator);
@@ -204,7 +204,7 @@ class ProductModerationNotificationTest extends TestCase
 
         $notification = new ProductModerationNotification($product->id, 'rejected', 'Bad');
 
-        $this->assertInstanceOf(MailMessage::class, $notification->toMail($creator));
+        $this->assertInstanceOf(ReactEmailMailable::class, $notification->toMail($creator));
         $this->assertTrue($notification->shouldSend($creator, 'mail'));
 
         $product->delete();
@@ -244,7 +244,7 @@ class ProductModerationNotificationTest extends TestCase
         $this->assertStringContainsString('still live', $payload['lines'][0]['content']);
         $this->assertStringNotContainsString('need changes', $payload['lines'][0]['content']);
         $this->assertStringContainsString('Nope', $payload['lines'][1]['content']);
-        $this->assertInstanceOf(MailMessage::class, $notification->toMail($creator));
+        $this->assertInstanceOf(ReactEmailMailable::class, $notification->toMail($creator));
     }
 
     private function editedProduct(Workspace $workspace, User $creator, string $title): DigitalProduct

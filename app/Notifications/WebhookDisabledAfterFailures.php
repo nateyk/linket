@@ -4,7 +4,8 @@ namespace App\Notifications;
 
 use App\Webhooks\Models\Webhook;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailMessage;
 use Illuminate\Notifications\Notification;
 
 class WebhookDisabledAfterFailures extends Notification
@@ -18,14 +19,19 @@ class WebhookDisabledAfterFailures extends Notification
         return ['mail', 'database'];
     }
 
-    public function toMail(): MailMessage
+    public function toMail(object $notifiable): ReactEmailMailable
     {
         [$headline, $details] = $this->notificationLines();
 
-        return (new MailMessage)
-            ->line($headline)
-            ->line($details)
-            ->action(__('Review webhooks'), url('/account-settings/webhooks'));
+        return ReactEmailMessage::toNotifiable(
+            $notifiable,
+            $headline,
+            $headline,
+            $headline,
+            [$details],
+            __('Review webhooks'),
+            url('/account-settings/webhooks'),
+        );
     }
 
     public function toArray(): array

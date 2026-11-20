@@ -5,10 +5,10 @@ verifier="deploy/verify-release-artifact.sh"
 sha=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/payload/public/build" "$tmp/payload/vendor"
+mkdir -p "$tmp/payload/public/build" "$tmp/payload/scripts/dist" "$tmp/payload/vendor"
 printf '%s\n' "$sha" > "$tmp/payload/RELEASE_SHA"
 printf 'CI_SHA=%s\n' "$sha" > "$tmp/payload/CI_META"
-touch "$tmp/payload/artisan" "$tmp/payload/public/build/manifest.json" "$tmp/payload/vendor/autoload.php"
+touch "$tmp/payload/artisan" "$tmp/payload/public/build/manifest.json" "$tmp/payload/scripts/dist/render-email.cjs" "$tmp/payload/vendor/autoload.php"
 name=linket-aaaaaaa-20261031-150000.tar.gz
 tar -czf "$tmp/$name" -C "$tmp/payload" .
 (cd "$tmp"; sha256sum "$name" > "$name.sha256")

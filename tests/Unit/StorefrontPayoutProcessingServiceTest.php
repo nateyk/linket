@@ -7,12 +7,15 @@ namespace Tests\Unit;
 use App\Storefront\ChapaPayoutService;
 use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\CreatorLedgerService;
+use App\Models\User;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Notifications\ChapaPayoutStatusNotification;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use RuntimeException;
@@ -25,6 +28,13 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         parent::setUp();
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', ':memory:');
+
+        Schema::create('users', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name')->nullable();
+            $table->string('email')->nullable();
+            $table->timestamps();
+        });
 
         Schema::create('payout_requests', function (Blueprint $table): void {
             $table->id();
@@ -47,6 +57,7 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
     {
         Schema::dropIfExists('storefront_payout_intents');
         Schema::dropIfExists('payout_requests');
+        Schema::dropIfExists('users');
         parent::tearDown();
     }
 
@@ -74,6 +85,67 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
             'withdrawal_code' => 'bank_transfer',
             'destination_snapshot' => '1000123456789',
             'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+        ]);
+    }
+
+    public function testSuccessfulSettlementEmailsTheCreator(): void
+    {
+        Notification::fake();
+        $this->creatorId();
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($this->verified());
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('disbursePayout')->once();
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+
+        (new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider))
+            ->verifyPayout($intent);
+
+        Notification::assertSentTo(
+            User::query()->findOrFail(30),
+            ChapaPayoutStatusNotification::class,
+            fn (ChapaPayoutStatusNotification $notification): bool => $notification->event === 'sent'
+                && $notification->amountLabel === '500.00 ETB'
+                && $notification->reference === 'lk-po-TEST-REF-01',
+        );
+    }
+
+    public function testFailedSettlementEmailsTheCreator(): void
+    {
+        Notification::fake();
+        $this->creatorId();
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('verifyTransfer')->once()->andReturn($this->verified('failed'));
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('releasePayoutReservation')->once();
+        $finance = Mockery::mock(DigitalProductFinance::class);
+        $finance->shouldReceive('record')->once();
+        $this->app->instance(DigitalProductFinance::class, $finance);
+
+        $payout = $this->payout();
+        $intent = $this->intent($payout);
+
+        (new StorefrontPayoutProcessingService(creatorLedger: $ledger, chapaPayoutService: $provider))
+            ->verifyPayout($intent);
+
+        Notification::assertSentTo(
+            User::query()->findOrFail(30),
+            ChapaPayoutStatusNotification::class,
+            fn (ChapaPayoutStatusNotification $notification): bool => $notification->event === 'failed'
+                && $notification->reason === 'Chapa verified the transfer was unsuccessful.',
+        );
+    }
+
+    private function creatorId(): int
+    {
+        return (int) User::query()->insertGetId([
+            'id' => 30,
+            'name' => 'Ada',
+            'email' => 'ada@example.test',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 

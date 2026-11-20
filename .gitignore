@@ -26,6 +26,7 @@ vendor
 # Build output
 dist
 dist-ssr
+scripts/dist/
 public/build
 public/hot
 #
