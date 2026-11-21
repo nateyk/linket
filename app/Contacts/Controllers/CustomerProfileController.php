@@ -104,6 +104,7 @@ class CustomerProfileController extends BaseController
 
         $builder = Conversation::query()
             ->where('user_id', $userId)
+            ->platformSupport()
             ->when(
                 request('statusId'),
                 fn($query) => $query->where('status_id', request('statusId')),

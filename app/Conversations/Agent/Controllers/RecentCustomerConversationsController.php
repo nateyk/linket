@@ -16,6 +16,7 @@ class RecentCustomerConversationsController extends BaseController
 
         $conversations = User::findOrFail($userId)
             ->conversations()
+            ->platformSupport()
             ->when(
                 $excludeId,
                 fn($query) => $query->where('id', '!=', $excludeId),

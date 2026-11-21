@@ -14,6 +14,7 @@ use Common\Domains\CustomDomainsController;
 use Common\Files\Controllers\DownloadFileController;
 use Common\Settings\Mail\ConnectGmailAccountController;
 use Common\Workspaces\Controllers\WorkspaceMembersController;
+use Common\Workspaces\Middleware\EnsureWorkspacesIntegrated;
 use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -42,11 +43,13 @@ Route::group(['middleware' => 'web'], function () {
     Route::get('workspace/join/login', [HomeController::class, 'render']);
     Route::get('workspace/join/register', [HomeController::class, 'render']);
 
-    // WORKSPACES
-    Route::get('workspace/join/{workspaceInvite}', [
-        WorkspaceMembersController::class,
-        'join',
-    ]);
+    // WORKSPACES — only reachable when the product flag is enabled.
+    Route::middleware(EnsureWorkspacesIntegrated::class)->group(function () {
+        Route::get('workspace/join/{workspaceInvite}', [
+            WorkspaceMembersController::class,
+            'join',
+        ]);
+    });
 
     // CSV
     Route::get('csv/download/{id}', [

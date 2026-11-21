@@ -17,6 +17,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\Rule;
 
 use const App\Providers\WORKSPACE_HOME_ROUTE;
 
@@ -117,12 +118,19 @@ class WorkspaceMembersController extends Controller
         Gate::authorize('update', [WorkspaceMember::class, $workspace]);
 
         $validatedData = $request->validate([
-            'roleId' => 'required|integer',
+            'roleId' => [
+                'required',
+                'integer',
+                Rule::exists('roles', 'id')->where('type', 'workspace'),
+            ],
         ]);
 
-        WorkspaceMember::query()
+        $updated = WorkspaceMember::query()
             ->where('id', $memberId)
+            ->where('workspace_id', $workspace->id)
             ->update(['role_id' => $validatedData['roleId']]);
+
+        abort_unless($updated === 1, 404);
 
         return response()->noContent();
     }
