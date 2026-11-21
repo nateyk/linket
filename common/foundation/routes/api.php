@@ -1,5 +1,6 @@
 <?php
 
+use Common\Workspaces\Middleware\EnsureWorkspacesIntegrated;
 use Common\Admin\SiteAlertsController;
 use Common\Admin\CacheController;
 use Common\Admin\ImpersonateUserController;
@@ -155,21 +156,23 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('user-sessions', [UserSessionsController::class, 'index'])->middleware('auth');
         Route::post('user-sessions/logout-other', [UserSessionsController::class, 'LogoutOtherSessions'])->middleware(['auth', 'password.confirm']);
 
-        // WORKSPACES
-        Route::get('workspaces', [WorkspacesController::class, 'index']);
-        Route::get('workspaces/{id}', [WorkspacesController::class, 'show']);
-        Route::post('workspaces', [WorkspacesController::class, 'store']);
-        Route::put('workspaces/{id}', [WorkspacesController::class, 'update']);
-        Route::delete('workspaces/{id}', [WorkspacesController::class, 'destroy']);
-        Route::get('workspace/{id}/members', [WorkspaceMembersController::class, 'index']);
-        Route::get('workspace/{id}/invites', [WorkspaceInvitesController::class, 'index']);
-        Route::delete('workspace/{id}/member/{userId}', [WorkspaceMembersController::class, 'destroy']);
-        Route::post('workspace/{id}/invite', [WorkspaceInvitesController::class, 'store']);
-        Route::post('workspace/{id}/{inviteId}/resend', [WorkspaceInvitesController::class, 'resend']);
-        Route::post('workspace/{id}/member/{memberId}/change-role', [WorkspaceMembersController::class, 'changeRole']);
-        Route::post('workspace/{id}/invite/{inviteId}/change-role', [WorkspaceInvitesController::class, 'changeRole']);
-        Route::delete('workspace/invite/{inviteId}', [WorkspaceInvitesController::class, 'destroy']);
-        Route::get('workspace/join/{inviteId}', [WorkspaceMembersController::class, 'join']);
+        // WORKSPACES — only reachable when the product flag is enabled.
+        Route::middleware(EnsureWorkspacesIntegrated::class)->group(function () {
+            Route::get('workspaces', [WorkspacesController::class, 'index']);
+            Route::get('workspaces/{id}', [WorkspacesController::class, 'show']);
+            Route::post('workspaces', [WorkspacesController::class, 'store']);
+            Route::put('workspaces/{id}', [WorkspacesController::class, 'update']);
+            Route::delete('workspaces/{id}', [WorkspacesController::class, 'destroy']);
+            Route::get('workspace/{id}/members', [WorkspaceMembersController::class, 'index']);
+            Route::get('workspace/{id}/invites', [WorkspaceInvitesController::class, 'index']);
+            Route::delete('workspace/{id}/member/{userId}', [WorkspaceMembersController::class, 'destroy']);
+            Route::post('workspace/{id}/invite', [WorkspaceInvitesController::class, 'store']);
+            Route::post('workspace/{id}/{inviteId}/resend', [WorkspaceInvitesController::class, 'resend']);
+            Route::post('workspace/{id}/member/{memberId}/change-role', [WorkspaceMembersController::class, 'changeRole']);
+            Route::post('workspace/{id}/invite/{inviteId}/change-role', [WorkspaceInvitesController::class, 'changeRole']);
+            Route::delete('workspace/invite/{inviteId}', [WorkspaceInvitesController::class, 'destroy']);
+            Route::get('workspace/join/{inviteId}', [WorkspaceMembersController::class, 'join']);
+        });
 
         // SETTINGS
         Route::get('settings', [SettingsController::class, 'index']);

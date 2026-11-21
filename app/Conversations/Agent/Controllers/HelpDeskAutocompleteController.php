@@ -36,9 +36,12 @@ class HelpDeskAutocompleteController extends BaseController
             ->where('type', 'user')
             ->whereNotNull('email')
             ->when(request('query'), function ($query) {
-                $query
-                    ->where('name', 'like', '%' . request('query') . '%')
-                    ->orWhere('email', 'like', '%' . request('query') . '%');
+                $term = '%' . request('query') . '%';
+                $query->where(function ($inner) use ($term) {
+                    $inner
+                        ->where('name', 'like', $term)
+                        ->orWhere('email', 'like', $term);
+                });
             })
             ->limit(40)
             ->get()

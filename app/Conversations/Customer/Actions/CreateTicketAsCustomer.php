@@ -8,6 +8,7 @@ use App\Conversations\Agent\Notifications\Ticketing\ConversationCreatedNotif;
 use App\Conversations\Email\Mailables\TicketReceivedMailable;
 use App\Conversations\Events\ConversationCreated;
 use App\Conversations\Events\ConversationsUpdated;
+use App\Conversations\Messages\AuthorizeConversationAttachments;
 use App\Conversations\Messages\CreateConversationMessage;
 use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationItem;
@@ -24,6 +25,14 @@ class CreateTicketAsCustomer
 {
     public function execute(array $data, User $user): Conversation
     {
+        // Reject foreign files before creating a ticket or pausing events.
+        if (!empty($data['message']['attachments'])) {
+            (new AuthorizeConversationAttachments())->execute(
+                (int) $user->id,
+                $data['message']['attachments'],
+            );
+        }
+
         // Make sure updated event is not fired until chat is fully created
         ConversationsUpdated::pauseDispatching();
 
