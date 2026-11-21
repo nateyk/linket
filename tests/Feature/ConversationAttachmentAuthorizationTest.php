@@ -48,6 +48,30 @@ class ConversationAttachmentAuthorizationTest extends TestCase
         $this->assertSame($messageCount, $ticket->items()->count());
     }
 
+    public function test_customer_cannot_create_a_ticket_with_another_users_attachment(): void
+    {
+        $customer = User::factory()->create();
+        $victim = User::factory()->create();
+        $this->grantPermission($customer, 'conversations.create');
+        $victimEntry = $this->createFileEntry($victim->id);
+
+        $this->stateful()
+            ->actingAs($customer)
+            ->postJson('/api/v1/helpdesk/customer/tickets', [
+                'subject' => 'Rejected ticket attachment',
+                'message' => [
+                    'body' => '<p>Invalid attachment</p>',
+                    'attachments' => [$victimEntry->id],
+                ],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('conversations', [
+            'user_id' => $customer->id,
+            'subject' => 'Rejected ticket attachment',
+        ]);
+    }
+
     public function test_agent_cannot_sync_another_users_file_entry_onto_a_message(): void
     {
         $customer = User::factory()->create();
