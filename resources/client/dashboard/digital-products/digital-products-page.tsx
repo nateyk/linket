@@ -771,20 +771,20 @@ function StatusBadge({
   let label = <Trans message="Draft" />;
 
   if (isPendingUpdate) {
-    dotColor = 'bg-amber-500';
+    dotColor = 'bg-warning';
     label = <Trans message="Update under review" />;
   } else {
     switch (status) {
       case 'pending_approval':
-        dotColor = 'bg-amber-500';
+        dotColor = 'bg-warning';
         label = <Trans message="In review" />;
         break;
       case 'approved':
-        dotColor = 'bg-emerald-500';
+        dotColor = 'bg-positive';
         label = <Trans message="Live" />;
         break;
       case 'rejected':
-        dotColor = 'bg-rose-500';
+        dotColor = 'bg-destructive';
         label = <Trans message="Needs changes" />;
         break;
       case 'archived':

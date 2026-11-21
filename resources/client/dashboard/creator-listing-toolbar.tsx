@@ -40,12 +40,13 @@ export function CreatorListingToolbar({
   sort,
   onSortChange,
   sortOptions,
-  defaultSort = 'latest',
+  defaultSort,
   onClear,
 }: Props) {
   const {trans} = useTrans();
+  const resolvedDefaultSort = defaultSort ?? sortOptions?.[0]?.value ?? 'latest';
   const isStatusActive = Boolean(status);
-  const isSortActive = Boolean(sort && sort !== defaultSort);
+  const isSortActive = Boolean(sort && sort !== resolvedDefaultSort);
   const activeFilterCount = (isStatusActive ? 1 : 0) + (isSortActive ? 1 : 0);
   const filtersActive = Boolean(search.trim() || activeFilterCount > 0);
 
@@ -121,7 +122,7 @@ export function CreatorListingToolbar({
                     <Trans message="Sort by" />
                   </Dropdown.GroupLabel>
                   <Dropdown.RadioGroup
-                    value={sort ?? defaultSort}
+                    value={sort ?? resolvedDefaultSort}
                     onValueChange={onSortChange}
                   >
                     {sortOptions.map(option => (
