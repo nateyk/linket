@@ -632,6 +632,31 @@ class PayoutSystemTest extends TestCase
             ->assertJsonValidationErrorFor('transfer_reference');
     }
 
+    public function testCreatorCanAddCbebirrAndDashenAlongsideTelebirr(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $destinations = ['telebirr' => '0911223344', 'cbebirr' => '0911223344', 'dashen' => '1234567890123'];
+        DigitalProductWithdrawalMethod::query()->whereIn('code', ['telebirr', 'cbebirr', 'bank_transfer'])
+            ->update(['is_active' => true]);
+        $this->mock(ChapaPayoutService::class)->shouldReceive('availableBankOptions')
+            ->andReturn([['code' => 'telebirr'], ['code' => 'cbebirr'], ['code' => 'dashen']]);
+        $this->stateful()->actingAs($creator);
+
+        foreach ($destinations as $code => $destination) {
+            $this->postJson('/api/v1/items/payout-methods', [
+                'bank_code' => $code,
+                'account_holder' => 'Example Creator',
+                'destination' => $destination,
+                'is_default' => false,
+            ])->assertCreated()
+                ->assertJsonPath('data.bank_code', $code)
+                ->assertJsonPath('data.is_default', $code === 'telebirr')
+                ->assertJsonPath('data.status', DigitalProductPayoutMethod::STATUS_PENDING);
+        }
+
+        $this->getJson('/api/v1/items/payout-methods')->assertOk()->assertJsonCount(3, 'data');
+    }
+
     public function testStoreRouteGatesOnKyc(): void
     {
         settings()->save(['kyc.enabled' => true]);
