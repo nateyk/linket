@@ -5,6 +5,7 @@ namespace App\Team\Models;
 use App\Models\User;
 use Common\Auth\Actions\CreateUser;
 use Common\Auth\Roles\Role;
+use Common\Notifications\SubscribeUserToNotifications;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -63,6 +64,12 @@ class AgentInvite extends Model
                     'created_at' => now(),
                 ],
             ]);
+
+            try {
+                (new SubscribeUserToNotifications())->execute($user->fresh(), null);
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             $this->delete();
         }

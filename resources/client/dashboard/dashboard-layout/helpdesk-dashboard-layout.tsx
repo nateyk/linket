@@ -6,6 +6,7 @@ import {HelpdeskDashboardSidebar} from '@app/dashboard/helpdesk-dashboard-layout
 import {MobileBottomNavbar} from '@app/dashboard/dashboard-layout/mobile-bottom-navbar';
 import {dashboardChatUpdatesNotifier} from '@app/dashboard/websockets/dashboard-websocket-updates-notifier';
 import {useDashboardWebsocketListener} from '@app/dashboard/websockets/use-dashboard-websocket-listener';
+import {useUserNotificationListener} from '@app/dashboard/websockets/use-user-notification-listener';
 import {useAuth} from '@common/auth/use-auth';
 import {DashboardLayout} from '@common/ui/dashboard-layout/dashboard-layout';
 import {DashboardSidenav} from '@common/ui/dashboard-layout/dashboard-sidenav';
@@ -98,6 +99,7 @@ function AgentDashboardContent({adminShell = false}: {adminShell?: boolean}) {
 function GlobalDashboardHooks() {
   const {user} = useAuth();
   useDashboardWebsocketListener();
+  useUserNotificationListener();
 
   const compactAgentQuery = useCompactAgents();
 

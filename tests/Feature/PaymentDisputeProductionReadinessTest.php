@@ -13,8 +13,8 @@ it('has dispute lifecycle migration and required production scheduler hooks', fu
         ->implode("\n");
 
     expect($commands)->toContain('marketplace:reconcile')
-        ->not->toContain('billing:reconcile-pending-verifications')
-        ->not->toContain('billing:process-direct-renewals');
+        ->toContain('billing:process-direct-renewals')
+        ->not->toContain('billing:reconcile-pending-verifications');
 
     $envExample = File::get(base_path('env.example'));
     expect($envExample)->not->toContain('VERIFY_ET_MOCK=true')

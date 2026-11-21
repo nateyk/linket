@@ -35,6 +35,7 @@ use App\Tags\Models\Tag;
 use App\Webhooks\Console\DeleteOldWebhookDeliveries;
 use Common\Auth\Events\UserCreated;
 use Common\Files\Events\FileUploaded;
+use Common\Notifications\SubscribeUserToNotifications;
 use Common\Auth\Models\BaseUser;
 use Common\Core\Bootstrap\BootstrapData;
 use Common\Domains\CustomDomain;
@@ -337,6 +338,29 @@ class AppServiceProvider extends ServiceProvider
                     ]);
                 }
             }
+
+            $this->seedNotificationSubscriptions($e->user);
         });
+    }
+
+    private function seedNotificationSubscriptions(User $user): void
+    {
+        $isAgent = method_exists($user, 'isAgent') && $user->isAgent();
+        $isAdmin = $user->type === 'admin';
+
+        // Agents/admins always get ticket subscription rows so helpdesk
+        // whereNeedsNotificationFor() can resolve recipients. Creators only
+        // auto-subscribe when NOTIF_SUBS_ENABLED, and only to non-agent notifs.
+        if (! $isAgent && ! $isAdmin && ! config('app.notif_subs_integrated')) {
+            return;
+        }
+
+        $notificationIds = ($isAgent || $isAdmin) ? null : ['W01'];
+
+        try {
+            (new SubscribeUserToNotifications())->execute($user, $notificationIds);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }
