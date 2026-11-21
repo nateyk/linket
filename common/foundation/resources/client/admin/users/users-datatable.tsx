@@ -6,6 +6,7 @@ import {
 } from '@common/admin/users/users-datatable-columns';
 import {UserDatatableFilters} from '@common/admin/users/users-datatable-filters';
 import {
+  deleteUsersOptions,
   exportUsersCsvOptions,
   listUsersForDatatableOptions,
   usersBaseKey,
@@ -15,7 +16,7 @@ import {CsvExportInfoDialog} from '@common/datatable/csv-export/csv-export-info-
 import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
-import {apiClient, queryClient} from '@common/http/query-client';
+import {queryClient} from '@common/http/query-client';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {DashboardLayoutContext} from '@common/ui/dashboard/dashboard-layout-context';
@@ -195,7 +196,7 @@ export function DeleteUsersDialog({
   onDelete,
 }: DeleteUsersDialogProps) {
   const deleteSelectedUsers = useMutation({
-    mutationFn: () => apiClient.delete(`users/${selectedIds.join(',')}`),
+    ...deleteUsersOptions,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: usersBaseKey,
@@ -227,7 +228,7 @@ export function DeleteUsersDialog({
           <AlertDialog.Action
             color="danger"
             disabled={deleteSelectedUsers.isPending}
-            onClick={() => deleteSelectedUsers.mutate()}
+            onClick={() => deleteSelectedUsers.mutate(selectedIds)}
           >
             <Trans message="Delete" />
           </AlertDialog.Action>
