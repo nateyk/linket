@@ -32,21 +32,24 @@ final class TelegramCreatorLifecycleTest extends TestCase
 
     public function test_pro_past_due_and_expiry_alert_only_once_without_touching_chapa(): void
     {
-        $creator = $this->connectedCreator();
+        // One open verify_et subscription per creator (DB uniqueness). Use two
+        // creators so past_due and expiry paths can run in the same command pass.
+        $pastDueCreator = $this->connectedCreator();
+        $expiryCreator = $this->connectedCreator();
         $plan = Product::query()->where('system_key', 'pro')->firstOrFail();
         $price = Price::query()->where('product_id', $plan->id)->firstOrFail();
         $pastDue = Subscription::query()->create([
-            'user_id' => $creator->id, 'product_id' => $plan->id,
+            'user_id' => $pastDueCreator->id, 'product_id' => $plan->id,
             'price_id' => $price->id, 'gateway_name' => 'verify_et',
             'gateway_status' => 'active', 'renews_at' => now()->subDays(2),
         ]);
         $expired = Subscription::query()->create([
-            'user_id' => $creator->id, 'product_id' => $plan->id,
+            'user_id' => $expiryCreator->id, 'product_id' => $plan->id,
             'price_id' => $price->id, 'gateway_name' => 'verify_et',
             'gateway_status' => 'past_due', 'renews_at' => now()->subDays(8),
         ]);
         $legacy = Subscription::query()->create([
-            'user_id' => $creator->id, 'product_id' => $plan->id,
+            'user_id' => $pastDueCreator->id, 'product_id' => $plan->id,
             'price_id' => $price->id, 'gateway_name' => 'chapa',
             'gateway_status' => 'active', 'renews_at' => now()->subDays(8),
         ]);
@@ -57,10 +60,11 @@ final class TelegramCreatorLifecycleTest extends TestCase
         $this->assertSame('past_due', $pastDue->fresh()->gateway_status);
         $this->assertSame('expired', $expired->fresh()->gateway_status);
         $this->assertSame('active', $legacy->fresh()->gateway_status);
-        Notification::assertSentToTimes($creator, \App\Payments\Notifications\DirectProLifecycleNotification::class, 2);
-        Notification::assertSentTo($creator, \App\Payments\Notifications\DirectProLifecycleNotification::class,
+        Notification::assertSentToTimes($pastDueCreator, \App\Payments\Notifications\DirectProLifecycleNotification::class, 1);
+        Notification::assertSentToTimes($expiryCreator, \App\Payments\Notifications\DirectProLifecycleNotification::class, 1);
+        Notification::assertSentTo($pastDueCreator, \App\Payments\Notifications\DirectProLifecycleNotification::class,
             fn ($notification): bool => $notification->event === 'past_due' && $notification->subscriptionId === $pastDue->id);
-        Notification::assertSentTo($creator, \App\Payments\Notifications\DirectProLifecycleNotification::class,
+        Notification::assertSentTo($expiryCreator, \App\Payments\Notifications\DirectProLifecycleNotification::class,
             fn ($notification): bool => $notification->event === 'expired' && $notification->subscriptionId === $expired->id);
     }
 

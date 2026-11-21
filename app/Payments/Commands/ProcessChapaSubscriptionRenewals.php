@@ -7,6 +7,8 @@ use App\Payments\Notifications\ChapaRenewalReminder;
 use App\Payments\Notifications\ChapaSubscriptionStatusNotification;
 use Common\Billing\Subscription;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class ProcessChapaSubscriptionRenewals extends Command
 {
@@ -15,6 +17,18 @@ class ProcessChapaSubscriptionRenewals extends Command
     protected $description = 'Send Chapa renewal reminders and expire subscriptions after the grace period.';
 
     public function handle(): int
+    {
+        $this->sendUpcomingReminders();
+
+        $now = now();
+        $graceCutoff = $now->copy()->subDays(7);
+        $this->markPastDue($now, $graceCutoff);
+        $this->expireAfterGrace($graceCutoff);
+
+        return self::SUCCESS;
+    }
+
+    private function sendUpcomingReminders(): void
     {
         foreach ([7, 3, 1] as $daysBefore) {
             Subscription::query()
@@ -33,10 +47,10 @@ class ProcessChapaSubscriptionRenewals extends Command
                     }
                 });
         }
+    }
 
-        $now = now();
-        $graceCutoff = $now->copy()->subDays(7);
-
+    private function markPastDue(Carbon $now, Carbon $graceCutoff): void
+    {
         Subscription::query()
             ->where('gateway_name', 'chapa')
             ->whereNull('ends_at')
@@ -46,7 +60,7 @@ class ProcessChapaSubscriptionRenewals extends Command
             ->where(function ($query): void {
                 $query->whereNull('gateway_status')->orWhere('gateway_status', '!=', 'past_due');
             })
-            ->chunkById(100, function ($subscriptions) use ($now, $graceCutoff): void {
+            ->chunkById(100, function (Collection $subscriptions) use ($now, $graceCutoff): void {
                 foreach ($subscriptions as $subscription) {
                     $changed = Subscription::query()
                         ->whereKey($subscription->id)
@@ -64,13 +78,16 @@ class ProcessChapaSubscriptionRenewals extends Command
                     }
                 }
             });
+    }
 
+    private function expireAfterGrace(Carbon $graceCutoff): void
+    {
         Subscription::query()
             ->where('gateway_name', 'chapa')
             ->whereNull('ends_at')
             ->whereNotNull('renews_at')
             ->where('renews_at', '<', $graceCutoff)
-            ->chunkById(100, function ($subscriptions) use ($graceCutoff): void {
+            ->chunkById(100, function (Collection $subscriptions) use ($graceCutoff): void {
                 foreach ($subscriptions as $subscription) {
                     $changed = Subscription::query()
                         ->whereKey($subscription->id)
@@ -88,7 +105,5 @@ class ProcessChapaSubscriptionRenewals extends Command
                     }
                 }
             });
-
-        return self::SUCCESS;
     }
 }
