@@ -8,6 +8,7 @@ use App\Storefront\Models\CommissionInvoice;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Services\DirectStorefrontFulfillment;
+use App\Models\User;
 use Common\Billing\Models\Price;
 use Common\Billing\Subscription;
 use Illuminate\Support\Str;
@@ -145,6 +146,10 @@ final class VerifyEtSettlementHandler
         if ($payment->status === 'paid') {
             return false;
         }
+
+        // Serialize concurrent Direct Pro settlements per creator so two
+        // workers cannot both create an open verify_et subscription.
+        User::query()->whereKey($payment->creator_id)->lockForUpdate()->firstOrFail();
 
         $price = $this->resolveProPrice($payment);
         $subscription = Subscription::query()

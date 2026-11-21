@@ -139,8 +139,20 @@ class ChapaV1TransferApprovalContractTest extends TestCase
             'account_name' => 'Test Seller',
             'account_number' => '251911223344',
         ], $changes);
-        $request = Request::create('/api/v1/chapa/transfer-approval', 'POST', $payload);
-        $request->headers->set('Chapa-Signature', $signature ?? hash_hmac('sha256', self::SECRET, self::SECRET));
+        $rawBody = json_encode($payload, JSON_THROW_ON_ERROR);
+        $request = Request::create(
+            '/api/v1/chapa/transfer-approval',
+            'POST',
+            [],
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            $rawBody,
+        );
+        $request->headers->set(
+            'Chapa-Signature',
+            $signature ?? hash_hmac('sha256', $rawBody, self::SECRET),
+        );
 
         return app(ChapaV1TransferApprovalController::class)(
             $request, app(ChapaPayoutService::class),
@@ -262,7 +274,6 @@ class ChapaV1TransferApprovalContractTest extends TestCase
         $intent->update(['amount_cents' => 500]);
 
         $path = '/api/v1/chapa/transfer-approval';
-        $headers = ['Chapa-Signature' => hash_hmac('sha256', self::SECRET, self::SECRET)];
         $payload = [
             'reference' => self::REFERENCE,
             'bank' => 'telebirr',
@@ -270,9 +281,34 @@ class ChapaV1TransferApprovalContractTest extends TestCase
             'account_number' => '251911223344',
             'amount' => '5.00',
         ];
-        $this->postJson($path, $payload, $headers)->assertOk()->assertJsonPath('message', 'Transfer approved');
-        $this->postJson($path, [...$payload, 'amount' => 4.90, 'charge' => 0.10], $headers)
-            ->assertStatus(400)->assertJsonPath('message', 'Transfer not approved');
+        $approvedBody = json_encode($payload, JSON_THROW_ON_ERROR);
+        $this->call(
+            'POST',
+            $path,
+            [],
+            [],
+            [],
+            [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_Chapa-Signature' => hash_hmac('sha256', $approvedBody, self::SECRET),
+            ],
+            $approvedBody,
+        )->assertOk()->assertJsonPath('message', 'Transfer approved');
+
+        $rejectedPayload = [...$payload, 'amount' => 4.90, 'charge' => 0.10];
+        $rejectedBody = json_encode($rejectedPayload, JSON_THROW_ON_ERROR);
+        $this->call(
+            'POST',
+            $path,
+            [],
+            [],
+            [],
+            [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_Chapa-Signature' => hash_hmac('sha256', $rejectedBody, self::SECRET),
+            ],
+            $rejectedBody,
+        )->assertStatus(400)->assertJsonPath('message', 'Transfer not approved');
 
         $this->assertSame('processing', $payout->fresh()->status);
         $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $intent->fresh()->status);

@@ -33,9 +33,12 @@ final class ReconcilePendingVerifications extends Command
 
         app(\App\Storefront\Services\CreatorVerificationAllowance::class)->expireAbandoned();
 
+        // Do not bulk-expire `verifying` orders: in-flight Verify.et evidence
+        // must still be able to settle. Day-old verifying rows are moved to
+        // manual_review below; abandoned pending payment still expires here.
         StorefrontOrder::query()
             ->where('payment_gateway', 'verify_et')
-            ->whereIn('status', ['pending_payment', 'pending', 'verifying', 'failed_verification', 'failed'])
+            ->whereIn('status', ['pending_payment', 'pending', 'failed_verification', 'failed'])
             ->where(function ($q): void {
                 $q->where('payment_expires_at', '<', now())
                   ->orWhere('verification_attempts', '>=', 5);

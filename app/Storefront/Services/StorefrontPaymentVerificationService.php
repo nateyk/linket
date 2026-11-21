@@ -104,11 +104,15 @@ class StorefrontPaymentVerificationService
         int $amountCents,
         string $currency,
     ): void {
-        $attempt->update([
-            'status' => StorefrontPaymentAttempt::STATUS_FAILED,
-            'verification_data' => $verified,
-            'error_message' => "Verification mismatch: status={$status}, amount={$amountCents}, currency={$currency}",
-        ]);
+        // Never clobber a concurrent successful verification / paid attempt.
+        StorefrontPaymentAttempt::query()
+            ->whereKey($attempt->id)
+            ->where('status', '!=', StorefrontPaymentAttempt::STATUS_SUCCESSFUL)
+            ->update([
+                'status' => StorefrontPaymentAttempt::STATUS_FAILED,
+                'verification_data' => $verified,
+                'error_message' => "Verification mismatch: status={$status}, amount={$amountCents}, currency={$currency}",
+            ]);
     }
 
     private function manager(): LinketChapaManager
