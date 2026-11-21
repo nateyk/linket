@@ -34,6 +34,16 @@ class CreateConversationMessage
             $data['user_id'] = null;
         }
 
+        // Reject foreign attachments before persisting the message. A forbidden
+        // request must not leave a message behind.
+        $attachmentIds = [];
+        if (!empty($data['attachments'])) {
+            $attachmentIds = (new AuthorizeConversationAttachments())->execute(
+                isset($data['user_id']) ? (int) $data['user_id'] : null,
+                $data['attachments'],
+            );
+        }
+
         $messageType = $data['type'] ?? 'message';
         $message = $conversation->items()->create([
             'body' => $this->maybePurifyBody($messageType, $data['body']),
@@ -47,14 +57,8 @@ class CreateConversationMessage
             'updated_at' => $data['updated_at'] ?? now(),
         ]);
 
-        if (!empty($data['attachments'])) {
-            $attachmentIds = (new AuthorizeConversationAttachments())->execute(
-                isset($data['user_id']) ? (int) $data['user_id'] : null,
-                $data['attachments'],
-            );
-            if ($attachmentIds !== []) {
-                $message->attachments()->attach($attachmentIds);
-            }
+        if ($attachmentIds !== []) {
+            $message->attachments()->attach($attachmentIds);
         }
 
         $message->syncInlineImages();
