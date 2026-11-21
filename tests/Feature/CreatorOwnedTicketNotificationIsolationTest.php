@@ -15,6 +15,7 @@ use App\Conversations\Events\ConversationsUpdated;
 use App\Conversations\Models\Conversation;
 use App\Models\User;
 use Common\Permissions\Models\Permission;
+use Database\Seeders\SupportDefaultsSeeder;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
@@ -25,6 +26,12 @@ use Tests\TestCase;
 class CreatorOwnedTicketNotificationIsolationTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(SupportDefaultsSeeder::class);
+    }
 
     public function test_creator_owned_ticket_notifies_owner_but_never_platform_agents(): void
     {

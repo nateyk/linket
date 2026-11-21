@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
 
 /**
@@ -52,7 +53,10 @@ class WorkspaceInvitesController extends Controller
     public function resend(int $id, string $inviteId)
     {
         $workspace = Workspace::findOrFail($id);
-        $workspaceInvite = WorkspaceInvite::findOrFail($inviteId);
+        $workspaceInvite = WorkspaceInvite::query()
+            ->where('workspace_id', $workspace->id)
+            ->whereKey($inviteId)
+            ->firstOrFail();
 
         Gate::authorize('store', [WorkspaceMember::class, $workspace, false]);
 
@@ -92,7 +96,11 @@ class WorkspaceInvitesController extends Controller
         $validatedData = $request->validate([
             'emails' => ['required', 'array'],
             'emails.*.email' => $emailRules,
-            'emails.*.roleId' => ['required', 'integer'],
+            'emails.*.roleId' => [
+                'required',
+                'integer',
+                Rule::exists('roles', 'id')->where('type', 'workspace'),
+            ],
         ]);
         $emails = collect($validatedData['emails']);
         $emailAddresses = $emails->pluck('email')->all();
@@ -226,12 +234,19 @@ class WorkspaceInvitesController extends Controller
         Gate::authorize('update', [WorkspaceMember::class, $workspace]);
 
         $validatedData = $request->validate([
-            'roleId' => 'required|integer',
+            'roleId' => [
+                'required',
+                'integer',
+                Rule::exists('roles', 'id')->where('type', 'workspace'),
+            ],
         ]);
 
-        WorkspaceInvite::query()
+        $updated = WorkspaceInvite::query()
             ->where('id', $inviteId)
+            ->where('workspace_id', $workspace->id)
             ->update(['role_id' => $validatedData['roleId']]);
+
+        abort_unless($updated === 1, 404);
 
         return response()->noContent();
     }

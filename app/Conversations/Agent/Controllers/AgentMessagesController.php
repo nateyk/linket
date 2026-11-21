@@ -3,9 +3,11 @@
 use App\Conversations\Actions\PaginateConversationItems;
 use App\Conversations\Agent\Actions\SubmitMessageAsAgent;
 use App\Conversations\Events\ConversationsUpdated;
+use App\Conversations\Messages\AuthorizeConversationAttachments;
 use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationItem;
 use Common\Core\BaseController;
+use Illuminate\Support\Facades\Auth;
 
 class AgentMessagesController extends BaseController
 {
@@ -67,7 +69,11 @@ class AgentMessagesController extends BaseController
         }
 
         if (isset($data['attachments'])) {
-            $message->attachments()->sync($data['attachments']);
+            $attachmentIds = (new AuthorizeConversationAttachments())->execute(
+                Auth::id() ? (int) Auth::id() : null,
+                $data['attachments'],
+            );
+            $message->attachments()->sync($attachmentIds);
         }
 
         $message->save();

@@ -4,8 +4,6 @@ namespace App\Conversations\Messages;
 
 use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationItem;
-use Common\Files\Actions\SyncFileEntryModels;
-use Illuminate\Support\Arr;
 
 class CreateConversationMessage
 {
@@ -36,6 +34,16 @@ class CreateConversationMessage
             $data['user_id'] = null;
         }
 
+        // Reject foreign attachments before persisting the message. A forbidden
+        // request must not leave a message behind.
+        $attachmentIds = [];
+        if (!empty($data['attachments'])) {
+            $attachmentIds = (new AuthorizeConversationAttachments())->execute(
+                isset($data['user_id']) ? (int) $data['user_id'] : null,
+                $data['attachments'],
+            );
+        }
+
         $messageType = $data['type'] ?? 'message';
         $message = $conversation->items()->create([
             'body' => $this->maybePurifyBody($messageType, $data['body']),
@@ -49,14 +57,8 @@ class CreateConversationMessage
             'updated_at' => $data['updated_at'] ?? now(),
         ]);
 
-        if (!empty($data['attachments'])) {
-            $attachments = is_array(Arr::first($data['attachments']))
-                ? array_map(
-                    fn($attachment) => $attachment['id'],
-                    $data['attachments'],
-                )
-                : $data['attachments'];
-            $message->attachments()->attach(array_values($attachments));
+        if ($attachmentIds !== []) {
+            $message->attachments()->attach($attachmentIds);
         }
 
         $message->syncInlineImages();

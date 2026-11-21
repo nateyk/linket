@@ -7,6 +7,9 @@ use App\Conversations\Customer\Actions\CreateTicketAsCustomer;
 use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationStatus;
 use App\Models\User;
+use App\Storefront\Models\CreatorPaymentMethod;
+use App\Storefront\Models\DigitalProduct;
+use App\Stores\Models\Store;
 use Common\Auth\Actions\CreateUser;
 use Common\Core\BaseController;
 use Common\Database\Datasource\Datasource;
@@ -130,7 +133,19 @@ class CustomerTicketsController extends BaseController
                 'support_owner_id' => [
                     'nullable',
                     'integer',
-                    Rule::exists('users', 'id'),
+                    'exists:users,id',
+                    function (string $attribute, mixed $value, \Closure $fail): void {
+                        if ($value === null) {
+                            return;
+                        }
+                        $creatorId = (int) $value;
+                        $isCreator = Store::query()->where('user_id', $creatorId)->exists()
+                            || DigitalProduct::query()->where('user_id', $creatorId)->exists()
+                            || CreatorPaymentMethod::query()->where('user_id', $creatorId)->exists();
+                        if (! $isCreator) {
+                            $fail(__('Invalid support owner.'));
+                        }
+                    },
                 ],
             ],
             [
