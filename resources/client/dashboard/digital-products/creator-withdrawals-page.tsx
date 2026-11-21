@@ -79,6 +79,7 @@ export type PayoutDestination = {
   id: number;
   type: string;
   bank_code?: string | null;
+  bank_enabled: boolean;
   bank_name?: string | null;
   account_holder: string;
   destination: string;
@@ -99,7 +100,7 @@ export type PayoutDestination = {
 const isApprovedDestination = (destination: PayoutDestination): boolean =>
   destination.is_active && destination.status === 'active' && !!destination.approved_at &&
   destination.withdrawal_method?.is_active === true &&
-  ['cbebirr', 'cbe', 'mpesa', 'telebirr', 'yaya'].includes((destination.bank_code ?? '').toLowerCase());
+  destination.bank_enabled === true;
 
 const statusLabels: Record<PayoutStatus, string> = {
   requested: 'Requested',

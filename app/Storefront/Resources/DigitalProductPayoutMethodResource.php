@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Storefront\Resources;
 
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use Dedoc\Scramble\Attributes\SchemaName;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ class DigitalProductPayoutMethodResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $bankCode = ChapaPayoutService::canonicalBankCode((string) $this->bank_code);
+
         return [
             'id' => $this->id,
             'type' => $this->type,
@@ -28,6 +31,7 @@ class DigitalProductPayoutMethodResource extends JsonResource
                 'maximum_amount_cents' => $this->withdrawalMethod?->maximum_amount_cents,
             ]),
             'bank_code' => $this->bank_code,
+            'bank_enabled' => $bankCode !== null && ChapaPayoutService::bankEnabled($bankCode),
             'bank_name' => $this->bank_name,
             'account_holder' => $this->account_holder,
             'account_number_last_four' => $this->account_number_last_four,

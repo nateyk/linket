@@ -650,11 +650,14 @@ class PayoutSystemTest extends TestCase
                 'is_default' => false,
             ])->assertCreated()
                 ->assertJsonPath('data.bank_code', $code)
+                ->assertJsonPath('data.bank_enabled', true)
                 ->assertJsonPath('data.is_default', $code === 'telebirr')
                 ->assertJsonPath('data.status', DigitalProductPayoutMethod::STATUS_PENDING);
         }
 
-        $this->getJson('/api/v1/items/payout-methods')->assertOk()->assertJsonCount(3, 'data');
+        settings()->save(['marketplace.payout_bank.dashen.enabled' => 0]);
+        $accounts = $this->getJson('/api/v1/items/payout-methods')->assertOk()->assertJsonCount(3, 'data');
+        $this->assertFalse(collect($accounts->json('data'))->firstWhere('bank_code', 'dashen')['bank_enabled']);
     }
 
     public function testStoreRouteGatesOnKyc(): void
