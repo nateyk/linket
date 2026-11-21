@@ -34,6 +34,7 @@ class ConversationAttachmentAuthorizationTest extends TestCase
         $this->grantPermission($customer, 'conversations.create');
         $ticket = $this->openTicket($customer->id, 'Attachment IDOR ticket');
         $victimEntry = $this->createFileEntry($victim->id);
+        $messageCount = $ticket->items()->count();
 
         $this->stateful()
             ->actingAs($customer)
@@ -44,6 +45,7 @@ class ConversationAttachmentAuthorizationTest extends TestCase
             ->assertForbidden();
 
         $this->assertAttachmentNotLinked($victimEntry->id);
+        $this->assertSame($messageCount, $ticket->items()->count());
     }
 
     public function test_agent_cannot_sync_another_users_file_entry_onto_a_message(): void
