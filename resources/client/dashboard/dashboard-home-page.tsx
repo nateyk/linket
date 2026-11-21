@@ -87,10 +87,10 @@ export function Component() {
         </DashboardLayout.SectionHeader>
         <DashboardLayout.SectionContent className="overflow-y-auto">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
-            <StatCards />
+            <StatCards dateRange={dateRange} />
             <CreatorSetupChecklist />
             <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
-              <RecentOrders />
+              <RecentOrders dateRange={dateRange} />
               <TopReferrers dateRange={dateRange} />
               <SalesTrend dateRange={dateRange} />
               <EngagementTrend
@@ -113,12 +113,12 @@ function SalesTrend({dateRange}: {dateRange: DateRangeValue}) {
   </Card.Content></Card>;
 }
 
-function StatCards() {
+function StatCards({dateRange}: {dateRange: DateRangeValue}) {
   const {
     data: salesData,
     isLoading: salesLoading,
     isError: salesError,
-  } = useDashboardSales();
+  } = useDashboardSales(dateRange);
 
   const summary = salesData?.summary;
   const currency = summary?.currency ?? getSiteCurrency();
@@ -420,8 +420,8 @@ function TopLocations({dateRange}: {dateRange: DateRangeValue}) {
   );
 }
 
-function RecentOrders() {
-  const {data: salesData, isLoading, isError} = useDashboardSales();
+function RecentOrders({dateRange}: {dateRange: DateRangeValue}) {
+  const {data: salesData, isLoading, isError} = useDashboardSales(dateRange);
   const {trans} = useTrans();
   const orders = salesData?.data.data?.slice(0, 5) ?? [];
 

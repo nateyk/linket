@@ -109,12 +109,19 @@ export const deleteStoreOptions = () =>
     },
   });
 
+const syncStoreContentCache = (storeId: string | number) => {
+  queryClient.invalidateQueries({
+    queryKey: [...storesBaseKey, `${storeId}`] as unknown as string[],
+  });
+};
+
 export const createStoreLinkOptions = (
   storeId: FirstParam<typeof createStoreLink>,
 ) => {
   return mutationOptions({
     mutationFn: (body: SecondParam<typeof createStoreLink>) =>
       createStoreLink(storeId, body as any),
+    onSuccess: () => syncStoreContentCache(storeId),
   });
 };
 
@@ -126,6 +133,7 @@ export const updateStoreLinkOptions = (
   return mutationOptions({
     mutationFn: (body: ThirdParam<typeof updateStoreLink>) =>
       updateStoreLink(storeId, linkId as any, body as any),
+    onSuccess: () => syncStoreContentCache(storeId),
   });
 };
 
@@ -135,6 +143,7 @@ export const detachStoreLinkOptions = (
 ) => {
   return mutationOptions({
     mutationFn: () => detachStoreLink(storeId, linkId as any),
+    onSuccess: () => syncStoreContentCache(storeId),
   });
 };
 
@@ -144,6 +153,7 @@ export const changeStoreContentOrderOptions = (
   return mutationOptions({
     mutationFn: (body: SecondParam<typeof changeStoreContentOrder>) =>
       changeStoreContentOrder(storeId, body as any),
+    onSuccess: () => syncStoreContentCache(storeId),
   });
 };
 
@@ -153,6 +163,7 @@ export const createStoreWidgetOptions = (
   return mutationOptions({
     mutationFn: (body: SecondParam<typeof createStoreWidget>) =>
       createStoreWidget(storeId, body as any),
+    onSuccess: () => syncStoreContentCache(storeId),
   });
 };
 
@@ -163,6 +174,7 @@ export const updateStoreWidgetOptions = (
   return mutationOptions({
     mutationFn: (body: ThirdParam<typeof updateStoreWidget>) =>
       updateStoreWidget(storeId, widgetId as any, body as any),
+    onSuccess: () => syncStoreContentCache(storeId),
   });
 };
 
@@ -172,6 +184,7 @@ export const deleteStoreWidgetOptions = (
 ) => {
   return mutationOptions({
     mutationFn: () => deleteStoreWidget(storeId, widgetId as any),
+    onSuccess: () => syncStoreContentCache(storeId),
   });
 };
 

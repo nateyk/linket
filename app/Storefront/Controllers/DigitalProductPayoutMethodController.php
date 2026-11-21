@@ -306,15 +306,50 @@ class DigitalProductPayoutMethodController extends Controller
         return $method;
     }
 
-    public function adminIndex(): AnonymousResourceCollection
+    public function adminIndex(Request $request): AnonymousResourceCollection
     {
         Gate::authorize('admin.access');
 
+        $filters = $request->validate([
+            'status' => ['nullable', 'string', 'in:all,pending,active,rejected'],
+            'search' => ['nullable', 'string', 'max:255'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $status = $filters['status'] ?? 'all';
+        $search = trim((string) ($filters['search'] ?? ''));
+
+        $query = DigitalProductPayoutMethod::query()
+            ->with(['creator', 'withdrawalMethod'])
+            ->latest('id');
+
+        if ($status === 'pending') {
+            $query->whereNotIn('status', [
+                DigitalProductPayoutMethod::STATUS_ACTIVE,
+                DigitalProductPayoutMethod::STATUS_REJECTED,
+            ]);
+        } elseif ($status === 'active' || $status === 'rejected') {
+            $query->where('status', $status);
+        }
+
+        if ($search !== '') {
+            $like = '%'.$search.'%';
+            $query->where(function ($builder) use ($like): void {
+                $builder
+                    ->where('account_holder', 'like', $like)
+                    ->orWhere('display_label', 'like', $like)
+                    ->orWhere('bank_code', 'like', $like)
+                    ->orWhere('account_number_last_four', 'like', $like)
+                    ->orWhereHas('creator', function ($creator) use ($like): void {
+                        $creator
+                            ->where('name', 'like', $like)
+                            ->orWhere('email', 'like', $like);
+                    });
+            });
+        }
+
         return DigitalProductPayoutMethodResource::collection(
-            DigitalProductPayoutMethod::query()
-                ->with(['creator', 'withdrawalMethod'])
-                ->latest('id')
-                ->paginate(50),
+            $query->paginate(50),
         );
     }
 

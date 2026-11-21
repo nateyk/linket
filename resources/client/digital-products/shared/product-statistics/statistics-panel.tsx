@@ -1,3 +1,4 @@
+import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
 import {useState} from 'react';
 import {KpiCards} from './kpi-cards';
@@ -23,7 +24,7 @@ export function StatisticsPanel({
   currency,
 }: StatisticsPanelProps) {
   const [period, setPeriod] = useState(() => currentMonthPeriod());
-  const {data, isLoading} = useProductStatistics(
+  const {data, isLoading, isError, refetch} = useProductStatistics(
     [...queryKey, productId],
     endpoint,
     period,
@@ -37,8 +38,25 @@ export function StatisticsPanel({
     );
   }
 
-  if (!data) {
-    return null;
+  if (isError || !data) {
+    return (
+      <div
+        role="alert"
+        className="flex min-h-64 flex-col items-center justify-center gap-3 text-center"
+      >
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Couldn't load statistics." />
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void refetch()}
+        >
+          <Trans message="Retry" />
+        </Button>
+      </div>
+    );
   }
 
   return (
