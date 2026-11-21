@@ -78,6 +78,7 @@ describe('CreatorWithdrawalsPage', () => {
       id: 1,
       type: 'telebirr',
       bank_code: 'telebirr',
+      bank_enabled: true,
       bank_name: 'Telebirr',
       account_holder: 'Nathnael',
       destination: '+251911223344',
@@ -93,6 +94,7 @@ describe('CreatorWithdrawalsPage', () => {
       id: 2,
       type: 'cbe',
       bank_code: 'cbe',
+      bank_enabled: true,
       bank_name: 'Commercial Bank of Ethiopia',
       account_holder: 'Nathnael',
       destination: '1000123456789',
@@ -282,6 +284,30 @@ describe('CreatorWithdrawalsPage', () => {
         payout_method_id: 1,
       });
     });
+  });
+
+  it('selects the approved default Dashen account and also offers the enabled wallet', async () => {
+    const dashen = {
+      ...mockDestinations[1], bank_code: 'dashen', display_label: 'Dashen Bank (•••• 0011)', is_default: true,
+    };
+    mockApiClient.get
+      .mockResolvedValueOnce({data: {summary: mockSummary}})
+      .mockResolvedValueOnce({data: {data: []}})
+      .mockResolvedValueOnce({data: {data: [
+        {...mockDestinations[0], is_default: false},
+        dashen,
+        {...mockDestinations[1], id: 3, bank_enabled: false},
+      ]}});
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', {name: /Request withdrawal/i}));
+    const select = screen.getByRole('combobox', {name: 'Destination account'}) as HTMLSelectElement;
+    expect(Array.from(select.options, option => option.value)).toEqual(['1', '2']);
+    expect(select.selectedOptions[0].textContent).toContain('Dashen Bank');
+    fireEvent.click(screen.getByRole('button', {name: /Confirm withdrawal/i}));
+    await waitFor(() => expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/items/payout-requests', {
+      amount_cents: 18000, payout_method_id: dashen.id,
+    }));
   });
 
   it('enforces the selected approved bank method limits and caps Max accordingly', async () => {
