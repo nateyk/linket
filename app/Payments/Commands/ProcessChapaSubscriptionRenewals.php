@@ -11,6 +11,7 @@ use Illuminate\Console\Command;
 class ProcessChapaSubscriptionRenewals extends Command
 {
     protected $signature = 'billing:process-chapa-renewals';
+
     protected $description = 'Send Chapa renewal reminders and expire subscriptions after the grace period.';
 
     public function handle(): int
@@ -33,34 +34,59 @@ class ProcessChapaSubscriptionRenewals extends Command
                 });
         }
 
+        $now = now();
+        $graceCutoff = $now->copy()->subDays(7);
+
         Subscription::query()
-            ->with('user')
             ->where('gateway_name', 'chapa')
             ->whereNull('ends_at')
             ->whereNotNull('renews_at')
-            ->where('renews_at', '<', now())
-            ->where('renews_at', '>=', now()->subDays(7))
+            ->where('renews_at', '<', $now)
+            ->where('renews_at', '>=', $graceCutoff)
             ->where(function ($query): void {
                 $query->whereNull('gateway_status')->orWhere('gateway_status', '!=', 'past_due');
             })
-            ->each(function (Subscription $subscription): void {
-                $subscription->user?->notify(new ChapaSubscriptionStatusNotification('past_due'));
-                $subscription->update(['gateway_status' => 'past_due']);
+            ->chunkById(100, function ($subscriptions) use ($now, $graceCutoff): void {
+                foreach ($subscriptions as $subscription) {
+                    $changed = Subscription::query()
+                        ->whereKey($subscription->id)
+                        ->where('gateway_name', 'chapa')
+                        ->whereNull('ends_at')
+                        ->where('renews_at', '<', $now)
+                        ->where('renews_at', '>=', $graceCutoff)
+                        ->where(function ($query): void {
+                            $query->whereNull('gateway_status')->orWhere('gateway_status', '!=', 'past_due');
+                        })
+                        ->update(['gateway_status' => 'past_due']);
+
+                    if ($changed === 1) {
+                        $subscription->user?->notify(new ChapaSubscriptionStatusNotification('past_due'));
+                    }
+                }
             });
 
         Subscription::query()
-            ->with('user')
             ->where('gateway_name', 'chapa')
             ->whereNull('ends_at')
             ->whereNotNull('renews_at')
-            ->where('renews_at', '<', now()->subDays(7))
-            ->each(function (Subscription $subscription): void {
-                $subscription->user?->notify(new ChapaSubscriptionStatusNotification('expired'));
-                $subscription->update([
-                    'gateway_status' => 'expired',
-                    'ends_at' => now(),
-                    'renews_at' => null,
-                ]);
+            ->where('renews_at', '<', $graceCutoff)
+            ->chunkById(100, function ($subscriptions) use ($graceCutoff): void {
+                foreach ($subscriptions as $subscription) {
+                    $changed = Subscription::query()
+                        ->whereKey($subscription->id)
+                        ->where('gateway_name', 'chapa')
+                        ->whereNull('ends_at')
+                        ->where('renews_at', '<', $graceCutoff)
+                        ->update([
+                            'gateway_status' => 'expired',
+                            'ends_at' => now(),
+                            'renews_at' => null,
+                        ]);
+
+                    if ($changed === 1) {
+                        $subscription->user?->notify(new ChapaSubscriptionStatusNotification('expired'));
+                    }
+                }
             });
 
         return self::SUCCESS;
