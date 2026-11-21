@@ -3,9 +3,11 @@
 use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationStatus;
 use App\Models\User;
+use App\Storefront\Models\DigitalProduct;
 use App\Team\Models\Group;
 use App\Webhooks\Jobs\DispatchWebhooksForEvent;
 use App\Webhooks\Models\Webhook;
+use Common\Workspaces\Actions\CreateWorkspace;
 use Database\Seeders\SupportDefaultsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -23,6 +25,16 @@ test('creating a customer ticket dispatches ticket.created webhook for support o
     Queue::fake();
 
     $owner = User::factory()->create();
+    $workspace = (new CreateWorkspace())->createPersonalWorkspace($owner);
+    DigitalProduct::query()->create([
+        'workspace_id' => $workspace->id,
+        'user_id' => $owner->id,
+        'title' => 'Owner product',
+        'status' => 'approved',
+        'price_cents' => 1000,
+        'currency' => 'ETB',
+        'type' => 'digital',
+    ]);
     $customer = User::factory()->create();
     $customer->permissions()->attach(
         \Common\Permissions\Models\Permission::query()->firstOrCreate([

@@ -5,8 +5,10 @@ namespace Tests\Feature\Support;
 use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationStatus;
 use App\Models\User;
+use App\Storefront\Models\DigitalProduct;
 use App\Team\Models\Group;
 use Common\Permissions\Models\Permission;
+use Common\Workspaces\Actions\CreateWorkspace;
 use Database\Seeders\SupportDefaultsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -99,6 +101,16 @@ class CreateCustomerTicketTest extends TestCase
     {
         $user = User::factory()->create();
         $owner = User::factory()->create();
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($owner);
+        DigitalProduct::query()->create([
+            'workspace_id' => $workspace->id,
+            'user_id' => $owner->id,
+            'title' => 'Owner product',
+            'status' => 'approved',
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'type' => 'digital',
+        ]);
         $this->grantPermission($user, 'conversations.create');
 
         $this->stateful()
