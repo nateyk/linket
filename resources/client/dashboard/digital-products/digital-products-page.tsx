@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
-import clsx from 'clsx';
+import {cn} from '@ui/utils/cn';
 import {CreatorListingToolbar} from '@app/dashboard/creator-listing-toolbar';
 import {CreateProductDialog} from './create-product-dialog';
 
@@ -800,13 +800,13 @@ function StatusBadge({
 
   return (
     <div
-      className={clsx(
+      className={cn(
         'inline-flex items-center gap-1.5 rounded-card-xs bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground shadow-xs ring-1 ring-foreground/10',
         className,
       )}
     >
       <span
-        className={clsx('size-1.5 rounded-full', dotColor)}
+        className={cn('size-1.5 rounded-full', dotColor)}
         aria-hidden="true"
       />
       <span>{label}</span>
