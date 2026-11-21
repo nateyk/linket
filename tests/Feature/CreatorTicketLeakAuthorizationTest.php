@@ -11,6 +11,7 @@ use Common\Workspaces\Actions\CreateWorkspace;
 use Database\Seeders\SupportDefaultsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class CreatorTicketLeakAuthorizationTest extends TestCase
@@ -25,67 +26,35 @@ class CreatorTicketLeakAuthorizationTest extends TestCase
 
     public function test_recent_customer_conversations_hide_creator_owned_tickets(): void
     {
-        $customer = User::factory()->create();
-        $creator = User::factory()->create();
-        $agent = $this->createPlatformAgent();
+        [$customer, $agent] = $this->seedPlatformAndCreatorTickets();
 
-        Conversation::query()->create([
-            'user_id' => $customer->id,
-            'support_owner_id' => $creator->id,
-            'subject' => 'Private creator ticket',
-            'type' => 'ticket',
-            'assigned_to' => Conversation::ASSIGNED_AGENT,
-            'status_category' => Conversation::STATUS_OPEN,
-        ]);
-        Conversation::query()->create([
-            'user_id' => $customer->id,
-            'subject' => 'Platform ticket',
-            'type' => 'ticket',
-            'assigned_to' => Conversation::ASSIGNED_AGENT,
-            'status_category' => Conversation::STATUS_OPEN,
-        ]);
+        $subjects = $this->subjectsFrom(
+            $this->stateful()
+                ->actingAs($agent)
+                ->getJson("/api/v1/helpdesk/agent/conversations/recent/{$customer->id}")
+                ->assertOk(),
+            'conversations',
+        );
 
-        $response = $this->stateful()
-            ->actingAs($agent)
-            ->getJson("/api/v1/helpdesk/agent/conversations/recent/{$customer->id}")
-            ->assertOk();
-
-        $subjects = collect($response->json('conversations'))->pluck('subject');
         $this->assertTrue($subjects->contains('Platform ticket'));
         $this->assertFalse($subjects->contains('Private creator ticket'));
     }
 
     public function test_customer_profile_conversations_hide_creator_owned_tickets(): void
     {
-        $customer = User::factory()->create();
-        $creator = User::factory()->create();
-        $agent = $this->createPlatformAgent();
+        [$customer, $agent] = $this->seedPlatformAndCreatorTickets();
         $this->grantPermission($agent, 'users.update');
         $this->grantPermission($agent, 'api.access');
         $agent = $agent->fresh(['roles', 'permissions']);
 
-        Conversation::query()->create([
-            'user_id' => $customer->id,
-            'support_owner_id' => $creator->id,
-            'subject' => 'Private creator ticket',
-            'type' => 'ticket',
-            'assigned_to' => Conversation::ASSIGNED_AGENT,
-            'status_category' => Conversation::STATUS_OPEN,
-        ]);
-        Conversation::query()->create([
-            'user_id' => $customer->id,
-            'subject' => 'Platform ticket',
-            'type' => 'ticket',
-            'assigned_to' => Conversation::ASSIGNED_AGENT,
-            'status_category' => Conversation::STATUS_OPEN,
-        ]);
+        $subjects = $this->subjectsFrom(
+            $this->stateful()
+                ->actingAs($agent)
+                ->getJson("/api/v1/helpdesk/customers/{$customer->id}/conversations")
+                ->assertOk(),
+            'pagination.data',
+        );
 
-        $response = $this->stateful()
-            ->actingAs($agent)
-            ->getJson("/api/v1/helpdesk/customers/{$customer->id}/conversations")
-            ->assertOk();
-
-        $subjects = collect($response->json('pagination.data'))->pluck('subject');
         $this->assertTrue($subjects->contains('Platform ticket'));
         $this->assertFalse($subjects->contains('Private creator ticket'));
     }
@@ -130,6 +99,37 @@ class CreatorTicketLeakAuthorizationTest extends TestCase
                 'support_owner_id' => $creator->id,
             ])
             ->assertOk();
+    }
+
+    /** @return array{0: User, 1: User} */
+    private function seedPlatformAndCreatorTickets(): array
+    {
+        $customer = User::factory()->create();
+        $creator = User::factory()->create();
+        $agent = $this->createPlatformAgent();
+
+        Conversation::query()->create([
+            'user_id' => $customer->id,
+            'support_owner_id' => $creator->id,
+            'subject' => 'Private creator ticket',
+            'type' => 'ticket',
+            'assigned_to' => Conversation::ASSIGNED_AGENT,
+            'status_category' => Conversation::STATUS_OPEN,
+        ]);
+        Conversation::query()->create([
+            'user_id' => $customer->id,
+            'subject' => 'Platform ticket',
+            'type' => 'ticket',
+            'assigned_to' => Conversation::ASSIGNED_AGENT,
+            'status_category' => Conversation::STATUS_OPEN,
+        ]);
+
+        return [$customer, $agent];
+    }
+
+    private function subjectsFrom(TestResponse $response, string $jsonPath): \Illuminate\Support\Collection
+    {
+        return collect($response->json($jsonPath))->pluck('subject');
     }
 
     private function createPlatformAgent(): User

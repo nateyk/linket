@@ -32,15 +32,7 @@ class ConversationAttachmentAuthorizationTest extends TestCase
         $customer = User::factory()->create();
         $victim = User::factory()->create();
         $this->grantPermission($customer, 'conversations.create');
-
-        $ticket = Conversation::query()->create([
-            'user_id' => $customer->id,
-            'subject' => 'Attachment IDOR ticket',
-            'type' => 'ticket',
-            'assigned_to' => Conversation::ASSIGNED_AGENT,
-            'status_category' => Conversation::STATUS_OPEN,
-        ]);
-
+        $ticket = $this->openTicket($customer->id, 'Attachment IDOR ticket');
         $victimEntry = $this->createFileEntry($victim->id);
 
         $this->stateful()
@@ -51,12 +43,7 @@ class ConversationAttachmentAuthorizationTest extends TestCase
             ])
             ->assertForbidden();
 
-        $this->assertFalse(
-            DB::table('file_entry_models')
-                ->where('file_entry_id', $victimEntry->id)
-                ->where('model_type', ConversationItem::MODEL_TYPE)
-                ->exists(),
-        );
+        $this->assertAttachmentNotLinked($victimEntry->id);
     }
 
     public function test_agent_cannot_sync_another_users_file_entry_onto_a_message(): void
@@ -64,14 +51,7 @@ class ConversationAttachmentAuthorizationTest extends TestCase
         $customer = User::factory()->create();
         $victim = User::factory()->create();
         $agent = $this->createPlatformAgent();
-
-        $ticket = Conversation::query()->create([
-            'user_id' => $customer->id,
-            'subject' => 'Agent sync IDOR ticket',
-            'type' => 'ticket',
-            'assigned_to' => Conversation::ASSIGNED_AGENT,
-            'status_category' => Conversation::STATUS_OPEN,
-        ]);
+        $ticket = $this->openTicket($customer->id, 'Agent sync IDOR ticket');
         $message = ConversationItem::query()->create([
             'conversation_id' => $ticket->id,
             'user_id' => $agent->id,
@@ -88,27 +68,14 @@ class ConversationAttachmentAuthorizationTest extends TestCase
             ])
             ->assertForbidden();
 
-        $this->assertFalse(
-            DB::table('file_entry_models')
-                ->where('file_entry_id', $victimEntry->id)
-                ->where('model_type', ConversationItem::MODEL_TYPE)
-                ->where('model_id', $message->id)
-                ->exists(),
-        );
+        $this->assertAttachmentNotLinked($victimEntry->id, $message->id);
     }
 
     public function test_customer_can_attach_their_own_file_entry(): void
     {
         $customer = User::factory()->create();
         $this->grantPermission($customer, 'conversations.create');
-
-        $ticket = Conversation::query()->create([
-            'user_id' => $customer->id,
-            'subject' => 'Own attachment ticket',
-            'type' => 'ticket',
-            'assigned_to' => Conversation::ASSIGNED_AGENT,
-            'status_category' => Conversation::STATUS_OPEN,
-        ]);
+        $ticket = $this->openTicket($customer->id, 'Own attachment ticket');
         $ownEntry = $this->createFileEntry($customer->id);
 
         $this->stateful()
@@ -125,6 +92,30 @@ class ConversationAttachmentAuthorizationTest extends TestCase
                 ->where('model_type', ConversationItem::MODEL_TYPE)
                 ->exists(),
         );
+    }
+
+    private function openTicket(int $userId, string $subject): Conversation
+    {
+        return Conversation::query()->create([
+            'user_id' => $userId,
+            'subject' => $subject,
+            'type' => 'ticket',
+            'assigned_to' => Conversation::ASSIGNED_AGENT,
+            'status_category' => Conversation::STATUS_OPEN,
+        ]);
+    }
+
+    private function assertAttachmentNotLinked(int $fileEntryId, ?int $messageId = null): void
+    {
+        $query = DB::table('file_entry_models')
+            ->where('file_entry_id', $fileEntryId)
+            ->where('model_type', ConversationItem::MODEL_TYPE);
+
+        if ($messageId !== null) {
+            $query->where('model_id', $messageId);
+        }
+
+        $this->assertFalse($query->exists());
     }
 
     private function createFileEntry(int $ownerId): FileEntry
