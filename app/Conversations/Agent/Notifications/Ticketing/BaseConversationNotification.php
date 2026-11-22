@@ -7,6 +7,7 @@ use App\Mail\ReactEmailMessage;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Slack\SlackMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
@@ -108,5 +109,10 @@ abstract class BaseConversationNotification extends Notification implements
                 $this->lines($notifiable),
             ),
         ];
+    }
+
+    public function toBroadcast(User $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->toArray($notifiable));
     }
 }

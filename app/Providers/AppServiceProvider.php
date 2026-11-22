@@ -35,6 +35,7 @@ use App\Tags\Models\Tag;
 use App\Webhooks\Console\DeleteOldWebhookDeliveries;
 use Common\Auth\Events\UserCreated;
 use Common\Files\Events\FileUploaded;
+use Common\Notifications\SubscribeUserToNotifications;
 use Common\Auth\Models\BaseUser;
 use Common\Core\Bootstrap\BootstrapData;
 use Common\Domains\CustomDomain;
@@ -337,6 +338,61 @@ class AppServiceProvider extends ServiceProvider
                     ]);
                 }
             }
+
+            $this->seedNotificationSubscriptions($e->user);
         });
+    }
+
+    private function seedNotificationSubscriptions(User $user): void
+    {
+        // Agents/admins always get ticket subscription rows so helpdesk
+        // whereNeedsNotificationFor() can resolve recipients. Creators only
+        // auto-subscribe when NOTIF_SUBS_ENABLED, and only to non-agent notifs.
+        if ($this->shouldSkipNotificationSeeding($user)) {
+            return;
+        }
+
+        try {
+            (new SubscribeUserToNotifications())->execute(
+                $user,
+                $this->notificationIdsForSeeding($user),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function shouldSkipNotificationSeeding(User $user): bool
+    {
+        if ($this->userIsHelpdeskStaff($user)) {
+            return false;
+        }
+
+        return ! (bool) config('app.notif_subs_integrated');
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function notificationIdsForSeeding(User $user): ?array
+    {
+        if ($this->userIsHelpdeskStaff($user)) {
+            return null;
+        }
+
+        return ['W01'];
+    }
+
+    private function userIsHelpdeskStaff(User $user): bool
+    {
+        if ($user->type === 'admin') {
+            return true;
+        }
+
+        if (! method_exists($user, 'isAgent')) {
+            return false;
+        }
+
+        return $user->isAgent();
     }
 }

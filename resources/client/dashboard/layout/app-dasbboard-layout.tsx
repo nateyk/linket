@@ -1,6 +1,7 @@
 import {MobileBottomNavbar} from '@app/dashboard/layout/mobile-bottom-navbar';
 import {UpgradeButton} from '@app/dashboard/layout/sidenav/upgrade-button';
 import {GlobalSearchInput} from '@app/dashboard/search/global-search-input';
+import {useUserNotificationListener} from '@app/dashboard/websockets/use-user-notification-listener';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {DashboardLayoutContext} from '@common/ui/dashboard/dashboard-layout-context';
 import {Navbar} from '@common/ui/navigation/navbar/navbar';
@@ -22,6 +23,7 @@ export function Component() {
   const {trans} = useTrans();
   const isCompactLayout = useMediaQuery('(max-width: 1024px)');
   const {pathname, search} = useLocation();
+  useUserNotificationListener();
   // Editor routes get the labelled main landmark (A-10); every other
   // dashboard page keeps an unlabelled main.
   const isStoreEditor = /^\/(dashboard|admin)\/stores\/[^/]+/.test(pathname);

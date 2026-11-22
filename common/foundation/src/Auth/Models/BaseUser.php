@@ -106,6 +106,14 @@ abstract class BaseUser extends BaseModel implements
         return config('services.slack.notifications.channel');
     }
 
+    /**
+     * Match routes/channels.php authorization for private notification broadcasts.
+     */
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return 'App.User.'.$this->getKey();
+    }
+
     public function scopeWhereNeedsNotificationFor(
         Builder $query,
         string $notifId,

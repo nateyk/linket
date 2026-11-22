@@ -15,7 +15,7 @@ export interface FetchNotificationSubscriptionsResponse
 
 function fetchNotificationSubscriptions(): Promise<FetchNotificationSubscriptionsResponse> {
   return apiClient
-    .get('notifications/me/subscriptions')
+    .get('notifications/subscriptions')
     .then(response => response.data);
 }
 
@@ -32,7 +32,7 @@ export const notificationSubscriptionsQueryOptions =
     queryKey: ['notification-subscriptions'],
     queryFn: () =>
       apiClient
-        .get('notifications/me/subscriptions')
+        .get('notifications/subscriptions')
         .then(response => response.data),
     staleTime: Infinity,
   });

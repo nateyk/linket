@@ -4,6 +4,7 @@ namespace Common;
 
 use App\Models\Channel;
 use App\Payments\Commands\ProcessChapaSubscriptionRenewals;
+use App\Payments\Commands\ProcessDirectSubscriptionRenewals;
 use App\Payments\Models\ProSubscriptionPayment;
 use App\Models\User;
 use App\Storefront\Models\CommissionInvoice;
@@ -545,6 +546,7 @@ class CommonServiceProvider extends ServiceProvider
             CountUploadingBackendFiles::class,
             UpdateAppCommand::class,
             ProcessChapaSubscriptionRenewals::class,
+            ProcessDirectSubscriptionRenewals::class,
         ];
 
         if ($this->app->environment() !== 'production') {
@@ -589,6 +591,11 @@ class CommonServiceProvider extends ServiceProvider
                 ->everyFifteenMinutes();
             $schedule
                 ->command(ProcessChapaSubscriptionRenewals::class)
+                ->hourly()
+                ->withoutOverlapping()
+                ->onOneServer();
+            $schedule
+                ->command(ProcessDirectSubscriptionRenewals::class)
                 ->hourly()
                 ->withoutOverlapping()
                 ->onOneServer();

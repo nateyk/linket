@@ -18,7 +18,7 @@ function UpdateNotificationSettings(
   payload: UpdateNotificationSettingsPayload,
 ): Promise<Response> {
   return apiClient
-    .put('notifications/me/subscriptions', {selections: payload})
+    .put('notifications/subscriptions', {selections: payload})
     .then(r => r.data);
 }
 
