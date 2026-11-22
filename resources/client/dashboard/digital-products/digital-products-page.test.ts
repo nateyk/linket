@@ -95,14 +95,22 @@ describe('product card visual hierarchy', () => {
     expect(source).toContain('<Trans message="Update under review" />');
   });
 
-  test('shows price beneath the title and sales in the footer without repeating price', () => {
+  test('shows price beneath the title and single-line sales + earned metrics in card content', () => {
     const card = source.slice(source.indexOf('function ProductCard('), source.indexOf('function SalesLabel('));
     expect(card).toContain('product.price_cents === 0');
     expect(card).toContain('<Trans message="Free access" />');
     expect(card.indexOf('valueInCents={product.price_cents}')).toBeLessThan(card.indexOf('<Card.Footer'));
-    expect(card).toContain('<ShoppingBagIcon className="size-4 shrink-0"');
+    expect(card).toContain('<ShoppingBagIcon className="size-3.5 shrink-0"');
     expect(card).toContain('<SalesLabel count={product.sales_count} />');
     expect(card).toContain('product.gross_revenue_cents');
-    expect(card).toContain('<ProductActions');
+    expect(card.indexOf('<ShoppingBagIcon')).toBeLessThan(card.indexOf('<Card.Footer'));
+  });
+
+  test('card footer contains type badge and product actions', () => {
+    const card = source.slice(source.indexOf('function ProductCard('), source.indexOf('function SalesLabel('));
+    const footer = card.slice(card.indexOf('<Card.Footer'), card.indexOf('</Card.Footer>'));
+    expect(footer).toContain('<Trans message="Course" />');
+    expect(footer).toContain('<Trans message="Digital download" />');
+    expect(footer).toContain('<ProductActions');
   });
 });

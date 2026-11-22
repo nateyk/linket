@@ -132,7 +132,7 @@ describe('services list', () => {
     expect(screen.getByText('Website build')).toBeTruthy();
 
     await user.clear(search);
-    await user.click(screen.getByRole('button', {name: 'Filter by status'}));
+    await user.click(screen.getByRole('button', {name: 'Filter'}));
     await user.click(await screen.findByRole('menuitemradio', {name: 'Draft'}));
     await waitFor(() => expect(screen.queryByText('Logo design')).toBeNull());
 
@@ -159,7 +159,7 @@ describe('services list', () => {
     );
     expect(await screen.findByText('Logo design')).toBeTruthy();
     const before = get.mock.calls.length;
-    await user.click(screen.getByRole('button', {name: 'Sort by'}));
+    await user.click(screen.getByRole('button', {name: 'Filter'}));
     await user.click(await screen.findByRole('menuitemradio', {name: 'Most inquiries'}));
     await waitFor(() => {
       const titles = Array.from(document.querySelectorAll('[data-slot="card-title"]'))

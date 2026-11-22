@@ -1,9 +1,10 @@
+import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Input} from '@shadcn/forms/input/input';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
-import {ArrowDownWideNarrowIcon, ChevronDownIcon, ListFilterIcon, SearchIcon, XIcon} from 'lucide-react';
+import {ListFilterIcon, SearchIcon, XIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
 
 export type CreatorFilterOption = {
@@ -39,22 +40,24 @@ export function CreatorListingToolbar({
   sort,
   onSortChange,
   sortOptions,
-  defaultSort = 'latest',
+  defaultSort,
   onClear,
 }: Props) {
   const {trans} = useTrans();
-  const currentStatus = statusOptions.find(option => option.value === status);
-  const currentSort = sortOptions?.find(option => option.value === sort);
-  const filtersActive = Boolean(search.trim() || status || (sort && sort !== defaultSort));
+  const resolvedDefaultSort = defaultSort ?? sortOptions?.[0]?.value ?? 'latest';
+  const isStatusActive = Boolean(status);
+  const isSortActive = Boolean(sort && sort !== resolvedDefaultSort);
+  const activeFilterCount = (isStatusActive ? 1 : 0) + (isSortActive ? 1 : 0);
+  const filtersActive = Boolean(search.trim() || activeFilterCount > 0);
 
   return (
     <div
       data-slot="creator-listing-toolbar"
       role="search"
       aria-label={searchLabel}
-      className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2.5"
+      className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center"
     >
-      <div className="relative w-full min-w-0 sm:w-72 sm:max-w-xs sm:flex-none">
+      <div className="relative min-w-0 flex-1 sm:max-w-xs">
         <SearchIcon
           className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -72,29 +75,30 @@ export function CreatorListingToolbar({
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <Dropdown.Root>
           <Dropdown.Trigger
-            aria-label={trans({message: 'Filter by status'})}
+            aria-label={trans({message: 'Filter'})}
             render={
               <Button
                 type="button"
                 variant="outline"
-                color={status ? 'primary' : 'default'}
+                color={activeFilterCount > 0 ? 'primary' : 'default'}
                 size="sm"
-                className="h-9 gap-1.5 px-3"
+                className="h-9 gap-2 px-3"
               />
             }
           >
-            <ListFilterIcon className="size-4" aria-hidden="true" />
-            <Trans message="Status" />
-            {currentStatus && (
-              <span className="max-w-24 truncate text-xs font-medium">
-                {currentStatus.label}
-              </span>
+            <ListFilterIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+            <Trans message="Filter" />
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                {activeFilterCount}
+              </Badge>
             )}
-            <ChevronDownIcon className="size-3.5 text-muted-foreground" aria-hidden="true" />
           </Dropdown.Trigger>
-          <Dropdown.Content align="start" className="min-w-48">
+          <Dropdown.Content align="start" className="min-w-56">
             <Dropdown.Group>
-              <Dropdown.GroupLabel><Trans message="Status" /></Dropdown.GroupLabel>
+              <Dropdown.GroupLabel>
+                <Trans message="Status" />
+              </Dropdown.GroupLabel>
               <Dropdown.RadioGroup
                 value={status || 'all'}
                 onValueChange={value => onStatusChange(value === 'all' ? '' : value)}
@@ -109,42 +113,39 @@ export function CreatorListingToolbar({
                 ))}
               </Dropdown.RadioGroup>
             </Dropdown.Group>
+
+            {sortOptions && onSortChange && (
+              <>
+                <Dropdown.Separator />
+                <Dropdown.Group>
+                  <Dropdown.GroupLabel>
+                    <Trans message="Sort by" />
+                  </Dropdown.GroupLabel>
+                  <Dropdown.RadioGroup
+                    value={sort ?? resolvedDefaultSort}
+                    onValueChange={onSortChange}
+                  >
+                    {sortOptions.map(option => (
+                      <Dropdown.RadioItem key={option.value} value={option.value}>
+                        {option.label}
+                      </Dropdown.RadioItem>
+                    ))}
+                  </Dropdown.RadioGroup>
+                </Dropdown.Group>
+              </>
+            )}
           </Dropdown.Content>
         </Dropdown.Root>
-        {sortOptions && onSortChange && (
-          <Dropdown.Root>
-            <Dropdown.Trigger
-              aria-label={trans({message: 'Sort by'})}
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  color={sort && sort !== defaultSort ? 'primary' : 'default'}
-                  size="sm"
-                  className="h-9 gap-1.5 px-3"
-                />
-              }
-            >
-              <ArrowDownWideNarrowIcon className="size-4" aria-hidden="true" />
-              <span className="max-w-28 truncate">{currentSort?.label ?? <Trans message="Sort" />}</span>
-              <ChevronDownIcon className="size-3.5 text-muted-foreground" aria-hidden="true" />
-            </Dropdown.Trigger>
-            <Dropdown.Content align="start" className="min-w-48">
-              <Dropdown.Group>
-                <Dropdown.GroupLabel><Trans message="Sort by" /></Dropdown.GroupLabel>
-                <Dropdown.RadioGroup value={sort ?? defaultSort} onValueChange={onSortChange}>
-                  {sortOptions.map(option => (
-                    <Dropdown.RadioItem key={option.value} value={option.value}>
-                      {option.label}
-                    </Dropdown.RadioItem>
-                  ))}
-                </Dropdown.RadioGroup>
-              </Dropdown.Group>
-            </Dropdown.Content>
-          </Dropdown.Root>
-        )}
+
         {filtersActive && (
-          <Button type="button" variant="ghost" color="default" size="sm" className="h-9 gap-1 px-2 text-muted-foreground" onClick={onClear}>
+          <Button
+            type="button"
+            variant="ghost"
+            color="default"
+            size="sm"
+            className="h-9 gap-1 px-2 text-muted-foreground"
+            onClick={onClear}
+          >
             <XIcon className="size-3.5" aria-hidden="true" />
             <Trans message="Clear filters" />
           </Button>

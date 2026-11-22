@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
+import {cn} from '@ui/utils/cn';
 import {CreatorListingToolbar} from '@app/dashboard/creator-listing-toolbar';
 import {CreateProductDialog} from './create-product-dialog';
 
@@ -423,24 +424,17 @@ function ProductCard({
         </div>
       </Card.Header>
 
-      <Card.Content className="flex flex-1 flex-col gap-3 p-4 pb-0">
-        <div className="flex min-w-0 flex-col gap-1">
-          {isCourse && (
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              <Trans message="Course" />
-            </span>
-          )}
-          <Card.Title className="truncate text-sm font-semibold leading-5">
-            <Link
-              to={editPath}
-              className="hover:underline hover:underline-offset-3"
-            >
-              {product.title}
-            </Link>
-          </Card.Title>
-        </div>
+      <Card.Content className="flex flex-1 flex-col gap-1.5 p-4 pb-0">
+        <Card.Title className="truncate text-sm font-semibold leading-5">
+          <Link
+            to={editPath}
+            className="hover:underline hover:underline-offset-3"
+          >
+            {product.title}
+          </Link>
+        </Card.Title>
 
-        <div className="text-xs font-medium text-muted-foreground">
+        <div className="text-sm font-semibold text-foreground">
           {product.price_cents === 0 ? (
             <Trans message="Free access" />
           ) : (
@@ -451,34 +445,42 @@ function ProductCard({
           )}
         </div>
 
-        {(product.status === 'rejected' || product.status === 'pending_approval') && product.rejection_reason && (
-          <div className="flex gap-2 rounded-card-sm bg-destructive/8 p-2.5 text-xs leading-4 text-destructive">
-            <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
-            <span className="line-clamp-2">{product.rejection_reason}</span>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <ShoppingBagIcon className="size-3.5 shrink-0" aria-hidden="true" />
+          <SalesLabel count={product.sales_count} />
+          <span>·</span>
+          <Trans
+            message=":amount earned"
+            values={{
+              amount: formatMoney(
+                product.gross_revenue_cents,
+                product.currency.toUpperCase(),
+              ),
+            }}
+          />
+        </div>
+
+        {(product.status === 'rejected' ||
+          product.status === 'pending_approval') &&
+          product.rejection_reason && (
+            <div className="mt-1 flex gap-2 rounded-card-sm bg-destructive/8 p-2.5 text-xs leading-4 text-destructive">
+              <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+              <span className="line-clamp-2">{product.rejection_reason}</span>
+            </div>
+          )}
       </Card.Content>
 
-      <Card.Footer className="justify-between gap-3 px-4 py-4">
-        <div className="flex min-w-0 flex-col gap-0.5 text-sm text-muted-foreground">
-          <div className="flex min-w-0 items-center gap-2">
-            <ShoppingBagIcon className="size-4 shrink-0" aria-hidden="true" />
-            <SalesLabel count={product.sales_count} />
-          </div>
-          {product.sales_count > 0 && (
-            <span className="truncate">
-              <Trans
-                message=":amount earned"
-                values={{
-                  amount: formatMoney(
-                    product.gross_revenue_cents,
-                    product.currency.toUpperCase(),
-                  ),
-                }}
-              />
-            </span>
+      <Card.Footer className="mt-auto flex items-center justify-between gap-3 px-4 py-3">
+        <Badge
+          variant="secondary"
+          className="font-normal text-muted-foreground"
+        >
+          {isCourse ? (
+            <Trans message="Course" />
+          ) : (
+            <Trans message="Digital download" />
           )}
-        </div>
+        </Badge>
 
         <Tooltip.Provider>
           <div className="flex items-center gap-1">
@@ -757,50 +759,59 @@ function ProductCoverFallback() {
 function StatusBadge({
   status,
   hasPendingUpdate = false,
+  className,
 }: {
   status: ProductStatus;
   hasPendingUpdate?: boolean;
+  className?: string;
 }) {
-  if (status === 'approved' && hasPendingUpdate) {
-    return (
-      <Badge variant="secondary">
-        <Trans message="Update under review" />
-      </Badge>
-    );
+  const isPendingUpdate = status === 'approved' && hasPendingUpdate;
+
+  let dotColor = 'bg-muted-foreground';
+  let label = <Trans message="Draft" />;
+
+  if (isPendingUpdate) {
+    dotColor = 'bg-warning';
+    label = <Trans message="Update under review" />;
+  } else {
+    switch (status) {
+      case 'pending_approval':
+        dotColor = 'bg-warning';
+        label = <Trans message="In review" />;
+        break;
+      case 'approved':
+        dotColor = 'bg-positive';
+        label = <Trans message="Live" />;
+        break;
+      case 'rejected':
+        dotColor = 'bg-destructive';
+        label = <Trans message="Needs changes" />;
+        break;
+      case 'archived':
+        dotColor = 'bg-muted-foreground/60';
+        label = <Trans message="Archived" />;
+        break;
+      default:
+        dotColor = 'bg-muted-foreground';
+        label = <Trans message="Draft" />;
+        break;
+    }
   }
 
-  switch (status) {
-    case 'pending_approval':
-      return (
-        <Badge variant="secondary">
-          <Trans message="In review" />
-        </Badge>
-      );
-    case 'approved':
-      return (
-        <Badge variant="default">
-          <Trans message="Live" />
-        </Badge>
-      );
-    case 'rejected':
-      return (
-        <Badge variant="destructive">
-          <Trans message="Needs changes" />
-        </Badge>
-      );
-    case 'archived':
-      return (
-        <Badge variant="secondary">
-          <Trans message="Archived" />
-        </Badge>
-      );
-    default:
-      return (
-        <Badge variant="secondary">
-          <Trans message="Draft" />
-        </Badge>
-      );
-  }
+  return (
+    <div
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-card-xs bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground shadow-xs ring-1 ring-foreground/10',
+        className,
+      )}
+    >
+      <span
+        className={cn('size-1.5 rounded-full', dotColor)}
+        aria-hidden="true"
+      />
+      <span>{label}</span>
+    </div>
+  );
 }
 
 function EmptyProducts({onNewProduct}: {onNewProduct: () => void}) {
@@ -835,15 +846,14 @@ function ProductSkeleton() {
           <Card.Header className="p-0">
             <Skeleton className="aspect-video w-full rounded-none" />
           </Card.Header>
-          <Card.Content className="flex flex-col gap-3 p-4 pb-0">
+          <Card.Content className="flex flex-col gap-2 p-4 pb-0">
             <Skeleton className="h-5 w-2/3" />
-            <Skeleton className="h-7 w-1/3" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-5 w-1/4" />
+            <Skeleton className="h-4 w-1/2" />
           </Card.Content>
-          <Card.Footer className="justify-between px-4 py-4">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-8 w-24" />
+          <Card.Footer className="mt-auto flex items-center justify-between gap-3 px-4 py-3">
+            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-8 w-16" />
           </Card.Footer>
         </Card.Root>
       ))}
