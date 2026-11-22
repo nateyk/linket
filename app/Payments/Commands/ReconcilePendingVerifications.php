@@ -7,9 +7,9 @@ use App\Payments\Models\VerifyEtWebhookDelivery;
 use App\Payments\VerifyEt\VerifyEtGateway;
 use App\Jobs\ProcessVerifyEtWebhook;
 use App\Storefront\Models\StorefrontOrder;
+use App\Mail\OpsAlertMail;
 use App\Storefront\Services\CreatorPaymentReviewNotifier;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
 
 final class ReconcilePendingVerifications extends Command
 {
@@ -60,7 +60,12 @@ final class ReconcilePendingVerifications extends Command
                             $updated = StorefrontOrder::query()->whereKey($verification->payable_id)->whereIn('status', ['pending_payment', 'verifying'])->update(['status' => 'manual_review']);
                             $creatorEmail = $updated ? $verification->payable?->creator?->email : null;
                             if ($creatorEmail) {
-                                Mail::raw('A buyer payment needs your review in Linket.', fn ($message) => $message->to($creatorEmail)->subject('Payment needs review'));
+                                OpsAlertMail::send(
+                                    $creatorEmail,
+                                    'Payment needs review',
+                                    'A buyer payment needs your review in Linket.',
+                                    'Open your creator dashboard to continue.',
+                                );
                             }
                             if ($updated) {
                                 $order = StorefrontOrder::query()->find($verification->payable_id);

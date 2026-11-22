@@ -29,9 +29,18 @@ test('email branding falls back to light logo when dark is empty', function () {
     expect($props['logoUrl'])->toBe('https://cdn.example/logo.png');
 });
 
-test('email branding skips svg logos and returns null logoUrl', function () {
+test('email branding resolves svg logos to a local png sibling for clients', function () {
     settings()->set('branding.logo_dark', 'images/logo-dark.svg');
     settings()->set('branding.logo_light', 'images/logo-light.SVG');
+
+    $props = app(EmailBranding::class)->props();
+
+    expect($props['logoUrl'])->toBe('https://linket.test/images/logo-dark.png');
+});
+
+test('email branding skips svg logos when no png sibling exists', function () {
+    settings()->set('branding.logo_dark', 'images/missing-brand.svg');
+    settings()->set('branding.logo_light', 'images/also-missing.svg');
 
     $props = app(EmailBranding::class)->props();
 

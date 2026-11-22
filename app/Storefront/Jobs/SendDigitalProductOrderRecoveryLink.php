@@ -2,6 +2,8 @@
 
 namespace App\Storefront\Jobs;
 
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailRenderer;
 use App\Storefront\Models\DigitalProductOrderRecovery;
 use App\Storefront\Models\DigitalProductOrderRecoveryDelivery;
 use Illuminate\Bus\Queueable;
@@ -9,7 +11,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
-use App\Mail\ReactEmailMessage;
 use Illuminate\Support\Facades\Mail;
 
 class SendDigitalProductOrderRecoveryLink implements ShouldQueue
@@ -35,19 +36,23 @@ class SendDigitalProductOrderRecoveryLink implements ShouldQueue
             $recovery = DigitalProductOrderRecovery::find($this->recoveryId);
             $delivery = DigitalProductOrderRecoveryDelivery::find($this->deliveryId);
 
-            if (!$recovery || !$delivery || $recovery->expires_at->isPast() || $recovery->redeemed_at) {
+            if (! $recovery || ! $delivery || $recovery->expires_at->isPast() || $recovery->redeemed_at) {
                 return;
             }
 
-            $subject = __('Your Linket sign-in code');
-            Mail::to($recovery->email)->send(ReactEmailMessage::make(
-                $subject,
-                $subject,
-                $subject,
-                [
-                    __('Your Linket sign-in code is: :code', ['code' => $this->code]),
-                    __('This code expires in 10 minutes.'),
-                ],
+            $siteName = (string) (settings('branding.site_name') ?: config('app.name', 'Linket'));
+            $subject = __('Your :site sign-in code', ['site' => $siteName]);
+            $rendered = app(ReactEmailRenderer::class)->render('portal-sign-in', [
+                'otp' => $this->code,
+                'expiresInMinutes' => 10,
+                'portalUrl' => url('/my-portal'),
+                'siteName' => $siteName,
+            ]);
+
+            Mail::to($recovery->email)->send(new ReactEmailMailable(
+                html: $rendered['html'],
+                text: $rendered['text'],
+                subjectLine: $subject,
             ));
 
             $delivery->update(['status' => 'sent', 'failure_code' => null]);

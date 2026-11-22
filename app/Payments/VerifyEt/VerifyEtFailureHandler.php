@@ -2,11 +2,11 @@
 
 namespace App\Payments\VerifyEt;
 
+use App\Mail\OpsAlertMail;
 use App\Payments\Models\DirectPaymentVerification;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Services\StorefrontVerificationSession;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 
 final class VerifyEtFailureHandler
@@ -77,9 +77,11 @@ final class VerifyEtFailureHandler
 
         $email = VerifyEtSettings::get('alert_email');
         if ($email) {
-            Mail::raw('Verify.et verification credits require attention.', static function ($message) use ($email): void {
-                $message->to($email)->subject('Verify.et credits require attention');
-            });
+            OpsAlertMail::send(
+                $email,
+                'Verify.et credits require attention',
+                'Verify.et verification credits require attention.',
+            );
         }
     }
 
@@ -96,9 +98,11 @@ final class VerifyEtFailureHandler
             RateLimiter::attempt(
                 'verify-et:authentication-alert',
                 static function () use ($email): void {
-                    Mail::raw('Verify.et rejected Linket credentials or scoped API permissions.', static function ($message) use ($email): void {
-                        $message->to($email)->subject('Verify.et integration configuration requires attention');
-                    });
+                    OpsAlertMail::send(
+                        $email,
+                        'Verify.et integration configuration requires attention',
+                        'Verify.et rejected Linket credentials or scoped API permissions.',
+                    );
                 },
                 1,
                 300,
