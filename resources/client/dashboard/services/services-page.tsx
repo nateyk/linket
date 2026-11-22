@@ -1,5 +1,6 @@
 import {apiClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {StatusBadge} from '@app/dashboard/digital-products/digital-products-page';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
@@ -364,15 +365,7 @@ function ServiceCard({
           )}
         </Link>
         <div className="absolute top-3 left-3">
-          <Badge
-            variant={service.status === 'published' ? 'positive' : 'secondary'}
-          >
-            {service.status === 'published' ? (
-              <Trans message="Published" />
-            ) : (
-              <Trans message="Draft" />
-            )}
-          </Badge>
+          <StatusBadge status={service.status} />
         </div>
       </Card.Header>
 

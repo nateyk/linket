@@ -14,18 +14,25 @@ describe('digital product status badge', () => {
     const badge = screen.getByText('Update under review');
     expect(badge).toBeTruthy();
     expect(badge.className).toContain('text-warning');
+    expect(badge.className).toContain('bg-background');
+    expect(badge.className).toContain('shadow-xs');
+    expect(badge.className).toContain('ring-foreground/10');
   });
 
   it.each([
     ['pending_approval', 'In review', 'text-warning'],
-    ['approved', 'Live', 'text-positive'],
+    ['approved', 'Published', 'text-positive'],
+    ['published', 'Published', 'text-positive'],
     ['rejected', 'Needs changes', 'text-destructive'],
-    ['archived', 'Archived', 'bg-secondary'],
-    ['draft', 'Draft', 'bg-secondary'],
+    ['archived', 'Archived', 'text-muted-foreground'],
+    ['draft', 'Draft', 'text-muted-foreground'],
   ] as const)('renders %s status', (status, label, expectedClass) => {
     render(<StatusBadge status={status} />);
     const badge = screen.getByText(label);
     expect(badge).toBeTruthy();
     expect(badge.className).toContain(expectedClass);
+    expect(badge.className).toContain('bg-background');
+    expect(badge.className).toContain('shadow-xs');
+    expect(badge.className).toContain('ring-foreground/10');
   });
 });
