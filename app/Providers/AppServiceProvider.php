@@ -345,22 +345,54 @@ class AppServiceProvider extends ServiceProvider
 
     private function seedNotificationSubscriptions(User $user): void
     {
-        $isAgent = method_exists($user, 'isAgent') && $user->isAgent();
-        $isAdmin = $user->type === 'admin';
-
         // Agents/admins always get ticket subscription rows so helpdesk
         // whereNeedsNotificationFor() can resolve recipients. Creators only
         // auto-subscribe when NOTIF_SUBS_ENABLED, and only to non-agent notifs.
-        if (! $isAgent && ! $isAdmin && ! config('app.notif_subs_integrated')) {
+        if ($this->shouldSkipNotificationSeeding($user)) {
             return;
         }
 
-        $notificationIds = ($isAgent || $isAdmin) ? null : ['W01'];
-
         try {
-            (new SubscribeUserToNotifications())->execute($user, $notificationIds);
+            (new SubscribeUserToNotifications())->execute(
+                $user,
+                $this->notificationIdsForSeeding($user),
+            );
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    private function shouldSkipNotificationSeeding(User $user): bool
+    {
+        if ($this->userIsHelpdeskStaff($user)) {
+            return false;
+        }
+
+        return ! (bool) config('app.notif_subs_integrated');
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function notificationIdsForSeeding(User $user): ?array
+    {
+        if ($this->userIsHelpdeskStaff($user)) {
+            return null;
+        }
+
+        return ['W01'];
+    }
+
+    private function userIsHelpdeskStaff(User $user): bool
+    {
+        if ($user->type === 'admin') {
+            return true;
+        }
+
+        if (! method_exists($user, 'isAgent')) {
+            return false;
+        }
+
+        return $user->isAgent();
     }
 }
