@@ -755,7 +755,7 @@ function ProductCoverFallback() {
   );
 }
 
-function StatusBadge({
+export function StatusBadge({
   status,
   hasPendingUpdate = false,
   className,
