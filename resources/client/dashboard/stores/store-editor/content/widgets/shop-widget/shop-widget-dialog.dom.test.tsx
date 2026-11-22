@@ -65,7 +65,7 @@ test('ShopWidgetDialog lists approved products and toggles product_ids selection
   expect(screen.queryByText('Draft kit')).toBeNull();
   expect(screen.getByText('Products')).toBeTruthy();
 
-  fireEvent.click(screen.getByRole('checkbox', {name: 'Logo pack'}));
+  fireEvent.click(screen.getByLabelText('Logo pack'));
 
   await waitFor(() => {
     expect(screen.getByLabelText('Remove Logo pack')).toBeTruthy();
