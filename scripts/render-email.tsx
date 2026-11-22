@@ -10,6 +10,9 @@ const registry: Record<string, () => Promise<TemplateModule>> = {
   'order-confirmation': () => import('../emails/order-confirmation'),
   'verify-email': () => import('../emails/verify-email'),
   'password-reset': () => import('../emails/password-reset'),
+  'portal-sign-in': () => import('../emails/portal-sign-in'),
+  'renewal-reminder': () => import('../emails/renewal-reminder'),
+  'ops-alert': () => import('../emails/ops-alert'),
   message: () => import('../emails/message'),
 };
 
