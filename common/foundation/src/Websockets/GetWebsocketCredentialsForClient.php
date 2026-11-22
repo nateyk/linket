@@ -6,6 +6,10 @@ class GetWebsocketCredentialsForClient
 {
     public function execute(): array|null
     {
+        if (! config('app.websockets_integrated')) {
+            return null;
+        }
+
         $driver = config('broadcasting.default');
 
         if ($driver === 'pusher') {
