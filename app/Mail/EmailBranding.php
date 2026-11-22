@@ -41,14 +41,40 @@ final class EmailBranding
             }
 
             $raw = trim($raw);
-            if ($raw === '' || $this->isSvg($raw)) {
+            if ($raw === '') {
                 continue;
             }
 
-            return $this->toAbsoluteUrl($raw);
+            $resolved = $this->resolveRasterLogo($raw);
+            if ($resolved !== null) {
+                return $resolved;
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Email clients often blank SVG in <img>. Prefer a local .png sibling when
+     * the configured logo is SVG (default Linket marks), otherwise use raster URLs as-is.
+     */
+    private function resolveRasterLogo(string $value): ?string
+    {
+        if (! $this->isSvg($value)) {
+            return $this->toAbsoluteUrl($value);
+        }
+
+        $pngCandidate = (string) preg_replace('/\.svg$/i', '.png', $value);
+        if ($pngCandidate === $value) {
+            return null;
+        }
+
+        $relative = ltrim((string) (PublicMediaUrl::normalize($pngCandidate) ?? $pngCandidate), '/');
+        if ($relative === '' || ! is_file(public_path($relative))) {
+            return null;
+        }
+
+        return $this->toAbsoluteUrl($pngCandidate);
     }
 
     private function buttonBorderRadiusPx(): int
