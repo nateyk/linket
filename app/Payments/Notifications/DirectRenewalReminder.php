@@ -2,13 +2,14 @@
 
 namespace App\Payments\Notifications;
 
+use App\Mail\ReactEmailMailable;
+use App\Mail\ReactEmailRenderer;
 use App\Models\User;
 use App\Telegram\Support\TelegramNotificationChannels;
 use App\Telegram\Support\TelegramNotificationPreferences;
 use Common\Billing\Subscription;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Telegram\TelegramMessage;
 
@@ -51,17 +52,27 @@ class DirectRenewalReminder extends Notification implements ShouldQueue
         );
     }
 
-    public function toMail(User $notifiable): MailMessage
+    public function toMail(User $notifiable): ReactEmailMailable
     {
-        return (new MailMessage())
-            ->subject(__('Your Linket Pro renewal is coming up'))
-            ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
-            ->line(__('Your :plan subscription renews in :days day(s).', [
-                'plan' => $this->subscription->product?->name ?? 'Pro',
-                'days' => $this->daysBefore,
-            ]))
-            ->line(__('Pay by direct transfer in Billing to keep Pro active without interruption.'))
-            ->action(__('Renew Pro'), url('/account-settings/billing'));
+        $siteName = (string) (settings('branding.site_name') ?: config('app.name', 'Linket'));
+        $planName = $this->subscription->product?->name ?? 'Pro';
+        $subject = __('Your :site :plan renewal is coming up', [
+            'site' => $siteName,
+            'plan' => $planName,
+        ]);
+        $rendered = app(ReactEmailRenderer::class)->render('renewal-reminder', [
+            'name' => (string) ($notifiable->name ?: __('there')),
+            'planName' => $planName,
+            'daysBefore' => $this->daysBefore,
+            'renewUrl' => url('/account-settings/billing'),
+            'siteName' => $siteName,
+        ]);
+
+        return (new ReactEmailMailable(
+            html: $rendered['html'],
+            text: $rendered['text'],
+            subjectLine: $subject,
+        ))->to($notifiable->routeNotificationFor('mail', $this));
     }
 
     public function toTelegram(User $notifiable): TelegramMessage

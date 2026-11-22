@@ -26,7 +26,7 @@ test('mail send template samples sends every react email template to the recipie
         'email' => 'natenaelny@gmail.com',
     ])->assertSuccessful();
 
-    Mail::assertSent(ReactEmailMailable::class, 4);
+    Mail::assertSent(ReactEmailMailable::class, 7);
 
     Mail::assertSent(ReactEmailMailable::class, function (ReactEmailMailable $mail) {
         return $mail->hasTo('natenaelny@gmail.com')

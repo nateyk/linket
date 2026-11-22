@@ -141,6 +141,38 @@ final class SendEmailTemplateSamplesCommand extends Command
                     'downloadLimitLabel' => '5 downloads',
                 ],
             ],
+            [
+                'template' => 'portal-sign-in',
+                'label' => 'My Portal sign-in OTP',
+                'props' => [
+                    'otp' => '482913',
+                    'expiresInMinutes' => 10,
+                    'portalUrl' => $appUrl.'/my-portal',
+                    'siteName' => (string) config('app.name', 'Linket'),
+                ],
+            ],
+            [
+                'template' => 'renewal-reminder',
+                'label' => 'Direct Pro renewal reminder',
+                'props' => [
+                    'name' => 'Nate',
+                    'planName' => 'Pro',
+                    'daysBefore' => 7,
+                    'renewUrl' => $appUrl.'/account-settings/billing',
+                    'siteName' => (string) config('app.name', 'Linket'),
+                ],
+            ],
+            [
+                'template' => 'ops-alert',
+                'label' => 'Ops / admin alert',
+                'props' => [
+                    'preview' => 'Payment needs review',
+                    'heading' => 'Payment needs review',
+                    'body' => 'A buyer payment needs your review in Linket.',
+                    'note' => 'Sample only — safe to ignore.',
+                    'siteName' => (string) config('app.name', 'Linket'),
+                ],
+            ],
         ];
     }
 }
