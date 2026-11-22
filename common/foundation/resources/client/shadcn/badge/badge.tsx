@@ -3,27 +3,37 @@ import {useRender} from '@base-ui/react/use-render';
 import {cn} from '@ui/utils/cn';
 import {cva, type VariantProps} from 'class-variance-authority';
 
+export type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
+
+export interface BadgeProps
+  extends Omit<useRender.ComponentProps<'span'>, 'color'>,
+    VariantProps<typeof badgeVariants> {
+  color?: VariantProps<typeof badgeVariants>['variant'];
+}
+
 /**
  * Displays a badge or a component that looks like a badge.
  */
 export function Badge({
   className,
-  variant = 'default',
+  variant,
+  color,
   render,
   ...props
-}: useRender.ComponentProps<'span'> & VariantProps<typeof badgeVariants>) {
+}: BadgeProps) {
+  const resolvedVariant = variant ?? color ?? 'default';
   return useRender({
     defaultTagName: 'span',
     props: mergeProps<'span'>(
       {
-        className: cn(badgeVariants({variant}), className),
+        className: cn(badgeVariants({variant: resolvedVariant}), className),
       },
       props,
     ),
     render,
     state: {
       slot: 'badge',
-      variant,
+      variant: resolvedVariant,
     },
   });
 }
@@ -40,6 +50,8 @@ export const badgeVariants = cva(
           'bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20',
         positive:
           'bg-positive/10 text-positive focus-visible:ring-positive/20 dark:bg-positive/20 dark:focus-visible:ring-positive/40 [a]:hover:bg-positive/20',
+        warning:
+          'bg-warning/10 text-warning focus-visible:ring-warning/20 dark:bg-warning/20 dark:focus-visible:ring-warning/40 [a]:hover:bg-warning/20',
         outline:
           'border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground',
         ghost:

@@ -7,12 +7,15 @@ import {
   CheckIcon,
   ClockIcon,
   SparklesIcon,
+  TriangleAlertIcon,
 } from 'lucide-react';
 
 const variants = [
   'default',
   'secondary',
   'destructive',
+  'positive',
+  'warning',
   'outline',
   'ghost',
   'link',
@@ -43,6 +46,14 @@ export const WithIcons = meta.story({
       <Badge>
         <CheckIcon data-icon="inline-start" />
         Active
+      </Badge>
+      <Badge color="positive">
+        <CheckIcon data-icon="inline-start" />
+        Published
+      </Badge>
+      <Badge color="warning">
+        <TriangleAlertIcon data-icon="inline-start" />
+        Under review
       </Badge>
       <Badge color="secondary">
         <SparklesIcon data-icon="inline-start" />
