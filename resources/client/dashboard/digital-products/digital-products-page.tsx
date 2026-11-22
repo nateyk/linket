@@ -40,7 +40,6 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
-import {cn} from '@ui/utils/cn';
 import {CreatorListingToolbar} from '@app/dashboard/creator-listing-toolbar';
 import {CreateProductDialog} from './create-product-dialog';
 
