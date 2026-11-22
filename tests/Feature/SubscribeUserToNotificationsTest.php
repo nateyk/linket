@@ -50,4 +50,30 @@ class SubscribeUserToNotificationsTest extends TestCase
 
         $this->assertSame($ids->count(), $ids->unique()->count());
     }
+
+    public function test_creator_is_not_auto_subscribed_when_notif_subs_are_disabled(): void
+    {
+        config()->set('app.notif_subs_integrated', false);
+
+        $creator = User::factory()->create(['type' => 'user']);
+
+        event(new UserCreated($creator, []));
+
+        $this->assertSame(0, $creator->notificationSubscriptions()->count());
+    }
+
+    public function test_admin_is_auto_subscribed_even_when_notif_subs_are_disabled(): void
+    {
+        config()->set('app.notif_subs_integrated', false);
+
+        $admin = User::factory()->create(['type' => 'admin']);
+
+        event(new UserCreated($admin, []));
+
+        $this->assertTrue(
+            $admin->notificationSubscriptions()
+                ->where('notif_id', ConversationCreatedNotif::NOTIF_ID)
+                ->exists(),
+        );
+    }
 }
