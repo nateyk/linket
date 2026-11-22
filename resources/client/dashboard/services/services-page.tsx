@@ -365,7 +365,7 @@ function ServiceCard({
         </Link>
         <div className="absolute top-3 left-3">
           <Badge
-            variant={service.status === 'published' ? 'default' : 'secondary'}
+            variant={service.status === 'published' ? 'positive' : 'secondary'}
           >
             {service.status === 'published' ? (
               <Trans message="Published" />

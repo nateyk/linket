@@ -93,6 +93,13 @@ describe('product card visual hierarchy', () => {
     expect(card).toContain('ring-1 ring-foreground/10 transition-shadow hover:shadow-sm');
     expect(source).toContain('hasPendingUpdate');
     expect(source).toContain('<Trans message="Update under review" />');
+    const statusBadge = source.slice(
+      source.indexOf('function StatusBadge('),
+      source.indexOf('function EmptyProducts('),
+    );
+    expect(statusBadge).toContain('<Badge');
+    expect(statusBadge).not.toContain('rounded-full');
+    expect(statusBadge).not.toContain('dotColor');
   });
 
   test('shows price beneath the title and single-line sales + earned metrics in card content', () => {
