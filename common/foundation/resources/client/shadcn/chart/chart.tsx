@@ -90,7 +90,9 @@ function ChartLegendContent({
   className,
   payload,
   verticalAlign = 'bottom',
-}: RechartsPrimitive.DefaultLegendContentProps) {
+}: RechartsPrimitive.DefaultLegendContentProps & {
+  className?: string;
+}) {
   if (!payload?.length) {
     return null;
   }

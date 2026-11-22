@@ -40,15 +40,24 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
+import {cn} from '@ui/utils/cn';
 import {CreatorListingToolbar} from '@app/dashboard/creator-listing-toolbar';
 import {CreateProductDialog} from './create-product-dialog';
 
-type ProductStatus =
+export type ProductStatus =
   | 'draft'
   | 'pending_approval'
   | 'approved'
   | 'rejected'
   | 'archived';
+
+export type ItemStatus = ProductStatus | 'published';
+
+export interface StatusBadgeProps {
+  status: ItemStatus;
+  hasPendingUpdate?: boolean;
+  className?: string;
+}
 
 type ProductBiolink = {
   id: number;
@@ -253,7 +262,7 @@ export function Component() {
             statusOptions={[
               {value: 'draft', label: <Trans message="Draft" />},
               {value: 'pending_approval', label: <Trans message="In review" />},
-              {value: 'approved', label: <Trans message="Live" />},
+              {value: 'approved', label: <Trans message="Published" />},
               {value: 'rejected', label: <Trans message="Needs changes" />},
               {value: 'archived', label: <Trans message="Archived" />},
             ]}
@@ -755,20 +764,23 @@ function ProductCoverFallback() {
   );
 }
 
+const coverBadgeClass =
+  'bg-background dark:bg-background shadow-xs ring-1 ring-foreground/10';
+
 export function StatusBadge({
   status,
   hasPendingUpdate = false,
   className,
-}: {
-  status: ProductStatus;
-  hasPendingUpdate?: boolean;
-  className?: string;
-}) {
-  const isPendingUpdate = status === 'approved' && hasPendingUpdate;
+}: StatusBadgeProps) {
+  const isPendingUpdate =
+    (status === 'approved' || status === 'published') && hasPendingUpdate;
 
   if (isPendingUpdate) {
     return (
-      <Badge variant="warning" className={className}>
+      <Badge
+        variant="warning"
+        className={cn(coverBadgeClass, 'text-warning', className)}
+      >
         <Trans message="Update under review" />
       </Badge>
     );
@@ -777,31 +789,48 @@ export function StatusBadge({
   switch (status) {
     case 'pending_approval':
       return (
-        <Badge variant="warning" className={className}>
+        <Badge
+          variant="warning"
+          className={cn(coverBadgeClass, 'text-warning', className)}
+        >
           <Trans message="In review" />
         </Badge>
       );
     case 'approved':
+    case 'published':
       return (
-        <Badge variant="positive" className={className}>
-          <Trans message="Live" />
+        <Badge
+          variant="positive"
+          className={cn(coverBadgeClass, 'text-positive', className)}
+        >
+          <Trans message="Published" />
         </Badge>
       );
     case 'rejected':
       return (
-        <Badge variant="destructive" className={className}>
+        <Badge
+          variant="destructive"
+          className={cn(coverBadgeClass, 'text-destructive', className)}
+        >
           <Trans message="Needs changes" />
         </Badge>
       );
     case 'archived':
       return (
-        <Badge variant="secondary" className={className}>
+        <Badge
+          variant="secondary"
+          className={cn(coverBadgeClass, 'text-muted-foreground', className)}
+        >
           <Trans message="Archived" />
         </Badge>
       );
+    case 'draft':
     default:
       return (
-        <Badge variant="secondary" className={className}>
+        <Badge
+          variant="secondary"
+          className={cn(coverBadgeClass, 'text-muted-foreground', className)}
+        >
           <Trans message="Draft" />
         </Badge>
       );
