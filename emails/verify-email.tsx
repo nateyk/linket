@@ -6,6 +6,8 @@ export interface VerifyEmailProps {
   expiresInMinutes: number;
   accountSettingsUrl: string;
   siteName: string;
+  logoUrl?: string | null;
+  buttonBorderRadiusPx?: number;
 }
 
 export default function VerifyEmail({
@@ -13,9 +15,10 @@ export default function VerifyEmail({
   expiresInMinutes,
   accountSettingsUrl,
   siteName,
+  logoUrl = null,
 }: VerifyEmailProps) {
   return (
-    <LinketShell preview={`${siteName} security code`}>
+    <LinketShell preview={`${siteName} security code`} logoUrl={logoUrl} siteName={siteName}>
       <Heading as="h1" className="m-0 mb-4 text-2xl font-semibold text-ink">
         Your {siteName} security code
       </Heading>

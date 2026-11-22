@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Mail;
 
+use App\Mail\EmailBranding;
 use App\Mail\ReactEmailRenderException;
 use App\Mail\ReactEmailRenderer;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,8 +22,8 @@ class ReactEmailRendererTest extends TestCase
 
         $result = $renderer->render('order-confirmation', ['buyerName' => 'Ada']);
 
-        $this->assertSame('<p>Hello Ada</p>', $result['html']);
-        $this->assertSame('Hello Ada', $result['text']);
+        $this->assertStringContainsString('Hello Ada', $result['html']);
+        $this->assertStringContainsString('Hello Ada', $result['text']);
     }
 
     #[Test]
@@ -70,5 +71,65 @@ class ReactEmailRendererTest extends TestCase
 
         $this->assertStringContainsString('Hello Developer', $result['html']);
         $this->assertStringContainsString('Order #12345 confirmed.', $result['text']);
+    }
+
+    #[Test]
+    public function it_merges_email_branding_props_into_the_render_script_input(): void
+    {
+        $this->app->instance(EmailBranding::class, new class
+        {
+            public function props(): array
+            {
+                return [
+                    'siteName' => 'Branded',
+                    'logoUrl' => 'https://cdn.example/logo.png',
+                    'buttonBorderRadiusPx' => 6,
+                ];
+            }
+        });
+
+        $script = base_path('tests/fixtures/react-email/fake-render.mjs');
+        $renderer = new ReactEmailRenderer(
+            nodeBinary: 'node',
+            scriptPath: $script,
+            timeoutSeconds: 10,
+        );
+
+        $result = $renderer->render('order-confirmation', ['buyerName' => 'Ada']);
+
+        $this->assertStringContainsString('https://cdn.example/logo.png', $result['html']);
+        $this->assertStringContainsString('|6</p>', $result['html']);
+    }
+
+    #[Test]
+    public function it_lets_caller_props_override_branding_defaults(): void
+    {
+        $this->app->instance(EmailBranding::class, new class
+        {
+            public function props(): array
+            {
+                return [
+                    'siteName' => 'Branded',
+                    'logoUrl' => 'https://cdn.example/logo.png',
+                    'buttonBorderRadiusPx' => 6,
+                ];
+            }
+        });
+
+        $script = base_path('tests/fixtures/react-email/fake-render.mjs');
+        $renderer = new ReactEmailRenderer(
+            nodeBinary: 'node',
+            scriptPath: $script,
+            timeoutSeconds: 10,
+        );
+
+        $result = $renderer->render('order-confirmation', [
+            'buyerName' => 'Ada',
+            'buttonBorderRadiusPx' => 0,
+            'logoUrl' => 'https://cdn.example/override.png',
+        ]);
+
+        $this->assertStringContainsString('https://cdn.example/override.png', $result['html']);
+        $this->assertStringContainsString('|0</p>', $result['html']);
     }
 }

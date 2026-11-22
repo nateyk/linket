@@ -1,4 +1,5 @@
-import { Button, Heading, Text } from 'react-email';
+import { Heading, Text } from 'react-email';
+import { LinketButton } from './linket-button';
 import { LinketShell } from './linket-shell';
 
 export interface LinketMessageProps {
@@ -8,6 +9,9 @@ export interface LinketMessageProps {
   actionLabel?: string;
   actionUrl?: string;
   note?: string;
+  logoUrl?: string | null;
+  siteName?: string;
+  buttonBorderRadiusPx?: number;
 }
 
 export function LinketMessage({
@@ -17,9 +21,12 @@ export function LinketMessage({
   actionLabel,
   actionUrl,
   note,
+  logoUrl = null,
+  siteName = 'Linket',
+  buttonBorderRadiusPx = 24,
 }: LinketMessageProps) {
   return (
-    <LinketShell preview={preview}>
+    <LinketShell preview={preview} logoUrl={logoUrl} siteName={siteName}>
       <Heading as="h1" className="m-0 mb-4 text-2xl font-semibold text-ink">
         {heading}
       </Heading>
@@ -29,12 +36,13 @@ export function LinketMessage({
         </Text>
       ))}
       {actionLabel && actionUrl ? (
-        <Button
+        <LinketButton
           href={actionUrl}
-          className="box-border mt-2 rounded-full bg-brand px-5 py-3 text-center text-sm font-medium text-white no-underline"
+          buttonBorderRadiusPx={buttonBorderRadiusPx}
+          className="box-border mt-2 bg-brand px-5 py-3 text-center text-sm font-medium text-white no-underline"
         >
           {actionLabel}
-        </Button>
+        </LinketButton>
       ) : null}
       {note ? <Text className="mt-6 mb-0 text-sm text-muted">{note}</Text> : null}
     </LinketShell>
