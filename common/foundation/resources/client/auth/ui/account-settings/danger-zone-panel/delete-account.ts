@@ -21,8 +21,6 @@ export function useDeleteAccount() {
   });
 }
 
-function deleteAccount(userId: number): Promise<Response> {
-  return apiClient
-    .delete(`users/${userId}`, {params: {deleteCurrentUser: true}})
-    .then(r => r.data);
+function deleteAccount(_userId: number): Promise<Response> {
+  return apiClient.delete(`users/me`).then(r => r.data);
 }

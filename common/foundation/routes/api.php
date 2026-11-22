@@ -138,6 +138,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('users/{id}', [UsersController::class, 'show'])->withoutMiddleware('verified');
         Route::post('users', [UsersController::class, 'store']);
         Route::put('users/{id}', [UsersController::class, 'update']);
+        Route::delete('users/me', [UsersController::class, 'destroyMe']);
         Route::delete('users/bulk', [UsersController::class, 'bulkeDelete']);
         Route::post('access-tokens', [AccessTokenController::class, 'store']);
         Route::delete('access-tokens/{tokenId}', [AccessTokenController::class, 'destroy']);

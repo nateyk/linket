@@ -22,27 +22,27 @@ class DeleteResourcesRelatedToUser
     {
         $userIds = $event->users->pluck('id');
         $linkIds = Link::query()->whereIn('user_id', $userIds)->pluck('id');
-        (new DeleteLinks())->execute($linkIds);
+        (new DeleteLinks())->execute($linkIds->all());
 
         $folderIds = Folder::query()->whereIn('user_id', $userIds)->pluck('id');
-        (new DeleteFolders())->execute($folderIds);
+        (new DeleteFolders())->execute($folderIds->all());
 
         $qrCodeIds = QrCode::query()->whereIn('user_id', $userIds)->pluck('id');
-        (new DeleteQrCodes())->execute($qrCodeIds->toArray());
+        (new DeleteQrCodes())->execute($qrCodeIds->all());
 
         $biolinkIds = Biolink::query()
             ->whereIn('user_id', $userIds)
             ->pluck('id');
-        (new DeleteBiolinks())->execute($biolinkIds);
+        (new DeleteBiolinks())->execute($biolinkIds->all());
 
         $pixelIds = TrackingPixel::query()
             ->whereIn('user_id', $userIds)
             ->pluck('id');
-        (new DeleteTrackingPixels())->execute($pixelIds);
+        (new DeleteTrackingPixels())->execute($pixelIds->all());
 
         $overlayIds = LinkOverlay::query()
             ->whereIn('user_id', $userIds)
             ->pluck('id');
-        (new DeleteLinkOverlays())->execute($overlayIds);
+        (new DeleteLinkOverlays())->execute($overlayIds->all());
     }
 }

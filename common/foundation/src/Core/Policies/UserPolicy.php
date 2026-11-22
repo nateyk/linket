@@ -53,9 +53,9 @@ class UserPolicy extends BasePolicy
     public function destroy(User $user, array $userIds)
     {
         $deletingOwnAccount = collect($userIds)->every(function (
-            int $userId,
+            int|string $userId,
         ) use ($user) {
-            return $userId === $user->id;
+            return (int) $userId === (int) $user->id;
         });
 
         return $deletingOwnAccount ||
