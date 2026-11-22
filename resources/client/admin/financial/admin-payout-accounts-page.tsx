@@ -9,7 +9,7 @@ import {Spinner} from '@shadcn/spinner/spinner';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
 import {CheckIcon, RefreshCwIcon, XIcon} from 'lucide-react';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 
 type PayoutAccount = {
   id: number;
@@ -29,14 +29,28 @@ export function Component() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string>();
   const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('search') ?? '');
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedQuery(query.trim());
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [query]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/api/v1/admin/financial/payout-accounts', {params: {page}});
+      const response = await apiClient.get('/api/v1/admin/financial/payout-accounts', {
+        params: {
+          page,
+          status: filter === 'all' ? undefined : filter,
+          search: debouncedQuery || undefined,
+        },
+      });
       setAccounts(response.data.data ?? []);
       setLastPage(response.data.meta?.last_page ?? 1);
       setError(undefined);
@@ -45,7 +59,7 @@ export function Component() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, filter, debouncedQuery]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -64,15 +78,6 @@ export function Component() {
       setBusyId(null);
     }
   };
-
-  const filtered = useMemo(() => accounts.filter(account => {
-    const matchesStatus = filter === 'all' ||
-      (filter === 'pending' ? !['active', 'rejected'].includes(account.status) : account.status === filter);
-    const value = [account.creator?.name, account.creator?.email, account.account_holder,
-      account.display_label, account.bank_code, account.masked_account_number]
-      .filter(Boolean).join(' ').toLowerCase();
-    return matchesStatus && value.includes(query.trim().toLowerCase());
-  }), [accounts, filter, query]);
 
   return (
     <DashboardLayout.MainSection>
@@ -135,7 +140,7 @@ export function Component() {
                       </Table.Row>
                     </Table.Header>
                     <Table.Body>
-                      {filtered.map(account => (
+                      {accounts.map(account => (
                         <Table.Row key={account.id}>
                           <Table.Cell>
                             <p className="font-medium">{account.creator?.name ?? account.account_holder}</p>
@@ -167,7 +172,7 @@ export function Component() {
                           </Table.Cell>
                         </Table.Row>
                       ))}
-                      {filtered.length === 0 && (
+                      {accounts.length === 0 && (
                         <Table.Row>
                           <Table.Cell colSpan={4} className="py-8 text-center text-muted-foreground">
                             <Trans message="No seller payout accounts to review." />

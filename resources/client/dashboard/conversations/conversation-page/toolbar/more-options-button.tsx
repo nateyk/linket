@@ -55,7 +55,8 @@ export function MoreOptionsButton({data: {user, conversation}}: Props) {
         onOpenChange={setSuspendUserIsOpen}
         onSuccess={async () => {
           await queryClient.invalidateQueries({
-            queryKey: ['conversations', `${conversation.id}`],
+            queryKey: helpdeskQueries.conversations.get(conversation.id)
+              .queryKey,
           });
         }}
         description={

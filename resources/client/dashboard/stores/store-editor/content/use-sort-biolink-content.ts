@@ -39,5 +39,10 @@ export function useSortBiolinkContent() {
         widgetToPin,
       });
     },
+    onError: (_error, {oldIndex, newIndex}) => {
+      // Roll back the optimistic reorder for this session.
+      const current = getState().content;
+      overrideContent(moveItemInNewArray(current, newIndex, oldIndex));
+    },
   });
 }

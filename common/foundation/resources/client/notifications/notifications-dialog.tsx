@@ -150,11 +150,33 @@ export function NotificationsPopoverContent({
 }
 
 function NotificationsList({settingsLink}: {settingsLink?: string | null}) {
-  const {data, isLoading} = useQuery(listNotificationsOptions());
+  const {data, isLoading, isError, refetch} = useQuery(
+    listNotificationsOptions(),
+  );
   if (isLoading) {
     return (
       <div className="flex h-41 items-center justify-center">
         <Spinner aria-label="Loading notifications..." className="size-5" />
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div
+        role="alert"
+        className="flex h-41 flex-col items-center justify-center gap-3 px-4 text-center"
+      >
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Couldn't load notifications." />
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void refetch()}
+        >
+          <Trans message="Retry" />
+        </Button>
       </div>
     );
   }
