@@ -20,6 +20,8 @@ final class ReactEmailRenderer
      */
     public function render(string $template, array $props): array
     {
+        $props = $this->mergeBrandingProps($props);
+
         $bundledCjs = base_path('scripts/dist/render-email.cjs');
         $bundledMjs = base_path('scripts/dist/render-email.mjs');
         $bundledScript = is_file($bundledCjs) ? $bundledCjs : (is_file($bundledMjs) ? $bundledMjs : null);
@@ -72,6 +74,25 @@ final class ReactEmailRenderer
             'html' => $decoded['html'],
             'text' => $decoded['text'],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $props
+     * @return array<string, mixed>
+     */
+    private function mergeBrandingProps(array $props): array
+    {
+        if (! function_exists('app')) {
+            return $props;
+        }
+
+        try {
+            $branding = app(EmailBranding::class)->props();
+        } catch (\Throwable) {
+            return $props;
+        }
+
+        return array_merge($branding, $props);
     }
 
     private function shouldFallback(mixed $bundledScript, mixed $tsx): bool

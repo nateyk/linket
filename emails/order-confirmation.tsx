@@ -1,4 +1,5 @@
-import { Button, Heading, Link, Text } from 'react-email';
+import { Heading, Link, Text } from 'react-email';
+import { LinketButton } from './_components/linket-button';
 import { LinketShell } from './_components/linket-shell';
 
 export interface OrderConfirmationEmailProps {
@@ -10,6 +11,9 @@ export interface OrderConfirmationEmailProps {
   downloads: Array<{ name: string; url: string }>;
   expiresAtLabel?: string;
   downloadLimitLabel?: string;
+  logoUrl?: string | null;
+  siteName?: string;
+  buttonBorderRadiusPx?: number;
 }
 
 export default function OrderConfirmationEmail({
@@ -21,12 +25,15 @@ export default function OrderConfirmationEmail({
   downloads = [],
   expiresAtLabel,
   downloadLimitLabel,
+  logoUrl = null,
+  siteName = 'Linket',
+  buttonBorderRadiusPx = 24,
 }: OrderConfirmationEmailProps) {
   const safeDownloads = Array.isArray(downloads) ? downloads : [];
   const primaryUrl = safeDownloads[0]?.url;
 
   return (
-    <LinketShell preview={`Your receipt for ${productName}`}>
+    <LinketShell preview={`Your receipt for ${productName}`} logoUrl={logoUrl} siteName={siteName}>
       <Heading as="h1" className="m-0 mb-4 text-2xl font-semibold text-ink">
         Thanks for your purchase
       </Heading>
@@ -37,12 +44,9 @@ export default function OrderConfirmationEmail({
       <Text className="m-0 mb-1 text-sm text-muted">Order {orderId}</Text>
       <Text className="m-0 mb-6 text-sm text-muted">Total {amountLabel}</Text>
       {primaryUrl ? (
-        <Button
-          href={primaryUrl}
-          className="box-border rounded-full bg-brand px-5 py-3 text-center text-sm font-medium text-white no-underline"
-        >
+        <LinketButton href={primaryUrl} buttonBorderRadiusPx={buttonBorderRadiusPx}>
           Download files
-        </Button>
+        </LinketButton>
       ) : null}
       {safeDownloads.length > 0 ? (
         <>
@@ -78,4 +82,5 @@ OrderConfirmationEmail.PreviewProps = {
   ],
   expiresAtLabel: 'in 7 days',
   downloadLimitLabel: 'Each file can be downloaded up to 10 times.',
+  buttonBorderRadiusPx: 24,
 } satisfies OrderConfirmationEmailProps;
