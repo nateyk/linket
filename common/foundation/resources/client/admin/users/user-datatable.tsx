@@ -18,7 +18,7 @@ import {
   DatatablePageWithHeaderLayout,
 } from '@common/datatable/page/datatable-page-with-header-layout';
 import {useDatatableQuery} from '@common/datatable/requests/use-datatable-query';
-import {apiClient, queryClient} from '@common/http/query-client';
+import {queryClient} from '@common/http/query-client';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {Dialog} from '@shadcn/dialog/dialog';
@@ -31,6 +31,7 @@ import {ConfirmationDialog} from '@ui/overlays/dialog/confirmation-dialog';
 import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 import {
+  deleteUsersOptions,
   listUsersForDatatableOptions,
   usersBaseKey,
 } from '@common/admin/users/users-queries';
@@ -140,7 +141,7 @@ export function DeleteUsersDialog({
 }: DeleteUsersDialogProps) {
   const {close} = useDialogContext();
   const deleteSelectedUsers = useMutation({
-    mutationFn: () => apiClient.delete(`users/${selectedIds.join(',')}`),
+    ...deleteUsersOptions,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: usersBaseKey,
@@ -163,7 +164,7 @@ export function DeleteUsersDialog({
         />
       }
       confirm={<Trans message="Delete" />}
-      onConfirm={() => deleteSelectedUsers.mutate()}
+      onConfirm={() => deleteSelectedUsers.mutate(selectedIds)}
     />
   );
 }

@@ -111,6 +111,24 @@ class UsersController extends Controller
     }
 
     /**
+     * Delete the authenticated user's own account.
+     *
+     * @operationId deleteCurrentUser
+     */
+    #[BlockedOnDemoSite]
+    public function destroyMe()
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 401);
+
+        Gate::authorize('destroy', [User::class, [$user->id]]);
+
+        (new DeleteUsers())->execute([$user->id]);
+
+        return response()->noContent();
+    }
+
+    /**
      * Bulk delete users.
      *
      * @operationId deleteUsers
