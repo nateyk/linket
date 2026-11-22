@@ -767,51 +767,46 @@ function StatusBadge({
 }) {
   const isPendingUpdate = status === 'approved' && hasPendingUpdate;
 
-  let dotColor = 'bg-muted-foreground';
-  let label = <Trans message="Draft" />;
-
   if (isPendingUpdate) {
-    dotColor = 'bg-warning';
-    label = <Trans message="Update under review" />;
-  } else {
-    switch (status) {
-      case 'pending_approval':
-        dotColor = 'bg-warning';
-        label = <Trans message="In review" />;
-        break;
-      case 'approved':
-        dotColor = 'bg-positive';
-        label = <Trans message="Live" />;
-        break;
-      case 'rejected':
-        dotColor = 'bg-destructive';
-        label = <Trans message="Needs changes" />;
-        break;
-      case 'archived':
-        dotColor = 'bg-muted-foreground/60';
-        label = <Trans message="Archived" />;
-        break;
-      default:
-        dotColor = 'bg-muted-foreground';
-        label = <Trans message="Draft" />;
-        break;
-    }
+    return (
+      <Badge variant="warning" className={className}>
+        <Trans message="Update under review" />
+      </Badge>
+    );
   }
 
-  return (
-    <div
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-card-xs bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground shadow-xs ring-1 ring-foreground/10',
-        className,
-      )}
-    >
-      <span
-        className={cn('size-1.5 rounded-full', dotColor)}
-        aria-hidden="true"
-      />
-      <span>{label}</span>
-    </div>
-  );
+  switch (status) {
+    case 'pending_approval':
+      return (
+        <Badge variant="warning" className={className}>
+          <Trans message="In review" />
+        </Badge>
+      );
+    case 'approved':
+      return (
+        <Badge variant="positive" className={className}>
+          <Trans message="Live" />
+        </Badge>
+      );
+    case 'rejected':
+      return (
+        <Badge variant="destructive" className={className}>
+          <Trans message="Needs changes" />
+        </Badge>
+      );
+    case 'archived':
+      return (
+        <Badge variant="secondary" className={className}>
+          <Trans message="Archived" />
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="secondary" className={className}>
+          <Trans message="Draft" />
+        </Badge>
+      );
+  }
 }
 
 function EmptyProducts({onNewProduct}: {onNewProduct: () => void}) {
