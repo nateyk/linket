@@ -1,12 +1,15 @@
 import {FeatureListEditor} from '@common/admin/settings/landing-page-settings/feature-section-settings';
+import {getMissingCreatorJourneyImages} from '@common/admin/settings/landing-page-settings/creator-journey-image-presets';
 import {Field} from '@shadcn/forms/field';
+import {Button} from '@shadcn/button/button';
 import {HookForm} from '@shadcn/forms/form/hook-form';
 import {Input} from '@shadcn/forms/input/input';
 import {Select} from '@shadcn/forms/select/select';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Trans} from '@ui/i18n/trans';
-import {useWatch} from 'react-hook-form';
+import {ImagesIcon} from 'lucide-react';
+import {useFormContext, useWatch} from 'react-hook-form';
 
 const presentationOptions = [
   {value: 'standard', label: 'Standard feature grid'},
@@ -26,7 +29,22 @@ export function FeaturesGridSettings({index}: Props) {
   const prefix =
     `client.landingPage.sections.${index}` as `client.landingPage.sections.${number}`;
   const presentation = useWatch({name: `${prefix}.presentation`});
+  const title = useWatch({name: `${prefix}.title`});
+  const {getValues, setValue} = useFormContext();
   const isJourney = presentation === 'journey';
+  const isCreatorJourney = title === 'From your first idea to your first sale';
+
+  function enableImageJourney() {
+    // Keep the editor's current copy, order and already-uploaded images intact.
+    const steps = getValues(`${prefix}.features`) ?? [];
+    for (const {index, image} of getMissingCreatorJourneyImages(steps)) {
+      setValue(`${prefix}.features.${index}.image`, image, {shouldDirty: true});
+    }
+    setValue(`${prefix}.presentation`, 'journey', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }
   return (
     <Field.Group>
       <HookForm.Field name={`${prefix}.badge`}>
@@ -73,6 +91,29 @@ export function FeaturesGridSettings({index}: Props) {
         </Select.Root>
         <Field.Error />
       </HookForm.Field>
+
+      {isCreatorJourney && !isJourney ? (
+        <div className="flex flex-col items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 p-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              <Trans message="Use images instead of icons" />
+            </p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              <Trans message="Switch these steps to illustrated cards with replaceable sample images. Your current titles and descriptions stay unchanged." />
+            </p>
+          </div>
+          <Button type="button" size="sm" variant="outline" color="primary" onClick={enableImageJourney}>
+            <ImagesIcon />
+            <Trans message="Enable illustrated steps" />
+          </Button>
+        </div>
+      ) : null}
+
+      <p className="text-sm leading-6 text-muted-foreground">
+        <Trans message={isJourney
+          ? 'Open each journey step to upload or replace its image.'
+          : 'Choose Image-led journey steps above to replace the icon cards with editable images.'} />
+      </p>
 
       <FeatureListEditor prefix={prefix} withImages={isJourney} />
 
