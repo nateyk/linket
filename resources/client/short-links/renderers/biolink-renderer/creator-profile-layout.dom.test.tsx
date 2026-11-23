@@ -465,8 +465,12 @@ describe('creator profile cover and verification polish', () => {
       name: 'Verified creator',
     });
     expect(verified.parentElement!.className).toContain('-mt-10');
-    expect(verified.className).toContain('-bottom-1');
-    expect(verified.className).toContain('-end-1');
+    // The badge sits on the circular photo edge. Negative end/bottom offsets
+    // put it outside the avatar's bounding box and leave a visible gap.
+    expect(verified.classList.contains('bottom-1')).toBe(true);
+    expect(verified.classList.contains('end-1')).toBe(true);
+    expect(verified.classList.contains('-bottom-1')).toBe(false);
+    expect(verified.classList.contains('-end-1')).toBe(false);
     expect(verified.className).toContain('size-4');
     expect(verified.className).toContain('rounded-full');
     expect(verified.className).toContain('bg-[var(--biolink-surface)]');
@@ -502,6 +506,8 @@ describe('creator profile cover and verification polish', () => {
       const badge = within(mobile).getByRole('img', {name: 'Verified creator'});
       expect(badge.className).toContain('size-4');
       expect(badge.className).toContain('rounded-full');
+      expect(badge.classList.contains('end-1')).toBe(true);
+      expect(badge.classList.contains('bottom-1')).toBe(true);
       expect(badge.className).not.toContain('ring-');
     },
   );
