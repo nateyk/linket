@@ -151,7 +151,7 @@ class ChapaV1TransferApprovalContractTest extends TestCase
         );
         $request->headers->set(
             'Chapa-Signature',
-            $signature ?? hash_hmac('sha256', $rawBody, self::SECRET),
+            $signature ?? hash_hmac('sha256', self::SECRET, self::SECRET),
         );
 
         return app(ChapaV1TransferApprovalController::class)(
@@ -204,6 +204,17 @@ class ChapaV1TransferApprovalContractTest extends TestCase
 
         $this->assertSame('processing', PayoutRequest::query()->firstOrFail()->status);
         Http::assertNothingSent();
+    }
+
+    public function testTelebirrApprovalAllowsMissingNameOnlyForTheApprovedNumber(): void
+    {
+        $this->assertSame(200, $this->requestApproval(['account_name' => null])->status());
+        $this->assertSame(200, $this->requestApproval(['account_name' => ''])->status());
+        $this->assertSame(400, $this->requestApproval([
+            'account_name' => null,
+            'account_number' => '251911223345',
+        ])->status());
+        $this->assertSame(400, $this->requestApproval(['account_name' => 'Different Seller'])->status());
     }
 
     public function testWrongSignatureAndMissingApprovalSecretFailClosed(): void
@@ -290,7 +301,7 @@ class ChapaV1TransferApprovalContractTest extends TestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_Chapa-Signature' => hash_hmac('sha256', $approvedBody, self::SECRET),
+                'HTTP_Chapa-Signature' => hash_hmac('sha256', self::SECRET, self::SECRET),
             ],
             $approvedBody,
         )->assertOk()->assertJsonPath('message', 'Transfer approved');
@@ -305,7 +316,7 @@ class ChapaV1TransferApprovalContractTest extends TestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_Chapa-Signature' => hash_hmac('sha256', $rejectedBody, self::SECRET),
+                'HTTP_Chapa-Signature' => hash_hmac('sha256', self::SECRET, self::SECRET),
             ],
             $rejectedBody,
         )->assertStatus(400)->assertJsonPath('message', 'Transfer not approved');
