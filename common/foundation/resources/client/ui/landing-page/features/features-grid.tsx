@@ -1,10 +1,12 @@
 import {ConfigIconWithBg} from '@common/ui/landing-page/config-icon';
+import type {LandingPageImageConfig} from '@common/ui/landing-page/landing-page-config';
 import {Trans} from '@ui/i18n/trans';
 import {IconTree} from '@ui/icons/create-svg-icon';
 import {cn} from '@ui/utils/cn';
 
 export type FeaturesGridConfig = {
   name: 'features-grid';
+  presentation?: 'journey';
   title?: string;
   badge?: string;
   description?: string;
@@ -15,6 +17,7 @@ export type FeaturesGridConfig = {
     title: string;
     description: string;
     icon?: string | IconTree[];
+    image?: LandingPageImageConfig;
   }[];
 };
 
@@ -22,6 +25,10 @@ type FeaturesGridProps = {
   config: FeaturesGridConfig;
 };
 export default function FeaturesGrid({config}: FeaturesGridProps) {
+  if (config.presentation === 'journey') {
+    return <CreatorJourney config={config} />;
+  }
+
   return (
     <div
       className={cn(
@@ -100,4 +107,81 @@ function getColumnsClassName(maxColumns?: number | string): string {
     default:
       return 'lg:grid-cols-2'; // default to 2 columns
   }
+}
+
+/**
+ * Linket's editorial three-step journey. Based on the free numbered-process
+ * pattern, with optional images instead of icon-heavy feature cards.
+ * Standard feature grids continue using the original renderer above.
+ */
+function CreatorJourney({config}: FeaturesGridProps) {
+  return (
+    <section
+      aria-label={config.title}
+      className={cn(
+        'overflow-hidden py-16 sm:py-20 lg:py-24',
+        config.mutedBg && 'bg-muted/40 dark:bg-card',
+      )}
+    >
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          {config.badge ? (
+            <p className="text-sm font-semibold text-primary">
+              <Trans message={config.badge} />
+            </p>
+          ) : null}
+          {config.title ? (
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl lg:text-5xl">
+              <Trans message={config.title} />
+            </h2>
+          ) : null}
+          {config.description ? (
+            <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+              <Trans message={config.description} />
+            </p>
+          ) : null}
+        </div>
+        <ol className="mt-10 grid grid-cols-1 gap-4 sm:mt-12 md:grid-cols-3 md:gap-5 lg:gap-6">
+          {config.features?.map((feature, index) => (
+            <li
+              key={`${index}-${feature.title}`}
+              className="relative flex min-w-0 flex-col overflow-visible rounded-2xl border border-border/70 bg-background shadow-sm"
+            >
+              <div className="relative overflow-hidden rounded-t-[inherit] border-b border-border/60 bg-primary/5">
+                {feature.image?.src ? (
+                  <img
+                    alt=""
+                    src={feature.image.src}
+                    width={feature.image.width}
+                    height={feature.image.height}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-[4/3] w-full object-contain p-3 sm:p-4"
+                  />
+                ) : (
+                  <div aria-hidden="true" className="aspect-[4/3] w-full bg-linear-to-br from-primary/10 via-muted/40 to-background" />
+                )}
+              </div>
+              <div className="flex items-start gap-3 p-5 sm:gap-4 sm:p-6">
+                <span
+                  aria-hidden="true"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold tabular-nums text-primary-foreground"
+                >
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold tracking-tight text-foreground">
+                    <Trans message={feature.title} />
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    <Trans message={feature.description} />
+                  </p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
 }
