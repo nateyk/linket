@@ -6,14 +6,17 @@ import {
   Heading,
 } from '@common/ui/landing-page/hero/shared';
 import {LandingPageContext} from '@common/ui/landing-page/landing-page-context';
+import type {LandingPageImageConfig} from '@common/ui/landing-page/landing-page-config';
 import {Logo} from '@common/ui/navigation/navbar/logo';
 import {Trans} from '@ui/i18n/trans';
 import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
 import {cn} from '@ui/utils/cn';
+import {motion, useReducedMotion} from 'framer-motion';
 import {useContext} from 'react';
 
 export type HeroSplitWithScreenshotConfig = BaseHeroConfig & {
   name: 'hero-split-with-screenshot';
+  supportingImages?: LandingPageImageConfig[];
 };
 
 type Props = {
@@ -35,19 +38,19 @@ export function HeroSplitWithScreenshot({config}: Props) {
         config.forceDarkMode && 'dark',
       )}
     >
-      <GridDecoration />
+      {!creator && <GridDecoration />}
       <ColorSplash />
       {config.bgColors ? <BgColors config={config} /> : null}
-      <div className={creator ? "mx-auto grid max-w-7xl items-center gap-8 px-6 py-16 sm:py-24 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-28" : "mx-auto max-w-7xl px-6 pt-10 pb-24 sm:pb-32 lg:flex lg:px-8 lg:py-40"}>
+      <div className={creator ? "mx-auto grid max-w-7xl items-center gap-10 px-5 py-14 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-24" : "mx-auto max-w-7xl px-6 pt-10 pb-24 sm:pb-32 lg:flex lg:px-8 lg:py-40"}>
         <div className="mx-auto max-w-2xl lg:mx-0 lg:shrink-0 lg:pt-8">
           {!creator && <Logo className="h-10" color={isDarkMode ? 'light' : 'dark'} url="/" />}
           {config.badge ? (
-            <div className={cn("w-max max-w-full rounded-full bg-primary/10 px-3 py-1.5 text-sm/6 font-semibold text-primary ring-1 ring-primary/10 ring-inset", creator ? "mt-6" : "mt-24 sm:mt-32 lg:mt-16")}>
+            <div className={cn("w-max max-w-full rounded-full bg-primary/10 px-3 py-1.5 text-sm/6 font-semibold text-primary ring-1 ring-primary/10 ring-inset", creator ? "mt-2" : "mt-24 sm:mt-32 lg:mt-16")}>
               <Trans message={config.badge} />
             </div>
           ) : null}
           {config.title ? (
-            <Heading className={creator ? "mt-6 max-w-2xl text-4xl! leading-tight! sm:text-6xl!" : "mt-10"}>
+            <Heading className={creator ? "mt-6 max-w-2xl text-4xl! leading-[1.08]! sm:text-6xl!" : "mt-10"}>
               <Trans message={config.title} />
             </Heading>
           ) : null}
@@ -68,18 +71,91 @@ export function HeroSplitWithScreenshot({config}: Props) {
         {config.image ? (
           <div className={creator ? "mx-auto w-full min-w-0 max-w-full" : "mx-auto mt-16 flex max-w-2xl sm:mt-24 lg:mt-0 lg:mr-0 lg:ml-10 lg:max-w-none lg:flex-none xl:ml-32"}>
             <div className={creator ? "w-full min-w-0" : "max-w-3xl flex-none sm:max-w-5xl lg:max-w-none"}>
-              <div className={creator ? "overflow-hidden rounded-2xl border border-primary/10 bg-background/75 p-2 shadow-xl" : "-m-2 rounded-2xl border bg-muted/60 p-2 lg:-m-4 lg:rounded-3xl lg:p-4"}>
-                <img
-                  alt=""
-                  src={config.image.src}
-                  width={config.image.width}
-                  height={config.image.height}
-                  className={creator ? "block h-auto w-full rounded-xl" : "w-304 rounded-md border shadow-2xl"}
+              {creator && config.supportingImages?.[0]?.src && config.supportingImages?.[1]?.src ? (
+                <CreatorHeroCollage
+                  image={config.image}
+                  supportingImages={config.supportingImages}
                 />
-              </div>
+              ) : (
+                <div className={creator ? "overflow-hidden rounded-2xl border border-primary/10 bg-background/75 p-2 shadow-xl" : "-m-2 rounded-2xl border bg-muted/60 p-2 lg:-m-4 lg:rounded-3xl lg:p-4"}>
+                  <img
+                    alt=""
+                    src={config.image.src}
+                    width={config.image.width}
+                    height={config.image.height}
+                    className={creator ? "block h-auto w-full rounded-xl" : "w-304 rounded-md border shadow-2xl"}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+type CreatorHeroCollageProps = {
+  image: LandingPageImageConfig;
+  supportingImages: LandingPageImageConfig[];
+};
+
+// The storefront image remains the focus. Two optional supporting images can
+// be replaced independently in the landing-page editor. The static image
+// fallback above remains available for existing/customized landing pages.
+function CreatorHeroCollage({
+  image,
+  supportingImages,
+}: CreatorHeroCollageProps) {
+  const reducedMotion = useReducedMotion();
+
+  return (
+    <div
+      aria-hidden="true"
+      className="relative isolate mx-auto aspect-[5/4] w-full max-w-152 sm:aspect-[6/5] lg:aspect-[5/4]"
+    >
+      <div className="pointer-events-none absolute inset-[12%_8%] -z-10 rounded-full bg-primary/10 blur-3xl" />
+      <motion.div
+        initial={false}
+        animate={reducedMotion ? undefined : {y: [0, -3, 0]}}
+        transition={{duration: 8, repeat: Infinity, ease: 'easeInOut'}}
+        className="absolute top-[7%] left-[4%] z-0 w-[49%] -rotate-6 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-lg"
+      >
+        <img
+          src={supportingImages[0].src}
+          alt=""
+          width={supportingImages[0].width}
+          height={supportingImages[0].height}
+          loading="lazy"
+          decoding="async"
+          className="aspect-[4/3] w-full rounded-xl object-cover"
+        />
+      </motion.div>
+      <motion.div
+        initial={false}
+        animate={reducedMotion ? undefined : {y: [0, 3, 0]}}
+        transition={{duration: 10, repeat: Infinity, ease: 'easeInOut'}}
+        className="absolute top-[4%] right-[3%] z-10 w-[46%] rotate-6 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-lg"
+      >
+        <img
+          src={supportingImages[1].src}
+          alt=""
+          width={supportingImages[1].width}
+          height={supportingImages[1].height}
+          loading="lazy"
+          decoding="async"
+          className="aspect-[4/3] w-full rounded-xl object-cover"
+        />
+      </motion.div>
+      <div className="absolute inset-x-[7%] bottom-[7%] z-20 overflow-hidden rounded-2xl border border-primary/15 bg-background p-1.5 shadow-xl sm:p-2">
+        <img
+          src={image.src}
+          alt=""
+          width={image.width}
+          height={image.height}
+          decoding="async"
+          className="block h-auto w-full rounded-xl"
+        />
       </div>
     </div>
   );
