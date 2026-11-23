@@ -6,6 +6,12 @@ import {Select} from '@shadcn/forms/select/select';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Trans} from '@ui/i18n/trans';
+import {useWatch} from 'react-hook-form';
+
+const presentationOptions = [
+  {value: 'standard', label: 'Standard feature grid'},
+  {value: 'journey', label: 'Image-led journey steps'},
+] as const;
 
 const maxColumnsOptions = [
   {value: '2', label: '2'},
@@ -19,6 +25,8 @@ type Props = {
 export function FeaturesGridSettings({index}: Props) {
   const prefix =
     `client.landingPage.sections.${index}` as `client.landingPage.sections.${number}`;
+  const presentation = useWatch({name: `${prefix}.presentation`});
+  const isJourney = presentation === 'journey';
   return (
     <Field.Group>
       <HookForm.Field name={`${prefix}.badge`}>
@@ -47,11 +55,30 @@ export function FeaturesGridSettings({index}: Props) {
 
       <Field.Separator />
 
-      <FeatureListEditor prefix={prefix} />
+      <HookForm.Field name={`${prefix}.presentation`}>
+        <Field.Label>
+          <Trans message="Section layout" />
+        </Field.Label>
+        <Select.Root items={presentationOptions}>
+          <Select.Trigger className="w-full">
+            <Select.Value placeholder={<Trans message="Standard feature grid" />} />
+          </Select.Trigger>
+          <Select.Content>
+            {presentationOptions.map(option => (
+              <Select.Item key={option.value} value={option.value}>
+                {option.label}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Root>
+        <Field.Error />
+      </HookForm.Field>
+
+      <FeatureListEditor prefix={prefix} withImages={isJourney} />
 
       <Field.Separator />
 
-      <HookForm.Field name={`${prefix}.maxColumns`}>
+      {!isJourney ? <HookForm.Field name={`${prefix}.maxColumns`}>
         <Field.Label>
           <Trans message="Maximum columns" />
         </Field.Label>
@@ -68,15 +95,15 @@ export function FeaturesGridSettings({index}: Props) {
           </Select.Content>
         </Select.Root>
         <Field.Error />
-      </HookForm.Field>
+      </HookForm.Field> : null}
 
-      <HookForm.Field name={`${prefix}.iconsOnTop`}>
+      {!isJourney ? <HookForm.Field name={`${prefix}.iconsOnTop`}>
         <Field.Label>
           <Switch />
           <Trans message="Icons on top" />
         </Field.Label>
         <Field.Error />
-      </HookForm.Field>
+      </HookForm.Field> : null}
 
       <HookForm.Field name={`${prefix}.mutedBg`}>
         <Field.Label>

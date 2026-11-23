@@ -131,8 +131,9 @@ export function FeatureSectionSettings({index}: Props) {
 
 type FeatureListEditorProps = {
   prefix: string;
+  withImages?: boolean;
 };
-export function FeatureListEditor({prefix}: FeatureListEditorProps) {
+export function FeatureListEditor({prefix, withImages = false}: FeatureListEditorProps) {
   const {fields, remove, append, move} = useFieldArray({
     name: `${prefix}.features`,
   }) as unknown as UseFieldArrayReturn<FeatureWithScreenshotConfig, 'features'>;
@@ -142,7 +143,7 @@ export function FeatureListEditor({prefix}: FeatureListEditorProps) {
   return (
     <div className="flex flex-col gap-2">
       <Field.Title>
-        <Trans message="Feature list" />
+        <Trans message={withImages ? 'Journey steps' : 'Feature list'} />
       </Field.Title>
       {fields.map((feature, index) => (
         <FeatureListItem
@@ -152,6 +153,7 @@ export function FeatureListEditor({prefix}: FeatureListEditorProps) {
           onSortEnd={(oldIndex, newIndex) => move(oldIndex, newIndex)}
           index={index}
           prefix={prefix}
+          withImages={withImages}
           isOpen={activeFeatureIndex === index}
           onOpenChange={open => setActiveFeatureIndex(open ? index : null)}
           onDelete={() => {
@@ -169,14 +171,14 @@ export function FeatureListEditor({prefix}: FeatureListEditorProps) {
         className="w-max"
         onClick={() => {
           append({
-            title: `Feature ${fields.length + 1}`,
-            description: `Feature ${fields.length + 1} description`,
+            title: `${withImages ? 'Step' : 'Feature'} ${fields.length + 1}`,
+            description: '',
           });
           setActiveFeatureIndex(fields.length);
         }}
       >
         <PlusIcon />
-        <Trans message="Add new feature" />
+        <Trans message={withImages ? "Add step" : "Add new feature"} />
       </Button>
     </div>
   );
@@ -188,6 +190,7 @@ type FeatureListItemProps = {
   onSortEnd: UseSortableProps['onSortEnd'];
   index: number;
   prefix: string;
+  withImages?: boolean;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete: () => void;
@@ -198,6 +201,7 @@ function FeatureListItem({
   onSortEnd,
   index,
   prefix,
+  withImages,
   isOpen,
   onOpenChange,
   onDelete,
@@ -250,7 +254,7 @@ function FeatureListItem({
             </Drawer.Close>
           </Drawer.Header>
           <Drawer.Body>
-            <EditFeatureForm formPathPrefix={formPathPrefix} />
+            <EditFeatureForm formPathPrefix={formPathPrefix} withImages={withImages} />
           </Drawer.Body>
           <Drawer.Footer>
             <Button
@@ -276,11 +280,17 @@ function FeatureListItem({
 
 type EditFeatureFormProps = {
   formPathPrefix: string;
+  withImages?: boolean;
 };
-function EditFeatureForm({formPathPrefix}: EditFeatureFormProps) {
+function EditFeatureForm({formPathPrefix, withImages}: EditFeatureFormProps) {
   return (
     <Field.Group>
-      <IconDialogTrigger formPrefix={formPathPrefix} />
+      {withImages ? (
+        <LandingPageImageSelector
+          formPrefix={formPathPrefix}
+          label={<Trans message="Step image" />}
+        />
+      ) : <IconDialogTrigger formPrefix={formPathPrefix} />}
 
       <HookForm.Field name={`${formPathPrefix}.title`}>
         <Field.Label>

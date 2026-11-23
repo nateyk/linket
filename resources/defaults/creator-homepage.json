@@ -44,28 +44,39 @@
     {
       "name": "features-grid",
       "title": "From your first idea to your first sale",
-      "description": "Your page is more than a list of links. Give your audience one place to discover your work and support what you create.",
-      "badge": "A simpler way to start",
-      "maxColumns": 3,
-      "iconsOnTop": true,
+      "description": "Three simple steps to bring your digital work online and reach your next customer.",
+      "badge": "How Linket works",
       "mutedBg": true,
       "features": [
         {
-          "icon": "stores",
-          "title": "Make it yours",
-          "description": "Build a mobile-first storefront that reflects your style, content, and brand."
+          "title": "Create your storefront",
+          "description": "Set up your page, add your products, and make it yours.",
+          "image": {
+            "src": "images/landing/creator-storefront.svg",
+            "width": 1280,
+            "height": 880
+          }
         },
         {
-          "icon": "links",
-          "title": "Share what you create",
-          "description": "Publish digital products, courses, services, and useful links in one place."
+          "title": "Share your link",
+          "description": "Let people discover your products from social media, Telegram, or anywhere.",
+          "image": {
+            "src": "images/landing/creator-hero.svg",
+            "width": 1280,
+            "height": 880
+          }
         },
         {
-          "icon": "insights",
-          "title": "Run your business",
-          "description": "Follow your orders, completed sales, and audience activity from one dashboard."
+          "title": "Sell and manage orders",
+          "description": "Eligible buyers check out with Chapa. Follow confirmed sales and orders in one place.",
+          "image": {
+            "src": "images/landing/creator-checkout.svg",
+            "width": 1280,
+            "height": 880
+          }
         }
-      ]
+      ],
+      "presentation": "journey"
     },
     {
       "name": "feature-with-screenshot",
