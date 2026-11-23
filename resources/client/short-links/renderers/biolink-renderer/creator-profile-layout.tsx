@@ -360,8 +360,8 @@ function CreatorCard({
 
       <Card.Content className="px-4 pb-4 sm:px-5 sm:pb-5">
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 sm:gap-4">
-          {/* The avatar clips its photo; the verification mark stays outside
-              that clipping boundary, as a compact 16px overlay. */}
+          {/* The avatar clips its photo; the compact verification mark is anchored on the visible lower-right
+              arc, not the bottom-right corner of the square avatar box. */}
           <div className="relative z-10 -mt-10 size-22 shrink-0">
             <Avatar.Root
               className={cn(
@@ -385,7 +385,7 @@ function CreatorCard({
               <span
                 role="img"
                 aria-label={trans(message('Verified creator'))}
-                className="absolute -end-1 -bottom-1 z-10 flex size-4 items-center justify-center rounded-full bg-[var(--biolink-surface)]"
+                className="absolute end-1 bottom-1 z-10 flex size-4 items-center justify-center rounded-full bg-[var(--biolink-surface)]"
               >
                 <BadgeCheckIcon
                   className="size-full fill-[var(--biolink-accent)] text-[var(--biolink-accent-foreground)]"
