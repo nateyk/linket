@@ -2,21 +2,21 @@
   "sections": [
     {
       "name": "hero-split-with-screenshot",
-      "title": "One link. Your entire creator business.",
-      "description": "Bring your content, digital products, services, and audience together in one beautiful storefront. Share one link, sell directly to customers, and run your creator business from one place.",
-      "badge": "Creator storefront · Digital products · Services",
+      "title": "Create your storefront. Sell what you make.",
+      "description": "Give your ebooks, digital downloads, courses, and services one home. Share your link and manage your creator business without coding.",
+      "badge": "Made for creators in Ethiopia",
       "presentation": "creator",
       "showSearchBarSlot": false,
       "buttons": [
         {
-          "label": "Create your storefront",
+          "label": "Create your free storefront",
           "action": "/register",
           "type": "route",
           "variant": "default",
           "color": "primary"
         },
         {
-          "label": "Explore features",
+          "label": "See how it works",
           "action": "#from-your-first-idea-to-your-first-sale",
           "type": "route",
           "variant": "outline",
@@ -27,7 +27,19 @@
         "src": "images/landing/creator-hero.svg",
         "width": 1280,
         "height": 880
-      }
+      },
+      "supportingImages": [
+        {
+          "src": "images/landing/creator-storefront.svg",
+          "width": 1280,
+          "height": 880
+        },
+        {
+          "src": "images/landing/creator-checkout.svg",
+          "width": 1280,
+          "height": 880
+        }
+      ]
     },
     {
       "name": "features-grid",
