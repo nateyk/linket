@@ -31,8 +31,7 @@ final class ChapaV1TransferApprovalController extends Controller
         if ($secret === '') {
             return $this->reject('approval_secret_missing');
         }
-        $rawBody = $request->getContent();
-        if (!$this->isValidSignature($secret, $signature, $rawBody)) {
+        if (!$this->isValidSignature($secret, $signature)) {
             return $this->reject($signature === '' ? 'signature_missing' : 'signature_invalid');
         }
 
@@ -40,7 +39,7 @@ final class ChapaV1TransferApprovalController extends Controller
             'reference' => ['required', 'string', 'max:190'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'bank' => ['required', 'string', 'max:100'],
-            'account_name' => ['required', 'string', 'max:160'],
+            'account_name' => ['nullable', 'string', 'max:160'],
             'account_number' => ['required', 'string', 'max:100'],
         ]);
 
@@ -63,7 +62,6 @@ final class ChapaV1TransferApprovalController extends Controller
         }
 
         // Idempotent callback: no transfer dispatch and no ledger mutation here.
-        // Payload+intent matching above is the replay gate for forged variants.
         return response()->json(['message' => 'Transfer approved'], 200);
     }
 
@@ -75,15 +73,15 @@ final class ChapaV1TransferApprovalController extends Controller
         return response()->json(['message' => 'Transfer not approved'], 400);
     }
 
-    private function isValidSignature(string $secret, string $signature, string $rawBody): bool
+    private function isValidSignature(string $secret, string $signature): bool
     {
-        if ($rawBody === '' || preg_match('/^[0-9a-f]{64}$/i', $signature) !== 1) {
+        if (preg_match('/^[0-9a-f]{64}$/i', $signature) !== 1) {
             return false;
         }
 
-        // Request-bound HMAC over the raw body (same family as Chapa payment webhooks).
+        // Chapa v1 signs the approval secret using the same secret as the key.
         return hash_equals(
-            hash_hmac('sha256', $rawBody, $secret),
+            hash_hmac('sha256', $secret, $secret),
             strtolower($signature),
         );
     }

@@ -326,7 +326,9 @@ class ChapaPayoutService
         if (!hash_equals((string) $expectedNumber, (string) $actualNumber)) {
             return 'account_number_mismatch';
         }
-        if (!hash_equals((string) $payout->account_holder_snapshot, (string) ($payload['account_name'] ?? ''))) {
+        $accountName = (string) ($payload['account_name'] ?? '');
+        if (($expectedBank !== 'telebirr' || trim($accountName) !== '')
+            && !hash_equals((string) $payout->account_holder_snapshot, $accountName)) {
             return 'account_name_mismatch';
         }
         $amountCents = EtbMajorAmount::cents($payload['amount'] ?? null);
