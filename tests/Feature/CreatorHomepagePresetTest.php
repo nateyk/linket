@@ -10,9 +10,11 @@ class CreatorHomepagePresetTest extends TestCase
     {
         $config = json_decode(file_get_contents(resource_path('defaults/creator-homepage.json')), true);
         $this->assertIsArray($config['sections'] ?? null);
-        $this->assertSame('One link. Your entire creator business.', $config['sections'][0]['title']);
+        $this->assertSame('Create your storefront. Sell what you make.', $config['sections'][0]['title']);
         $this->assertSame('creator', $config['sections'][0]['presentation']);
         $this->assertSame('images/landing/creator-hero.svg', $config['sections'][0]['image']['src']);
+        $this->assertSame('images/landing/creator-storefront.svg', $config['sections'][0]['supportingImages'][0]['src']);
+        $this->assertSame('images/landing/creator-checkout.svg', $config['sections'][0]['supportingImages'][1]['src']);
         $this->assertContains('pricing', array_column($config['sections'], 'name'));
         $this->assertContains('faq', array_column($config['sections'], 'name'));
         $this->assertSame('/register', $config['sections'][0]['buttons'][0]['action']);
