@@ -3,6 +3,13 @@ import {HeroSplitWithScreenshot} from '@common/ui/landing-page/hero/hero-split-w
 import {renderToStaticMarkup} from 'react-dom/server';
 import {describe, expect, it, vi} from 'vitest';
 
+const motionPreference = vi.hoisted(() => ({reduced: false}));
+
+vi.mock('framer-motion', async importOriginal => {
+  const original = await importOriginal<typeof import('framer-motion')>();
+  return {...original, useReducedMotion: () => motionPreference.reduced};
+});
+
 vi.mock('@ui/themes/use-is-dark-mode', () => ({
   useIsDarkMode: () => false,
 }));
@@ -13,7 +20,7 @@ vi.mock('@common/ui/navigation/navbar/logo', () => ({
   Logo: () => null,
 }));
 
-function renderHero(presentation?: 'creator', collage = false) {
+function renderHero(presentation?: 'creator', collage = false, includeSecondImage = true) {
   return renderToStaticMarkup(
     <LandingPageContext.Provider value={{defaultIcons: {}, sections: []}}>
       <HeroSplitWithScreenshot
@@ -30,7 +37,9 @@ function renderHero(presentation?: 'creator', collage = false) {
           supportingImages: collage
             ? [
                 {src: 'images/landing/creator-storefront.svg'},
-                {src: 'images/landing/creator-checkout.svg'},
+                ...(includeSecondImage
+                  ? [{src: 'images/landing/creator-checkout.svg'}]
+                  : []),
               ]
             : undefined,
         }}
@@ -60,6 +69,25 @@ describe('Linket homepage hero background', () => {
     expect(html).toContain('images/landing/creator-checkout.svg');
     expect(html).toContain('aria-hidden="true"');
     expect(html).not.toContain('<circle');
+  });
+
+  it('shows the original single-image hero when only one supporting image exists', () => {
+    const html = renderHero('creator', true, false);
+
+    expect(html).toContain('images/landing/creator-hero.svg');
+    expect(html).not.toContain('images/landing/creator-storefront.svg');
+    expect(html).not.toContain('images/landing/creator-checkout.svg');
+  });
+
+  it('renders the collage without floating animation for reduced-motion users', () => {
+    motionPreference.reduced = true;
+    try {
+      const html = renderHero('creator', true);
+      expect(html).toContain('images/landing/creator-storefront.svg');
+      expect(html).toContain('images/landing/creator-checkout.svg');
+    } finally {
+      motionPreference.reduced = false;
+    }
   });
 
   it('retains the grid and glow for standard non-creator heroes', () => {
