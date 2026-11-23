@@ -72,6 +72,31 @@ class PayoutSystemTest extends TestCase
         ]);
     }
 
+    public function testCreatorCanRequestAnotherPayoutWhileExistingReservationRemains(): void
+    {
+        $creator = $this->createVerifiedCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+        $this->creditSale($creator, 10000);
+        $this->createPayoutMethod($creator, $workspaceId);
+
+        $first = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 4000);
+        $first->update(['status' => 'processing']);
+        $second = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 500);
+
+        $this->assertSame('processing', $first->fresh()->status);
+        $this->assertSame('requested', $second->status);
+        $summary = app(DigitalProductFinance::class)->summary($creator->id, $workspaceId);
+        $this->assertSame(5500, $summary['available_for_payout_cents']);
+        $this->assertSame(4500, $summary['reserved_payout_cents']);
+
+        try {
+            app(PayoutRequestService::class)->create($creator->id, $workspaceId, 5501);
+            $this->fail('The reserved amounts must not be available for another request.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount_cents', $exception->errors());
+        }
+    }
+
     public function testUnbackedLegacyEarningsCannotBeWithdrawnWithoutChapaJournalFunds(): void
     {
         $creator = $this->createVerifiedCreator();
