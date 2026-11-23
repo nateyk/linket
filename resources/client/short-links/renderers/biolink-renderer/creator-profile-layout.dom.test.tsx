@@ -435,6 +435,58 @@ describe('the preview follows the editor tab (A-06)', () => {
 });
 
 
+describe('creator profile cover and verification polish', () => {
+  test('uses the editor 3:1 crop and anchors the legible verified badge to the avatar', () => {
+    const biolink = makeBiolink({is_verified: true}) as unknown as {
+      profile_config: Record<string, unknown>;
+    };
+    biolink.profile_config.cover_url = '/creator-cover.webp';
+    biolink.profile_config.avatar_url = '/creator-avatar.webp';
+
+    render(
+      <CreatorProfileLayout
+        biolink={biolink as never}
+        appearance={null}
+        content={[]}
+      />,
+    );
+
+    const mobile = mobileBranch();
+    const cover = mobile.querySelector<HTMLImageElement>(
+      'img[src="/creator-cover.webp"]',
+    );
+    expect(cover).toBeTruthy();
+    expect(cover!.parentElement!.className).toContain('aspect-[3/1]');
+    expect(cover!.parentElement!.className).toContain('overflow-hidden');
+    expect(cover!.className).toContain('absolute');
+    expect(cover!.className).toContain('object-cover');
+
+    const verified = within(mobile).getByRole('img', {
+      name: 'Verified creator',
+    });
+    expect(verified.parentElement!.className).toContain('-mt-10');
+    expect(verified.className).toContain('bottom-0');
+    expect(verified.querySelector('svg')!.getAttribute('class')).toContain(
+      'fill-[var(--biolink-accent)]',
+    );
+    expect(within(mobile).getByRole('heading', {name: 'Nathanael'}).querySelector('svg')).toBeNull();
+  });
+
+  test('does not show a verified mark for a string false API value', () => {
+    render(
+      <CreatorProfileLayout
+        biolink={makeBiolink({is_verified: 'false'})}
+        appearance={null}
+        content={[]}
+      />,
+    );
+
+    expect(
+      within(mobileBranch()).queryByRole('img', {name: 'Verified creator'}),
+    ).toBeNull();
+  });
+});
+
 describe('public creator card responsive readability (SF-06)', () => {
   test('keeps a long creator name, readable bio and primary action inside the mobile profile', async () => {
     const longName = 'CreatorWithAnUnbrokenName'.repeat(8);
