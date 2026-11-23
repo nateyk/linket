@@ -471,11 +471,16 @@ describe('creator profile card wiring', () => {
   });
 
   test('frames the avatar at the size the editor previews', () => {
-    expect(source).toContain('-mt-10 aspect-square size-22');
+    // The overlap lives on the unclipped wrapper so the verified badge can
+    // sit outside the clipped avatar without changing the 88px avatar size.
+    expect(source).toContain('relative z-10 -mt-10 size-22 shrink-0');
+    expect(source).toContain('aspect-square size-full overflow-hidden');
     // Edge-to-edge photo — no heavy p-1 surface pad frame.
     expect(source).not.toContain('bg-[var(--biolink-surface-strong)] p-1');
     expect(source).toContain('ring-2 ring-[var(--biolink-surface)]');
     expect(source).toContain('after:rounded-[inherit]');
+    expect(source).toContain("aria-label={trans(message('Verified creator'))}");
+    expect(source).toContain('fill-[var(--biolink-accent)] text-[var(--biolink-accent-foreground)]');
   });
 
   test('sizes name and title beside the avatar without single-line truncate', () => {
@@ -508,9 +513,12 @@ describe('creator profile card wiring', () => {
     expect(source).toContain('className="relative aspect-[3/1] w-full');
   });
 
-  test('keeps the cover image clipped by the card shell instead of rounding it', () => {
+  test('clips the cover image to the 3:1 frame without stretching it', () => {
+    expect(source).toContain(
+      'aspect-[3/1] w-full shrink-0 overflow-hidden',
+    );
     expect(source).toMatch(
-      /className="size-full object-cover"\s+src=\{profile\.cover_url\}/,
+      /className="absolute inset-0 size-full object-cover object-center"\s+src=\{profile\.cover_url\}/,
     );
   });
 });

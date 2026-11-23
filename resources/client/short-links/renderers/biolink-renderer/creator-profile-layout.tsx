@@ -315,6 +315,11 @@ function CreatorCard({
   const visibleSkills = profile.skills.slice(0, 8);
   const visibleSocialLinks = socialLinks;
   const showContactAction = !!profile.contact_url;
+  // The API normally returns a boolean; never treat a string "false" as verified.
+  const isVerified =
+    biolink.is_verified === true ||
+    biolink.is_verified === 'true' ||
+    biolink.is_verified === '1';
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   // Appearance → Buttons → Shadow soft-pops the profile shell the same way
   // it lifts Message / social / View actions. Empty string = flat (None).
@@ -331,10 +336,10 @@ function CreatorCard({
       )}
       style={{boxShadow: buttonShadow}}
     >
-      <div className="relative aspect-[3/1] w-full shrink-0 bg-[var(--biolink-surface-muted)] bg-linear-to-br from-[var(--biolink-surface-muted)] to-[var(--biolink-surface-strong)]">
+      <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden bg-[var(--biolink-surface-muted)] bg-linear-to-br from-[var(--biolink-surface-muted)] to-[var(--biolink-surface-strong)]">
         {profile.cover_url && (
           <img
-            className="size-full object-cover"
+            className="absolute inset-0 size-full object-cover object-center"
             src={profile.cover_url}
             alt=""
           />
@@ -343,7 +348,7 @@ function CreatorCard({
           <Badge
             variant="secondary"
             className={cn(
-              'absolute end-4 bottom-4 border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] backdrop-blur-sm',
+              'absolute end-3 top-3 max-w-[calc(100%-1.5rem)] border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] backdrop-blur-sm sm:end-4 sm:top-4',
             )}
             style={{boxShadow: buttonShadow}}
           >
@@ -355,49 +360,50 @@ function CreatorCard({
 
       <Card.Content className="px-4 pb-4 sm:px-5 sm:pb-5">
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 sm:gap-4">
-          {/* Edge-to-edge photo: no p-1 surface pad (that read as a heavy white
-              frame). Lift with a surface ring + thin biolink border so radius
-              follows appearance without nesting a second radius calc. */}
-          <Avatar.Root
-            className={cn(
-              '-mt-10 aspect-square size-22 overflow-hidden bg-[var(--biolink-surface-muted)] ring-2 ring-[var(--biolink-surface)] after:rounded-[inherit] after:border-[var(--biolink-border)]',
-              containerRadius.avatarClassName,
-            )}
-          >
-            <Avatar.Image
+          {/* Keep the verified mark at the avatar's lower-right edge, rather
+              than alongside the display name. The avatar itself must clip, but
+              the badge must sit outside that clipping boundary. */}
+          <div className="relative z-10 -mt-10 size-22 shrink-0">
+            <Avatar.Root
               className={cn(
-                'size-full object-cover',
+                'aspect-square size-full overflow-hidden bg-[var(--biolink-surface-muted)] ring-2 ring-[var(--biolink-surface)] after:rounded-[inherit] after:border-[var(--biolink-border)]',
                 containerRadius.avatarClassName,
               )}
-              src={profile.avatar_url}
-              alt={profile.display_name}
-            />
-            <Avatar.ColorFallback className={containerRadius.avatarClassName}>
-              {profile.display_name}
-            </Avatar.ColorFallback>
-          </Avatar.Root>
+            >
+              <Avatar.Image
+                className={cn(
+                  'size-full object-cover',
+                  containerRadius.avatarClassName,
+                )}
+                src={profile.avatar_url}
+                alt={profile.display_name}
+              />
+              <Avatar.ColorFallback className={containerRadius.avatarClassName}>
+                {profile.display_name}
+              </Avatar.ColorFallback>
+            </Avatar.Root>
+            {isVerified && (
+              <span
+                role="img"
+                aria-label={trans(message('Verified creator'))}
+                className="absolute -end-1 bottom-0 flex size-7 items-center justify-center rounded-full bg-[var(--biolink-surface)] ring-2 ring-[var(--biolink-surface)]"
+              >
+                <BadgeCheckIcon
+                  className="size-6 fill-[var(--biolink-accent)] text-[var(--biolink-accent-foreground)]"
+                  aria-hidden="true"
+                />
+              </span>
+            )}
+          </div>
 
           {/* Name + title baseline with the avatar foot; wrap instead of
               truncating mid-word so titles like "Architect" stay readable. */}
           <div className="flex min-w-0 flex-col justify-end gap-1 pb-0.5">
-            <div className="flex min-w-0 items-start gap-1.5">
-              <h1 className="min-w-0 text-xl leading-snug font-semibold tracking-tight text-pretty text-[var(--biolink-text)] sm:text-2xl">
-                <span className="line-clamp-2 break-words [overflow-wrap:anywhere]">
-                  {profile.display_name}
-                </span>
-              </h1>
-              {biolink.is_verified && (
-                <>
-                  <BadgeCheckIcon
-                    className="mt-0.5 size-5 shrink-0 fill-current text-[var(--biolink-text)]"
-                    aria-hidden="true"
-                  />
-                  <span className="sr-only">
-                    <Trans message="Verified creator" />
-                  </span>
-                </>
-              )}
-            </div>
+            <h1 className="min-w-0 text-xl leading-snug font-semibold tracking-tight text-pretty text-[var(--biolink-text)] sm:text-2xl">
+              <span className="line-clamp-2 break-words [overflow-wrap:anywhere]">
+                {profile.display_name}
+              </span>
+            </h1>
             {(profile.profile_title || profile.headline) && (
               <p className="line-clamp-2 text-sm leading-snug text-pretty text-[var(--biolink-muted-text)]">
                 {profile.profile_title || profile.headline}
