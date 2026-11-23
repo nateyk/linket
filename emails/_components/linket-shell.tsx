@@ -37,11 +37,22 @@ export function LinketShell({
           <Container className="mx-auto my-8 max-w-[560px] px-4">
             <Section className="mb-6">
               {logoUrl ? (
+                // Match the PNG aspect (440×158 ≈ 2.78:1). Explicit width+height
+                // stop clients from stretching the mark full-width and squashing it.
                 <Img
                   src={logoUrl}
                   alt={siteName}
-                  height="32"
-                  style={{ height: '32px', width: 'auto', maxWidth: '180px', display: 'block' }}
+                  width={200}
+                  height={72}
+                  style={{
+                    display: 'block',
+                    width: '200px',
+                    height: 'auto',
+                    maxWidth: '100%',
+                    border: '0',
+                    outline: 'none',
+                    textDecoration: 'none',
+                  }}
                 />
               ) : (
                 <Text className="m-0 text-xl font-semibold text-brand">{siteName}</Text>
