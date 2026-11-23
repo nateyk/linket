@@ -28,6 +28,9 @@ class PayoutRequestService
         }
 
         return DB::transaction(function () use ($creatorId, $workspaceId, $amountCents, $payoutMethodId): PayoutRequest {
+            // Serialize reservations for this creator, including requests to different accounts.
+            User::query()->whereKey($creatorId)->lockForUpdate()->firstOrFail();
+
             $accountQuery = DigitalProductPayoutMethod::query()
                 ->with('withdrawalMethod')
                 ->where('creator_id', $creatorId)
@@ -55,7 +58,7 @@ class PayoutRequestService
                 throw ValidationException::withMessages(['amount_cents' => __('This amount is outside the selected withdrawal method limits.')]);
             }
 
-            if (PayoutRequest::query()->where('creator_id', $creatorId)->whereIn('status', ['requested', 'processing'])->lockForUpdate()->exists()) {
+            if (PayoutRequest::query()->where('creator_id', $creatorId)->where('status', 'requested')->lockForUpdate()->exists()) {
                 throw ValidationException::withMessages(['amount_cents' => __('You already have a payout being reviewed.')]);
             }
 
