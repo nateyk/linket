@@ -465,12 +465,46 @@ describe('creator profile cover and verification polish', () => {
       name: 'Verified creator',
     });
     expect(verified.parentElement!.className).toContain('-mt-10');
-    expect(verified.className).toContain('bottom-0');
-    expect(verified.querySelector('svg')!.getAttribute('class')).toContain(
-      'fill-[var(--biolink-accent)]',
-    );
+    expect(verified.className).toContain('-bottom-1');
+    expect(verified.className).toContain('-end-1');
+    expect(verified.className).toContain('size-4');
+    expect(verified.className).toContain('rounded-full');
+    expect(verified.className).toContain('bg-[var(--biolink-surface)]');
+    expect(verified.className).not.toContain('ring-');
+    const iconClass = verified.querySelector('svg')!.getAttribute('class')!;
+    expect(iconClass).toContain('size-full');
+    expect(iconClass).toContain('fill-[var(--biolink-accent)]');
+    expect(iconClass).toContain('text-[var(--biolink-accent-foreground)]');
     expect(within(mobile).getByRole('heading', {name: 'Nathanael'}).querySelector('svg')).toBeNull();
   });
+
+  test.each([
+    ['rounded-none', 'rounded-none'],
+    ['rounded-sm', 'rounded-card-sm'],
+    ['rounded-lg', 'rounded-card'],
+    ['rounded-full', 'rounded-full'],
+  ] as const)(
+    'keeps the badge compact across Appearance radius %s',
+    (radius, avatarRadius) => {
+      render(
+        <CreatorProfileLayout
+          biolink={makeBiolink({is_verified: true})}
+          appearance={{btnConfig: {radius}} as never}
+          content={[]}
+        />,
+      );
+
+      const mobile = mobileBranch();
+      const avatar = mobile.querySelector<HTMLElement>('[data-slot="avatar"]');
+      expect(avatar).toBeTruthy();
+      expect(avatar!.className).toContain(avatarRadius);
+
+      const badge = within(mobile).getByRole('img', {name: 'Verified creator'});
+      expect(badge.className).toContain('size-4');
+      expect(badge.className).toContain('rounded-full');
+      expect(badge.className).not.toContain('ring-');
+    },
+  );
 
   test('does not show a verified mark for a string false API value', () => {
     render(
