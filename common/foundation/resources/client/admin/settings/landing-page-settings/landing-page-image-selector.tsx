@@ -8,17 +8,20 @@ import {useFormContext, useWatch} from 'react-hook-form';
 
 type Props = {
   formPrefix: string;
+  imagePath?: string;
   className?: string;
   label: ReactNode;
 };
 export function LandingPageImageSelector({
   formPrefix,
+  imagePath,
   className,
   label,
 }: Props) {
+  const fieldName = imagePath ?? `${formPrefix}.image`;
   const nativeImageRef = useRef<File>(null);
   const {setValue} = useFormContext();
-  const value = useWatch({name: `${formPrefix}.image`});
+  const value = useWatch({name: fieldName});
   return (
     <Field.Root>
       <Field.Label>{label}</Field.Label>
@@ -37,7 +40,7 @@ export function LandingPageImageSelector({
               value.height = size.height;
             }
           }
-          setValue(`${formPrefix}.image`, value, {shouldDirty: true});
+          setValue(fieldName, value, {shouldDirty: true});
         }}
         onFileSelected={file => {
           nativeImageRef.current = file;

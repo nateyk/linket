@@ -49,6 +49,9 @@ const buttonColorOptions = [
 export function HeroSectionSettings({index}: {index: number}) {
   const prefix =
     `client.landingPage.sections.${index}` as `client.landingPage.sections.${number}`;
+  const heroName = useWatch({name: `${prefix}.name`});
+  const presentation = useWatch({name: `${prefix}.presentation`});
+  const creatorSplit = heroName === 'hero-split-with-screenshot' && presentation === 'creator';
   const buttons = useFieldArray<AdminSettings>({
     name: `${prefix}.buttons`,
   });
@@ -183,6 +186,26 @@ export function HeroSectionSettings({index}: {index: number}) {
         formPrefix={prefix}
         label={<Trans message="Header image" />}
       />
+      {creatorSplit ? (
+        <>
+          <Field.Title>
+            <Trans message="Supporting images" />
+          </Field.Title>
+          <p className="text-sm text-muted-foreground">
+            <Trans message="Optional images behind the storefront preview. Upload both to enable the collage. You can replace them without changing the hero layout." />
+          </p>
+          <LandingPageImageSelector
+            formPrefix={prefix}
+            imagePath={`${prefix}.supportingImages.0`}
+            label={<Trans message="Supporting image one" />}
+          />
+          <LandingPageImageSelector
+            formPrefix={prefix}
+            imagePath={`${prefix}.supportingImages.1`}
+            label={<Trans message="Supporting image two" />}
+          />
+        </>
+      ) : null}
 
       <Field.Separator />
 
