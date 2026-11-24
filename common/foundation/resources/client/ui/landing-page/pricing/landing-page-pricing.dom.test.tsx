@@ -29,7 +29,7 @@ test('homepage pricing opts into the editorial card layout and keeps billing sel
     />,
   );
 
-  expect(screen.getByText('Start free. Grow at your own pace.')).toBeTruthy();
+  expect(screen.getByRole('heading', {name: 'Start free. Grow at your own pace.', level: 2})).toBeTruthy();
   expect(screen.getByTestId('homepage-pricing-layout').textContent).toBe('landing / yearly');
   expect(screen.getByRole('radio', {name: 'Monthly'})).toBeTruthy();
   fireEvent.click(screen.getByRole('radio', {name: 'Monthly'}));
