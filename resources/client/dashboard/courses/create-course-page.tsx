@@ -13,7 +13,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
 import {isAxiosError} from 'axios';
-import {TriangleAlertIcon} from 'lucide-react';
+import {EyeIcon, GraduationCapIcon, TriangleAlertIcon} from 'lucide-react';
 import {FormEvent, type ReactNode, useRef, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
 import {parseEtbToCents, parseWizardPrefill, priceForBillingMode, type BillingMode} from '../digital-products/product-create-flow';
@@ -21,6 +21,8 @@ import {BillingModePicker} from '../digital-products/billing-mode-picker';
 import {isUncertainMutationOutcome} from '../digital-products/request-outcome';
 import {ProductFormField} from '../digital-products/product-form-field';
 import {ProductFormProgress} from '../digital-products/product-form-progress';
+import {ProductFormCustomerPreview} from '../digital-products/product-preview';
+import {ProductPreviewDialog} from '../digital-products/product-preview-dialog';
 import {
   CourseSettingsCoverField,
   CourseSettingsDescriptionField,
@@ -50,6 +52,7 @@ export function Component() {
   const createInFlight = useRef(false);
   const uncertainRequest = useRef(false);
   const [creationUncertain, setCreationUncertain] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   // Inline course settings (Task B): the same shared fields the builder's
   // CourseSettingsDialog renders, filled in before the course exists.
   const [description, setDescription] = useState('');
@@ -149,6 +152,9 @@ export function Component() {
       setCreating(false);
     }
   };
+  const previewPrice = isFree
+    ? trans({message: 'Free'})
+    : `ETB ${(Number(price) || 0).toFixed(2)}`;
   // The settings panel mounts CroppedCover, whose upload hook reads the
   // FileUploadContext — same provider wrap as the builder and the
   // digital-product form, or opening the section throws during render.
@@ -168,6 +174,17 @@ export function Component() {
         </Breadcrumb.Item>
       </Breadcrumb.Root>
       <div className="ms-auto flex shrink-0 items-center gap-2 max-sm:ms-0 max-sm:gap-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="max-lg:size-11 max-lg:px-0"
+          aria-label={trans({message: 'Preview'})}
+          onClick={() => setPreviewOpen(true)}
+        >
+          <EyeIcon className="size-4" aria-hidden="true" />
+          <span className="max-lg:hidden"><Trans message="Preview" /></span>
+        </Button>
         {creationUncertain && (
           <Button
             variant="outline"
@@ -271,6 +288,24 @@ export function Component() {
           </CreateCoursePanel>
         </div>
       </div>
+      <ProductPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <ProductFormCustomerPreview
+          title={title}
+          emptyTitle="Your course title"
+          price={previewPrice}
+          productType="course"
+          coverUrl={coverUrl || undefined}
+          description={descriptionText || undefined}
+          imageFallback={
+            <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+              <GraduationCapIcon className="size-8" aria-hidden="true" />
+              <span className="text-xs">
+                <Trans message="Add a cover image" />
+              </span>
+            </div>
+          }
+        />
+      </ProductPreviewDialog>
     </form></DashboardLayout.SectionContent>
   </DashboardLayout.MainSection></FileUploadProvider>;
 }

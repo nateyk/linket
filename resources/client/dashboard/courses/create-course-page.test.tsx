@@ -22,6 +22,9 @@ describe('large text responsive Course header UX-34', () => {
     expect(source).toContain('max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1');
     expect(source).toContain('max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden');
     expect(source).toContain('<h1 className="sr-only">');
+    expect(source).toContain('max-lg:hidden');
+    expect(source).toContain('max-lg:size-11 max-lg:px-0');
+    expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
     expect(source).toContain('<Trans message="Create course" />');
     expect(source).toContain('<Trans message="Creating..." />');
   });
@@ -84,9 +87,15 @@ describe('wizard handoff continuity', () => {
     expect(source).toContain('message="Course setup"');
     expect(source).not.toContain('Accordion.Root');
     expect(source).not.toContain('ProductFormSection');
-    expect(source).not.toContain('ProductFormCustomerPreview');
-    expect(source).not.toContain('ProductPreviewDialog');
     expect(source).not.toContain('xl:sticky');
+  });
+
+  test('customer preview opens through the shared read-only dialog', () => {
+    expect(source).toContain('ProductFormCustomerPreview');
+    expect(source).not.toContain('<Card.Root>');
+    expect(source).toContain('<ProductPreviewDialog');
+    expect(source).toContain('<Trans message="Preview" />');
+    expect(source).not.toContain('<aside className="min-w-0 lg:sticky lg:top-6">');
   });
 
   test('panel headers are plain titles without generative icon chrome', () => {
