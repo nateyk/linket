@@ -46,8 +46,11 @@ class ChapaWebhookController extends Controller
             return $this->handleMarketplacePayment($attempt, $txRef, $deliveryLogger);
         }
 
-        if (str_starts_with($txRef, 'lk-po-') && Schema::hasTable('storefront_payout_intents')) {
-            $payoutIntent = StorefrontPayoutIntent::query()->where('merchant_reference', $txRef)->first();
+        if (Schema::hasTable('storefront_payout_intents')) {
+            $payoutIntent = StorefrontPayoutIntent::query()
+                ->where('merchant_reference', $txRef)
+                ->orWhere('chapa_reference', $txRef)
+                ->first();
             if ($payoutIntent) {
                 return $this->handlePayoutTransfer($payoutIntent, $txRef, $deliveryLogger);
             }
@@ -143,11 +146,15 @@ class ChapaWebhookController extends Controller
             $request->input('merchant_reference'),
             $request->input('tx_ref'),
             $request->input('trx_ref'),
+            $request->input('reference'),
+            $request->input('chapa_transfer_id'),
             data_get($request->input('data'), 'merchant_reference'),
             data_get($request->input('data'), 'tx_ref'),
+            data_get($request->input('data'), 'reference'),
+            data_get($request->input('data'), 'chapa_transfer_id'),
         ] as $reference) {
             if (is_string($reference) && filled($reference)) {
-                return $reference;
+                return trim($reference);
             }
         }
 

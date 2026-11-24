@@ -21,7 +21,7 @@ class PayoutRequestsController extends Controller
         $workspaceId = ActiveWorkspace::get()?->id ?? 1;
 
         $payouts = PayoutRequest::query()
-            ->with(['withdrawalMethod', 'activities.actor'])
+            ->with(['withdrawalMethod', 'activities.actor', 'latestPayoutIntent'])
             ->where('workspace_id', $workspaceId)
             ->where('creator_id', $request->user()->id)
             ->latest('id')
@@ -46,7 +46,7 @@ class PayoutRequestsController extends Controller
             $data['payout_method_id'] ?? null
         );
 
-        return (new PayoutRequestResource($payout->load(['withdrawalMethod', 'activities.actor'])))
+        return (new PayoutRequestResource($payout->load(['withdrawalMethod', 'activities.actor', 'latestPayoutIntent'])))
             ->response()
             ->setStatusCode(201);
     }

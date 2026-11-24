@@ -34,6 +34,7 @@ export type PayoutIntent = {
   id: number;
   merchant_reference: string;
   status: string;
+  provider_status?: string | null;
   chapa_reference?: string | null;
   verified_at?: string | null;
   last_error?: string | null;
@@ -392,9 +393,14 @@ function WithdrawalDetailsCard({payout}: {payout: Payout}) {
                 <Table.Cell className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs">{payout.latest_payout_intent.merchant_reference}</span>
-                    <Badge variant={payout.latest_payout_intent.status === 'success' ? 'positive' : payout.latest_payout_intent.status === 'failed' ? 'destructive' : 'outline'}>
+                    <Badge variant={payout.latest_payout_intent.status === 'success' || payout.latest_payout_intent.status === 'successful' ? 'positive' : payout.latest_payout_intent.status === 'failed' ? 'destructive' : 'outline'}>
                       {payout.latest_payout_intent.status}
                     </Badge>
+                    {payout.latest_payout_intent.provider_status && (
+                      <Badge variant="outline" className="font-mono text-[10px] uppercase">
+                        Chapa: {payout.latest_payout_intent.provider_status}
+                      </Badge>
+                    )}
                   </div>
                   {payout.latest_payout_intent.chapa_reference && (
                     <p className="font-mono text-xs text-muted-foreground">Chapa ref: {payout.latest_payout_intent.chapa_reference}</p>
@@ -513,7 +519,11 @@ function Stage2Section({
   const intentLabel: Record<string, string> = {
     prepared: 'Prepared',
     submitted: 'Submission unconfirmed',
-    provider_pending: 'Queued — awaiting settlement',
+    provider_pending: intent?.provider_status === 'processing'
+      ? 'In progress with bank'
+      : intent?.provider_status === 'pending'
+      ? 'Queued with Chapa'
+      : 'Queued — awaiting settlement',
     successful: 'Settled',
     failed: 'Transfer failed',
   };
@@ -526,7 +536,7 @@ function Stage2Section({
           <p className="text-xs text-muted-foreground"><Trans message="Sends a transfer request through the Linket platform Chapa account." /></p>
         </div>
         {intent && (
-          <Badge variant={intent.status === 'successful' ? 'positive' : 'outline'}>
+          <Badge variant={intent.status === 'successful' ? 'positive' : intent.status === 'failed' ? 'destructive' : 'outline'}>
             {intentLabel[intent.status] ?? intent.status.replaceAll('_', ' ')}
           </Badge>
         )}
@@ -554,6 +564,15 @@ function Stage2Section({
       )}
       {intent?.status === 'submitted' && intent.last_error && (
         <p className="text-xs text-muted-foreground">{intent.last_error}</p>
+      )}
+      {intent?.status === 'provider_pending' && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {intent.provider_status === 'processing' ? (
+            <Trans message="Dispatched by Chapa and currently in-flight with beneficiary bank. Verify settlement to confirm." />
+          ) : (
+            <Trans message="Queued with Chapa for automated disbursement. Verify settlement to check latest status." />
+          )}
+        </p>
       )}
     </div>
   );

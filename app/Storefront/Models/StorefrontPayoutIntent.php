@@ -54,4 +54,28 @@ final class StorefrontPayoutIntent extends StorefrontModel
     {
         return $this->status === self::STATUS_FAILED;
     }
+
+    public function providerStatus(): ?string
+    {
+        $status = data_get($this->verification_data, 'data.status')
+            ?? data_get($this->verification_data, 'status');
+
+        if (is_string($status) && filled($status)) {
+            return strtolower(trim($status));
+        }
+
+        if ($this->status === self::STATUS_PROVIDER_PENDING) {
+            return 'pending';
+        }
+
+        if ($this->status === self::STATUS_SUCCESSFUL) {
+            return 'success';
+        }
+
+        if ($this->status === self::STATUS_FAILED) {
+            return 'failed';
+        }
+
+        return null;
+    }
 }

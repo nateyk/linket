@@ -68,8 +68,16 @@ final class ChapaV1TransferVerificationGuard
     /** @param array<string, mixed> $data */
     private function assertTransferIdentity(StorefrontPayoutIntent $intent, array $data): void
     {
-        $reference = (string) ($data['reference'] ?? $data['tx_ref'] ?? $data['merchant_reference'] ?? '');
-        if (!hash_equals((string) $intent->merchant_reference, $reference)) {
+        $matchesMerchantRef = (isset($data['tx_ref']) && hash_equals((string) $intent->merchant_reference, (string) $data['tx_ref']))
+            || (isset($data['merchant_reference']) && hash_equals((string) $intent->merchant_reference, (string) $data['merchant_reference']))
+            || (isset($data['reference']) && hash_equals((string) $intent->merchant_reference, (string) $data['reference']));
+
+        $matchesChapaRef = filled($intent->chapa_reference) && (
+            (isset($data['chapa_transfer_id']) && hash_equals((string) $intent->chapa_reference, (string) $data['chapa_transfer_id']))
+            || (isset($data['reference']) && hash_equals((string) $intent->chapa_reference, (string) $data['reference']))
+        );
+
+        if (!$matchesMerchantRef && !$matchesChapaRef) {
             throw new RuntimeException('Transfer verification details do not match the approved withdrawal.');
         }
 
@@ -92,10 +100,10 @@ final class ChapaV1TransferVerificationGuard
     private function matchesAmountWithCharge(StorefrontPayoutIntent $intent, array $data, string $status, ?int $amountCents): bool
     {
         $successfulWallet = in_array($status, ['success', 'successful'], true)
-            && in_array($intent->withdrawal_code, ['telebirr', 'cbebirr'], true)
+            && in_array($intent->withdrawal_code, ['telebirr', 'cbebirr'], true);
+        $supportedStatus = ($successfulWallet || in_array($status, ['failed/cancelled', 'failed'], true))
             && strtoupper((string) $intent->currency) === 'ETB';
-        if ((!$successfulWallet && !in_array($status, ['failed/cancelled', 'failed'], true))
-            || $amountCents === null || $amountCents <= 0
+        if (!$supportedStatus || $amountCents === null || $amountCents <= 0
             || !isset($data['account_number'])
             || ($data['tx_ref'] ?? null) !== $intent->merchant_reference) {
             return false;

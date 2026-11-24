@@ -67,6 +67,7 @@ export type Payout = {
   amount_cents: number;
   currency: string;
   status: PayoutStatus;
+  provider_status?: string | null;
   account_holder_snapshot?: string | null;
   bank_code_snapshot?: string | null;
   masked_destination?: string | null;
@@ -76,6 +77,10 @@ export type Payout = {
   paid_at?: string | null;
   rejection_reason?: string | null;
   activities?: PayoutActivity[];
+  latest_payout_intent?: {
+    status: string;
+    provider_status?: string | null;
+  } | null;
 };
 
 export type PayoutDestination = {
@@ -469,13 +474,34 @@ function WithdrawalHistoryTable({
                 <Table.Cell className="font-medium">
                   <FormattedCurrency value={p.amount_cents / 100} currency={p.currency} />
                 </Table.Cell>
-                <Table.Cell className="text-xs text-muted-foreground">
-                  {p.payout_method_label || p.withdrawal_method_name || '—'}
+                <Table.Cell className="text-xs">
+                  <div className="flex min-w-0 flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-medium text-foreground">
+                        {p.payout_method_label || p.withdrawal_method_name || p.masked_destination || '—'}
+                      </span>
+                      {p.bank_code_snapshot && (
+                        <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                          {p.bank_code_snapshot}
+                        </span>
+                      )}
+                    </div>
+                    {p.account_holder_snapshot && (
+                      <span className="truncate text-[11px] text-muted-foreground">
+                        {p.account_holder_snapshot}
+                      </span>
+                    )}
+                  </div>
                 </Table.Cell>
                 <Table.Cell className="text-xs">
                   <FormattedDate date={p.created_at} />
                 </Table.Cell>
-                <Table.Cell><PayoutStatusBadge status={p.status} /></Table.Cell>
+                <Table.Cell>
+                  <PayoutStatusBadge
+                    status={p.status}
+                    providerStatus={p.provider_status ?? p.latest_payout_intent?.provider_status}
+                  />
+                </Table.Cell>
                 <Table.Cell className="text-xs text-muted-foreground">
                   {p.paid_at ? <FormattedDate date={p.paid_at} /> : '—'}
                 </Table.Cell>
@@ -506,11 +532,44 @@ function WithdrawalHistoryTable({
   );
 }
 
-function PayoutStatusBadge({status}: {status: PayoutStatus}) {
-  const config: Record<PayoutStatus, {variant: 'outline' | 'positive' | 'destructive'; Icon: LucideIcon}> = {
+function PayoutStatusBadge({
+  status,
+  providerStatus,
+}: {
+  status: PayoutStatus;
+  providerStatus?: string | null;
+}) {
+  const normProvider = providerStatus?.toLowerCase();
+
+  if (status === 'processing' || status === 'provider_pending') {
+    if (normProvider === 'processing') {
+      return (
+        <Badge variant="warning">
+          <RefreshCwIcon className="motion-safe:animate-spin" aria-hidden="true" />
+          <Trans message="In progress with bank" />
+        </Badge>
+      );
+    }
+    if (normProvider === 'pending') {
+      return (
+        <Badge variant="outline">
+          <Clock3Icon aria-hidden="true" />
+          <Trans message="Queued with provider" />
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="warning">
+        <RefreshCwIcon className="motion-safe:animate-spin" aria-hidden="true" />
+        <Trans message="Processing Settlement" />
+      </Badge>
+    );
+  }
+
+  const config: Record<PayoutStatus, {variant: 'outline' | 'warning' | 'positive' | 'destructive'; Icon: LucideIcon}> = {
     requested: {variant: 'outline', Icon: Clock3Icon},
-    processing: {variant: 'outline', Icon: RefreshCwIcon},
-    provider_pending: {variant: 'outline', Icon: RefreshCwIcon},
+    processing: {variant: 'warning', Icon: RefreshCwIcon},
+    provider_pending: {variant: 'warning', Icon: RefreshCwIcon},
     paid: {variant: 'positive', Icon: CheckCircleIcon},
     rejected: {variant: 'destructive', Icon: TriangleAlertIcon},
     cancelled: {variant: 'destructive', Icon: BanIcon},
@@ -774,16 +833,38 @@ function WithdrawalDetailsDialog({
               </div>
               <div>
                 <span className="text-xs text-muted-foreground"><Trans message="Status" /></span>
-                <div className="mt-0.5"><PayoutStatusBadge status={payout.status} /></div>
+                <div className="mt-0.5">
+                  <PayoutStatusBadge
+                    status={payout.status}
+                    providerStatus={payout.provider_status ?? payout.latest_payout_intent?.provider_status}
+                  />
+                </div>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground"><Trans message="Destination" /></span>
-                <p className="text-xs font-medium">{payout.payout_method_label || payout.masked_destination || '—'}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-medium">{payout.payout_method_label || payout.masked_destination || '—'}</p>
+                  {payout.bank_code_snapshot && (
+                    <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                      {payout.bank_code_snapshot}
+                    </span>
+                  )}
+                </div>
                 {payout.account_holder_snapshot && (
                   <p className="text-[11px] text-muted-foreground">{payout.account_holder_snapshot}</p>
                 )}
               </div>
             </div>
+
+            {(payout.status === 'processing' || payout.status === 'provider_pending') && (
+              <div className="rounded-input border bg-muted/20 p-3 text-xs text-muted-foreground">
+                {(payout.provider_status ?? payout.latest_payout_intent?.provider_status) === 'processing' ? (
+                  <Trans message="Your transfer has been dispatched to your beneficiary bank and is currently processing." />
+                ) : (
+                  <Trans message="Your withdrawal has been approved and queued with our payout provider for settlement." />
+                )}
+              </div>
+            )}
 
             {payout.rejection_reason && (
               <div className="rounded-input border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
