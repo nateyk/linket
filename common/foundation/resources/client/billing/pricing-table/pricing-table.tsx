@@ -70,6 +70,7 @@ function PlanList({plans, selectedPeriod, layout}: PlanListProps) {
         };
 
         const isLanding = layout === 'landing';
+        const PlanHeading = isLanding ? 'h3' : 'h2';
         let upgradeRoute: string | undefined;
         if (!isLoggedIn && (!isLanding || plan.free || price)) {
           upgradeRoute = '/register?redirectFrom=pricing';
@@ -131,9 +132,9 @@ function PlanList({plans, selectedPeriod, layout}: PlanListProps) {
               isLanding && 'pt-6 sm:pt-8',
             )}>
               <div className="flex min-h-6 items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-foreground">
+                <PlanHeading className="text-lg font-semibold text-foreground">
                   <Trans message={plan.name} />
-                </h2>
+                </PlanHeading>
                 {plan.recommended ? (
                   <Badge variant="secondary">
                     <Trans message="Most popular" />
