@@ -391,4 +391,47 @@ describe('AdminWithdrawalReviewPage', () => {
     expect(screen.getByText('In progress with bank')).toBeTruthy();
     expect(screen.getByText('Chapa ref: CTaG6D70gioaTd')).toBeTruthy();
   });
+
+  it.each([
+    {providerStatus: 'pending', label: 'Queued with Chapa'},
+    {providerStatus: null, label: 'Queued — awaiting settlement'},
+  ])('renders queued settlement guidance for $providerStatus without permitting resubmission', async ({providerStatus, label}) => {
+    mockApiClient.get.mockResolvedValue({data: {data: {
+      ...basePayout,
+      status: 'processing',
+      latest_payout_intent: {
+        id: 88,
+        merchant_reference: 'lk-po-queued',
+        status: 'provider_pending',
+        provider_status: providerStatus,
+      },
+    }}});
+
+    renderPage();
+    expect(await screen.findByText(label)).toBeTruthy();
+    expect(screen.getByText('Queued with Chapa for automated disbursement. Verify settlement to check latest status.')).toBeTruthy();
+    expect(screen.getByRole('button', {name: /Verify settlement with Chapa/i})).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /Submit transfer to Chapa/i})).toBeNull();
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+  });
+
+  it('renders a failed transfer without exposing a repeat submission or settlement action', async () => {
+    mockApiClient.get.mockResolvedValue({data: {data: {
+      ...basePayout,
+      status: 'processing',
+      latest_payout_intent: {
+        id: 89,
+        merchant_reference: 'lk-po-failed',
+        status: 'failed',
+        provider_status: 'failed',
+      },
+    }}});
+
+    renderPage();
+    expect(await screen.findByText('Transfer failed')).toBeTruthy();
+    expect(screen.getByText('Chapa: failed')).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /Submit transfer to Chapa/i})).toBeNull();
+    expect(screen.queryByRole('button', {name: /Verify settlement with Chapa/i})).toBeNull();
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+  });
 });
