@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Models\User;
+use App\Payments\Chapa\Exceptions\ChapaTransferRejectedException;
 use App\Storefront\ChapaPayoutService;
 use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\CreatorLedgerService;
-use App\Models\User;
-use App\Storefront\Models\PayoutRequest;
-use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\DigitalProductPayoutMethod;
+use App\Storefront\Models\DigitalProductWithdrawalMethod;
+use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontPayoutIntent;
 use App\Storefront\Notifications\ChapaPayoutStatusNotification;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
@@ -303,14 +304,64 @@ class StorefrontPayoutProcessingServiceTest extends StorefrontPayoutTestCase
     {
         $provider = Mockery::mock(ChapaPayoutService::class);
         $provider->shouldReceive('createTransfer')->once()->andThrow(new RuntimeException('timeout'));
-        $service = new StorefrontPayoutProcessingService(chapaPayoutService: $provider);
-        $intent = $service->prepareIntent($this->payout());
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldNotReceive('releasePayoutReservation');
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger,
+            chapaPayoutService: $provider,
+        );
+        $intent = $service->prepareIntent($payout);
         $first = $service->submitPayout($intent);
         $second = $service->submitPayout($intent);
 
         $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $first->status);
         $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $second->status);
         $this->assertSame(1, (int) $second->attempts);
+        $this->assertSame('processing', $payout->fresh()->status);
+    }
+
+    public function testExplicitProviderRejectionRejectsWithdrawalAndReleasesReservationOnce(): void
+    {
+        Notification::fake();
+        $this->creatorId();
+        $provider = Mockery::mock(ChapaPayoutService::class);
+        $provider->shouldReceive('createTransfer')->once()->andThrow(
+            new ChapaTransferRejectedException(
+                providerMessage: 'Our Transfer hours are Mon-Sat from 08:30 AM - 04:30 PM only.',
+                httpStatus: 401,
+            ),
+        );
+        $ledger = Mockery::mock(CreatorLedgerService::class);
+        $ledger->shouldReceive('releasePayoutReservation')->once();
+        $finance = Mockery::mock(DigitalProductFinance::class);
+        $finance->shouldReceive('record')->once();
+        $this->app->instance(DigitalProductFinance::class, $finance);
+
+        $payout = $this->payout();
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledger,
+            chapaPayoutService: $provider,
+        );
+        $intent = $service->prepareIntent($payout);
+
+        $first = $service->submitPayout($intent);
+        $second = $service->submitPayout($intent->fresh());
+
+        $reason = 'Chapa rejected the transfer because it was submitted outside transfer hours.';
+        $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $first->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $second->status);
+        $this->assertSame($reason, $first->last_error);
+        $this->assertSame('rejected', $payout->fresh()->status);
+        $this->assertSame($reason, $payout->fresh()->rejection_reason);
+        $this->assertNotNull($payout->fresh()->rejected_at);
+
+        Notification::assertSentTo(
+            User::query()->findOrFail(30),
+            ChapaPayoutStatusNotification::class,
+            fn (ChapaPayoutStatusNotification $notification): bool => $notification->event === 'failed'
+                && $notification->reason === $reason,
+        );
     }
 
     public function testPendingVerificationClearsUncertaintyButKeepsCreatorFundsReserved(): void
