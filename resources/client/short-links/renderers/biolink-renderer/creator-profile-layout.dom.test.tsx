@@ -458,7 +458,12 @@ describe('creator profile cover and verification polish', () => {
     expect(cover).toBeTruthy();
     expect(cover!.parentElement!.className).toContain('aspect-[3/1]');
     expect(cover!.parentElement!.className).toContain('overflow-hidden');
+    // Media-backed cards have no pale outer ring against dark cover edges.
+    expect(cover!.closest('[data-slot="card"]')!.className).toContain('ring-0');
     expect(cover!.className).toContain('absolute');
+    expect(cover!.className).toContain('-inset-px');
+    expect(cover!.className).toContain('size-[calc(100%_+_2px)]');
+    expect(cover!.className).toContain('block');
     expect(cover!.className).toContain('object-cover');
 
     const verified = within(mobile).getByRole('img', {
@@ -511,6 +516,72 @@ describe('creator profile cover and verification polish', () => {
       expect(badge.className).not.toContain('ring-');
     },
   );
+
+  test('keeps the shared card edge when the creator has no cover image', () => {
+    render(
+      <CreatorProfileLayout
+        biolink={makeBiolink()}
+        appearance={null}
+        content={[]}
+      />,
+    );
+    const card = mobileBranch().querySelector<HTMLElement>('[data-slot="card"]');
+    expect(card).toBeTruthy();
+    expect(card!.className).toContain('ring-(color:--biolink-border)');
+    expect(card!.className).not.toContain('ring-0');
+  });
+
+  test('shows an accessible, reduced-motion-safe success status only when work is available', () => {
+    const biolink = makeBiolink();
+    render(
+      <CreatorProfileLayout
+        biolink={biolink}
+        appearance={null}
+        content={[]}
+      />,
+    );
+
+    const statusLabel = within(mobileBranch()).getByText('Available for work');
+    const badge = statusLabel.parentElement!;
+    expect(badge.className).toContain('bg-[var(--biolink-surface-strong)]');
+    expect(badge.className).toContain('rounded-button');
+    expect(badge.className).toContain('border-positive/20');
+    // A passive status does not inherit the Appearance button's hard shadow.
+    expect(badge.hasAttribute('style')).toBe(false);
+
+    const indicator = badge.querySelector<HTMLElement>(
+      '[data-slot="status-indicator"]',
+    );
+    expect(indicator).toBeTruthy();
+    expect(indicator!.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      [...indicator!.children].some(child =>
+        child.className.includes('motion-safe:animate-ping'),
+      ),
+    ).toBe(true);
+  });
+
+  test('does not advertise work availability when the creator disables it', () => {
+    const biolink = makeBiolink() as unknown as {
+      profile_config: Record<string, unknown>;
+    };
+    biolink.profile_config.available_for_work = false;
+
+    render(
+      <CreatorProfileLayout
+        biolink={biolink as never}
+        appearance={null}
+        content={[]}
+      />,
+    );
+
+    expect(
+      within(mobileBranch()).queryByText('Available for work'),
+    ).toBeNull();
+    expect(
+      mobileBranch().querySelector('[data-slot="status-indicator"]'),
+    ).toBeNull();
+  });
 
   test('does not show a verified mark for a string false API value', () => {
     render(
