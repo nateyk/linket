@@ -167,7 +167,11 @@ function PlanList({plans, selectedPeriod, layout}: PlanListProps) {
                   price={displayPrice}
                 />
               )}
-              {billedAnnually ? (
+              {isLanding ? (
+                <p className="mt-2 min-h-5 text-xs text-muted-foreground">
+                  {billedAnnually ? <Trans message="Billed annually" /> : null}
+                </p>
+              ) : billedAnnually ? (
                 <p className="mt-2 text-xs text-muted-foreground">
                   <Trans message="Billed annually" />
                 </p>
