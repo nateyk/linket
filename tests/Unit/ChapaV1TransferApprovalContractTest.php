@@ -217,6 +217,28 @@ class ChapaV1TransferApprovalContractTest extends TestCase
         $this->assertSame(400, $this->requestApproval(['account_name' => 'Different Seller'])->status());
     }
 
+    public function testTelebirrApprovalAcceptsNameFormattingButNotDifferentRecipient(): void
+    {
+        $this->assertSame(200, $this->requestApproval([
+            'account_name' => "  TEST   seller  ",
+            'account_number' => '0911223344',
+        ])->status());
+        $this->assertSame(400, $this->requestApproval([
+            'account_name' => 'TEST SELLER',
+            'account_number' => '251911223345',
+        ])->status());
+        $this->assertSame(400, $this->requestApproval([
+            'account_name' => 'Another Seller',
+        ])->status());
+        $this->assertSame(400, $this->requestApproval([
+            'account_name' => 'TEST SELLER',
+            'amount' => '500.01',
+        ])->status());
+        $this->assertSame('processing', PayoutRequest::query()->sole()->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, StorefrontPayoutIntent::query()->sole()->status);
+        Http::assertNothingSent();
+    }
+
     public function testWrongSignatureAndMissingApprovalSecretFailClosed(): void
     {
         Log::spy();
