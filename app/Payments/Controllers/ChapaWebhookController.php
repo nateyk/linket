@@ -8,11 +8,14 @@ use App\Payments\ChapaPaymentFulfillment;
 use App\Payments\Models\PaymentTransaction;
 use App\Payments\PaymentVerificationException;
 use App\Storefront\Models\StorefrontPaymentAttempt;
+use App\Storefront\Models\StorefrontPayoutIntent;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
+use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ChapaWebhookController extends Controller
 {
@@ -41,6 +44,13 @@ class ChapaWebhookController extends Controller
         $attempt = StorefrontPaymentAttempt::query()->where('merchant_reference', $txRef)->first();
         if ($attempt) {
             return $this->handleMarketplacePayment($attempt, $txRef, $deliveryLogger);
+        }
+
+        if (str_starts_with($txRef, 'lk-po-') && Schema::hasTable('storefront_payout_intents')) {
+            $payoutIntent = StorefrontPayoutIntent::query()->where('merchant_reference', $txRef)->first();
+            if ($payoutIntent) {
+                return $this->handlePayoutTransfer($payoutIntent, $txRef, $deliveryLogger);
+            }
         }
 
         $deliveryLogger->record($txRef, true, 'rejected', 'unknown_tx_ref');
@@ -99,6 +109,32 @@ class ChapaWebhookController extends Controller
         $deliveryLogger->record($txRef, true, 'fulfilled');
 
         return response()->json(['message' => 'Payment processed.']);
+    }
+
+    private function handlePayoutTransfer(
+        StorefrontPayoutIntent $intent,
+        string $txRef,
+        ChapaWebhookDeliveryLogger $deliveryLogger,
+    ): JsonResponse {
+        if ($intent->isSuccessful() || $intent->isFailed()) {
+            $deliveryLogger->record($txRef, true, 'duplicate');
+            return response()->json(['message' => 'Already processed.']);
+        }
+
+        try {
+            $intent = app(StorefrontPayoutProcessingService::class)->verifyPayout($intent);
+        } catch (\Throwable $e) {
+            $deliveryLogger->record($txRef, true, 'failed', 'verification_error');
+            Log::warning('Chapa payout webhook verification failed.', ['tx_ref' => $txRef, 'message' => $e->getMessage()]);
+            return response()->json(['message' => 'Payout verification failed.'], 422);
+        }
+
+        $deliveryLogger->record($txRef, true, $intent->isSuccessful() ? 'fulfilled' : 'processed');
+
+        return response()->json([
+            'message' => 'Payout processed.',
+            'status' => $intent->status,
+        ]);
     }
 
     private function transactionReference(Request $request): ?string

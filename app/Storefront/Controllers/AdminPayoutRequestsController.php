@@ -6,6 +6,7 @@ namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
+use App\Storefront\Models\StorefrontPayoutIntent;
 use App\Storefront\PayoutRequestService;
 use App\Storefront\Resources\AdminPayoutRequestResource;
 use App\Storefront\Services\AdminPayoutTransferStatusFilter;
@@ -206,8 +207,16 @@ class AdminPayoutRequestsController extends Controller
         try {
             $intent = app(StorefrontPayoutProcessingService::class)->verifyPayout($intent);
 
+            $message = match ($intent->status) {
+                StorefrontPayoutIntent::STATUS_SUCCESSFUL => __('Payout transfer settled and marked as paid.'),
+                StorefrontPayoutIntent::STATUS_FAILED => __('Payout transfer failed with provider.'),
+                StorefrontPayoutIntent::STATUS_PROVIDER_PENDING => __('Transfer is still processing with Chapa/bank. Recheck in a few minutes.'),
+                StorefrontPayoutIntent::STATUS_SUBMITTED => __('Transfer submitted; awaiting provider confirmation.'),
+                default => __('Payout settlement checked.'),
+            };
+
             return response()->json([
-                'message' => __('Payout settlement checked.'),
+                'message' => $message,
                 'data' => new AdminPayoutRequestResource($payoutRequest->fresh(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])),
                 'intent_status' => $intent->status,
             ]);

@@ -283,7 +283,7 @@ class ChapaPayoutService
 
     private function normalizeTelebirrName(string $name): string
     {
-        $collapsed = preg_replace('/\\s+/u', ' ', $name);
+        $collapsed = preg_replace('/\s+/u', ' ', $name);
 
         return mb_strtolower(trim($collapsed ?? $name), 'UTF-8');
     }
@@ -335,13 +335,12 @@ class ChapaPayoutService
         }
         $accountName = (string) ($payload['account_name'] ?? '');
         $expectedName = (string) $payout->account_holder_snapshot;
-        if ($expectedBank === 'telebirr') {
-            // The wallet number is already matched above. Chapa may omit the
-            // name or format it differently; do not accept a different name.
+        $isWallet = in_array($code, self::WALLET_CODES, true);
+        if ($isWallet) {
             $accountName = $this->normalizeTelebirrName($accountName);
             $expectedName = $this->normalizeTelebirrName($expectedName);
         }
-        if (($expectedBank !== 'telebirr' || $accountName !== '')
+        if ((!$isWallet || $accountName !== '')
             && !hash_equals($expectedName, $accountName)) {
             return 'account_name_mismatch';
         }

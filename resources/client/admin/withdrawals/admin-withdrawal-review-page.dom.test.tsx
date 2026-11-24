@@ -41,6 +41,9 @@ describe('AdminWithdrawalReviewPage', () => {
     amount_cents: 50000,
     currency: 'ETB',
     status: 'requested',
+    account_holder_snapshot: 'Abebe Bikila Snapshot',
+    bank_code_snapshot: 'telebirr',
+    masked_destination: '•••• 3344',
     payout_method_label: 'Telebirr (•••• 4321)',
     withdrawal_method_name: 'Telebirr',
     payout_mode: {mode: 'test', enabled: true, approval_configured: true, test_only: true},
@@ -87,10 +90,55 @@ describe('AdminWithdrawalReviewPage', () => {
     expect(await screen.findByText('Withdrawal request #123')).toBeTruthy();
     expect(screen.getByText('500.00 ETB')).toBeTruthy();
     expect(screen.getByText('Abebe Bikila')).toBeTruthy();
+    expect(screen.getByText('Abebe Bikila Snapshot')).toBeTruthy();
+    expect(screen.getByText('(telebirr)')).toBeTruthy();
     expect(screen.getByText('+251911223344')).toBeTruthy();
     expect(screen.getByText('Telebirr')).toBeTruthy();
     expect(screen.getByText('Activity timeline')).toBeTruthy();
     expect(screen.getByText('Creator requested withdrawal')).toBeTruthy();
+  });
+
+  it('falls back to payoutMethod account_holder and masked_destination when snapshot or full destination is missing', async () => {
+    mockApiClient.get.mockResolvedValueOnce({
+      data: {
+        data: {
+          ...basePayout,
+          account_holder_snapshot: null,
+          bank_code_snapshot: null,
+          payout_destination: null,
+          masked_destination: '•••• 9988',
+          payoutMethod: {
+            account_holder: 'Fallback Method Holder',
+          },
+        },
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Fallback Method Holder')).toBeTruthy();
+    expect(screen.getByText('•••• 9988')).toBeTruthy();
+    expect(screen.queryByText('(telebirr)')).toBeNull();
+  });
+
+  it('renders dashes when both snapshots and fallback methods or destinations are empty', async () => {
+    mockApiClient.get.mockResolvedValueOnce({
+      data: {
+        data: {
+          ...basePayout,
+          account_holder_snapshot: null,
+          bank_code_snapshot: null,
+          payoutMethod: null,
+          payout_destination: null,
+          masked_destination: null,
+        },
+      },
+    });
+
+    renderPage();
+
+    const dashes = await screen.findAllByText('—');
+    expect(dashes.length).toBeGreaterThanOrEqual(2);
   });
 
   it('approves a requested withdrawal (Stage 1)', async () => {

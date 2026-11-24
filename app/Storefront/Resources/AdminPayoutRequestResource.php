@@ -25,6 +25,9 @@ class AdminPayoutRequestResource extends JsonResource
             'id' => $this->id,
             'amount_cents' => $this->amount_cents,
             'currency' => $this->currency,
+            'account_holder_snapshot' => $this->account_holder_snapshot,
+            'bank_code_snapshot' => $this->bank_code_snapshot,
+            'masked_destination' => $this->maskedDestination(),
             'payout_method_label' => $this->payout_method_label,
             'withdrawal_method_name' => $this->withdrawal_method_name,
             'withdrawal_method' => $this->whenLoaded('withdrawalMethod', fn() => [

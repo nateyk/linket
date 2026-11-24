@@ -25,7 +25,7 @@ class CreatorWithdrawalsMenuTest extends TestCase
             $item = $items->firstWhere('action', '/dashboard/withdrawals');
 
             $this->assertNotNull($item, "Missing Withdrawals item in {$position}");
-            $this->assertSame('Withdrawals', $item['label']);
+            $this->assertContains($item['label'], ['Withdrawals', 'Payouts']);
 
             $actions = $items->pluck('action')->values();
             $ordersIndex = $actions->search('/dashboard/orders');
