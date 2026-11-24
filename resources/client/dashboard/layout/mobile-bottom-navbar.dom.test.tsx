@@ -38,22 +38,29 @@ const {mobileMenu} = vi.hoisted(() => ({
         id: 'products',
         type: 'route',
         order: 2,
-        label: 'Products',
-        action: '/dashboard/my-products',
-      },
-      {
-        id: 'payouts',
-        type: 'route',
-        order: 3,
-        label: 'Payouts',
-        action: '/dashboard/sales-payouts',
+        label: 'My Items',
+        action: '/dashboard/items',
       },
       {
         id: 'services',
         type: 'route',
-        order: 4,
-        label: 'Services',
+        order: 3,
+        label: 'My Services',
         action: '/dashboard/services',
+      },
+      {
+        id: 'orders',
+        type: 'route',
+        order: 4,
+        label: 'Orders & Sales',
+        action: '/dashboard/orders',
+      },
+      {
+        id: 'withdrawals',
+        type: 'route',
+        order: 5,
+        label: 'Withdrawals',
+        action: '/dashboard/withdrawals',
       },
     ],
   },
@@ -90,9 +97,24 @@ test('bottom navbar is a labelled navigation landmark', async () => {
   const nav = await screen.findByRole('navigation', {
     name: 'Mobile navigation',
   });
-  expect(within(nav).getAllByRole('link')).toHaveLength(4);
+  expect(within(nav).getAllByRole('link')).toHaveLength(5);
   expect(within(nav).queryByRole('link', {name: 'Stores'})).toBeNull();
   expect(within(nav).queryByRole('link', {name: 'Legacy Store'})).toBeNull();
+});
+
+test('uses compact one-line labels without wrapping long menu titles', async () => {
+  renderNavbar('/dashboard');
+  const nav = await screen.findByRole('navigation', {
+    name: 'Mobile navigation',
+  });
+
+  expect(within(nav).getByText('Home')).toBeTruthy();
+  expect(within(nav).getByText('Items')).toBeTruthy();
+  expect(within(nav).getByText('Services')).toBeTruthy();
+  expect(within(nav).getByText('Orders')).toBeTruthy();
+  expect(within(nav).getByText('Payouts')).toBeTruthy();
+  expect(within(nav).queryByText('Orders & Sales')).toBeNull();
+  expect(within(nav).queryByText('My Services')).toBeNull();
 });
 
 test('store editor remains reachable elsewhere without activating the bottom bar', async () => {
@@ -111,25 +133,19 @@ test('dashboard link is the only aria-current on the home route', async () => {
   ]);
 });
 
-test('remaining destinations share the bar and keep visible focus', async () => {
-  // Four route items plus Account fit at equal widths on compact phones.
-  // Titles may wrap at spaces but are not clipped mid-word.
+test('remaining destinations share the bar with equal tabs and safe focus', async () => {
   renderNavbar('/dashboard');
   const nav = await screen.findByRole('navigation', {
     name: 'Mobile navigation',
   });
 
-  expect(nav.className).not.toContain('gap-7.5');
-  expect(nav.className).toContain('px-2');
-  expect(nav.className).toContain('items-start');
-  expect(nav.className).toContain('shrink-0');
+  expect(nav.className).toContain('items-stretch');
   expect(nav.className).toContain('bg-background');
-  for (const item of nav.querySelectorAll('a, button')) {
-    expect(item.className).not.toContain('whitespace-nowrap');
-    expect(item.className).not.toContain('shrink-0');
+  expect(nav.className).toContain('safe-area-inset-bottom');
+  for (const item of nav.querySelectorAll('a')) {
     expect(item.className).toContain('min-w-0');
     expect(item.className).toContain('flex-1');
-    expect(item.className).toContain('text-center');
     expect(item.className).toContain('focus-visible:outline-2');
+    expect(item.querySelector('span')?.className).toContain('truncate');
   }
 });

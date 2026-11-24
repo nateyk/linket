@@ -405,8 +405,9 @@ describe('course approval submission', () => {
     );
     expect(source).toContain("toast.positive('Course submitted for review')");
     expect(source).toContain('const hasPublishedLesson =');
-    expect(source).toContain("'Submit for review'");
-    expect(source).toContain("'Add a published lesson'");
+    expect(source).toContain("message={publishing ? 'Submitting...' : 'Submit'}");
+    expect(source).toContain('aria-label="Submit for review"');
+    expect(source).not.toContain("'Add a published lesson'");
   });
 });
 
@@ -498,7 +499,7 @@ describe('submit gating guidance', () => {
   );
 
   test('explains blocked and approved states next to the button', () => {
-    expect(source).toContain(
+    expect(source).not.toContain(
       'Publish at least one lesson to submit for review.',
     );
     expect(source).toContain('Edits will return this course to draft.');
@@ -634,7 +635,6 @@ describe('builder copy is translatable', () => {
 
   test('wraps bare labels through Trans', () => {
     expect(source).toContain('<Trans message="Analytics" />');
-    expect(source).toContain('message="Chapter :id • Lesson editor"');
     expect(source).toContain('<Trans message="or" />');
     expect(source).toContain('message="Current: :name"');
     expect(source).toContain('<Trans message="View" />');
@@ -691,7 +691,7 @@ describe('quiz option correctness', () => {
 });
 
 describe('course builder video embed policy', () => {
-  test('warns that YouTube and Vimeo embeds can leave Linket', () => {
+  test('keeps video upload and URL fields without long policy copy', () => {
     const builderSource = fs.readFileSync(
       path.resolve(
         'resources/client/dashboard/courses/course-builder-page.tsx',
@@ -699,8 +699,13 @@ describe('course builder video embed policy', () => {
       'utf8',
     );
 
-    expect(builderSource).toContain(
+    expect(builderSource).toContain('Upload a video');
+    expect(builderSource).toContain('Video URL');
+    expect(builderSource).not.toContain(
       'YouTube and Vimeo embeds can be opened or shared outside Linket',
+    );
+    expect(builderSource).not.toContain(
+      'Upload a video for playback inside Linket',
     );
   });
 });
@@ -721,6 +726,8 @@ describe('builder surfaces avoid nested cards', () => {
     );
     expect(source).not.toContain('rounded-card border p-2 text-sm');
     expect(source).not.toContain('bg-primary/5 ring-1 ring-primary/20');
+    expect(source).toContain("? 'bg-selected'");
+    expect(source).not.toContain("? 'bg-primary/10'");
   });
 
   test('the video block is a section in the form, not a card', () => {

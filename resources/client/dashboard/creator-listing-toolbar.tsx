@@ -27,8 +27,8 @@ type Props = {
 };
 
 /**
- * One quiet toolbar for creator listings. Uses the existing Linket/Base UI
- * primitives, not extra shadcn/Cubby themes or client-side table state.
+ * Creator listing toolbar: search + Filter side-by-side, with multi-state
+ * removable chips for active status/sort (same pattern as datatable FilterList).
  */
 export function CreatorListingToolbar({
   search,
@@ -50,43 +50,45 @@ export function CreatorListingToolbar({
   const activeFilterCount = (isStatusActive ? 1 : 0) + (isSortActive ? 1 : 0);
   const filtersActive = Boolean(search.trim() || activeFilterCount > 0);
 
+  const activeStatusLabel = statusOptions.find(
+    option => option.value === status,
+  )?.label;
+  const activeSortLabel = sortOptions?.find(
+    option => option.value === sort,
+  )?.label;
+
   return (
     <div
       data-slot="creator-listing-toolbar"
       role="search"
       aria-label={searchLabel}
-      className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center"
+      className="flex min-w-0 flex-col gap-2"
     >
-      <div className="relative min-w-0 flex-1 sm:max-w-xs">
-        <SearchIcon
-          className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          bindToHookForm={false}
-          type="search"
-          value={search}
-          onChange={event => onSearchChange(event.target.value)}
-          placeholder={searchLabel}
-          aria-label={searchLabel}
-          className="h-9 ps-9"
-        />
-      </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-row items-center gap-2">
+        <div className="relative w-full min-w-0 max-w-xs flex-1 sm:flex-none">
+          <SearchIcon
+            className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            bindToHookForm={false}
+            type="search"
+            value={search}
+            onChange={event => onSearchChange(event.target.value)}
+            placeholder={searchLabel}
+            aria-label={searchLabel}
+            className="h-9 ps-9"
+          />
+        </div>
+
         <Dropdown.Root>
           <Dropdown.Trigger
             aria-label={trans({message: 'Filter'})}
             render={
-              <Button
-                type="button"
-                variant="outline"
-                color={activeFilterCount > 0 ? 'primary' : 'default'}
-                size="sm"
-                className="h-9 gap-2 px-3"
-              />
+              <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" />
             }
           >
-            <ListFilterIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+            <ListFilterIcon data-icon="inline-start" aria-hidden="true" />
             <Trans message="Filter" />
             {activeFilterCount > 0 && (
               <Badge variant="secondary" className="px-1.5 py-0 text-xs">
@@ -94,14 +96,16 @@ export function CreatorListingToolbar({
               </Badge>
             )}
           </Dropdown.Trigger>
-          <Dropdown.Content align="start" className="min-w-56">
+          <Dropdown.Content align="end" className="min-w-56">
             <Dropdown.Group>
               <Dropdown.GroupLabel>
                 <Trans message="Status" />
               </Dropdown.GroupLabel>
               <Dropdown.RadioGroup
                 value={status || 'all'}
-                onValueChange={value => onStatusChange(value === 'all' ? '' : value)}
+                onValueChange={value =>
+                  onStatusChange(value === 'all' ? '' : value)
+                }
               >
                 <Dropdown.RadioItem value="all">
                   <Trans message="All statuses" />
@@ -126,7 +130,10 @@ export function CreatorListingToolbar({
                     onValueChange={onSortChange}
                   >
                     {sortOptions.map(option => (
-                      <Dropdown.RadioItem key={option.value} value={option.value}>
+                      <Dropdown.RadioItem
+                        key={option.value}
+                        value={option.value}
+                      >
                         {option.label}
                       </Dropdown.RadioItem>
                     ))}
@@ -136,21 +143,73 @@ export function CreatorListingToolbar({
             )}
           </Dropdown.Content>
         </Dropdown.Root>
+      </div>
 
-        {filtersActive && (
+      {activeFilterCount > 0 && (
+        <ul
+          className="flex min-w-0 flex-wrap items-center gap-1.5"
+          aria-label={trans({message: 'Active filters'})}
+        >
+          {isStatusActive && activeStatusLabel && (
+            <li>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                aria-label={trans({message: 'Remove status filter'})}
+                onClick={() => onStatusChange('')}
+              >
+                {activeStatusLabel}
+                <XIcon data-icon="inline-end" aria-hidden="true" />
+              </Button>
+            </li>
+          )}
+          {isSortActive && activeSortLabel && onSortChange && (
+            <li>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                aria-label={trans({message: 'Remove sort filter'})}
+                onClick={() => onSortChange(resolvedDefaultSort)}
+              >
+                {activeSortLabel}
+                <XIcon data-icon="inline-end" aria-hidden="true" />
+              </Button>
+            </li>
+          )}
+          {filtersActive && (
+            <li>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-muted-foreground"
+                onClick={onClear}
+              >
+                <Trans message="Clear filters" />
+              </Button>
+            </li>
+          )}
+        </ul>
+      )}
+
+      {filtersActive && activeFilterCount === 0 && (
+        <div className="flex items-center">
           <Button
             type="button"
             variant="ghost"
-            color="default"
             size="sm"
-            className="h-9 gap-1 px-2 text-muted-foreground"
+            className="h-8 text-muted-foreground"
             onClick={onClear}
           >
-            <XIcon className="size-3.5" aria-hidden="true" />
+            <XIcon data-icon="inline-start" aria-hidden="true" />
             <Trans message="Clear filters" />
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

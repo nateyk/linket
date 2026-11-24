@@ -7,7 +7,17 @@ vi.mock('@ui/i18n/trans', () => ({Trans: ({message}: {message: string}) => messa
 afterEach(cleanup);
 
 describe('payment status label', () => {
-  it.each([['pending', 'Payment pending'], ['pending_payment', 'Payment pending'], ['verifying', 'Awaiting provider verification'], ['paid', 'Payment verified'], ['completed', 'Payment verified'], ['failed_verification', 'Verification rejected'], ['manual_review', 'Manual review needed']])('renders %s', (status, label) => {
+  it.each([
+    ['pending', 'Pending'],
+    ['pending_payment', 'Pending'],
+    ['verifying', 'Verifying'],
+    ['paid', 'Paid'],
+    ['completed', 'Paid'],
+    ['fulfilled', 'Paid'],
+    ['failed_verification', 'Rejected'],
+    ['manual_review', 'Review'],
+    ['expired', 'Expired'],
+  ])('renders %s', (status, label) => {
     render(<PaymentStatusLabel status={status} />);
     expect(screen.getByText(label)).toBeTruthy();
   });

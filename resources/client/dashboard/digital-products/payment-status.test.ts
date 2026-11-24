@@ -3,14 +3,15 @@ import {paymentStatusLabel} from './payment-status';
 
 describe('direct payment status', () => {
   it.each([
-    ['pending', 'Payment pending'],
-    ['pending_payment', 'Payment pending'],
-    ['verifying', 'Awaiting provider verification'],
-    ['paid', 'Payment verified'],
-    ['completed', 'Payment verified'],
-    ['fulfilled', 'Payment verified'],
-    ['failed_verification', 'Verification rejected'],
-    ['manual_review', 'Manual review needed'],
+    ['pending', 'Pending'],
+    ['pending_payment', 'Pending'],
+    ['verifying', 'Verifying'],
+    ['paid', 'Paid'],
+    ['completed', 'Paid'],
+    ['fulfilled', 'Paid'],
+    ['failed_verification', 'Rejected'],
+    ['manual_review', 'Review'],
+    ['expired', 'Expired'],
   ])('labels %s as %s', (status, label) => {
     expect(paymentStatusLabel(status)).toBe(label);
   });

@@ -375,18 +375,20 @@ function SalesTable({orders, loading}: {orders: Order[]; loading: boolean}) {
               ) : orders.length ? (
                 orders.slice(0, 10).map(order => (
                   <Table.Row key={order.id}>
-                    <Table.Cell className="font-medium">
-                      {order.product?.title ?? (
-                        <Trans message="Digital product" />
-                      )}
+                    <Table.Cell className="max-w-64 whitespace-normal">
+                      <span className="truncate text-sm font-medium">
+                        {order.product?.title ?? (
+                          <Trans message="Digital product" />
+                        )}
+                      </span>
                     </Table.Cell>
-                    <Table.Cell className="text-muted-foreground">
+                    <Table.Cell className="text-sm text-muted-foreground">
                       <FormattedDate
                         date={order.paid_at ?? order.created_at}
                         preset="short"
                       />
                     </Table.Cell>
-                    <Table.Cell className="text-end font-medium">
+                    <Table.Cell className="text-end text-sm font-medium tabular-nums">
                       <FormattedCurrency
                         valueInCents={order.creator_earnings_cents}
                         currency={order.currency.toUpperCase()}
