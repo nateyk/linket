@@ -494,4 +494,34 @@ describe('CreatorWithdrawalsPage', () => {
     expect(await screen.findByText('In progress with bank')).toBeTruthy();
     expect(screen.getByText('Queued with provider')).toBeTruthy();
   });
+
+  it.each([
+    {providerStatus: 'processing', label: 'In progress with bank', description: 'Your transfer has been dispatched to your beneficiary bank and is currently processing.'},
+    {providerStatus: 'pending', label: 'Queued with provider', description: 'Your withdrawal has been approved and queued with our payout provider for settlement.'},
+  ])('shows $providerStatus from the nested intent in the history and details', async ({providerStatus, label, description}) => {
+    const payout = {
+      ...mockPayouts[0],
+      status: 'provider_pending',
+      payout_method_label: null,
+      withdrawal_method_name: null,
+      bank_code_snapshot: 'telebirr',
+      latest_payout_intent: {status: 'provider_pending', provider_status: providerStatus},
+    };
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') return Promise.resolve({data: {summary: mockSummary}});
+      if (url.startsWith('/api/v1/items/payout-requests')) return Promise.resolve({data: {data: [payout]}});
+      if (url === '/api/v1/items/payout-methods') return Promise.resolve({data: {data: mockDestinations}});
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+
+    renderPage();
+    expect(await screen.findByText(label)).toBeTruthy();
+    expect(screen.getByText('•••• 1234')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', {name: /View details/i}));
+    expect(await screen.findByText(description)).toBeTruthy();
+    expect(screen.getAllByText(label)).toHaveLength(2);
+    expect(screen.getAllByText('telebirr')).toHaveLength(2);
+    expect(screen.getAllByText('•••• 1234')).toHaveLength(2);
+    expect(mockApiClient.post).not.toHaveBeenCalled();
+  });
 });
