@@ -331,6 +331,9 @@ function CreatorCard({
       className={cn(
         'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-md',
         biolinkSurfaceEdgeClassName,
+        // The image itself defines the cover edge. A light shell ring against
+        // dark photography appears as a stray 1px white outline at rounded corners.
+        profile.cover_url && 'ring-0',
         '@4xl:sticky @4xl:top-8',
         containerRadius.className,
       )}
