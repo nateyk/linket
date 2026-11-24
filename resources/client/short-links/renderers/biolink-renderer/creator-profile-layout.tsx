@@ -331,6 +331,9 @@ function CreatorCard({
       className={cn(
         'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-md',
         biolinkSurfaceEdgeClassName,
+        // The image itself defines the cover edge. A light shell ring against
+        // dark photography appears as a stray 1px white outline at rounded corners.
+        profile.cover_url && 'ring-0',
         '@4xl:sticky @4xl:top-8',
         containerRadius.className,
       )}
@@ -339,20 +342,24 @@ function CreatorCard({
       <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden bg-[var(--biolink-surface-muted)] bg-linear-to-br from-[var(--biolink-surface-muted)] to-[var(--biolink-surface-strong)]">
         {profile.cover_url && (
           <img
-            className="absolute inset-0 size-full object-cover object-center"
+            className="absolute -inset-px block size-[calc(100%_+_2px)] object-cover object-center"
             src={profile.cover_url}
             alt=""
           />
         )}
         {profile.available_for_work && (
           <Badge
-            variant="secondary"
-            className={cn(
-              'absolute end-3 top-3 max-w-[calc(100%-1.5rem)] border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] backdrop-blur-sm sm:end-4 sm:top-4',
-            )}
-            style={{boxShadow: buttonShadow}}
+            variant="positive"
+            className="absolute end-3 top-3 z-10 h-auto max-w-[calc(100%-1.5rem)] gap-1.5 rounded-button border-positive/20 bg-[var(--biolink-surface-strong)] px-2.5 py-1 text-positive backdrop-blur-sm sm:end-4 sm:top-4"
           >
-            <BriefcaseBusinessIcon />
+            <span
+              data-slot="status-indicator"
+              aria-hidden="true"
+              className="relative flex size-2 shrink-0"
+            >
+              <span className="absolute inset-0 rounded-full bg-positive/60 motion-safe:animate-ping" />
+              <span className="relative size-2 rounded-full bg-positive" />
+            </span>
             <Trans message="Available for work" />
           </Badge>
         )}
