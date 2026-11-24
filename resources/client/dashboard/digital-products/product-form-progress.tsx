@@ -42,7 +42,9 @@ export function ProductFormProgress({
   const isSteps = messageVariant === 'steps';
   const ariaLabel = isSteps
     ? trans({message: 'Product creation progress'})
-    : trans({message: progressAriaLabel});
+    : progressAriaLabel
+    ? trans({message: progressAriaLabel})
+    : trans({message: 'Product setup progress'});
 
   return (
     <div
@@ -62,7 +64,9 @@ export function ProductFormProgress({
           </p>
         ) : (
           <>
-            <p className="text-sm font-medium">{heading}</p>
+            <p className="text-sm font-medium">
+              {heading ?? <Trans message="Product setup" />}
+            </p>
             <p className="mt-1 text-sm text-muted-foreground">
               <Trans
                 message=":completed of :total required sections complete"

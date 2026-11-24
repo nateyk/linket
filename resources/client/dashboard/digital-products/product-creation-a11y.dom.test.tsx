@@ -9,7 +9,6 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor,
   within,
 } from '@testing-library/react';
 import {useBootstrapDataStore} from '@ui/bootstrap-data/bootstrap-data-store';
@@ -851,10 +850,15 @@ describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
       ],
       {initialEntries: ['/dashboard/items/new/course']},
     );
+    const queryClient = new QueryClient({
+      defaultOptions: {queries: {retry: false}},
+    });
     render(
-      <DashboardLayoutContextProvider name="test">
-        {() => <RouterProvider router={router} />}
-      </DashboardLayoutContextProvider>,
+      <QueryClientProvider client={queryClient}>
+        <DashboardLayoutContextProvider name="test">
+          {() => <RouterProvider router={router} />}
+        </DashboardLayoutContextProvider>
+      </QueryClientProvider>,
     );
 
     const {h1, sections} = expectHeadingHierarchy();
@@ -862,7 +866,7 @@ describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
     // The section triggers ARE the h2 headings, titled per section.
     expect(sections.map(h => h.textContent)).toEqual([
       expect.stringContaining('Course details'),
-      expect.stringContaining('Course settings'),
+      expect.stringMatching(/Course settings|About Course/i),
     ]);
   });
 

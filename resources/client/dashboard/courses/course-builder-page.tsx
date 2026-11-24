@@ -605,7 +605,10 @@ function CourseBuilder() {
       <DashboardLayout.MainSection>
         <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
-          <DashboardLayout.SectionTitle render={<h1 />}>
+          <DashboardLayout.SectionTitle
+            render={<h1 />}
+            className="max-lg:basis-full max-lg:whitespace-normal"
+          >
             <Trans message="Course Builder" />
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
@@ -656,7 +659,10 @@ function CourseBuilder() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle render={<h1 />}>
+        <DashboardLayout.SectionTitle
+          render={<h1 />}
+          className="max-lg:basis-full max-lg:whitespace-normal"
+        >
           <Trans message="Course Builder" />
           {course.product.status === 'approved' && (
             <Badge variant="positive" className="ms-2">
@@ -759,6 +765,7 @@ function CourseBuilder() {
                   <span className="inline-flex">
                     <Button
                       size="sm"
+                      aria-label="Submit for review"
                       onClick={() => void submit()}
                       disabled={publishing || !canSubmit || !hasPublishedLesson}
                     >
