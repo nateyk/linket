@@ -85,10 +85,8 @@ final class StorefrontPayoutProcessingService
         try {
             $result = $this->provider()->createTransfer($intent->fresh());
             $providerReference = $this->queuedProviderReference($result);
-            if ($providerReference === null
-                || !hash_equals((string) $intent->merchant_reference, $providerReference)) {
-                throw new RuntimeException('Chapa did not return the submitted transfer reference.');
-            }
+            $this->assertValidSubmissionResponse($intent, $result, $providerReference);
+
             $intent->update([
                 'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
                 'chapa_reference' => $providerReference,
@@ -127,7 +125,8 @@ final class StorefrontPayoutProcessingService
             throw new RuntimeException('Transfer has not been submitted.');
         }
 
-        $raw = $this->provider()->verifyTransfer((string) $intent->merchant_reference);
+        $reference = (string) ($intent->merchant_reference ?: $intent->chapa_reference);
+        $raw = $this->provider()->verifyTransfer($reference);
         $status = app(ChapaV1TransferVerificationGuard::class)->status($intent, $raw);
         if (in_array($status, ['success', 'successful', 'completed', 'paid'], true)) {
             return $this->settle($intent, $raw);
@@ -151,10 +150,16 @@ final class StorefrontPayoutProcessingService
                 return $intent;
             }
 
+            $chapaRef = $intent->chapa_reference ?: (
+                data_get($raw, 'data.chapa_transfer_id')
+                ?: (str_starts_with((string) data_get($raw, 'data.reference', ''), 'CT') ? data_get($raw, 'data.reference') : null)
+            );
+
             // Chapa verified the reference but has not confirmed settlement.
             // Clear uncertainty without releasing or disbursing creator funds.
             $intent->update([
                 'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+                'chapa_reference' => $chapaRef ?? $intent->chapa_reference,
                 'last_error' => null,
                 'verified_at' => now(),
                 'verification_data' => $raw,
@@ -179,8 +184,14 @@ final class StorefrontPayoutProcessingService
 
             $alreadyPaid = $payout->status === 'paid';
 
+            $chapaRef = $intent->chapa_reference ?: (
+                data_get($raw, 'data.chapa_transfer_id')
+                ?: (str_starts_with((string) data_get($raw, 'data.reference', ''), 'CT') ? data_get($raw, 'data.reference') : null)
+            );
+
             $intent->update([
                 'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
+                'chapa_reference' => $chapaRef ?? $intent->chapa_reference,
                 'last_error' => null,
                 'verified_at' => now(),
                 'verification_data' => $raw,
@@ -268,14 +279,53 @@ final class StorefrontPayoutProcessingService
     private function queuedProviderReference(array $response): ?string
     {
         $data = $response['data'] ?? null;
-        if (is_string($data)) {
-            return $data;
+        if (is_string($data) && trim($data) !== '') {
+            return trim($data);
         }
-        if (is_array($data) && is_string($data['reference'] ?? null)) {
-            return $data['reference'];
+        if (is_array($data)) {
+            foreach (['chapa_transfer_id', 'reference', 'id'] as $key) {
+                if (isset($data[$key]) && (is_string($data[$key]) || is_numeric($data[$key]))) {
+                    $val = trim((string) $data[$key]);
+                    if ($val !== '') {
+                        return $val;
+                    }
+                }
+            }
+            if (isset($data['tx_ref']) && is_string($data['tx_ref']) && trim($data['tx_ref']) !== '') {
+                return trim($data['tx_ref']);
+            }
         }
 
         return null;
+    }
+
+    /** @param array<string, mixed> $result */
+    private function assertValidSubmissionResponse(
+        StorefrontPayoutIntent $intent,
+        array $result,
+        ?string $providerReference,
+    ): void {
+        if ($providerReference === null || $providerReference === '') {
+            throw new RuntimeException('Chapa did not return a transfer reference.');
+        }
+
+        $data = $result['data'] ?? null;
+
+        if (is_array($data)) {
+            $merchantRef = (string) ($data['tx_ref'] ?? $data['merchant_reference'] ?? '');
+            if ($merchantRef !== '' && !hash_equals((string) $intent->merchant_reference, $merchantRef)) {
+                throw new RuntimeException('Chapa returned a mismatched merchant transfer reference.');
+            }
+
+            return;
+        }
+
+        $matchesMerchant = hash_equals((string) $intent->merchant_reference, $providerReference);
+        $isChapaTransferId = str_starts_with($providerReference, 'CT');
+
+        if (!$matchesMerchant && !$isChapaTransferId) {
+            throw new RuntimeException('Chapa did not return the submitted transfer reference.');
+        }
     }
 
     private function provider(): ChapaPayoutService

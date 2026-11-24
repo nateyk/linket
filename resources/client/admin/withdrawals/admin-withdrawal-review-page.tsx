@@ -34,6 +34,7 @@ export type PayoutIntent = {
   id: number;
   merchant_reference: string;
   status: string;
+  provider_status?: string | null;
   chapa_reference?: string | null;
   verified_at?: string | null;
   last_error?: string | null;
@@ -392,9 +393,14 @@ function WithdrawalDetailsCard({payout}: {payout: Payout}) {
                 <Table.Cell className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs">{payout.latest_payout_intent.merchant_reference}</span>
-                    <Badge variant={payout.latest_payout_intent.status === 'success' ? 'positive' : payout.latest_payout_intent.status === 'failed' ? 'destructive' : 'outline'}>
+                    <Badge variant={payout.latest_payout_intent.status === 'success' || payout.latest_payout_intent.status === 'successful' ? 'positive' : payout.latest_payout_intent.status === 'failed' ? 'destructive' : 'outline'}>
                       {payout.latest_payout_intent.status}
                     </Badge>
+                    {payout.latest_payout_intent.provider_status && (
+                      <Badge variant="outline" className="font-mono text-[10px] uppercase">
+                        Chapa: {payout.latest_payout_intent.provider_status}
+                      </Badge>
+                    )}
                   </div>
                   {payout.latest_payout_intent.chapa_reference && (
                     <p className="font-mono text-xs text-muted-foreground">Chapa ref: {payout.latest_payout_intent.chapa_reference}</p>

@@ -20,6 +20,10 @@ export type Payout = {
   amount_cents: number;
   currency: string;
   status: PayoutStatus;
+  account_holder_snapshot?: string | null;
+  bank_code_snapshot?: string | null;
+  masked_destination?: string | null;
+  payout_destination?: string | null;
   payout_method_label?: string | null;
   withdrawal_method_name?: string | null;
   created_at: string;

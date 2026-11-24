@@ -29,6 +29,11 @@ class PayoutRequestResource extends JsonResource
                 'name' => $this->withdrawalMethod?->name,
             ]),
             'status' => $this->status,
+            'provider_status' => $this->latestPayoutIntent?->providerStatus(),
+            'latest_payout_intent' => $this->whenLoaded('latestPayoutIntent', fn() => [
+                'status' => $this->latestPayoutIntent?->status,
+                'provider_status' => $this->latestPayoutIntent?->providerStatus(),
+            ]),
             'paid_at' => $this->paid_at,
             'processing_at' => $this->processing_at,
             'rejected_at' => $this->rejected_at,

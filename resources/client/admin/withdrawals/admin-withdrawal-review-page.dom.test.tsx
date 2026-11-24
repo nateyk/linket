@@ -366,4 +366,29 @@ describe('AdminWithdrawalReviewPage', () => {
       });
     });
   });
+
+  it('renders provider status badges for in-flight Chapa transfer', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {
+        data: {
+          ...basePayout,
+          status: 'processing',
+          latest_payout_intent: {
+            id: 88,
+            merchant_reference: 'lk-po-aLphip8Ah0jK',
+            status: 'provider_pending',
+            provider_status: 'processing',
+            chapa_reference: 'CTaG6D70gioaTd',
+          },
+        },
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('lk-po-aLphip8Ah0jK')).toBeTruthy();
+    expect(screen.getByText('Chapa: processing')).toBeTruthy();
+    expect(screen.getByText('In progress with bank')).toBeTruthy();
+    expect(screen.getByText('Chapa ref: CTaG6D70gioaTd')).toBeTruthy();
+  });
 });

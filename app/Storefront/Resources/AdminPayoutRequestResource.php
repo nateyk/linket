@@ -82,6 +82,7 @@ class AdminPayoutRequestResource extends JsonResource
             'admin_step_up_required' => $this->when($canReviewDetail, fn () => (bool) config('services.chapa.admin_payout_step_up_required', false)),
             'latest_payout_intent' => $this->whenLoaded('latestPayoutIntent', fn() => [
                 'status' => $this->latestPayoutIntent?->status,
+                'provider_status' => $this->latestPayoutIntent?->providerStatus(),
                 ...($canReviewDetail ? [
                     'id' => $this->latestPayoutIntent?->id,
                     'merchant_reference' => $this->latestPayoutIntent?->merchant_reference,

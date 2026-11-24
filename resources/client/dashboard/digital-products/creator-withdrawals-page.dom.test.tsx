@@ -384,7 +384,7 @@ describe('CreatorWithdrawalsPage', () => {
     expect(await screen.findByText('Withdrawal request details')).toBeTruthy();
     expect(screen.getByText('Activity timeline')).toBeTruthy();
     expect(screen.getByText('Created withdrawal request')).toBeTruthy();
-    expect(screen.getByText('Nathnael Snapshot')).toBeTruthy();
+    expect(screen.getAllByText('Nathnael Snapshot').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders snapshot details and falls back to masked destination in withdrawal details dialog', async () => {
@@ -409,8 +409,8 @@ describe('CreatorWithdrawalsPage', () => {
     fireEvent.click(viewButtons[0]);
 
     expect(await screen.findByText('Withdrawal request details')).toBeTruthy();
-    expect(screen.getByText('Abebe Snapshot')).toBeTruthy();
-    expect(screen.getByText('•••• 9988')).toBeTruthy();
+    expect(screen.getAllByText('Abebe Snapshot').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('•••• 9988').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders dashes and omits account holder snapshot in details dialog when data is missing', async () => {
@@ -438,5 +438,60 @@ describe('CreatorWithdrawalsPage', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Abebe Snapshot')).toBeNull();
     expect(screen.queryByText('Nathnael Snapshot')).toBeNull();
+  });
+
+  it('renders bank code snapshot, account holder in table row, and warning badge for processing status', async () => {
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') return Promise.resolve({data: {summary: mockSummary}});
+      if (url.startsWith('/api/v1/items/payout-requests')) {
+        return Promise.resolve({data: {data: [
+          {
+            ...mockPayouts[0],
+            status: 'processing',
+            bank_code_snapshot: 'telebirr',
+            account_holder_snapshot: 'Chala Gemechu',
+          },
+        ]}});
+      }
+      if (url === '/api/v1/items/payout-methods') return Promise.resolve({data: {data: mockDestinations}});
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Chala Gemechu')).toBeTruthy();
+    expect(screen.getByText('telebirr')).toBeTruthy();
+    const processingBadge = screen.getByText('Processing Settlement').closest('[data-slot="badge"]');
+    expect(processingBadge).toBeTruthy();
+    expect(processingBadge?.className).toContain('text-warning');
+  });
+
+  it('renders distinct provider status badges for in progress and queued payouts', async () => {
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') return Promise.resolve({data: {summary: mockSummary}});
+      if (url.startsWith('/api/v1/items/payout-requests')) {
+        return Promise.resolve({data: {data: [
+          {
+            ...mockPayouts[0],
+            id: 201,
+            status: 'processing',
+            provider_status: 'processing',
+          },
+          {
+            ...mockPayouts[0],
+            id: 202,
+            status: 'processing',
+            provider_status: 'pending',
+          },
+        ]}});
+      }
+      if (url === '/api/v1/items/payout-methods') return Promise.resolve({data: {data: mockDestinations}});
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('In progress with bank')).toBeTruthy();
+    expect(screen.getByText('Queued with provider')).toBeTruthy();
   });
 });
