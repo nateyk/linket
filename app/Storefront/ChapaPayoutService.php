@@ -281,6 +281,13 @@ class ChapaPayoutService
         return $number;
     }
 
+    private function normalizeTelebirrName(string $name): string
+    {
+        $collapsed = preg_replace('/\\s+/u', ' ', $name);
+
+        return mb_strtolower(trim($collapsed ?? $name), 'UTF-8');
+    }
+
     /** Check callback recipient details against the immutable approved payout snapshot. */
     public function approvalMatches(StorefrontPayoutIntent $intent, array $payload): bool
     {
@@ -327,8 +334,15 @@ class ChapaPayoutService
             return 'account_number_mismatch';
         }
         $accountName = (string) ($payload['account_name'] ?? '');
-        if (($expectedBank !== 'telebirr' || trim($accountName) !== '')
-            && !hash_equals((string) $payout->account_holder_snapshot, $accountName)) {
+        $expectedName = (string) $payout->account_holder_snapshot;
+        if ($expectedBank === 'telebirr') {
+            // The wallet number is already matched above. Chapa may omit the
+            // name or format it differently; do not accept a different name.
+            $accountName = $this->normalizeTelebirrName($accountName);
+            $expectedName = $this->normalizeTelebirrName($expectedName);
+        }
+        if (($expectedBank !== 'telebirr' || $accountName !== '')
+            && !hash_equals($expectedName, $accountName)) {
             return 'account_name_mismatch';
         }
         $amountCents = EtbMajorAmount::cents($payload['amount'] ?? null);
