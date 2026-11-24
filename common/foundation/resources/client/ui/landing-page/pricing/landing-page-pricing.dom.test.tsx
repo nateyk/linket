@@ -11,6 +11,17 @@ vi.mock('@tanstack/react-query', () => ({
 }));
 vi.mock('@ui/bootstrap-data/bootstrap-data-store', () => ({
   getBootstrapData: () => ({loaders: {landingPage: {products: {data: []}}}}),
+  useBootstrapDataStore: (selector: (state: {
+    data: {i18n: {active: string; locales: {language: string; name: string; lines: Record<string, string>}[]}};
+  }) => unknown) =>
+    selector({
+      data: {
+        i18n: {
+          active: 'en',
+          locales: [{language: 'en', name: 'English', lines: {}}],
+        },
+      },
+    }),
 }));
 vi.mock('@common/billing/pricing-table/pricing-table', () => ({
   PricingTable: ({layout, selectedCycle}: {layout: string; selectedCycle: string}) => (
