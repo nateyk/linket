@@ -518,7 +518,7 @@ describe('creator profile card wiring', () => {
       'aspect-[3/1] w-full shrink-0 overflow-hidden',
     );
     expect(source).toMatch(
-      /className="absolute inset-0 size-full object-cover object-center"\s+src=\{profile\.cover_url\}/,
+      /className="absolute -inset-px block size-\[calc\(100%_\+_2px\)\] object-cover object-center"\s+src=\{profile\.cover_url\}/,
     );
   });
 });
