@@ -18,14 +18,12 @@ const source = fs.readFileSync(
 );
 
 describe('large text responsive Course header UX-34', () => {
-  test('shows Create course title on mobile and keeps a text submit button', () => {
-    expect(source).toContain('max-sm:h-14');
-    expect(source).toContain('sm:sr-only');
-    expect(source).toContain('hidden min-w-0 text-xl sm:flex');
+  test('keeps the heading readable and icon controls named at tablet text sizes', () => {
+    expect(source).toContain('max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1');
+    expect(source).toContain('max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden');
+    expect(source).toContain('<h1 className="sr-only">');
     expect(source).toContain('<Trans message="Create course" />');
     expect(source).toContain('<Trans message="Creating..." />');
-    expect(source).not.toContain('max-lg:size-11 max-lg:px-0');
-    expect(source).not.toContain('max-lg:hidden');
   });
 });
 
@@ -38,7 +36,9 @@ describe('course creation page', () => {
   test('renders All products › Create course and shared form primitives', () => {
     expect(source).toContain('<Breadcrumb.Root');
     expect(source).toContain('<Breadcrumb.Link to="/dashboard/items">');
-    expect(source).toContain('<Breadcrumb.Page><Trans message="Create course" /></Breadcrumb.Page>');
+    expect(source).toContain(
+      '<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate"><Trans message="Create course" /></Breadcrumb.Page>',
+    );
     expect(source).not.toContain('ArrowLeftIcon');
     expect(source).toContain('<ProductFormField');
     expect(source).toContain('aria-invalid');
@@ -241,6 +241,7 @@ function typeTitle(title = 'Cafe') {
 async function openSettingsSection(
   _user?: ReturnType<typeof userEvent.setup>,
 ) {
+  void _user;
   // Settings are always visible (no accordion) — wait for the shared fields.
   await screen.findByText('Description');
 }
