@@ -34,6 +34,7 @@ import {cn} from '@ui/utils/cn';
 import {isAbsoluteUrl} from '@ui/utils/urls/is-absolute-url';
 import {
   BadgeCheckIcon,
+  BriefcaseBusinessIcon,
   MailIcon,
   UserIcon,
   PackageIcon,
