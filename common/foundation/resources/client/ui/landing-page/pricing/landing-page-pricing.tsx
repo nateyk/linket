@@ -32,22 +32,22 @@ export function LandingPagePricing({config}: Props) {
     useState<UpsellBillingCycle>('yearly');
   return (
     <div
-      className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8"
+      className="mx-auto max-w-7xl px-5 py-20 sm:px-6 sm:py-24 lg:px-8"
       id="pricing-section"
     >
-      <div className="mb-16">
+      <div className="mb-10 sm:mb-12">
         <div className="mx-auto max-w-4xl text-center">
-          <h2 className="text-base/7 font-semibold text-primary">
-            <Trans message="Pricing" />
-          </h2>
           {config.title ? (
-            <p className="mt-2 text-5xl font-semibold tracking-tight text-balance text-foreground sm:text-6xl">
-              <Trans message={config.title} />
+            <p className="text-sm font-semibold text-primary">
+              <Trans message="Pricing" />
             </p>
           ) : null}
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl lg:text-5xl">
+            <Trans message={config.title || 'Pricing'} />
+          </h2>
         </div>
         {config.description ? (
-          <p className="mx-auto mt-6 max-w-2xl text-center text-lg font-medium text-pretty text-muted-foreground sm:text-xl/8">
+          <p className="mx-auto mt-4 max-w-2xl text-center text-base leading-7 text-muted-foreground sm:text-lg">
             <Trans message={config.description} />
           </p>
         ) : null}
@@ -56,9 +56,9 @@ export function LandingPagePricing({config}: Props) {
         products={query.data?.data}
         selectedCycle={selectedCycle}
         onChange={setSelectedCycle}
-        className="mb-10 flex justify-center"
+        className="mb-7 flex justify-center sm:mb-9"
       />
-      <PricingTable selectedCycle={selectedCycle} products={query.data?.data} />
+      <PricingTable layout="landing" selectedCycle={selectedCycle} products={query.data?.data} />
     </div>
   );
 }
