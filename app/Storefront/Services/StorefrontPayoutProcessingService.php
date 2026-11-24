@@ -150,10 +150,7 @@ final class StorefrontPayoutProcessingService
                 return $intent;
             }
 
-            $chapaRef = $intent->chapa_reference ?: (
-                data_get($raw, 'data.chapa_transfer_id')
-                ?: (str_starts_with((string) data_get($raw, 'data.reference', ''), 'CT') ? data_get($raw, 'data.reference') : null)
-            );
+            $chapaRef = $this->resolveChapaReference($intent, $raw);
 
             // Chapa verified the reference but has not confirmed settlement.
             // Clear uncertainty without releasing or disbursing creator funds.
@@ -184,10 +181,7 @@ final class StorefrontPayoutProcessingService
 
             $alreadyPaid = $payout->status === 'paid';
 
-            $chapaRef = $intent->chapa_reference ?: (
-                data_get($raw, 'data.chapa_transfer_id')
-                ?: (str_starts_with((string) data_get($raw, 'data.reference', ''), 'CT') ? data_get($raw, 'data.reference') : null)
-            );
+            $chapaRef = $this->resolveChapaReference($intent, $raw);
 
             $intent->update([
                 'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
@@ -275,28 +269,57 @@ final class StorefrontPayoutProcessingService
         });
     }
 
+    /** @param array<string, mixed> $raw */
+    private function resolveChapaReference(StorefrontPayoutIntent $intent, array $raw): ?string
+    {
+        if ($intent->chapa_reference) {
+            return $intent->chapa_reference;
+        }
+
+        $transferId = data_get($raw, 'data.chapa_transfer_id');
+        if (is_string($transferId) && $transferId !== '') {
+            return $transferId;
+        }
+
+        $reference = (string) data_get($raw, 'data.reference', '');
+        if (str_starts_with($reference, 'CT')) {
+            return $reference;
+        }
+
+        return null;
+    }
+
     /** @param array<string, mixed> $response */
     private function queuedProviderReference(array $response): ?string
     {
         $data = $response['data'] ?? null;
-        if (is_string($data) && trim($data) !== '') {
-            return trim($data);
+        if (is_string($data)) {
+            return $this->nonEmptyString($data);
         }
-        if (is_array($data)) {
-            foreach (['chapa_transfer_id', 'reference', 'id'] as $key) {
-                if (isset($data[$key]) && (is_string($data[$key]) || is_numeric($data[$key]))) {
-                    $val = trim((string) $data[$key]);
-                    if ($val !== '') {
-                        return $val;
-                    }
-                }
-            }
-            if (isset($data['tx_ref']) && is_string($data['tx_ref']) && trim($data['tx_ref']) !== '') {
-                return trim($data['tx_ref']);
+
+        if (!is_array($data)) {
+            return null;
+        }
+
+        foreach (['chapa_transfer_id', 'reference', 'id', 'tx_ref'] as $key) {
+            $value = $this->nonEmptyString($data[$key] ?? null);
+            if ($value !== null) {
+                return $value;
             }
         }
 
         return null;
+    }
+
+    private function nonEmptyString(mixed $value): ?string
+    {
+        if (!is_string($value) && !is_numeric($value)) {
+            return null;
+        }
+
+        $trimmed = trim((string) $value);
+
+        return $trimmed !== '' ? $trimmed : null;
     }
 
     /** @param array<string, mixed> $result */
