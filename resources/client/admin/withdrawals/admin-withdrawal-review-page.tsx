@@ -44,6 +44,9 @@ export type Payout = {
   amount_cents: number;
   currency: string;
   status: PayoutStatus;
+  account_holder_snapshot?: string | null;
+  bank_code_snapshot?: string | null;
+  masked_destination?: string | null;
   payout_method_label?: string | null;
   withdrawal_method_name?: string | null;
   payout_destination?: string | null;
@@ -331,6 +334,12 @@ function WithdrawalDetailsCard({payout}: {payout: Payout}) {
               </Table.Cell>
             </Table.Row>
             <Table.Row>
+              <Table.Cell className="text-muted-foreground"><Trans message="Account holder" /></Table.Cell>
+              <Table.Cell className="font-medium">
+                {payout.account_holder_snapshot ?? payout.payoutMethod?.account_holder ?? '—'}
+              </Table.Cell>
+            </Table.Row>
+            <Table.Row>
               <Table.Cell className="text-muted-foreground"><Trans message="Amount" /></Table.Cell>
               <Table.Cell className="font-semibold">{formatMoney(payout.amount_cents, payout.currency)}</Table.Cell>
             </Table.Row>
@@ -338,11 +347,16 @@ function WithdrawalDetailsCard({payout}: {payout: Payout}) {
               <Table.Cell className="text-muted-foreground"><Trans message="Withdrawal method" /></Table.Cell>
               <Table.Cell>
                 {payout.withdrawal_method_name ?? payout.payout_method_label ?? <Trans message="Not specified" />}
+                {payout.bank_code_snapshot && (
+                  <span className="ml-2 font-mono text-xs uppercase text-muted-foreground">({payout.bank_code_snapshot})</span>
+                )}
               </Table.Cell>
             </Table.Row>
             <Table.Row>
               <Table.Cell className="text-muted-foreground"><Trans message="Payout destination" /></Table.Cell>
-              <Table.Cell className="font-mono text-sm break-all">{payout.payout_destination ?? '—'}</Table.Cell>
+              <Table.Cell className="font-mono text-sm break-all">
+                {payout.payout_destination ?? payout.masked_destination ?? '—'}
+              </Table.Cell>
             </Table.Row>
             <Table.Row>
               <Table.Cell className="text-muted-foreground"><Trans message="Requested at" /></Table.Cell>
