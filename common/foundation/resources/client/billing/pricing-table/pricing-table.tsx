@@ -31,6 +31,7 @@ export function PricingTable({
 }: PricingTableProps) {
   return (
     <div
+      data-pricing-layout={layout}
       className={cn(
         'mx-auto grid w-full grid-cols-1 items-stretch md:grid-cols-2',
         layout === 'landing'
@@ -68,8 +69,9 @@ function PlanList({plans, selectedPeriod, layout}: PlanListProps) {
           interval_count: 1,
         };
 
+        const isLanding = layout === 'landing';
         let upgradeRoute: string | undefined;
-        if (!isLoggedIn) {
+        if (!isLoggedIn && (!isLanding || plan.free || price)) {
           upgradeRoute = '/register?redirectFrom=pricing';
         } else if (!plan.free && price) {
           upgradeRoute = isSubscribed
@@ -83,7 +85,6 @@ function PlanList({plans, selectedPeriod, layout}: PlanListProps) {
           ((price.interval === 'month' && price.interval_count >= 12) ||
             price.interval === 'year');
 
-        const isLanding = layout === 'landing';
         const action = (
           <Button
             variant={plan.recommended ? 'default' : 'outline'}
@@ -146,7 +147,10 @@ function PlanList({plans, selectedPeriod, layout}: PlanListProps) {
               )}
             </Card.Header>
 
-            <Card.Content className={cn('flex-1 px-6 pt-7 pb-0 sm:px-8', isLanding && 'pt-5')}>
+            <Card.Content className={cn(
+              'flex-1 px-6 pt-7 pb-0 sm:px-8',
+              isLanding && 'pt-5 pb-7 sm:pb-8',
+            )}>
               {isLanding && !plan.free && !price ? (
                 <p className="text-base font-medium text-muted-foreground">
                   <Trans message="Price unavailable" />
@@ -183,9 +187,7 @@ function PlanList({plans, selectedPeriod, layout}: PlanListProps) {
               <Card.Footer className="mt-6 px-6 pt-0 pb-7 sm:px-8 sm:pb-8">
                 {action}
               </Card.Footer>
-            ) : (
-              <div aria-hidden="true" className="h-6 shrink-0" />
-            )}
+            ) : null}
           </Card.Root>
         );
       })}
