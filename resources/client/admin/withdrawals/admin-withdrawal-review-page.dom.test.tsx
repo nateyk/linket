@@ -121,6 +121,26 @@ describe('AdminWithdrawalReviewPage', () => {
     expect(screen.queryByText('(telebirr)')).toBeNull();
   });
 
+  it('renders dashes when both snapshots and fallback methods or destinations are empty', async () => {
+    mockApiClient.get.mockResolvedValueOnce({
+      data: {
+        data: {
+          ...basePayout,
+          account_holder_snapshot: null,
+          bank_code_snapshot: null,
+          payoutMethod: null,
+          payout_destination: null,
+          masked_destination: null,
+        },
+      },
+    });
+
+    renderPage();
+
+    const dashes = await screen.findAllByText('—');
+    expect(dashes.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('approves a requested withdrawal (Stage 1)', async () => {
     renderPage();
 

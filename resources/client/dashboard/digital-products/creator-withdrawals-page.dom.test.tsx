@@ -51,10 +51,10 @@ describe('CreatorWithdrawalsPage', () => {
       amount_cents: 12000,
       currency: 'ETB',
       status: 'requested',
-      payout_method_label: 'Telebirr (•••• 1234)',
-      withdrawal_method_name: 'Telebirr',
       account_holder_snapshot: 'Nathnael Snapshot',
       masked_destination: '•••• 1234',
+      payout_method_label: 'Telebirr (•••• 1234)',
+      withdrawal_method_name: 'Telebirr',
       created_at: '2026-11-15T12:00:00Z',
       paid_at: null,
       rejection_reason: null,
@@ -411,5 +411,32 @@ describe('CreatorWithdrawalsPage', () => {
     expect(await screen.findByText('Withdrawal request details')).toBeTruthy();
     expect(screen.getByText('Abebe Snapshot')).toBeTruthy();
     expect(screen.getByText('•••• 9988')).toBeTruthy();
+  });
+
+  it('renders dashes and omits account holder snapshot in details dialog when data is missing', async () => {
+    mockApiClient.get.mockImplementation((url: string) => {
+      if (url === '/api/v1/items/sales') return Promise.resolve({data: {summary: mockSummary}});
+      if (url.startsWith('/api/v1/items/payout-requests')) {
+        return Promise.resolve({data: {data: [
+          {
+            ...mockPayouts[0],
+            payout_method_label: null,
+            masked_destination: null,
+            account_holder_snapshot: null,
+          },
+        ]}});
+      }
+      if (url === '/api/v1/items/payout-methods') return Promise.resolve({data: {data: mockDestinations}});
+      return Promise.reject(new Error('Unexpected endpoint'));
+    });
+
+    renderPage();
+    const viewButtons = await screen.findAllByRole('button', {name: /View details/i});
+    fireEvent.click(viewButtons[0]);
+
+    expect(await screen.findByText('Withdrawal request details')).toBeTruthy();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('Abebe Snapshot')).toBeNull();
+    expect(screen.queryByText('Nathnael Snapshot')).toBeNull();
   });
 });

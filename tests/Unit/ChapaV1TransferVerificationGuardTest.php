@@ -106,13 +106,13 @@ class ChapaV1TransferVerificationGuardTest extends TestCase
                     expectedStatus: 'processing',
                 ),
             ],
-            'bank transfer with deducted charge' => [
+            'cbebirr transfer with deducted charge' => [
                 new TransferVerificationSuccessCase(
                     intentAttributes: [
                         'merchant_reference' => 'lk-po-TESTBOA9988',
                         'amount_cents' => 200,
                         'currency' => 'ETB',
-                        'withdrawal_code' => 'bank_transfer',
+                        'withdrawal_code' => 'cbebirr',
                         'destination_snapshot' => '183285319',
                     ],
                     responseData: [
