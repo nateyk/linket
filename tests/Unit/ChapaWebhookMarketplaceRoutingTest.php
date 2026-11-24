@@ -11,7 +11,9 @@ use App\Payments\Models\PaymentTransaction;
 use App\Storefront\Controllers\ChapaStorefrontReturnController;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
+use App\Storefront\Models\StorefrontPayoutIntent;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
+use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -67,10 +69,12 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         });
 
         (new (require database_path('migrations/2026_11_14_210000_create_storefront_payment_attempts_table.php')))->up();
+        (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('storefront_payout_intents');
         Schema::dropIfExists('storefront_payment_attempts');
         Schema::dropIfExists('storefront_orders');
         Schema::dropIfExists('payment_transactions');
@@ -233,5 +237,63 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
             'successful verification' => [false],
             'pending exception tolerated' => [true],
         ];
+    }
+
+    public function testPayoutWebhookFulfillment(): void
+    {
+        $this->mockChapaGateway(true);
+        $this->mockDeliveryLogger();
+
+        $ref = 'lk-po-testwebhook123';
+        $intent = StorefrontPayoutIntent::query()->create([
+            'payout_request_id' => 1,
+            'merchant_reference' => $ref,
+            'idempotency_key' => 'idemp-'.$ref,
+            'withdrawal_code' => 'bank_transfer',
+            'destination_snapshot' => '183285319',
+            'amount_cents' => 200,
+            'currency' => 'ETB',
+            'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+        ]);
+
+        $mockService = new class {
+            public function verifyPayout(StorefrontPayoutIntent $intent): StorefrontPayoutIntent {
+                $intent->update(['status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL]);
+                return $intent;
+            }
+        };
+        $this->app->instance(StorefrontPayoutProcessingService::class, $mockService);
+
+        $controller = new ChapaWebhookController();
+        $request = Request::create('/billing/chapa/webhook', 'POST', ['tx_ref' => $ref]);
+
+        $response = $controller->handle($request);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(['message' => 'Payout processed.', 'status' => 'successful'], $response->getData(true));
+    }
+
+    public function testPayoutWebhookDuplicateIgnored(): void
+    {
+        $this->mockChapaGateway(true);
+        $this->mockDeliveryLogger();
+
+        $ref = 'lk-po-testwebhookalreadycompleted';
+        StorefrontPayoutIntent::query()->create([
+            'payout_request_id' => 1,
+            'merchant_reference' => $ref,
+            'idempotency_key' => 'idemp-'.$ref,
+            'withdrawal_code' => 'bank_transfer',
+            'destination_snapshot' => '183285319',
+            'amount_cents' => 200,
+            'currency' => 'ETB',
+            'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
+        ]);
+
+        $controller = new ChapaWebhookController();
+        $request = Request::create('/billing/chapa/webhook', 'POST', ['tx_ref' => $ref]);
+
+        $response = $controller->handle($request);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(['message' => 'Already processed.'], $response->getData(true));
     }
 }
