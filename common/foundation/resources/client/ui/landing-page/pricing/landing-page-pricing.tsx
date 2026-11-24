@@ -37,14 +37,14 @@ export function LandingPagePricing({config}: Props) {
     >
       <div className="mb-10 sm:mb-12">
         <div className="mx-auto max-w-4xl text-center">
-          <h2 className="text-sm font-semibold text-primary">
-            <Trans message="Pricing" />
-          </h2>
           {config.title ? (
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl lg:text-5xl">
-              <Trans message={config.title} />
+            <p className="text-sm font-semibold text-primary">
+              <Trans message="Pricing" />
             </p>
           ) : null}
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl lg:text-5xl">
+            <Trans message={config.title || 'Pricing'} />
+          </h2>
         </div>
         {config.description ? (
           <p className="mx-auto mt-4 max-w-2xl text-center text-base leading-7 text-muted-foreground sm:text-lg">
