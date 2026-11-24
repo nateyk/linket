@@ -16,7 +16,9 @@ use App\Storefront\Services\StorefrontPaymentVerificationService;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
@@ -45,10 +47,13 @@ final readonly class WebhookFulfillmentCase
 
 class ChapaWebhookMarketplaceRoutingTest extends TestCase
 {
+    private ?string $originalConnection = null;
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->originalConnection = config('database.default');
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', ':memory:');
 
@@ -78,6 +83,12 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         Schema::dropIfExists('storefront_payment_attempts');
         Schema::dropIfExists('storefront_orders');
         Schema::dropIfExists('payment_transactions');
+
+        if ($this->originalConnection !== null) {
+            DB::purge('sqlite');
+            config()->set('database.default', $this->originalConnection);
+        }
+
         parent::tearDown();
     }
 
@@ -124,7 +135,7 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
 
         $ref = 'lk-webhook-test';
         $order = StorefrontOrder::query()->create([
-            'uuid' => 'order-uuid-'.$ref,
+            'uuid' => (string) Str::uuid(),
             'status' => $case->orderStatus,
             'chapa_tx_ref' => $ref,
         ]);
@@ -132,7 +143,7 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         StorefrontPaymentAttempt::query()->create([
             'order_id' => $order->id,
             'merchant_reference' => $ref,
-            'idempotency_key' => 'idemp-'.$ref,
+            'idempotency_key' => (string) Str::uuid(),
             'amount_cents' => 15000,
             'currency' => 'ETB',
             'status' => $case->attemptStatus,
@@ -178,7 +189,7 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
     {
         $ref = 'lk-return-'.($throwsException ? 'fail' : 'ok');
         $order = StorefrontOrder::query()->create([
-            'uuid' => 'order-uuid-'.$ref,
+            'uuid' => (string) Str::uuid(),
             'status' => 'pending_payment',
             'chapa_tx_ref' => $ref,
         ]);
@@ -186,7 +197,7 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         StorefrontPaymentAttempt::query()->create([
             'order_id' => $order->id,
             'merchant_reference' => $ref,
-            'idempotency_key' => 'idemp-'.$ref,
+            'idempotency_key' => (string) Str::uuid(),
             'amount_cents' => 15000,
             'currency' => 'ETB',
             'status' => StorefrontPaymentAttempt::STATUS_PENDING,
@@ -208,8 +219,9 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
     public function testMarketplaceReturnRedirectsBuyersAfterPayment(): void
     {
         $ref = 'lk-return-redirect';
+        $orderUuid = (string) Str::uuid();
         $order = StorefrontOrder::query()->create([
-            'uuid' => 'order-uuid-redirect',
+            'uuid' => $orderUuid,
             'status' => 'pending_payment',
             'chapa_tx_ref' => $ref,
         ]);
@@ -217,7 +229,7 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         StorefrontPaymentAttempt::query()->create([
             'order_id' => $order->id,
             'merchant_reference' => $ref,
-            'idempotency_key' => 'idemp-'.$ref,
+            'idempotency_key' => (string) Str::uuid(),
             'amount_cents' => 15000,
             'currency' => 'ETB',
             'status' => StorefrontPaymentAttempt::STATUS_PENDING,
@@ -228,7 +240,7 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         $this->app->instance(StorefrontPaymentVerificationService::class, $verifier);
 
         $this->get('/storefront/chapa/return/'.$ref)
-            ->assertRedirect('/find-my-purchase/orders?highlight=order-uuid-redirect');
+            ->assertRedirect('/find-my-purchase/orders?highlight='.$orderUuid);
     }
 
     public static function returnOutcomeCases(): array
@@ -244,11 +256,11 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         $this->mockChapaGateway(true);
         $this->mockDeliveryLogger();
 
-        $ref = 'lk-po-testwebhook123';
+        $ref = 'lk-po-wbh123';
         $intent = StorefrontPayoutIntent::query()->create([
             'payout_request_id' => 1,
             'merchant_reference' => $ref,
-            'idempotency_key' => 'idemp-'.$ref,
+            'idempotency_key' => (string) Str::uuid(),
             'withdrawal_code' => 'bank_transfer',
             'destination_snapshot' => '183285319',
             'amount_cents' => 200,
@@ -277,11 +289,11 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         $this->mockChapaGateway(true);
         $this->mockDeliveryLogger();
 
-        $ref = 'lk-po-testwebhookalreadycompleted';
+        $ref = 'lk-po-wbh999';
         StorefrontPayoutIntent::query()->create([
             'payout_request_id' => 1,
             'merchant_reference' => $ref,
-            'idempotency_key' => 'idemp-'.$ref,
+            'idempotency_key' => (string) Str::uuid(),
             'withdrawal_code' => 'bank_transfer',
             'destination_snapshot' => '183285319',
             'amount_cents' => 200,
