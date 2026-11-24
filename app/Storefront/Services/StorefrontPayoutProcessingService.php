@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Storefront\Services;
 
+use App\Payments\Chapa\Exceptions\ChapaTransferRejectedException;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\ChapaPayoutService;
 use App\Storefront\DigitalProductFinance;
@@ -96,6 +97,15 @@ final class StorefrontPayoutProcessingService
             $intent->payoutRequest()->update(['transfer_reference' => $intent->merchant_reference]);
 
             return $intent->fresh();
+        } catch (ChapaTransferRejectedException $e) {
+            Log::notice('store.payout.chapa_v1_submission_rejected', [
+                'intent_id' => $intent->id,
+                'reference' => $intent->merchant_reference,
+                'http_status' => $e->httpStatus,
+                'provider_message' => $e->providerMessage,
+            ]);
+
+            return $this->releaseRejectedSubmission($intent, $e);
         } catch (\Throwable $e) {
             Log::warning('store.payout.chapa_v1_submission_uncertain', [
                 'intent_id' => $intent->id,
@@ -191,7 +201,27 @@ final class StorefrontPayoutProcessingService
 
     private function releaseFailed(StorefrontPayoutIntent $intent, array $raw): StorefrontPayoutIntent
     {
-        return DB::transaction(function () use ($intent, $raw): StorefrontPayoutIntent {
+        return $this->rejectAndRelease(
+            $intent,
+            $raw,
+            'Chapa verified the transfer was unsuccessful.',
+        );
+    }
+
+    private function releaseRejectedSubmission(
+        StorefrontPayoutIntent $intent,
+        ChapaTransferRejectedException $exception,
+    ): StorefrontPayoutIntent {
+        return $this->rejectAndRelease($intent, $exception->evidence(), $exception->publicReason());
+    }
+
+    /** @param array<string, mixed> $evidence */
+    private function rejectAndRelease(
+        StorefrontPayoutIntent $intent,
+        array $evidence,
+        string $reason,
+    ): StorefrontPayoutIntent {
+        return DB::transaction(function () use ($intent, $evidence, $reason): StorefrontPayoutIntent {
             $intent = StorefrontPayoutIntent::query()->lockForUpdate()->findOrFail($intent->id);
             $payout = $intent->payoutRequest()->lockForUpdate()->firstOrFail();
             if ($payout->status === 'paid' || $intent->status === StorefrontPayoutIntent::STATUS_SUCCESSFUL) {
@@ -206,14 +236,15 @@ final class StorefrontPayoutProcessingService
 
             $intent->update([
                 'status' => StorefrontPayoutIntent::STATUS_FAILED,
+                'last_error' => $reason,
                 'verified_at' => now(),
-                'verification_data' => $raw,
+                'verification_data' => $evidence,
             ]);
             $alreadyRejected = $payout->status === 'rejected';
             $payout->update([
                 'status' => 'rejected',
                 'rejected_at' => now(),
-                'rejection_reason' => 'Chapa verified the transfer was unsuccessful.',
+                'rejection_reason' => $reason,
             ]);
             app(DigitalProductFinance::class)->record(
                 $payout->workspace_id,

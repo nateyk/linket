@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Payments\Chapa;
 
+use App\Payments\Chapa\Exceptions\ChapaTransferRejectedException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -52,6 +53,8 @@ final class ChapaV1TransferClient
         $response = $this->request($secret)->post(self::BASE_URL.'/transfers', $payload);
         $data = $this->successfulPayload($response);
         if ($data === null) {
+            $this->throwIfExplicitlyRejected($response);
+
             throw new RuntimeException('Chapa did not accept the transfer. Check the transfer reference before retrying.');
         }
 
@@ -100,4 +103,23 @@ final class ChapaV1TransferClient
         return $data;
     }
 
+    private function throwIfExplicitlyRejected(Response $response): void
+    {
+        if ($response->serverError()) {
+            return;
+        }
+
+        $data = $response->json();
+        if (!is_array($data)
+            || !in_array(strtolower((string) ($data['status'] ?? '')), ['failed', 'rejected'], true)) {
+            return;
+        }
+
+        $message = is_string($data['message'] ?? null) ? trim($data['message']) : '';
+
+        throw new ChapaTransferRejectedException(
+            providerMessage: $message !== '' ? $message : 'Chapa rejected the transfer.',
+            httpStatus: $response->status(),
+        );
+    }
 }

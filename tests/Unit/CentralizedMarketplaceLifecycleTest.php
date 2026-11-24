@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Models\User;
+use App\Payments\Chapa\ChapaV2Client;
+use App\Payments\Chapa\Exceptions\ChapaTransferRejectedException;
 use App\Payments\Chapa\LinketChapaManager;
-use App\Storefront\Commission\CommissionPolicy;
 use App\Storefront\ChapaPayoutService;
+use App\Storefront\Commission\CommissionPolicy;
 use App\Storefront\DigitalProductFinance;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
@@ -24,7 +26,6 @@ use App\Storefront\Services\StorefrontPayoutProcessingService;
 use App\Storefront\StorefrontWebhookHandler;
 use Common\Billing\Models\Product;
 use Illuminate\Database\Schema\Blueprint;
-use App\Payments\Chapa\ChapaV2Client;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -33,6 +34,7 @@ use Nateyk\Chapa\ChapaClient;
 use Nateyk\Chapa\Http\RawResponse;
 use Nateyk\Chapa\Http\Transport;
 use PHPUnit\Framework\Attributes\TestWith;
+use RuntimeException;
 use Tests\TestCase;
 
 class CentralizedMarketplaceLifecycleTest extends TestCase
@@ -337,6 +339,92 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
 
         $this->assertSame(0, $ledgerService->getBalances($query)['reserved']);
         $this->assertSame($amountCents, $ledgerService->getBalances($query)['available']);
+    }
+
+    public function testExplicitSubmissionRejectionReleasesReservedBalance(): void
+    {
+        $creatorId = 100;
+        $amountCents = 500;
+        $this->seedCreator($creatorId, 'creator100@test.com');
+        $ledgerService = new CreatorLedgerService(new JournalPostingService());
+        $this->seedMaturedSale($creatorId, $amountCents, $ledgerService);
+        $query = BalanceQuery::for($creatorId, 'ETB');
+        $payout = PayoutRequest::create([
+            'workspace_id' => 1,
+            'creator_id' => $creatorId,
+            'amount_cents' => $amountCents,
+            'currency' => 'ETB',
+            'status' => 'processing',
+            'payout_destination' => '0900000002',
+        ]);
+        $ledgerService->reserveForPayout($payout, $amountCents);
+
+        $provider = $this->createMock(ChapaPayoutService::class);
+        $provider->expects($this->once())->method('createTransfer')->willThrowException(
+            new ChapaTransferRejectedException(
+                providerMessage: 'Our Transfer hours are Mon-Sat from 08:30 AM - 04:30 PM only.',
+                httpStatus: 401,
+            ),
+        );
+        $finance = $this->createMock(DigitalProductFinance::class);
+        $finance->expects($this->once())->method('record');
+        $this->app->instance(DigitalProductFinance::class, $finance);
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledgerService,
+            chapaPayoutService: $provider,
+        );
+
+        $intent = $service->prepareIntent($payout);
+        $service->submitPayout($intent);
+        $service->submitPayout($intent->fresh());
+
+        $reason = 'Chapa rejected the transfer because it was submitted outside transfer hours.';
+        $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $intent->fresh()->status);
+        $this->assertSame($reason, $intent->fresh()->last_error);
+        $this->assertSame('rejected', $payout->fresh()->status);
+        $this->assertSame($reason, $payout->fresh()->rejection_reason);
+        $this->assertSame(0, $ledgerService->getBalances($query)['reserved']);
+        $this->assertSame($amountCents, $ledgerService->getBalances($query)['available']);
+    }
+
+    public function testUncertainSubmissionKeepsReservedBalance(): void
+    {
+        $creatorId = 101;
+        $amountCents = 500;
+        $this->seedCreator($creatorId, 'creator101@test.com');
+        $ledgerService = new CreatorLedgerService(new JournalPostingService());
+        $this->seedMaturedSale($creatorId, $amountCents, $ledgerService);
+        $query = BalanceQuery::for($creatorId, 'ETB');
+        $payout = PayoutRequest::create([
+            'workspace_id' => 1,
+            'creator_id' => $creatorId,
+            'amount_cents' => $amountCents,
+            'currency' => 'ETB',
+            'status' => 'processing',
+            'payout_destination' => '0900000003',
+        ]);
+        $ledgerService->reserveForPayout($payout, $amountCents);
+
+        $provider = $this->createMock(ChapaPayoutService::class);
+        $provider->expects($this->once())->method('createTransfer')->willThrowException(
+            new RuntimeException('timeout'),
+        );
+        $finance = $this->createMock(DigitalProductFinance::class);
+        $finance->expects($this->never())->method('record');
+        $this->app->instance(DigitalProductFinance::class, $finance);
+        $service = new StorefrontPayoutProcessingService(
+            creatorLedger: $ledgerService,
+            chapaPayoutService: $provider,
+        );
+
+        $intent = $service->prepareIntent($payout);
+        $service->submitPayout($intent);
+        $service->submitPayout($intent->fresh());
+
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUBMITTED, $intent->fresh()->status);
+        $this->assertSame('processing', $payout->fresh()->status);
+        $this->assertSame($amountCents, $ledgerService->getBalances($query)['reserved']);
+        $this->assertSame(0, $ledgerService->getBalances($query)['available']);
     }
 
     private function seedCreator(int $id, string $email): void

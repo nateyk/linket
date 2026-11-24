@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Payments\Chapa\Exceptions\ChapaTransferRejectedException;
 use App\Payments\Chapa\ChapaV1TransferClient;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\ChapaPayoutService;
@@ -55,20 +56,50 @@ class ChapaV1TransferClientTest extends TestCase
         );
     }
 
-    public function testRejectedTransferFailsClosed(): void
+    public function testExplicitTransferRejectionIsDistinguishedFromAnUncertainSubmission(): void
     {
         Http::fake([
             'https://api.chapa.co/v1/transfers' => Http::response([
                 'status' => 'failed',
-                'message' => 'Insufficient Balance',
+                'message' => 'Our Transfer hours are Mon-Sat from 08:30 AM - 04:30 PM only.',
                 'data' => null,
-            ], 422),
+            ], 401),
+        ]);
+
+        try {
+            (new ChapaV1TransferClient())->create('CHASECK_TEST-private', [
+                'amount' => '100.00',
+                'reference' => 'lk-po-unpaid',
+                'currency' => 'ETB',
+                'account_number' => '0911223344',
+                'account_name' => 'Test Seller',
+                'bank_code' => 855,
+            ]);
+            $this->fail('An explicit Chapa rejection must use the definitive rejection path.');
+        } catch (ChapaTransferRejectedException $exception) {
+            $this->assertSame(401, $exception->httpStatus);
+            $this->assertSame(
+                'Chapa rejected the transfer because it was submitted outside transfer hours.',
+                $exception->publicReason(),
+            );
+        }
+    }
+
+    public function testServerFailureRemainsAnUncertainSubmission(): void
+    {
+        Http::fake([
+            'https://api.chapa.co/v1/transfers' => Http::response([
+                'status' => 'failed',
+                'message' => 'Internal server error',
+            ], 503),
         ]);
 
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Check the transfer reference before retrying');
+
         (new ChapaV1TransferClient())->create('CHASECK_TEST-private', [
             'amount' => '100.00',
-            'reference' => 'lk-po-unpaid',
+            'reference' => 'lk-po-uncertain',
             'currency' => 'ETB',
             'account_number' => '0911223344',
             'account_name' => 'Test Seller',
