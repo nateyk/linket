@@ -519,7 +519,11 @@ function Stage2Section({
   const intentLabel: Record<string, string> = {
     prepared: 'Prepared',
     submitted: 'Submission unconfirmed',
-    provider_pending: 'Queued — awaiting settlement',
+    provider_pending: intent?.provider_status === 'processing'
+      ? 'In progress with bank'
+      : intent?.provider_status === 'pending'
+      ? 'Queued with Chapa'
+      : 'Queued — awaiting settlement',
     successful: 'Settled',
     failed: 'Transfer failed',
   };
@@ -532,7 +536,7 @@ function Stage2Section({
           <p className="text-xs text-muted-foreground"><Trans message="Sends a transfer request through the Linket platform Chapa account." /></p>
         </div>
         {intent && (
-          <Badge variant={intent.status === 'successful' ? 'positive' : 'outline'}>
+          <Badge variant={intent.status === 'successful' ? 'positive' : intent.status === 'failed' ? 'destructive' : 'outline'}>
             {intentLabel[intent.status] ?? intent.status.replaceAll('_', ' ')}
           </Badge>
         )}
@@ -560,6 +564,15 @@ function Stage2Section({
       )}
       {intent?.status === 'submitted' && intent.last_error && (
         <p className="text-xs text-muted-foreground">{intent.last_error}</p>
+      )}
+      {intent?.status === 'provider_pending' && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {intent.provider_status === 'processing' ? (
+            <Trans message="Dispatched by Chapa and currently in-flight with beneficiary bank. Verify settlement to confirm." />
+          ) : (
+            <Trans message="Queued with Chapa for automated disbursement. Verify settlement to check latest status." />
+          )}
+        </p>
       )}
     </div>
   );
