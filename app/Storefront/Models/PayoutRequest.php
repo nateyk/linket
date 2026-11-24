@@ -43,4 +43,17 @@ class PayoutRequest extends StorefrontModel
     public function destinationReveals(): HasMany { return $this->hasMany(DigitalProductPayoutDestinationReveal::class); }
     public function payoutIntents(): HasMany { return $this->hasMany(StorefrontPayoutIntent::class, 'payout_request_id'); }
     public function latestPayoutIntent(): HasOne { return $this->hasOne(StorefrontPayoutIntent::class, 'payout_request_id')->latestOfMany(); }
+
+    public function maskedDestination(): string
+    {
+        $destination = (string) $this->payout_destination;
+        if (blank($destination)) {
+            return '••••';
+        }
+
+        $digits = preg_replace('/\s+/', '', $destination);
+        $suffix = substr((string) $digits, -4);
+
+        return $suffix !== '' ? '•••• ' . $suffix : '••••';
+    }
 }

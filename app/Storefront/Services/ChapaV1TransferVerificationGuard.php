@@ -91,9 +91,11 @@ final class ChapaV1TransferVerificationGuard
     /** @param array<string, mixed> $data */
     private function matchesAmountWithCharge(StorefrontPayoutIntent $intent, array $data, string $status, ?int $amountCents): bool
     {
-        $successfulTelebirr = $status === 'success' && $intent->withdrawal_code === 'telebirr'
+        $successfulWallet = in_array($status, ['success', 'successful'], true)
+            && in_array($intent->withdrawal_code, ['telebirr', 'cbebirr'], true)
             && strtoupper((string) $intent->currency) === 'ETB';
-        if ((!$successfulTelebirr && $status !== 'failed/cancelled') || $amountCents === null || $amountCents <= 0
+        if ((!$successfulWallet && !in_array($status, ['failed/cancelled', 'failed'], true))
+            || $amountCents === null || $amountCents <= 0
             || !isset($data['account_number'])
             || ($data['tx_ref'] ?? null) !== $intent->merchant_reference) {
             return false;

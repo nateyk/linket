@@ -16,7 +16,7 @@ import {FormattedDate} from '@ui/i18n/formatted-date';
 import {BackendPagination} from '@shadcn/table/utils/table-pagination';
 import {Link} from 'react-router';
 import {
-  BanknoteArrowUpIcon,
+  HandCoinsIcon,
   CheckCircleIcon,
   CircleAlertIcon,
   CircleHelpIcon,
@@ -67,6 +67,9 @@ export type Payout = {
   amount_cents: number;
   currency: string;
   status: PayoutStatus;
+  account_holder_snapshot?: string | null;
+  bank_code_snapshot?: string | null;
+  masked_destination?: string | null;
   payout_method_label?: string | null;
   withdrawal_method_name?: string | null;
   created_at: string;
@@ -176,7 +179,7 @@ export function Component() {
           </span>
         </Button>
         <Button disabled={loading || !summary} onClick={() => setWithdrawOpen(true)}>
-          <BanknoteArrowUpIcon />
+          <HandCoinsIcon />
           <Trans message="Request withdrawal" />
         </Button>
       </DashboardLayout.SectionHeader>
@@ -616,7 +619,7 @@ function RequestWithdrawalModal({
         <Dialog.Content className="sm:max-w-md">
           <Dialog.Header>
             <Dialog.Title>
-              <BanknoteArrowUpIcon />
+              <HandCoinsIcon />
               <Trans message="Request withdrawal" />
             </Dialog.Title>
           </Dialog.Header>
@@ -775,7 +778,10 @@ function WithdrawalDetailsDialog({
               </div>
               <div>
                 <span className="text-xs text-muted-foreground"><Trans message="Destination" /></span>
-                <p className="text-xs font-medium">{payout.payout_method_label || '—'}</p>
+                <p className="text-xs font-medium">{payout.payout_method_label || payout.masked_destination || '—'}</p>
+                {payout.account_holder_snapshot && (
+                  <p className="text-[11px] text-muted-foreground">{payout.account_holder_snapshot}</p>
+                )}
               </div>
             </div>
 
