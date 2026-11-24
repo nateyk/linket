@@ -196,12 +196,24 @@ export function Component() {
         )}
         <Button
           size="sm"
+          className="max-lg:size-11 max-lg:px-0"
           type="submit"
           form="course-create-form"
+          aria-label={
+            creating
+              ? trans({message: 'Creating...'})
+              : trans({message: 'Create course'})
+          }
           disabled={creating || creationUncertain}
         >
-          {creating ? <Spinner data-icon="inline-start" /> : null}
-          {creating ? <Trans message="Creating..." /> : <Trans message="Create course" />}
+          {creating ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <GraduationCapIcon className="size-4" data-icon="inline-start" />
+          )}
+          <span className="max-lg:hidden">
+            {creating ? <Trans message="Creating..." /> : <Trans message="Create course" />}
+          </span>
         </Button>
       </div>
     </DashboardLayout.SectionHeader>

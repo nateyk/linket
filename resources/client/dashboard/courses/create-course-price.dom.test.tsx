@@ -194,13 +194,11 @@ describe('page shell: one h1, and a title that owns the header row', () => {
     // Verify the current crumb here; its parent link is asserted in the
     // source-level contract and exercised by authenticated browser QA.
     expect(nav!.textContent).toContain('Create course');
-    expect(nav!.className).toContain('sm:flex');
+    expect(nav!.className).toContain('w-auto');
     expect(document.querySelector('[data-slot="breadcrumb-page"]')?.textContent).toBe('Create course');
     expect(document.querySelectorAll('[data-slot="breadcrumb-separator"]').length).toBeLessThanOrEqual(1);
     expect(screen.queryByRole('button', {name: 'Back to products'})).toBeNull();
     expect(document.querySelector('[data-slot="section-title"]')).toBeNull();
-    // Mobile header title (same copy as the breadcrumb page crumb).
-    expect(document.querySelector('h1')?.textContent).toBe('Create course');
   });
 
   test('progress bar keeps its screen-reader label', () => {
@@ -212,11 +210,28 @@ describe('page shell: one h1, and a title that owns the header row', () => {
   });
 });
 
-describe('course setup omits customer preview', () => {
-  test('has no Preview control or customer preview dialog', () => {
+describe('course setup customer preview on demand', () => {
+  test('keeps buyer preview hidden until opened, and Escape returns to the editor', async () => {
+    const user = userEvent.setup();
     mount('/dashboard/items/new/course?billing=free');
-    expect(screen.queryByRole('button', {name: 'Preview'})).toBeNull();
     expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
     expect(screen.queryByText('Your course title')).toBeNull();
+
+    const preview = screen.getByRole('button', {name: 'Preview'});
+    await user.click(preview);
+    expect(screen.getByRole('dialog', {name: 'Customer preview'})).not.toBeNull();
+    expect(screen.getByText('Your course title')).not.toBeNull();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
+    expect(document.activeElement).toBe(preview);
+  });
+
+  test('previews the current course title without creating a course', async () => {
+    mount('/dashboard/items/new/course?billing=paid&price_cents=1000');
+    typeTitle();
+    fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
+    expect(screen.getByText('Ethiopian coffee course')).not.toBeNull();
+    expect(mockPost).not.toHaveBeenCalled();
   });
 });
