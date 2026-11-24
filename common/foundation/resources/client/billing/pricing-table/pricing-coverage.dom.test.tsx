@@ -363,8 +363,8 @@ test('landing pricing uses unified cards with an early action and backend plan f
   );
 
   expect(container.querySelector('[data-pricing-layout="landing"]')).toBeTruthy();
-  const freeCard = screen.getByRole('heading', {name: 'Free'}).closest('[data-slot="card"]');
-  const proCard = screen.getByRole('heading', {name: 'Pro'}).closest('[data-slot="card"]');
+  const freeCard = screen.getByRole('heading', {name: 'Free', level: 3}).closest('[data-slot="card"]');
+  const proCard = screen.getByRole('heading', {name: 'Pro', level: 3}).closest('[data-slot="card"]');
   expect(freeCard).toBeTruthy();
   expect(proCard).toBeTruthy();
   expect(proCard?.className).toContain('bg-primary/5');
@@ -402,7 +402,7 @@ test('landing pricing does not offer nonexistent paid prices or checkout routes'
   );
 
   expect(screen.getByText('Price unavailable')).toBeTruthy();
-  const unavailableCard = screen.getByRole('heading', {name: 'Pro'}).closest('[data-slot="card"]');
+  const unavailableCard = screen.getByRole('heading', {name: 'Pro', level: 3}).closest('[data-slot="card"]');
   const proButton = unavailableCard?.querySelector('button');
   expect(proButton?.hasAttribute('disabled')).toBe(true);
   fireEvent.click(proButton!);
