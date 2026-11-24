@@ -345,3 +345,93 @@ test('equal or more expensive annual prices are never advertised as a discount',
   );
   expect(screen.queryByText(/Save up to/)).toBeNull();
 });
+
+
+test('landing pricing uses unified cards with an early action and backend plan features', () => {
+  const {container} = render(
+    <PricingTable
+      layout="landing"
+      selectedCycle="monthly"
+      products={[
+        makePlan({feature_list: ['A creator storefront']}),
+        proPlan({
+          description: 'For creators who need more tools',
+          feature_list: ['Advanced creator tools', 'Custom storefront options'],
+        }),
+      ]}
+    />,
+  );
+
+  expect(container.querySelector('[data-pricing-layout="landing"]')).toBeTruthy();
+  const freeCard = screen.getByRole('heading', {name: 'Free'}).closest('[data-slot="card"]');
+  const proCard = screen.getByRole('heading', {name: 'Pro'}).closest('[data-slot="card"]');
+  expect(freeCard).toBeTruthy();
+  expect(proCard).toBeTruthy();
+  expect(proCard?.className).toContain('bg-primary/5');
+  expect(screen.getByText('Most popular')).toBeTruthy();
+  expect(screen.getByText('A creator storefront')).toBeTruthy();
+  expect(screen.getByText('Advanced creator tools')).toBeTruthy();
+  expect(screen.getByText('Custom storefront options')).toBeTruthy();
+  expect(proCard?.textContent?.indexOf('Get started')).toBeLessThan(
+    proCard?.textContent?.indexOf("What's included") ?? 0,
+  );
+  expect(proCard?.querySelector('[data-slot="card-footer"]')).toBeNull();
+  expect(freeCard?.querySelector('[data-slot="card-footer"]')).toBeNull();
+});
+
+test('landing pricing CTA still preserves the paid plan during guest registration', () => {
+  render(
+    <PricingTable layout="landing" selectedCycle="monthly" products={[proPlan()]} />,
+  );
+
+  fireEvent.click(screen.getByRole('button', {name: 'Get started'}));
+  expect(state.saveSelection).toHaveBeenCalledWith('be.onboarding.selected', {
+    productId: 2,
+    priceId: 8,
+  });
+  expect(state.navigate).toHaveBeenCalledWith('/register?redirectFrom=pricing');
+});
+
+test('landing pricing does not offer nonexistent paid prices or checkout routes', () => {
+  const {container} = render(
+    <PricingTable
+      layout="landing"
+      selectedCycle="monthly"
+      products={[makePlan(), proPlan({prices: []})]}
+    />,
+  );
+
+  expect(screen.getByText('Price unavailable')).toBeTruthy();
+  const unavailableCard = screen.getByRole('heading', {name: 'Pro'}).closest('[data-slot="card"]');
+  const proButton = unavailableCard?.querySelector('button');
+  expect(proButton?.hasAttribute('disabled')).toBe(true);
+  fireEvent.click(proButton!);
+  expect(state.navigate).not.toHaveBeenCalled();
+  expect(state.saveSelection).not.toHaveBeenCalled();
+  expect(container.querySelector('[data-pricing-layout="landing"]')).toBeTruthy();
+});
+
+test('landing yearly pricing preserves the selected annual checkout record', () => {
+  state.isLoggedIn = true;
+  const annual = makePrice({id: 21, amount: 7000, interval: 'year'});
+  render(
+    <PricingTable
+      layout="landing"
+      selectedCycle="yearly"
+      products={[proPlan({prices: [makePrice(), annual]})]}
+    />,
+  );
+
+  expect(screen.getByText('Billed annually')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', {name: 'Upgrade'}));
+  expect(state.navigate).toHaveBeenCalledWith('/checkout/2/21');
+});
+
+test('standard pricing page keeps its original card footer and independent cards', () => {
+  const {container} = render(
+    <PricingTable selectedCycle="monthly" products={[makePlan()]} />,
+  );
+  expect(container.querySelector('[data-pricing-layout="standard"]')).toBeTruthy();
+  expect(container.querySelector('[data-slot="card-footer"]')).toBeTruthy();
+  expect(screen.queryByText('Price unavailable')).toBeNull();
+});
