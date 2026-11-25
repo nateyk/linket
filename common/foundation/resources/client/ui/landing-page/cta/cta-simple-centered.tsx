@@ -9,7 +9,7 @@ export type CtaSimpleCenteredConfig = {
   description?: string;
   buttons?: LandingPageButtonConfig[];
   forceDarkMode?: boolean;
-  presentation?: 'starfield';
+  presentation?: 'standard' | 'starfield';
 };
 
 type Props = {
