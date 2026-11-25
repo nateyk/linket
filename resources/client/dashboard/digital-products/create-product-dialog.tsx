@@ -51,7 +51,7 @@ export function CreateProductDialog({
           <Dialog.Body className="min-h-0 overflow-y-auto pt-1">
             <ProductTypePicker value={selectedType} onValueChange={setSelectedType} />
           </Dialog.Body>
-          <Dialog.Footer className="max-sm:flex-row max-sm:justify-between sm:justify-between border-t border-border/70 pt-4">
+          <Dialog.Footer className="max-sm:flex-row max-sm:justify-between sm:justify-between pt-3">
             <Dialog.CloseButton render={<Button variant="outline" className="min-h-10" />}>
               <Trans message="Cancel" />
             </Dialog.CloseButton>
