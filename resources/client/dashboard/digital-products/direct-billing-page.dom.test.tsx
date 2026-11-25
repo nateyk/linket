@@ -235,7 +235,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-it('renders readable mobile order cards without desktop table or single-page navigation', async () => {
+it('keeps the invoice-style table and column controls on mobile', async () => {
   const originalMatchMedia = window.matchMedia;
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
@@ -251,18 +251,37 @@ it('renders readable mobile order cards without desktop table or single-page nav
     mockApi({orders: [baseOrder], lastPage: 1, total: 1});
     render(<Component />);
 
-    const list = await screen.findByRole('list', {name: 'Orders'});
-    expect(list.querySelectorAll('[role="listitem"]')).toHaveLength(1);
-    expect(screen.queryByRole('table', {name: 'Orders'})).toBeNull();
+    const table = await screen.findByRole('table', {name: 'Orders'});
+    const scrollRegion = screen.getByRole('region', {name: 'Scrollable orders table'});
+    expect(scrollRegion.contains(table)).toBe(true);
+    expect(scrollRegion.className).toContain('overflow-x-auto');
+    expect(scrollRegion.tabIndex).toBe(0);
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(screen.queryByRole('list', {name: 'Orders'})).toBeNull();
+    expect(screen.getByRole('button', {name: 'Choose visible columns'})).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'View details'}).closest('td')?.className).toContain('sticky');
+    expect(screen.getByRole('button', {name: 'Previous'})).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', {name: 'Next'})).toHaveProperty('disabled', true);
+    expect(screen.getByText('1–1 of 1')).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitemcheckbox', {name: 'Buyer'}));
+    expect(screen.queryByRole('columnheader', {name: 'Buyer'})).toBeNull();
+    expect(screen.getByRole('columnheader', {name: 'Product'})).toBeTruthy();
     expect(screen.getByRole('button', {name: 'View details'})).toBeTruthy();
-    expect(screen.queryByRole('navigation', {name: 'Pagination'})).toBeNull();
-    expect(screen.getAllByText('Workbook').length).toBeGreaterThan(0);
   } finally {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       value: originalMatchMedia,
     });
   }
+});
+
+it('keeps search and column visibility controls available when orders are empty', async () => {
+  mockApi({orders: [], lastPage: 1, total: 0});
+  render(<Component />);
+  expect(await screen.findByText('No orders found')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Choose visible columns'})).toBeTruthy();
+  expect(screen.getByLabelText('Search orders')).toBeTruthy();
+  expect(screen.queryByRole('navigation', {name: 'Pagination'})).toBeNull();
 });
 
 it('applies redirected order filters to the controls and request', async () => {
