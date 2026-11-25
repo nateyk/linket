@@ -18,7 +18,7 @@ export type FeatureWithScreenshotConfig = {
   mobileImage?: LandingPageImageConfig;
   imageAlt?: string;
   mobileImageAlt?: string;
-  mediaVariant?: 'browser' | 'checkout';
+  mediaVariant?: 'standard' | 'browser' | 'checkout';
   imageSize?: 'xs' | 'sm' | 'lg' | 'md';
   alignLeft?: boolean;
   imagePanel?: boolean;
