@@ -38,25 +38,26 @@ export function CreateProductDialog({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="sm:max-w-xl">
+        <Dialog.Content className="gap-4 sm:max-w-2xl">
           <Dialog.Header>
-            <Dialog.Title>
-              <PackagePlusIcon className="size-5" aria-hidden="true" />
+            <Dialog.Title className="text-lg font-semibold tracking-tight">
+              <PackagePlusIcon className="size-5 text-primary" aria-hidden="true" />
               <Trans message="What are you selling?" />
             </Dialog.Title>
             <Dialog.Description>
               <Trans message="Choose a type to open its editor." />
             </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body className="flex min-h-0 flex-col gap-4 overflow-y-auto pt-2">
+          <Dialog.Body className="min-h-0 overflow-y-auto pt-1">
             <ProductTypePicker value={selectedType} onValueChange={setSelectedType} />
           </Dialog.Body>
-          <Dialog.Footer className="py-4 sm:justify-between">
-            <Dialog.CloseButton render={<Button variant="outline" />}>
+          <Dialog.Footer className="max-sm:flex-row max-sm:justify-between sm:justify-between border-t border-border/70 pt-4">
+            <Dialog.CloseButton render={<Button variant="outline" className="min-h-10" />}>
               <Trans message="Cancel" />
             </Dialog.CloseButton>
             <Button
               disabled={!selectedType}
+              className="min-h-10"
               onClick={handleContinue}
               aria-label={trans({message: 'Continue'})}
             >
