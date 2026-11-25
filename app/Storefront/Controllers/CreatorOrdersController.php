@@ -35,6 +35,7 @@ final class CreatorOrdersController extends Controller
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'sort' => ['nullable', 'in:newest,oldest,amount_desc,amount_asc,buyer_asc,buyer_desc'],
         ]);
 
         $base = $this->creatorOrdersQuery($request);
@@ -81,12 +82,23 @@ final class CreatorOrdersController extends Controller
             'sales_cents' => (int) (clone $query)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('gross_amount_cents'),
         ];
 
+        // Sort the complete filtered result before pagination. Never let the UI
+        // sort just the currently loaded page or accept arbitrary SQL columns.
+        $sort = $filters['sort'] ?? 'newest';
+        match ($sort) {
+            'oldest' => $query->orderBy('created_at')->orderBy('id'),
+            'amount_desc' => $query->orderByDesc('gross_amount_cents')->orderByDesc('id'),
+            'amount_asc' => $query->orderBy('gross_amount_cents')->orderByDesc('id'),
+            'buyer_asc' => $query->orderBy('buyer_name')->orderByDesc('id'),
+            'buyer_desc' => $query->orderByDesc('buyer_name')->orderByDesc('id'),
+            default => $query->orderByDesc('created_at')->orderByDesc('id'),
+        };
+
         $orders = $query
             ->with([
                 'product' => fn ($product) => $product->withTrashed()->with('cover'),
                 'entitlements',
             ])
-            ->latest()
             ->paginate($filters['per_page'] ?? 25)
             ->withQueryString()
             ->through(fn (StorefrontOrder $order): array => $this->orderPayload($order));
