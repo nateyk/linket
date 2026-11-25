@@ -10,6 +10,7 @@ export const sectionLabels = {
   ...heroSectionLabels,
   'feature-with-screenshot': <Trans message="Feature with screenshot" />,
   'features-grid': <Trans message="Features grid" />,
+  'creator-stories': <Trans message="Creator stories" />,
   faq: <Trans message="FAQ" />,
   'cta-simple-centered': <Trans message="Call to action" />,
   pricing: <Trans message="Pricing" />,

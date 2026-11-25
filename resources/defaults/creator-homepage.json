@@ -217,6 +217,13 @@
       ]
     },
     {
+      "name": "creator-stories",
+      "badge": "Made with Linket",
+      "title": "Real creators. Real storefronts.",
+      "description": "Explore creator storefronts published with permission.",
+      "stories": []
+    },
+    {
       "name": "pricing",
       "title": "Start free. Grow at your own pace.",
       "description": "Compare Free and Pro features, publishing limits, and current subscription prices. Eligible paid digital products use Chapa checkout."
