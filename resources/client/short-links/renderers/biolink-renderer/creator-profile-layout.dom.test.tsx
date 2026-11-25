@@ -7,9 +7,9 @@ import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 import {CreatorProfileLayout} from './creator-profile-layout';
 
 /**
- * On a phone the profile shows one section at a time and the floating bottom
- * nav is the only way to move between them: the Products | About tab strip is
- * the desktop arrangement, where both live side by side.
+ * On a phone the profile shows one section at a time and the sticky header
+ * navigation switches between them. On desktop the Products | About tab
+ * strip lives beside the creator's profile card.
  *
  * The split is expressed as container-query classes, which resolve against a
  * real container rather than the window, so these tests drive the rendered
@@ -43,9 +43,9 @@ vi.mock('react-router', () => ({
 }));
 
 vi.mock('@app/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-renderer', () => ({
-  ShopWidgetRenderer: () => (
+  ShopWidgetRenderer: ({showHeading}: {showHeading?: boolean}) => (
     <div data-testid="shop-widget">
-      <h2>Products</h2>
+      {showHeading && <h2>Products</h2>}
       <p>Digital product one</p>
       <p>Digital product two</p>
     </div>
@@ -138,13 +138,15 @@ function desktopBranch(): HTMLElement {
   return branch(false);
 }
 
-/** The bottom nav, found by its accessible name inside the mobile branch. */
-function bottomNav() {
-  return within(mobileBranch()).getByRole('navigation');
+/** The sticky header navigation, scoped to the mobile branch. */
+function sectionNav() {
+  return within(mobileBranch()).getByRole('navigation', {
+    name: 'Creator profile sections',
+  });
 }
 
 function navButton(name: string) {
-  return within(bottomNav()).getByRole('button', {name});
+  return within(sectionNav()).getByRole('button', {name});
 }
 
 /**
@@ -210,8 +212,14 @@ describe('creator profile on mobile', () => {
     // Bio page IS the store — match desktop defaultTab="products".
     expect(section('Products')).toBeTruthy();
     expect(within(mobileBranch()).getByTestId('shop-widget')).toBeTruthy();
-    // The Products | About strip belongs to the desktop grid.
+    // Mobile has sticky section buttons, not the desktop tabs.
     expect(within(mobileBranch()).queryByTestId('storefront')).toBeNull();
+    expect(sectionNav()).toBeTruthy();
+    expect(section('Products')!.querySelector('h2:not(.sr-only)')).toBeNull();
+    expect(within(section('Products')!).getByRole('heading', {
+      name: 'Products',
+      level: 2,
+    }).className).toContain('sr-only');
     expect(section('Profile')).toBeNull();
     expect(section('About')).toBeNull();
   });
@@ -245,7 +253,7 @@ describe('creator profile on mobile', () => {
     expect(within(mobileBranch()).queryByTestId('storefront')).toBeNull();
   });
 
-  test('(d) Services appears when the creator has published services', async () => {
+  test('(d) Services appears without a duplicate visible heading', async () => {
     const user = userEvent.setup();
     render(
       <CreatorProfileLayout
@@ -262,15 +270,20 @@ describe('creator profile on mobile', () => {
     expect(
       await within(section('Services')!).findByText('No services yet'),
     ).toBeTruthy();
+    const heading = within(section('Services')!).getByRole('heading', {
+      name: 'Services',
+      level: 2,
+    });
+    expect(heading.className).toContain('sr-only');
     expect(section('Products')).toBeNull();
   });
 
-  test('the nav is the only way between sections, and marks the current one', async () => {
+  test('the sticky header selects one section and exposes the current one', async () => {
     const user = userEvent.setup();
     renderProfile();
 
-    // A nav, not a tablist: buttons with aria-pressed, never tabs without
-    // tabpanels.
+    // A navigation landmark, not a tablist: buttons with aria-pressed,
+    // never tabs without tabpanels.
     expect(within(mobileBranch()).queryByRole('tablist')).toBeNull();
     expect(navButton('Products').getAttribute('aria-pressed')).toBe('true');
     expect(navButton('Profile').getAttribute('aria-pressed')).toBe('false');
@@ -294,16 +307,19 @@ describe('creator profile on mobile', () => {
     expect(window.scrollTo).toHaveBeenCalledWith({top: 0});
   });
 
-  test('the nav sits above the home indicator, on the device inset', () => {
+  test('the nav sticks to the top safe area and reuses storefront appearance', () => {
     renderProfile();
-    // The bar parks on --safe-bottom (34px on the device), which is what
-    // keeps it clear of the indicator; the layout reserves that inset too.
-    const nav = bottomNav();
-    expect(nav.className).toContain('bottom-[max(1rem,var(--safe-bottom,env(safe-area-inset-bottom,0px)))]');
-    expect(nav.className).toContain('fixed');
+    const nav = sectionNav();
+    expect(nav.className).toContain('sticky');
+    expect(nav.className).toContain('top-[var(--safe-top');
+    expect(nav.className).not.toContain('fixed');
+    expect(nav.querySelector('[class*="bg-[var(--biolink-surface-strong)]"]')).toBeTruthy();
+    expect(nav.querySelectorAll('button')).toHaveLength(3);
+    expect(navButton('Products').style.getPropertyValue('--biolink-button-background')).toBeTruthy();
     const main = mobileBranch().closest('main')!;
     expect(main.className).toContain('var(--safe-bottom');
     expect(main.className).toContain('var(--safe-top');
+    expect(main.className).not.toContain('calc(6rem');
   });
 
   test('a profile with neither products nor about gets no nav', () => {
@@ -325,6 +341,25 @@ describe('creator profile on mobile', () => {
     expect(section('Profile')).toBeTruthy();
   });
 
+  test('a product-only desktop store omits the redundant Products and item-count header', () => {
+    const biolink = makeBiolink() as unknown as {
+      profile_config: Record<string, unknown>;
+    };
+    biolink.profile_config.about_html = '';
+    render(
+      <CreatorProfileLayout
+        biolink={biolink as never}
+        appearance={null}
+        content={[shopWidget]}
+      />,
+    );
+
+    const desktop = desktopBranch();
+    expect(within(desktop).getByTestId('shop-widget')).toBeTruthy();
+    expect(within(desktop).queryByRole('heading', {name: 'Products'})).toBeNull();
+    expect(within(desktop).queryByTestId('storefront')).toBeNull();
+  });
+
   test('the desktop grid keeps both sections side by side', () => {
     renderProfile();
     const desktop = desktopBranch();
@@ -333,7 +368,7 @@ describe('creator profile on mobile', () => {
     // at once, so the strip is the right control there.
     expect(within(desktop).getByTestId('storefront')).toBeTruthy();
     expect(within(desktop).getByText('Nathanael')).toBeTruthy();
-    // The bottom nav is a phone affordance and stays out of the grid.
+    // The mobile sticky navigation stays out of the desktop grid.
     expect(within(desktop).queryByRole('navigation')).toBeNull();
   });
 
@@ -352,9 +387,9 @@ describe('creator profile on mobile', () => {
       />,
     );
 
-    expect(within(bottomNav()).getByRole('button', {name: 'Profile'})).toBeTruthy();
-    expect(within(bottomNav()).getByRole('button', {name: 'Products'})).toBeTruthy();
-    expect(within(bottomNav()).queryByRole('button', {name: 'About'})).toBeNull();
+    expect(within(sectionNav()).getByRole('button', {name: 'Profile'})).toBeTruthy();
+    expect(within(sectionNav()).getByRole('button', {name: 'Products'})).toBeTruthy();
+    expect(within(sectionNav()).queryByRole('button', {name: 'About'})).toBeNull();
   });
 });
 
