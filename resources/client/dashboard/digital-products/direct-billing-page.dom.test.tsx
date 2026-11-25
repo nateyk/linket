@@ -107,6 +107,25 @@ vi.mock('@shadcn/button/button', () => ({
     color?: string;
   }) => <button {...props} />,
 }));
+vi.mock('@shadcn/forms/checkbox/checkbox', () => ({
+  Checkbox: ({checked, indeterminate: _indeterminate, bindToHookForm: _bind,
+    onCheckedChange, ...props}: any) => (
+    <input type="checkbox" checked={checked}
+      onChange={event => onCheckedChange(event.target.checked)} {...props} />
+  ),
+}));
+vi.mock('@shadcn/dropdown/dropdown', () => ({
+  Dropdown: {
+    Root: ({children}: any) => <div>{children}</div>,
+    Trigger: ({render}: any) => <>{render}</>,
+    Content: ({children}: any) => <div>{children}</div>,
+    GroupLabel: 'p',
+    CheckboxItem: ({checked, onCheckedChange, onSelect: _select, children}: any) => (
+      <button type="button" role="menuitemcheckbox" aria-checked={checked}
+        onClick={() => onCheckedChange(!checked)}>{children}</button>
+    ),
+  },
+}));
 vi.mock('@shadcn/skeleton/skeleton', () => ({
   Skeleton: () => <span data-testid="skeleton" />,
 }));
@@ -433,6 +452,37 @@ it('shows summary and orders, and sends status, search and page filters to the s
       }),
     ),
   );
+});
+
+it('sorts full filtered orders on the server and resets to page one', async () => {
+  mockApi({orders: [baseOrder], lastPage: 3, total: 45});
+  render(<Component />);
+  await screen.findAllByText('Workbook');
+  fireEvent.click(screen.getByRole('button', {name: 'Amount'}));
+  await waitFor(() => expect(api.get).toHaveBeenCalledWith(
+    '/api/v1/storefront/direct-orders',
+    expect.objectContaining({params: expect.objectContaining({sort: 'amount_desc', page: 1})}),
+  ));
+  expect(screen.getByRole('columnheader', {name: 'Amount'}).getAttribute('aria-sort')).toBe('descending');
+  fireEvent.click(screen.getByRole('button', {name: 'Amount'}));
+  await waitFor(() => expect(api.get).toHaveBeenCalledWith(
+    '/api/v1/storefront/direct-orders',
+    expect.objectContaining({params: expect.objectContaining({sort: 'amount_asc'})}),
+  ));
+});
+
+it('selects current-page rows, enables a real CSV export action and hides optional columns', async () => {
+  mockApi({orders: [baseOrder]});
+  render(<Component />);
+  await screen.findAllByText('Workbook');
+
+  fireEvent.click(screen.getByRole('checkbox', {name: 'Select order order-1'}));
+  expect(screen.getByText('1 selected on this page')).toBeTruthy();
+  expect(screen.getByRole('button', {name: /Export selected/})).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('menuitemcheckbox', {name: 'Buyer'}));
+  expect(screen.queryByRole('columnheader', {name: 'Buyer'})).toBeNull();
+  expect(screen.getByRole('columnheader', {name: 'Product'})).toBeTruthy();
 });
 
 it('changes rows per page with server-backed pagination and resets to page one', async () => {
