@@ -1,6 +1,5 @@
 import {useAuth} from '@common/auth/use-auth';
 import {apiClient} from '@common/http/query-client';
-import {Badge} from '@shadcn/badge/badge';
 import {Button, LinkButton} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {
@@ -12,6 +11,7 @@ import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {toast} from '@shadcn/toast/toast';
 import {Trans} from '@ui/i18n/trans';
+import {cn} from '@ui/utils/cn';
 import useClipboard from '@ui/utils/hooks/use-clipboard';
 import {useLocalStorage} from '@ui/utils/hooks/local-storage';
 import {keepPreviousData, useQuery} from '@tanstack/react-query';
@@ -49,7 +49,8 @@ type SetupStep = {
   label: string;
   done: boolean;
   to: string;
-  nextHint?: string;
+  nextHint: string;
+  actionLabel: string;
 };
 
 const unwrap = <T,>(response: {
@@ -62,7 +63,7 @@ const unwrap = <T,>(response: {
 
 export function CreatorSetupChecklist() {
   const {user} = useAuth();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState<boolean | null>(null);
   const dismissalKey = `creator-setup-checklist-dismissed-v1:${user?.id ?? 'unknown'}`;
   const [dismissed, setDismissed] = useLocalStorage<boolean>(
     dismissalKey,
@@ -133,16 +134,22 @@ export function CreatorSetupChecklist() {
   const checks: SetupStep[] = [
     {
       label: 'Create storefront',
+      nextHint: 'Give your products a home and choose your storefront link.',
+      actionLabel: 'Create storefront',
       done: query.data.stores.length > 0,
       to: '/dashboard/stores',
     },
     {
       label: 'Add digital product',
+      nextHint: 'Add your first digital item with a title and price.',
+      actionLabel: 'Add product',
       done: query.data.products.length > 0,
       to: '/dashboard/items/new',
     },
     {
       label: 'Upload product file',
+      nextHint: 'Attach the file your customers will receive.',
+      actionLabel: 'Upload file',
       done: query.data.products.some(item => (item.files?.length ?? 0) > 0),
       to: product
         ? `/dashboard/items/${product.id}/edit`
@@ -150,6 +157,8 @@ export function CreatorSetupChecklist() {
     },
     {
       label: 'Configure payout account',
+      nextHint: 'Add your payout details so you can request withdrawals.',
+      actionLabel: 'Add payout account',
       done: query.data.accounts.some(
         account =>
           (account.account_configured ??
@@ -160,6 +169,8 @@ export function CreatorSetupChecklist() {
     },
     {
       label: 'Get product approved',
+      nextHint: 'Open your product to review its approval status and submit any required changes.',
+      actionLabel: 'Review product',
       done: query.data.products.some(
         item => item.status === 'approved' || item.status === 'published',
       ),
@@ -169,6 +180,8 @@ export function CreatorSetupChecklist() {
     },
     {
       label: 'Publish product in storefront',
+      nextHint: 'Add your approved product to your storefront.',
+      actionLabel: 'Publish product',
       done: query.data.products.some(
         item =>
           (item.status === 'approved' || item.status === 'published') &&
@@ -181,9 +194,10 @@ export function CreatorSetupChecklist() {
     },
     {
       label: 'Make your first sale',
+      nextHint: 'Share your storefront link to get started',
+      actionLabel: 'Copy store link',
       done: query.data.products.some(item => (item.sales_count ?? 0) > 0),
       to: '/dashboard/items',
-      nextHint: 'Share your storefront link to get started',
     },
   ];
   const completed = checks.filter(check => check.done).length;
@@ -195,24 +209,45 @@ export function CreatorSetupChecklist() {
     return null;
   }
 
+  const open = expanded ?? !isComplete;
+
   return (
     <section aria-labelledby="setup-title">
-      <Card size="sm" className="gap-0">
-        <Card.Header className="pb-4">
+      <Card size="sm" className="gap-3">
+        <Card.Header>
           <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/10 text-primary">
-              <StoreIcon className="size-5" aria-hidden="true" />
+            <span
+              className={cn(
+                'flex size-10 shrink-0 items-center justify-center rounded-card-xs',
+                isComplete
+                  ? 'bg-positive/10 text-positive'
+                  : 'bg-primary/10 text-primary',
+              )}
+            >
+              {isComplete ? (
+                <CheckIcon className="size-5" aria-hidden="true" />
+              ) : (
+                <StoreIcon className="size-5" aria-hidden="true" />
+              )}
             </span>
             <div className="min-w-0">
-              <Card.Title id="setup-title" className="font-semibold">
-                <Trans message="Get your storefront ready to sell" />
+              <Card.Title id="setup-title" role="heading" aria-level={2}>
+                {isComplete ? (
+                  <Trans message="Storefront setup complete" />
+                ) : (
+                  <Trans message="Get your storefront ready to sell" />
+                )}
               </Card.Title>
-              <Card.Description className="mt-0.5">
-                <Trans message="Set up your store and start receiving orders." />
+              <Card.Description className="mt-1">
+                {isComplete ? (
+                  <Trans message="You've completed every step, including your first sale." />
+                ) : (
+                  <Trans message="Follow the steps to launch your store and make your first sale." />
+                )}
               </Card.Description>
             </div>
           </div>
-          {isComplete ? (
+          {isComplete && (
             <Card.Action>
               <Button
                 type="button"
@@ -225,99 +260,139 @@ export function CreatorSetupChecklist() {
                 <XIcon aria-hidden="true" />
               </Button>
             </Card.Action>
-          ) : null}
+          )}
         </Card.Header>
 
-        <Card.Content className="pb-4">
-          <Progress.Root value={percent} className="gap-y-2">
+        <Card.Content>
+          <Progress.Root value={percent}>
             <Progress.Label className="text-sm text-muted-foreground">
               <Trans
                 message=":completed of :total setup steps complete"
                 values={{completed, total: checks.length}}
               />
             </Progress.Label>
-            <Progress.Value className="font-semibold tabular-nums" />
+            <Progress.Value className="font-medium tabular-nums" />
             <Progress.Track className="h-1.5">
-              <Progress.Indicator />
+              <Progress.Indicator
+                className={cn(
+                  'motion-reduce:transition-none',
+                  isComplete && 'bg-positive',
+                )}
+              />
             </Progress.Track>
           </Progress.Root>
         </Card.Content>
 
-        <Collapsible open={expanded} onOpenChange={setExpanded}>
-          <CollapsibleTrigger
-            render={
-              <Button
-                variant="ghost"
-                color="default"
-                className="h-11 w-full justify-between rounded-none border-t px-4"
-              >
-                <span className="flex items-center gap-2">
-                  <Trans message="Setup steps" />
-                  <span className="text-xs font-normal text-muted-foreground tabular-nums">
-                    {completed}/{checks.length}
+        <Collapsible open={open} onOpenChange={setExpanded}>
+          <Card.Content>
+            <CollapsibleTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  color="default"
+                  className="group h-10 w-full justify-between px-3"
+                >
+                  <span>
+                    {open ? (
+                      <Trans message="Hide setup steps" />
+                    ) : (
+                      <Trans message="View setup steps" />
+                    )}
                   </span>
-                </span>
-                <ChevronDownIcon className="transition-transform group-data-panel-open/button:rotate-180" />
-              </Button>
-            }
-          />
-          <CollapsibleContent>
-            <ol id="setup-steps" className="border-t">
-              {checks.map((check, index) => {
-                if (index === nextIndex) {
-                  return (
-                    <li key={check.label}>
-                      <NextStepRow step={check} storeUrl={storeUrl} />
-                    </li>
-                  );
-                }
-
-                if (check.done) {
-                  return (
-                    <li
-                      key={check.label}
-                      className="flex min-h-11 items-center gap-3 border-b px-4 py-2.5 last:border-b-0"
-                    >
-                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-positive text-primary-foreground">
-                        <CheckIcon
-                          className="size-3"
-                          strokeWidth={3}
-                          aria-hidden="true"
-                        />
-                      </span>
-                      <span className="min-w-0 flex-1 text-sm text-muted-foreground">
-                        <Trans message={check.label} />
-                      </span>
-                      <Badge variant="positive">
-                        <Trans message="Complete" />
-                      </Badge>
-                    </li>
-                  );
-                }
-
-                return (
-                  <li key={check.label} className="border-b last:border-b-0">
-                    <Link
-                      to={check.to}
-                      className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-sm font-medium outline-none transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
-                    >
-                      <span className="size-5 shrink-0 rounded-full border border-border bg-background" />
-                      <span className="min-w-0 flex-1">
-                        <Trans message={check.label} />
-                      </span>
-                    </Link>
+                  <ChevronDownIcon
+                    aria-hidden="true"
+                    className={cn(
+                      'transition-transform motion-reduce:transition-none',
+                      open && 'rotate-180',
+                    )}
+                  />
+                </Button>
+              }
+            />
+            {!open && !isComplete && nextIndex >= 0 && (
+              <div className="mt-2">
+                <NextStepRow
+                  step={checks[nextIndex]}
+                  index={nextIndex}
+                  storeUrl={storeUrl}
+                />
+              </div>
+            )}
+            <CollapsibleContent className="motion-reduce:transition-none">
+              <ol id="setup-steps" className="space-y-1 pt-2">
+                {checks.map((step, index) => (
+                  <li key={step.label} aria-current={index === nextIndex ? 'step' : undefined}>
+                    {index === nextIndex ? (
+                      <NextStepRow step={step} index={index} storeUrl={storeUrl} />
+                    ) : step.done ? (
+                      <div className="flex min-h-10 items-center gap-3 px-3 py-2">
+                        <StepIndicator index={index} done />
+                        <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+                          <Trans message={step.label} />
+                        </span>
+                        <span className="sr-only">
+                          <Trans message="Complete" />
+                        </span>
+                      </div>
+                    ) : (
+                      <Link
+                        to={step.to}
+                        className="flex min-h-10 items-center gap-3 rounded-card-xs px-3 py-2 text-sm font-medium outline-none transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary motion-reduce:transition-none"
+                      >
+                        <StepIndicator index={index} />
+                        <span className="min-w-0 flex-1">
+                          <Trans message={step.label} />
+                        </span>
+                        <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground rtl:rotate-180" aria-hidden="true" />
+                      </Link>
+                    )}
                   </li>
-                );
-              })}
-            </ol>
-          </CollapsibleContent>
+                ))}
+              </ol>
+            </CollapsibleContent>
+          </Card.Content>
         </Collapsible>
       </Card>
     </section>
   );
 }
 
-function NextStepRow({step, storeUrl}: {step: SetupStep; storeUrl: string}) {
+function StepIndicator({
+  index,
+  done = false,
+  active = false,
+}: {
+  index: number;
+  done?: boolean;
+  active?: boolean;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums',
+        done
+          ? 'border-transparent bg-positive/10 text-positive'
+          : active
+            ? 'border-primary bg-primary text-primary-foreground'
+            : 'border-border bg-card text-muted-foreground',
+      )}
+    >
+      {done ? <CheckIcon className="size-4" /> : index + 1}
+    </span>
+  );
+}
+
+function NextStepRow({
+  step,
+  index,
+  storeUrl,
+}: {
+  step: SetupStep;
+  index: number;
+  storeUrl: string;
+}) {
   const isFirstSale = step.label === 'Make your first sale';
   const [, copyToClipboard] = useClipboard(storeUrl);
 
@@ -333,43 +408,36 @@ function NextStepRow({step, storeUrl}: {step: SetupStep; storeUrl: string}) {
   };
 
   return (
-    <div className="flex flex-col gap-3 border-b bg-primary/4 px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 size-5 shrink-0 rounded-full border border-primary bg-background" />
+    <div className="flex min-w-0 items-start gap-3 rounded-card-xs border border-primary/30 bg-primary/4 p-3">
+      <StepIndicator index={index} active />
+      <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">
-              <Trans message={step.label} />
-            </span>
-            <Badge variant="outline" className="border-primary/30 text-primary">
-              <Trans message="Up next" />
-            </Badge>
-          </div>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {step.nextHint ? (
-              <Trans message={step.nextHint} />
-            ) : (
-              <Trans message="Continue with this step to finish setup." />
-            )}
+          <p className="text-xs font-medium text-primary">
+            <Trans message="Up next" />
+          </p>
+          <p className="mt-1 text-sm font-medium text-foreground">
+            <Trans message={step.label} />
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <Trans message={step.nextHint} />
           </p>
         </div>
+        {isFirstSale && storeUrl ? (
+          <Button
+            type="button"
+            size="sm"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => void onCopy()}
+          >
+            <Trans message={step.actionLabel} />
+          </Button>
+        ) : (
+          <LinkButton to={isFirstSale ? '/dashboard/stores' : step.to} size="sm" className="w-full shrink-0 sm:w-auto">
+            <Trans message={isFirstSale ? 'View storefront' : step.actionLabel} />
+            <ArrowRightIcon data-icon="inline-end" className="rtl:rotate-180" aria-hidden="true" />
+          </LinkButton>
+        )}
       </div>
-      {isFirstSale ? (
-        <Button
-          type="button"
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => void onCopy()}
-        >
-          <Trans message="Copy store link" />
-          <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
-        </Button>
-      ) : (
-        <LinkButton to={step.to} size="sm" className="w-full sm:w-auto">
-          <Trans message="Continue setup" />
-          <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
-        </LinkButton>
-      )}
     </div>
   );
 }
