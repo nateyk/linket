@@ -153,6 +153,35 @@ describe('R06 product type picker semantics', () => {
     expect(options[2].className).not.toContain('bg-primary/5');
     expect(options[3].className).not.toContain('bg-primary/5');
   });
+
+  test('cards use a two-column mobile and four-column desktop layout without a second selection indicator', () => {
+    const {container} = render(
+      <ProductTypePicker value="ebook" onValueChange={() => {}} />,
+    );
+    const group = screen.getByRole('radiogroup', {name: 'Product type'});
+    expect(group.className).toContain('grid-cols-2');
+    expect(group.className).toContain('sm:grid-cols-4');
+    const cards = Array.from(container.querySelectorAll('label'));
+    expect(cards).toHaveLength(4);
+    for (const card of cards) {
+      expect(card.className).toContain('min-h-40');
+      expect(card.className).toContain('bg-card');
+      expect(card.querySelectorAll('[role="radio"]')).toHaveLength(1);
+      expect(card.querySelector('[data-selection-glyph]')).toBeNull();
+    }
+    expect(cards[1].className).toContain('border-primary/60');
+    expect(cards[0].className).not.toContain('border-primary/60');
+  });
+
+  test('the complete card is clickable and updates the selection', async () => {
+    const user = userEvent.setup();
+    const {container} = render(<ControlledTypePicker />);
+    const cards = Array.from(container.querySelectorAll('label'));
+    await user.click(cards[3]);
+    expect(cards[3].className).toContain('border-primary/60');
+    expect(cards[3].querySelector('[role="radio"]')?.hasAttribute('data-checked')).toBe(true);
+    expect(cards[0].className).not.toContain('border-primary/60');
+  });
 });
 
 describe('R06 billing mode picker semantics', () => {  test('renders a radiogroup with two radio options', () => {
