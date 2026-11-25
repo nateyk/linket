@@ -2,7 +2,7 @@ import {useTrackedEventsFilters} from '@app/dashboard/reports/tracked-events-fil
 import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {ReportDateSelector} from '@common/admin/analytics/report-date-selector';
-import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
+import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
@@ -32,18 +32,18 @@ export function Component() {
     <>
       <StaticPageTitle>{title}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader className="max-md:h-auto max-md:flex-wrap max-md:py-2">
+        <DashboardLayout.SectionHeader className="max-md:h-auto max-md:flex-wrap max-md:gap-y-2 max-md:py-3">
           <DashboardLayout.SidebarToggle />
           <DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>
-          <div className="ms-auto flex shrink-0 items-center gap-2 max-md:order-3 max-md:w-full max-md:justify-end">
+          <div className="ms-auto flex shrink-0 items-center gap-2 max-md:order-3 max-md:w-full max-md:justify-between">
             <ReportDateSelector
               value={dateRange}
               onChange={setDateRange}
             />
-            <AddFilterButton
+            <AddFilterPopover
               filters={trackedEventsFilters}
-              color={null}
               variant="outline"
+              compactOnMobile
             />
           </div>
         </DashboardLayout.SectionHeader>
@@ -71,7 +71,7 @@ export function Component() {
         </Tabs.Root>
         <AdHost slot="dashboard" className="mt-6" />
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <FilterList filters={trackedEventsFilters} />
+          <FilterList filters={trackedEventsFilters} className="max-w-full flex-wrap" />
           <Outlet context={dateRange} />
           {links?.dash_footer && <Footer padding="mt-11" />}
         </DashboardLayout.SectionContent>
