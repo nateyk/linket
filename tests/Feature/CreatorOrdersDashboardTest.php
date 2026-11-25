@@ -167,6 +167,38 @@ test('creator orders dashboard lists only owned orders with real summary totals'
         ->assertJsonPath('data.total', 4);
 });
 
+test('creator orders sorting is server-side, paginated, scoped and validated', function () {
+    [$creator, , $product] = creatorOrdersDashboardFixture();
+    [$other, , $otherProduct] = creatorOrdersDashboardFixture('Other product');
+
+    $small = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa', 'gross_amount_cents' => 1200,
+    ]);
+    $large = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa', 'gross_amount_cents' => 4800,
+    ]);
+    $middle = creatorOrdersDashboardOrder($creator, $product, [
+        'status' => 'paid', 'payment_gateway' => 'chapa', 'gross_amount_cents' => 3000,
+    ]);
+    $outsider = creatorOrdersDashboardOrder($other, $otherProduct, [
+        'status' => 'paid', 'payment_gateway' => 'chapa', 'gross_amount_cents' => 99999,
+    ]);
+
+    creatorOrdersDashboardActAs($this, $creator);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa&sort=amount_desc&per_page=2')
+        ->assertOk()
+        ->assertJsonPath('data.total', 3)
+        ->assertJsonPath('data.data.0.uuid', $large->uuid)
+        ->assertJsonPath('data.data.1.uuid', $middle->uuid)
+        ->assertJsonMissing(['uuid' => $outsider->uuid]);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa&sort=amount_desc&per_page=2&page=2')
+        ->assertOk()->assertJsonPath('data.data.0.uuid', $small->uuid);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa&sort=amount_asc&per_page=2')
+        ->assertOk()->assertJsonPath('data.data.0.uuid', $small->uuid);
+    $this->getJson('/api/v1/storefront/direct-orders?gateway=chapa&sort=bad_column')
+        ->assertUnprocessable();
+});
+
 test('gateway-scoped orders and financial metrics exclude historical Verify.et from Chapa totals', function () {
     [$creator, , $product] = creatorOrdersDashboardFixture();
     [$otherCreator, , $otherProduct] = creatorOrdersDashboardFixture();
