@@ -213,7 +213,7 @@ export function CreatorSetupChecklist() {
 
   return (
     <section aria-labelledby="setup-title">
-      <Card size="sm" className="gap-3">
+      <Card size="sm" className="data-[size=sm]:gap-3">
         <Card.Header>
           <div className="flex min-w-0 items-start gap-3">
             <span
@@ -311,7 +311,7 @@ export function CreatorSetupChecklist() {
               }
             />
             {!open && !isComplete && nextIndex >= 0 && (
-              <div className="mt-2">
+              <div className="mt-2" aria-current="step">
                 <NextStepRow
                   step={checks[nextIndex]}
                   index={nextIndex}
@@ -319,7 +319,11 @@ export function CreatorSetupChecklist() {
                 />
               </div>
             )}
-            <CollapsibleContent className="motion-reduce:transition-none">
+            <CollapsibleContent
+              inert={!open}
+              aria-hidden={!open}
+              className="motion-reduce:transition-none"
+            >
               <ol id="setup-steps" className="space-y-1 pt-2">
                 {checks.map((step, index) => (
                   <li key={step.label} aria-current={index === nextIndex ? 'step' : undefined}>
