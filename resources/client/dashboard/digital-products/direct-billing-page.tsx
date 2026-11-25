@@ -3,6 +3,8 @@ import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
+import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
@@ -22,6 +24,11 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {useIsMobileMediaQuery} from '@ui/utils/hooks/is-mobile-media-query';
 import {
   CalendarDaysIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ArrowUpDownIcon,
+  Columns3Icon,
+  DownloadIcon,
   ChartNoAxesCombinedIcon,
   CircleDollarSignIcon,
   EyeIcon,
@@ -36,6 +43,7 @@ import {
   ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -118,6 +126,7 @@ type OrderDetail = Order & {
   } | null;
 };
 
+type OrderSort = 'newest' | 'oldest' | 'amount_desc' | 'amount_asc' | 'buyer_asc' | 'buyer_desc';
 const PAGE_SIZE_OPTIONS = [15, 25, 50] as const;
 
 const emptyPagination: PaginationData = {
@@ -161,6 +170,12 @@ export function Component() {
   const [orderPerPage, setOrderPerPage] = useState(() =>
     pageSizeFrom(searchParams.get('per_page')),
   );
+  const [orderSort, setOrderSort] = useState<OrderSort>(() => {
+    const raw = searchParams.get('sort');
+    return ['newest', 'oldest', 'amount_desc', 'amount_asc', 'buyer_asc', 'buyer_desc'].includes(raw ?? '')
+      ? raw as OrderSort
+      : 'newest';
+  });
   const debouncedOrderSearch = useDebouncedValue(orderSearch, 300);
 
   const [detailUuid, setDetailUuid] = useState<string>();
@@ -181,6 +196,7 @@ export function Component() {
           to: orderTo || undefined,
           page: orderPage,
           per_page: orderPerPage,
+          sort: orderSort,
         },
       });
       if (sequence !== ordersRequest.current) return;
@@ -202,6 +218,7 @@ export function Component() {
     orderTo,
     orderPage,
     orderPerPage,
+    orderSort,
   ]);
 
   useEffect(() => {
@@ -276,6 +293,8 @@ export function Component() {
                 <Card.Content className="px-0">
                   <OrdersTable
                     orders={orders}
+                    sort={orderSort}
+                    onSortChange={value => {setOrderSort(value); setOrderPage(1);}}
                     loading={ordersLoading}
                     error={ordersError}
                     onView={setDetailUuid}
@@ -486,13 +505,17 @@ function OrderFilters({
   );
 }
 
+
+type OptionalOrderColumn = 'buyer' | 'amount' | 'date' | 'status';
+const orderColumns: {id: OptionalOrderColumn; label: ReactNode}[] = [
+  {id: 'buyer', label: <Trans message="Buyer" />},
+  {id: 'amount', label: <Trans message="Amount" />},
+  {id: 'date', label: <Trans message="Date" />},
+  {id: 'status', label: <Trans message="Status" />},
+];
+
 function OrdersTable({
-  orders,
-  loading,
-  error,
-  onView,
-  onRetry,
-  emptyMessage,
+  orders, loading, error, onView, onRetry, emptyMessage, sort, onSortChange,
 }: {
   orders: Order[];
   loading: boolean;
@@ -500,23 +523,32 @@ function OrdersTable({
   onView: (uuid: string) => void;
   onRetry?: () => void;
   emptyMessage?: ReactNode;
+  sort: OrderSort;
+  onSortChange: (value: OrderSort) => void;
 }) {
   const {trans} = useTrans();
   const isMobile = useIsMobileMediaQuery();
+  const [selection, setSelection] = useState<Record<string, boolean>>({});
+  const [visible, setVisible] = useState<Record<OptionalOrderColumn, boolean>>({
+    buyer: true, amount: true, date: true, status: true,
+  });
+  // Selection never crosses the server's search, filter or pagination boundary.
+  useEffect(() => setSelection({}), [orders]);
+  const selectedOrders = useMemo(() => orders.filter(order => selection[order.uuid]), [orders, selection]);
+  const allSelected = orders.length > 0 && selectedOrders.length === orders.length;
+  const toggle = (uuid: string, checked: boolean) =>
+    setSelection(previous => ({...previous, [uuid]: checked}));
+  const toggleAll = (checked: boolean) =>
+    setSelection(checked ? Object.fromEntries(orders.map(order => [order.uuid, true])) : {});
+
   if (loading) return <TableLoading />;
   if (error) {
     return (
-      <div
-        className="flex flex-col items-start gap-3 px-6 py-8"
-        role="alert"
-      >
+      <div className="flex flex-col items-start gap-3 px-5 py-8" role="alert">
         <p className="text-sm text-destructive">{error}</p>
-        {onRetry && (
-          <Button variant="outline" size="sm" onClick={onRetry}>
-            <RefreshCwIcon aria-hidden="true" />
-            <Trans message="Try again" />
-          </Button>
-        )}
+        {onRetry && <Button variant="outline" size="sm" onClick={onRetry}>
+          <RefreshCwIcon aria-hidden="true" /><Trans message="Try again" />
+        </Button>}
       </div>
     );
   }
@@ -524,16 +556,10 @@ function OrdersTable({
     return (
       <Empty.Root>
         <Empty.Header>
-          <Empty.Media variant="icon">
-            <ReceiptTextIcon />
-          </Empty.Media>
-          <Empty.Title>
-            <Trans message="No orders found" />
-          </Empty.Title>
-          <Empty.Description>
-            {emptyMessage ?? (
-              <Trans message="Orders will appear here after a buyer tries to purchase one of your products." />
-            )}
+          <Empty.Media variant="icon"><ReceiptTextIcon /></Empty.Media>
+          <Empty.Title><Trans message="No orders found" /></Empty.Title>
+          <Empty.Description>{emptyMessage ??
+            <Trans message="Orders will appear here after a buyer tries to purchase one of your products." />}
           </Empty.Description>
         </Empty.Header>
       </Empty.Root>
@@ -541,152 +567,204 @@ function OrdersTable({
   }
 
   return (
-    <>
+    <div className="min-w-0">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2.5 sm:px-4">
+        <p className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
+          {selectedOrders.length
+            ? <Trans message=":count selected on this page" values={{count: selectedOrders.length}} />
+            : <Trans message=":count orders on this page" values={{count: orders.length}} />}
+        </p>
+        <div className="flex items-center gap-2">
+          {selectedOrders.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => exportSelectedOrders(selectedOrders)}>
+              <DownloadIcon aria-hidden="true" />
+              <Trans message="Export selected" />
+              <span className="tabular-nums">({selectedOrders.length})</span>
+            </Button>
+          )}
+          {!isMobile && (
+            <Dropdown.Root>
+              <Dropdown.Trigger render={
+                <Button variant="outline" size="sm" aria-label={trans({message: 'Choose visible columns'})}>
+                  <Columns3Icon aria-hidden="true" /><Trans message="Columns" />
+                </Button>
+              } />
+              <Dropdown.Content align="end">
+                <Dropdown.GroupLabel><Trans message="Show columns" /></Dropdown.GroupLabel>
+                {orderColumns.map(column => (
+                  <Dropdown.CheckboxItem key={column.id} checked={visible[column.id]}
+                    onCheckedChange={checked => setVisible(previous => ({...previous, [column.id]: checked}))}
+                    onSelect={event => event.preventDefault()}>
+                    {column.label}
+                  </Dropdown.CheckboxItem>
+                ))}
+              </Dropdown.Content>
+            </Dropdown.Root>
+          )}
+        </div>
+      </div>
+
       {isMobile ? (
-        <div className="divide-y" role="list" aria-label={trans({message: 'Orders'})}>
+        <div className="divide-y divide-border/70" role="list" aria-label={trans({message: 'Orders'})}>
           {orders.map(order => (
-            <article key={order.uuid} role="listitem" className="min-w-0 space-y-3 px-4 py-3">
+            <article key={order.uuid} role="listitem" className="min-w-0 px-3 py-3">
               <div className="flex min-w-0 items-start gap-3">
+                <Checkbox bindToHookForm={false} checked={!!selection[order.uuid]}
+                  onCheckedChange={checked => toggle(order.uuid, checked)}
+                  aria-label={trans({message: 'Select order :id', values: {id: order.uuid.slice(0, 8)}})}
+                  className="mt-2" />
                 <OrderMark order={order} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start gap-2">
-                    <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-                      {order.product?.title ?? <Trans message="Deleted product" />}
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="size-10 shrink-0"
-                      aria-label={trans({message: 'View details'})}
-                      onClick={() => onView(order.uuid)}
-                    >
-                      <EyeIcon aria-hidden="true" />
-                    </Button>
-                  </div>
-                  <p className="truncate text-sm text-muted-foreground">
+                  <p className="truncate text-sm font-semibold">
+                    {order.product?.title ?? <Trans message="Deleted product" />}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
                     {order.buyer_name || <Trans message="Guest buyer" />}
                   </p>
-                  {order.buyer_email && (
-                    <p className="truncate text-xs text-muted-foreground">{order.buyer_email}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex min-w-0 items-center justify-between gap-3 border-t pt-3">
-                <div className="min-w-0 space-y-1">
-                  <OrderStatusBadge status={order.status} />
-                  <p className="text-xs text-muted-foreground">
-                    <FormattedDate preset="short" date={order.created_at} />
+                  {order.buyer_email && <p className="truncate text-xs text-muted-foreground">{order.buyer_email}</p>}
+                  <p className="truncate font-mono text-xs text-muted-foreground">
+                    {'#' + order.uuid.slice(0, 8)}
                   </p>
                 </div>
+                <ViewOrderButton label={trans({message: 'View details'})}
+                  onClick={() => onView(order.uuid)} />
+              </div>
+              <div className="mt-2.5 flex min-w-0 items-center justify-between gap-2 ps-7">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <OrderStatusBadge status={order.status} />
+                  <span className="text-xs text-muted-foreground">
+                    <FormattedDate preset="short" date={order.created_at} />
+                  </span>
+                </div>
                 <span className="shrink-0 text-sm font-semibold tabular-nums">
-                  <FormattedCurrency
-                    valueInCents={order.gross_amount_cents}
-                    currency={order.currency ?? 'ETB'}
-                  />
+                  <FormattedCurrency valueInCents={order.gross_amount_cents}
+                    currency={order.currency ?? 'ETB'} />
                 </span>
               </div>
             </article>
           ))}
         </div>
       ) : (
-        <div className="min-w-0 max-w-full overflow-x-auto">
-          <Table.Root
-            aria-label={trans({message: 'Orders'})}
-            className="w-max min-w-full"
-          >
+        <div className="min-w-0 overflow-x-auto">
+          <Table.Root aria-label={trans({message: 'Orders'})} className="min-w-[720px] border-collapse">
             <Table.Header>
               <Table.Row className="hover:bg-transparent">
-                <Table.Head className="h-11 min-w-56 px-4">
-                  <Trans message="Product" />
+                <Table.Head className="h-10 w-10 px-3">
+                  <Checkbox bindToHookForm={false} checked={allSelected}
+                    indeterminate={!allSelected && selectedOrders.length > 0}
+                    onCheckedChange={toggleAll}
+                    aria-label={trans({message: 'Select all orders on this page'})} />
                 </Table.Head>
-                <Table.Head className="h-11 min-w-44 px-4">
-                  <Trans message="Buyer" />
-                </Table.Head>
-                <Table.Head className="h-11 min-w-28 px-4 text-end">
-                  <Trans message="Amount" />
-                </Table.Head>
-                <Table.Head className="h-11 min-w-36 px-4">
-                  <Trans message="Date" />
-                </Table.Head>
-                <Table.Head className="h-11 min-w-28 px-4">
-                  <Trans message="Status" />
-                </Table.Head>
-                <Table.Head className="h-11 w-12 px-4">
-                  <span className="sr-only">
-                    <Trans message="Actions" />
-                  </span>
-                </Table.Head>
+                <Table.Head className="h-10 min-w-52 px-3 text-xs text-muted-foreground"><Trans message="Product" /></Table.Head>
+                {visible.buyer && <OrderSortHead label={<Trans message="Buyer" />}
+                  sort={sort} ascending="buyer_asc" descending="buyer_desc" onChange={onSortChange} />}
+                {visible.amount && <OrderSortHead label={<Trans message="Amount" />}
+                  sort={sort} ascending="amount_asc" descending="amount_desc" onChange={onSortChange} align="end" />}
+                {visible.date && <OrderSortHead label={<Trans message="Date" />}
+                  sort={sort} ascending="oldest" descending="newest" onChange={onSortChange} />}
+                {visible.status && <Table.Head className="h-10 px-3 text-xs text-muted-foreground"><Trans message="Status" /></Table.Head>}
+                <Table.Head className="h-10 w-12 px-3"><span className="sr-only"><Trans message="Actions" /></span></Table.Head>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {orders.map(order => (
-                <Table.Row key={order.uuid}>
-                  <Table.Cell className="min-w-56 max-w-72 px-4 py-3 align-middle whitespace-normal">
-                    <span className="flex min-w-0 items-center gap-3">
+                <Table.Row key={order.uuid} selected={!!selection[order.uuid]} className="hover:bg-muted/40">
+                  <Table.Cell className="w-10 px-3 py-2.5">
+                    <Checkbox bindToHookForm={false} checked={!!selection[order.uuid]}
+                      onCheckedChange={checked => toggle(order.uuid, checked)}
+                      aria-label={trans({message: 'Select order :id', values: {id: order.uuid.slice(0, 8)}})} />
+                  </Table.Cell>
+                  <Table.Cell className="min-w-52 max-w-72 px-3 py-2.5 whitespace-normal">
+                    <span className="flex min-w-0 items-center gap-2.5">
                       <OrderMark order={order} />
                       <span className="min-w-0">
-                        <span
-                          className="block truncate text-sm font-medium"
-                          title={order.product?.title ?? undefined}
-                        >
-                        {order.product?.title ?? (
-                          <Trans message="Deleted product" />
-                          )}
+                        <span className="block truncate text-sm font-medium" title={order.product?.title ?? undefined}>
+                          {order.product?.title ?? <Trans message="Deleted product" />}
+                        </span>
+                        <span className="block truncate font-mono text-xs text-muted-foreground">
+                          {'#' + order.uuid.slice(0, 8)}
+                          {order.transaction_reference ? ' · ' + order.transaction_reference : ''}
+                        </span>
+                      </span>
                     </span>
-                    <span className="block truncate font-mono text-xs text-muted-foreground">
-                      #{order.uuid.slice(0, 8)}
-                      {order.transaction_reference
-                        ? ` · ${order.transaction_reference}`
-                        : ''}
+                  </Table.Cell>
+                  {visible.buyer && <Table.Cell className="min-w-36 max-w-52 px-3 py-2.5 whitespace-normal">
+                    <span className="block truncate text-sm">{order.buyer_name || <Trans message="Guest buyer" />}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{order.buyer_email}</span>
+                  </Table.Cell>}
+                  {visible.amount && <Table.Cell className="min-w-28 px-3 py-2.5 text-end text-sm font-medium tabular-nums">
+                    <FormattedCurrency valueInCents={order.gross_amount_cents} currency={order.currency ?? 'ETB'} />
+                  </Table.Cell>}
+                  {visible.date && <Table.Cell className="min-w-28 px-3 py-2.5 whitespace-normal">
+                    <span className="block text-sm"><FormattedDate preset="short" date={order.created_at} /></span>
+                    <span className="block text-xs text-muted-foreground">
+                      <FormattedRelativeTime date={order.paid_at ?? order.created_at} />
                     </span>
-                  </span>
-                </span>
-              </Table.Cell>
-              <Table.Cell className="min-w-44 max-w-56 px-4 py-3 align-middle whitespace-normal">
-                <span className="block truncate text-sm leading-5">
-                  {order.buyer_name || (
-                    <span className="text-muted-foreground">
-                      <Trans message="Guest buyer" />
-                    </span>
-                  )}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {order.buyer_email}
-                </span>
-              </Table.Cell>
-              <Table.Cell className="min-w-28 px-4 py-3 text-end align-middle text-sm font-medium tabular-nums">
-                <FormattedCurrency
-                  valueInCents={order.gross_amount_cents}
-                  currency={order.currency ?? 'ETB'}
-                />
-              </Table.Cell>
-              <Table.Cell className="min-w-36 px-4 py-3 align-middle whitespace-normal text-muted-foreground">
-                <span className="block truncate text-sm">
-                  <FormattedDate preset="short" date={order.created_at} />
-                </span>
-                <span className="block truncate text-xs">
-                  <FormattedRelativeTime
-                    date={order.paid_at ?? order.created_at}
-                  />
-                </span>
-              </Table.Cell>
-              <Table.Cell className="min-w-28 px-4 py-3 align-middle">
-                <OrderStatusBadge status={order.status} />
-              </Table.Cell>
-              <Table.Cell className="w-12 px-4 py-3 text-end align-middle">
-                <ViewOrderButton
-                  label={trans({message: 'View details'})}
-                  onClick={() => onView(order.uuid)}
-                />
-              </Table.Cell>
-            </Table.Row>
-          ))}
-          </Table.Body>
-        </Table.Root>
-      </div>
+                  </Table.Cell>}
+                  {visible.status && <Table.Cell className="px-3 py-2.5"><OrderStatusBadge status={order.status} /></Table.Cell>}
+                  <Table.Cell className="w-12 px-3 py-2.5 text-end">
+                    <ViewOrderButton label={trans({message: 'View details'})}
+                      onClick={() => onView(order.uuid)} />
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Root>
+        </div>
       )}
-    </>
+    </div>
   );
+}
+
+function OrderSortHead({
+  label, sort, ascending, descending, onChange, align = 'start',
+}: {
+  label: ReactNode;
+  sort: OrderSort;
+  ascending: OrderSort;
+  descending: OrderSort;
+  onChange: (value: OrderSort) => void;
+  align?: 'start' | 'end';
+}) {
+  const active = sort === ascending || sort === descending;
+  const current = sort === ascending ? 'ascending' : sort === descending ? 'descending' : 'none';
+  return (
+    <Table.Head className={align === 'end' ? 'h-10 px-3 text-end' : 'h-10 px-3'} aria-sort={current}>
+      <Button variant="ghost" size="sm" className="h-8 gap-1 px-1 text-xs text-muted-foreground hover:text-foreground"
+        onClick={() => onChange(sort === descending ? ascending
+          : sort === ascending ? descending
+          : ascending === 'amount_asc' ? descending : ascending)}>
+        {label}
+        {active
+          ? sort === ascending ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />
+          : <ArrowUpDownIcon className="size-3.5 opacity-50" />}
+      </Button>
+    </Table.Head>
+  );
+}
+
+function exportSelectedOrders(orders: Order[]) {
+  // Only selected rows on the loaded page; neutralize user-controlled CSV formulas.
+  const csvField = (value: string | null | undefined) => {
+    const clean = String(value ?? '').replace(/[\r\n\t]+/g, ' ').trim();
+    const escaped = /^[=+\-@\uFF1D\uFF0B\uFF0D\uFF20]/.test(clean) ? "'" + clean : clean;
+    return '"' + escaped.replace(/"/g, '""') + '"';
+  };
+  const fields = ['Order', 'Product', 'Buyer', 'Email', 'Reference', 'Status', 'Amount (cents)', 'Currency', 'Created at'];
+  const rows = orders.map(order => [
+    order.uuid, order.product?.title, order.buyer_name, order.buyer_email,
+    order.transaction_reference, order.status, String(order.gross_amount_cents),
+    order.currency ?? 'ETB', order.created_at,
+  ].map(value => csvField(value)).join(','));
+  const csv = [fields.join(','), ...rows].join('\r\n');
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8'}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'linket-selected-orders.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function ViewOrderButton({

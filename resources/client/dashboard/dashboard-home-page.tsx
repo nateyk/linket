@@ -19,6 +19,7 @@ import {
 import {Empty} from '@shadcn/empty/empty';
 import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
+import {Table} from '@shadcn/table/table';
 import {keepPreviousData, useQuery} from '@tanstack/react-query';
 import {DateRangeValue} from '@ui/forms/input-field/date/date-range-picker/date-range-value';
 import {DateRangePresets} from '@ui/forms/input-field/date/date-range-picker/dialog/date-range-presets';
@@ -462,24 +463,53 @@ function RecentOrders({dateRange}: {dateRange: DateRangeValue}) {
         ) : isError ? (
           <SalesErrorState />
         ) : orders.length ? (
-          <div role="list" aria-label={trans({message: 'Recent orders'})}>
-            <div className="hidden grid-cols-[2fr_1.4fr_1fr_auto] gap-4 rounded-card-sm bg-muted px-3 py-2 text-xs font-medium text-muted-foreground md:grid">
-              <span>
-                <Trans message="Order" />
-              </span>
-              <span>
-                <Trans message="Customer" />
-              </span>
-              <span>
-                <Trans message="Status" />
-              </span>
-              <span className="w-24 text-end">
-                <Trans message="Total" />
-              </span>
+          <div className="min-w-0 overflow-hidden rounded-card-sm border border-border/80">
+            <div className="hidden min-w-0 overflow-x-auto md:block">
+              <Table.Root aria-label={trans({message: 'Recent orders'})} className="w-full border-collapse">
+                <Table.Header>
+                  <Table.Row className="hover:bg-transparent">
+                    <Table.Head className="h-10 min-w-40 px-3 text-xs text-muted-foreground"><Trans message="Order" /></Table.Head>
+                    <Table.Head className="h-10 min-w-32 px-3 text-xs text-muted-foreground"><Trans message="Customer" /></Table.Head>
+                    <Table.Head className="h-10 px-3 text-xs text-muted-foreground"><Trans message="Status" /></Table.Head>
+                    <Table.Head className="h-10 px-3 text-end text-xs text-muted-foreground"><Trans message="Total" /></Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {orders.map(order => (
+                    <Table.Row key={order.uuid} className="hover:bg-muted/40">
+                      <Table.Cell className="max-w-56 px-3 py-2.5 whitespace-normal">
+                        <Link to="/dashboard/orders" className="flex min-w-0 items-center gap-2.5 rounded-sm outline-offset-2 focus-visible:outline-2">
+                          <span className="flex size-8 shrink-0 overflow-hidden rounded-card-sm bg-muted">
+                            {order.product?.cover_url
+                              ? <img src={order.product.cover_url} alt="" className="size-full object-cover" />
+                              : <span className="flex size-full items-center justify-center text-xs text-muted-foreground">{Avatar.initials(order.product?.title) || 'P'}</span>}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-mono text-xs font-semibold tabular-nums">{'#' + order.uuid.slice(0, 8)}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{order.product?.title ?? <Trans message="Digital product" />}</span>
+                          </span>
+                        </Link>
+                      </Table.Cell>
+                      <Table.Cell className="max-w-40 px-3 py-2.5 whitespace-normal">
+                        <span className="block truncate text-sm">{order.buyer_name?.trim() || <Trans message="Guest buyer" />}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {order.buyer_email?.trim() || (order.paid_at ?? order.created_at
+                            ? <FormattedRelativeTime date={order.paid_at ?? order.created_at} />
+                            : <Trans message="Date unavailable" />)}
+                        </span>
+                      </Table.Cell>
+                      <Table.Cell className="px-3 py-2.5"><OrderStatusBadge status={order.status} /></Table.Cell>
+                      <Table.Cell className="px-3 py-2.5 text-end font-medium tabular-nums">
+                        <FormattedCurrency valueInCents={order.gross_amount_cents} currency={order.currency} />
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Root>
             </div>
-            {orders.map(order => (
-              <RecentOrderRow key={order.uuid} order={order} />
-            ))}
+            <div role="list" aria-label={trans({message: 'Recent orders'})} className="divide-y divide-border/70 md:hidden">
+              {orders.map(order => <RecentOrderRow key={order.uuid} order={order} />)}
+            </div>
           </div>
         ) : (
           <OverviewEmptyState
@@ -506,7 +536,7 @@ function RecentOrderRow({order}: {order: DashboardOrder}) {
       to="/dashboard/orders"
       data-slot="recent-order-row"
       role="listitem"
-      className="grid grid-cols-[1fr_auto] items-center gap-4 border-b px-3 py-3 text-sm last:border-b-0 hover:bg-muted/50 md:grid-cols-[2fr_1.4fr_1fr_auto]"
+      className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-3 text-sm hover:bg-muted/40"
     >
       <span className="flex min-w-0 items-center gap-3">
         <span className="flex size-9 shrink-0 overflow-hidden rounded-card-sm bg-muted">

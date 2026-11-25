@@ -156,10 +156,11 @@ it('presents a minimal responsive recent-orders list', async () => {
 
   const list = await screen.findByRole('list', {name: 'Recent orders'});
   expect(list.querySelectorAll('[data-slot="recent-order-row"]')).toHaveLength(2);
-  expect(list.textContent).toContain('Order');
-  expect(list.textContent).toContain('Customer');
-  expect(list.textContent).toContain('Status');
-  expect(list.textContent).toContain('Total');
+  const table = screen.getByRole('table', {name: 'Recent orders'});
+  expect(table.querySelectorAll('thead th')).toHaveLength(4);
+  for (const heading of ['Order', 'Customer', 'Status', 'Total']) {
+    expect(table.textContent).toContain(heading);
+  }
   expect(list.textContent).toContain('Creator guide');
   expect(list.textContent).toContain('First buyer');
   expect(list.textContent).toContain('first@example.test');
