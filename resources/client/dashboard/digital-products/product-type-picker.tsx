@@ -14,7 +14,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type {ReactNode} from 'react';
-import {OptionRowContent} from './option-row';
 
 export type ProductType = 'digital' | 'ebook' | 'audio' | 'course';
 
@@ -60,9 +59,7 @@ export function ProductTypePicker({
       id: 'course',
       icon: GraduationCapIcon,
       title: <Trans message="Course" />,
-      description: (
-        <Trans message="A curriculum with chapters, lessons, and video." />
-      ),
+      description: <Trans message="A curriculum with chapters, lessons, and video." />,
     },
   ];
 
@@ -72,39 +69,55 @@ export function ProductTypePicker({
       value={value ?? ''}
       onValueChange={next => onValueChange(next as ProductType)}
       aria-label={trans({message: 'Product type'})}
-      className="flex w-full min-w-0 flex-col gap-2"
+      className="grid w-full min-w-0 grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3"
     >
-      {PRODUCT_TYPES.map(option => (
-        <label
-          key={option.id}
-          className={cn(
-            'flex w-full shrink-0 cursor-pointer items-center justify-start gap-3 rounded-card-sm border border-border bg-card px-3 py-2.5 text-start whitespace-normal ring-1 ring-transparent outline-none hover:border-foreground/15 hover:bg-muted/30 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-foreground',
-            value === option.id &&
-              'border-primary/60 bg-primary/5 ring-primary/15',
-          )}
-        >
-          <OptionRowContent
-            icon={option.icon}
-            title={option.title}
-            description={option.description}
-            checked={value === option.id}
-            hint={
-              // Course has no single file capability; e-book's formats are
-              // already stated in its description, so a hint would repeat it.
-              option.id === 'course' || option.id === 'ebook'
-                ? undefined
-                : formats?.[option.id]?.hint
-            }
-          />
-          {/* The real radio is the row's single visible indicator (no drawn
-              twin). Its own focus ring is suppressed — the card outline is
-              the one focus treatment (T1). */}
-          <RadioGroupItem
-            value={option.id}
-            className="focus-visible:ring-0 focus-visible:ring-offset-0"
-          />
-        </label>
-      ))}
+      {PRODUCT_TYPES.map(option => {
+        const selected = value === option.id;
+        const Icon = option.icon;
+        const hint =
+          option.id === 'course' || option.id === 'ebook'
+            ? undefined
+            : formats?.[option.id]?.hint;
+
+        return (
+          <label
+            key={option.id}
+            className={cn(
+              'group relative flex min-h-40 min-w-0 cursor-pointer flex-col items-start gap-3 rounded-card-sm border border-border bg-card p-3 text-start whitespace-normal outline-none transition-[border-color,background-color,box-shadow] hover:border-primary/35 hover:bg-muted/30 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-foreground',
+              selected && 'border-primary/60 bg-primary/5 ring-2 ring-primary/15',
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                'flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-primary/10 text-primary transition-colors',
+                selected && 'bg-primary text-primary-foreground',
+              )}
+            >
+              <Icon className="size-4.5" />
+            </span>
+            {/* The real radio remains the only selection indicator. It is
+                visible and keyboard focus draws a ring around the entire card. */}
+            <RadioGroupItem
+              value={option.id}
+              className="absolute end-3 top-3 focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+            <span className="mt-auto flex min-w-0 w-full flex-col gap-1">
+              <span className="text-sm leading-tight font-semibold text-foreground">
+                {option.title}
+              </span>
+              <span className="line-clamp-3 text-xs leading-4 text-muted-foreground">
+                {option.description}
+              </span>
+              {hint && (
+                <span className="line-clamp-1 text-[11px] leading-4 text-muted-foreground">
+                  {hint}
+                </span>
+              )}
+            </span>
+          </label>
+        );
+      })}
     </RadioGroup>
   );
 }
