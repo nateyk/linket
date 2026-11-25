@@ -603,11 +603,11 @@ function CourseBuilder() {
   if (loading) {
     return (
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
           <DashboardLayout.SidebarToggle />
           <DashboardLayout.SectionTitle
             render={<h1 />}
-            className="max-lg:basis-full max-lg:whitespace-normal"
+            className="max-lg:flex-wrap max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip max-lg:text-xl"
           >
             <Trans message="Course Builder" />
           </DashboardLayout.SectionTitle>
@@ -657,13 +657,15 @@ function CourseBuilder() {
 
   return (
     <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader>
+      <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle
           render={<h1 />}
-          className="max-lg:basis-full max-lg:whitespace-normal"
+          className="max-lg:flex-wrap max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip max-lg:text-xl"
         >
-          <Trans message="Course Builder" />
+          <span className="min-w-0 max-lg:break-words">
+            <Trans message="Course Builder" />
+          </span>
           {course.product.status === 'approved' && (
             <Badge variant="positive" className="ms-2">
               <Trans message="Published" />
@@ -675,7 +677,7 @@ function CourseBuilder() {
             </Badge>
           )}
         </DashboardLayout.SectionTitle>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 max-lg:w-full max-lg:basis-full max-lg:flex-wrap max-lg:justify-end lg:shrink-0">
           <div className="hidden items-center gap-2 lg:flex">
             <Button
               variant="outline"
