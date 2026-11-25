@@ -219,7 +219,7 @@ describe('Appearance editor → storefront contract', () => {
 
   test('Buttons style Message, socials, nav active, and product View', () => {
     expect(creator).toContain('style={buttonAppearance.style}');
-    expect(creator).toContain('activeButtonStyle={buttonAppearance.style}');
+    expect(creator).toContain('style={selected ? buttonAppearance.style : undefined}');
     expect(creator).toContain('buttonAppearance.className');
     expect(creator).toContain('pointer-coarse:min-h-11 pointer-coarse:min-w-11');
     // The shop may wrap the action classes in cn(); assert the resolved
@@ -431,10 +431,12 @@ describe('creator profile card wiring', () => {
     expect(source).not.toContain('rounded-card-sm');
   });
 
-  test('passes the remapped button radius token to the bottom navigation bar', () => {
-    // Setting names (rounded-sm|lg|…) bypass --be-radius-button; rounded-button
-    // is what the Appearance radius scale remaps on the page root.
-    expect(source).toContain('radius="rounded-button"');
+  test('uses the remapped appearance radius in the mobile sticky section header', () => {
+    // The segmented track and active button both resolve rounded-button
+    // from the creator's Appearance radius, never the raw setting utility.
+    expect(source).toContain('resolveBiolinkSegmentedTabsAppearance(appearance)');
+    expect(source).toContain('segmentedAppearance.listClassName');
+    expect(source).toContain('buttonAppearance.className');
     expect(source).not.toContain('radius={buttonAppearance.radius}');
   });
 
@@ -444,11 +446,11 @@ describe('creator profile card wiring', () => {
     );
   });
 
-  test('passes the resolved button appearance to the bottom navigation bar', () => {
-    expect(source).toContain(
-      'activeButtonClassName={buttonAppearance.className}',
-    );
-    expect(source).toContain('activeButtonStyle={buttonAppearance.style}');
+  test('applies the resolved button appearance to the active sticky section', () => {
+    expect(source).toContain('selected');
+    expect(source).toContain('buttonAppearance.className');
+    expect(source).toContain('style={selected ? buttonAppearance.style : undefined}');
+    expect(source).toContain('aria-pressed={selected}');
   });
 
   test('shares the surface ring edge and Appearance shadow soft-pop on the shell', () => {
@@ -652,16 +654,15 @@ describe('storefront bottom nav appearance wiring', () => {
     expect(navSource).toContain('bg-card/95');
   });
 
-  test('storefront bottom nav shells with --biolink-* instead of dashboard card chrome', () => {
-    const layout = fs.readFileSync(
-      path.resolve(
-        'resources/client/short-links/renderers/biolink-renderer/creator-profile-layout.tsx',
-      ),
-      'utf8',
-    );
-    expect(layout).toContain('bg-[var(--biolink-surface)]/95');
-    expect(layout).toContain('inactiveButtonClassName');
+  test('creator storefront sticky header uses biolink tokens, not dashboard chrome', () => {
+    const layout = readSource('creator-profile-layout.tsx');
+    expect(layout).toContain('data-testid="mobile-storefront-section-nav"');
+    expect(layout).toContain('sticky top-[var(--safe-top');
+    expect(layout).toContain('resolveBiolinkSegmentedTabsAppearance');
+    expect(layout).toContain('segmentedAppearance.listClassName');
     expect(layout).toContain('text-[var(--biolink-muted-text)]');
+    expect(layout).toContain('hover:bg-[var(--biolink-surface-muted)]');
+    expect(layout).not.toContain('inactiveButtonClassName=');
     expect(layout).toContain(
       "return hasProducts ? 'products' : hasServices ? 'services' : 'profile';",
     );
