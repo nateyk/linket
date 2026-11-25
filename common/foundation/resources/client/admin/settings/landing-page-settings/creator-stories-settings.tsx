@@ -1,3 +1,4 @@
+import {safeStorefrontPath} from '@common/ui/landing-page/creator-stories/creator-stories';
 import {LandingPageImageSelector} from '@common/admin/settings/landing-page-settings/landing-page-image-selector';
 import {Button} from '@shadcn/button/button';
 import {Drawer} from '@shadcn/drawer/drawer';
@@ -90,12 +91,16 @@ type StoryEditorProps = {
 function StoryEditor({index, path, open, setOpen, onDelete}: StoryEditorProps) {
   const name = useWatch({name: `${path}.creatorName`});
   const approved = useWatch({name: `${path}.approved`});
+  const image = useWatch({name: `${path}.image`});
+  const storefrontPath = useWatch({name: `${path}.storefrontPath`});
+  const publishable = approved && name?.trim() && image?.src &&
+    safeStorefrontPath(storefrontPath ?? '');
   return (
     <Drawer.Root position="right" open={open} onOpenChange={setOpen}>
       <Drawer.Trigger render={<Button type="button" variant="outline" className="w-full justify-start" />}>
         <span className="truncate">{name || `Creator ${index + 1}`}</span>
         <span className="ml-auto text-xs text-muted-foreground">
-          {approved ? <Trans message="Approved" /> : <Trans message="Draft" />}
+          {publishable ? <Trans message="Ready to publish" /> : <Trans message="Not published" />}
         </span>
         <ChevronRight className="size-4 text-muted-foreground" />
       </Drawer.Trigger>
