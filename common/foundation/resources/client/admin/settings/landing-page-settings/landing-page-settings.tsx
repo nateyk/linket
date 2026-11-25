@@ -1,5 +1,6 @@
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {AdminSettings} from '@common/admin/settings/admin-settings';
+import {CreatorStoriesSettings} from '@common/admin/settings/landing-page-settings/creator-stories-settings';
 import {CtaSectionSettings} from '@common/admin/settings/landing-page-settings/cta-section-settings';
 import {FaqSectionSettings} from '@common/admin/settings/landing-page-settings/faq-section-settings';
 import {FeatureSectionSettings} from '@common/admin/settings/landing-page-settings/feature-section-settings';
@@ -201,6 +202,8 @@ function SectionConfigPanel({name, index}: SectionConfigProps) {
       return <FeatureSectionSettings index={index} />;
     case 'features-grid':
       return <FeaturesGridSettings index={index} />;
+    case 'creator-stories':
+      return <CreatorStoriesSettings index={index} />;
     case 'faq':
       return <FaqSectionSettings index={index} />;
     case 'cta-simple-centered':

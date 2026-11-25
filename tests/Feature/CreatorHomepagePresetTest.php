@@ -21,7 +21,9 @@ class CreatorHomepagePresetTest extends TestCase
         $this->assertContains('pricing', array_column($config['sections'], 'name'));
         $this->assertContains('faq', array_column($config['sections'], 'name'));
         $this->assertSame('/register', $config['sections'][0]['buttons'][0]['action']);
-        $this->assertStringNotContainsString('500', $config['sections'][6]['title']);
+        $this->assertSame('creator-stories', $config['sections'][6]['name']);
+        $this->assertSame([], $config['sections'][6]['stories']);
+        $this->assertStringNotContainsString('500', $config['sections'][7]['title']);
     }
 
     public function test_default_settings_and_preset_share_the_same_sections(): void

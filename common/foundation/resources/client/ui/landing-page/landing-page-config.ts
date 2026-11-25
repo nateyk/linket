@@ -1,4 +1,5 @@
 import type {MenuItemConfig} from '@common/menus/menu-config';
+import type {CreatorStoriesConfig} from '@common/ui/landing-page/creator-stories/creator-stories';
 import type {CtaSimpleCenteredConfig} from '@common/ui/landing-page/cta/cta-simple-centered';
 import type {LandingPageFaqConfig} from '@common/ui/landing-page/faq/landing-page-faq';
 import type {FeatureWithScreenshotConfig} from '@common/ui/landing-page/features/feature-with-screenshot';
@@ -28,6 +29,7 @@ export type SectionConfig =
   | FeatureWithScreenshotConfig
   | FeaturesGridConfig
   | LandingPageFaqConfig
+  | CreatorStoriesConfig
   | CtaSimpleCenteredConfig
   | LandingPagePricingConfig
   | LandingPageFooterConfig;
