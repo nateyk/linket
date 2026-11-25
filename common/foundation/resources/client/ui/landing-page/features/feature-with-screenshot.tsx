@@ -15,6 +15,10 @@ export type FeatureWithScreenshotConfig = {
   badge: string;
   description: string;
   image?: LandingPageImageConfig;
+  mobileImage?: LandingPageImageConfig;
+  imageAlt?: string;
+  mobileImageAlt?: string;
+  mediaVariant?: 'browser' | 'checkout';
   imageSize?: 'xs' | 'sm' | 'lg' | 'md';
   alignLeft?: boolean;
   imagePanel?: boolean;
@@ -68,14 +72,14 @@ export function FeatureWithScreenshot({config}: Props) {
               >
                 <div className="lg:max-w-lg">
                   {config.badge ? (
-                    <h2 className="text-base/7 font-semibold text-primary">
+                    <p className="text-base/7 font-semibold text-primary">
                       <Trans message={config.badge} />
-                    </h2>
+                    </p>
                   ) : null}
                   {config.title ? (
-                    <p className="mt-2 text-4xl font-semibold tracking-tight text-pretty text-foreground sm:text-5xl">
+                    <h2 className="mt-2 text-4xl font-semibold tracking-tight text-pretty text-foreground sm:text-5xl">
                       <Trans message={config.title} />
-                    </p>
+                    </h2>
                   ) : null}
                   {config.description ? (
                     <p className="mt-6 text-lg/8 text-muted-foreground">
@@ -117,14 +121,18 @@ export function FeatureWithScreenshot({config}: Props) {
                     config.alignLeft && '-order-1 flex items-start justify-end',
                   )}
                 >
-                  {config.imagePanel ? (
+                  {creator && config.mediaVariant ? (
+                    <CreatorScreenshotFrame config={config} />
+                  ) : config.imagePanel ? (
                     <ScreenshotPanel config={config} />
                   ) : (
                     <img
-                      alt=""
+                      alt={config.imageAlt ?? ''}
                       src={config.image.src}
                       width={config.image.width}
                       height={config.image.height}
+                      loading="lazy"
+                      decoding="async"
                       className={cn(
                         creator ? 'block h-auto w-full max-w-full rounded-2xl border shadow-lg' : 'max-w-none rounded-xl border shadow-xl md:-ml-4 lg:ml-0',
                         !creator && getImageWidth(config),
@@ -138,6 +146,54 @@ export function FeatureWithScreenshot({config}: Props) {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function CreatorScreenshotFrame({config}: Props) {
+  if (!config.image) return null;
+  const browser = config.mediaVariant === 'browser';
+
+  return (
+    <div
+      data-slot="creator-screenshot-frame"
+      className={cn(
+        'relative w-full max-w-2xl rounded-2xl border border-border bg-card p-2 shadow-lg sm:p-3',
+        !browser && 'bg-muted/30',
+      )}
+    >
+      {browser ? (
+        <div aria-hidden="true" className="mb-2 flex items-center gap-1.5 px-1 py-1">
+          <span className="size-2 rounded-full bg-foreground/15" />
+          <span className="size-2 rounded-full bg-foreground/15" />
+          <span className="size-2 rounded-full bg-foreground/15" />
+        </div>
+      ) : null}
+      <img
+        alt={config.imageAlt ?? ''}
+        src={config.image.src}
+        width={config.image.width}
+        height={config.image.height}
+        loading="lazy"
+        decoding="async"
+        className={cn(
+          'block h-auto w-full rounded-xl border border-border/60 bg-background',
+          browser && config.mobileImage?.src && 'pr-[13%]',
+        )}
+      />
+      {browser && config.mobileImage?.src ? (
+        <div className="absolute right-[1%] bottom-[-4%] w-[30%] overflow-hidden rounded-[1.3rem] border-[3px] border-foreground/85 bg-card shadow-xl">
+          <img
+            alt={config.mobileImageAlt ?? ''}
+            src={config.mobileImage.src}
+            width={config.mobileImage.width}
+            height={config.mobileImage.height}
+            loading="lazy"
+            decoding="async"
+            className="block h-auto w-full"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
