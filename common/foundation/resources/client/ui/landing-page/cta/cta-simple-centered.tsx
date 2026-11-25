@@ -28,7 +28,7 @@ export function CtaSimpleCentered({config}: Props) {
       <div className={clsx(
         'relative isolate overflow-hidden border border-border/80 px-6 shadow-sm sm:rounded-3xl sm:px-6',
         sparse
-          ? 'bg-gradient-to-br from-primary/10 via-background to-primary/15 py-16 sm:py-20'
+          ? 'bg-linear-to-br from-primary/10 via-background to-primary/15 py-16 sm:py-20'
           : 'bg-muted/40 py-24 dark:bg-card',
       )}>
         {sparse ? <SparseStarfield /> : null}
