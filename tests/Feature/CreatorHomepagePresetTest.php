@@ -15,6 +15,9 @@ class CreatorHomepagePresetTest extends TestCase
         $this->assertSame('images/landing/creator-hero.svg', $config['sections'][0]['image']['src']);
         $this->assertSame('images/landing/creator-storefront.svg', $config['sections'][0]['supportingImages'][0]['src']);
         $this->assertSame('images/landing/creator-checkout.svg', $config['sections'][0]['supportingImages'][1]['src']);
+        $this->assertSame('catalog', $config['sections'][3]['presentation']);
+        $this->assertSame('Sell more than just downloads', $config['sections'][3]['title']);
+        $this->assertCount(4, $config['sections'][3]['features']);
         $this->assertContains('pricing', array_column($config['sections'], 'name'));
         $this->assertContains('faq', array_column($config['sections'], 'name'));
         $this->assertSame('/register', $config['sections'][0]['buttons'][0]['action']);

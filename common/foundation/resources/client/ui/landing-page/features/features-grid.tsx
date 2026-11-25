@@ -6,7 +6,7 @@ import {cn} from '@ui/utils/cn';
 
 export type FeaturesGridConfig = {
   name: 'features-grid';
-  presentation?: 'journey';
+  presentation?: 'journey' | 'catalog';
   title?: string;
   badge?: string;
   description?: string;
@@ -27,6 +27,9 @@ type FeaturesGridProps = {
 export default function FeaturesGrid({config}: FeaturesGridProps) {
   if (config.presentation === 'journey') {
     return <CreatorJourney config={config} />;
+  }
+  if (config.presentation === 'catalog') {
+    return <CreatorProductCatalog config={config} />;
   }
 
   return (
@@ -181,6 +184,79 @@ function CreatorJourney({config}: FeaturesGridProps) {
             </li>
           ))}
         </ol>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * An image-first product showcase for creators. Local, uploaded or licensed
+ * images can be assigned individually in the existing landing-page editor.
+ * The icon fallback preserves customized feature cards until media is chosen.
+ */
+function CreatorProductCatalog({config}: FeaturesGridProps) {
+  return (
+    <section
+      aria-label={config.title}
+      className={cn(
+        'py-16 sm:py-20 lg:py-24',
+        config.mutedBg && 'bg-muted/40 dark:bg-card',
+      )}
+    >
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          {config.badge ? (
+            <p className="text-sm font-semibold text-primary">
+              <Trans message={config.badge} />
+            </p>
+          ) : null}
+          {config.title ? (
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl lg:text-5xl">
+              <Trans message={config.title} />
+            </h2>
+          ) : null}
+          {config.description ? (
+            <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+              <Trans message={config.description} />
+            </p>
+          ) : null}
+        </div>
+        <ul className="mt-10 grid grid-cols-1 gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+          {config.features?.map((feature, index) => (
+            <li
+              key={`${index}-${feature.title}`}
+              className="group min-w-0 rounded-2xl border border-border/70 bg-card p-3 shadow-sm"
+            >
+              <div className="flex aspect-[5/4] items-center justify-center overflow-hidden rounded-xl bg-muted/40">
+                {feature.image?.src ? (
+                  <img
+                    alt=""
+                    src={feature.image.src}
+                    width={feature.image.width}
+                    height={feature.image.height}
+                    loading="lazy"
+                    decoding="async"
+                    className="size-full object-contain p-4"
+                  />
+                ) : feature.icon ? (
+                  <div aria-hidden="true" className="flex size-16 items-center justify-center rounded-2xl bg-background shadow-xs">
+                    <ConfigIconWithBg icon={feature.icon} />
+                  </div>
+                ) : (
+                  <div aria-hidden="true" className="size-16 rounded-2xl border border-border/70 bg-background/60" />
+                )}
+              </div>
+              <div className="px-2 pt-5 pb-4">
+                <h3 className="text-base font-semibold tracking-tight text-foreground">
+                  <Trans message={feature.title} />
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  <Trans message={feature.description} />
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

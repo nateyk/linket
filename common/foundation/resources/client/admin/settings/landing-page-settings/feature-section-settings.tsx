@@ -132,8 +132,13 @@ export function FeatureSectionSettings({index}: Props) {
 type FeatureListEditorProps = {
   prefix: string;
   withImages?: boolean;
+  imageCardType?: 'journey' | 'product';
 };
-export function FeatureListEditor({prefix, withImages = false}: FeatureListEditorProps) {
+export function FeatureListEditor({
+  prefix,
+  withImages = false,
+  imageCardType = 'journey',
+}: FeatureListEditorProps) {
   const {fields, remove, append, move} = useFieldArray({
     name: `${prefix}.features`,
   }) as unknown as UseFieldArrayReturn<FeatureWithScreenshotConfig, 'features'>;
@@ -143,7 +148,10 @@ export function FeatureListEditor({prefix, withImages = false}: FeatureListEdito
   return (
     <div className="flex flex-col gap-2">
       <Field.Title>
-        <Trans message={withImages ? 'Journey steps' : 'Feature list'} />
+        <Trans message={
+          !withImages ? 'Feature list'
+            : imageCardType === 'product' ? 'Product cards' : 'Journey steps'
+        } />
       </Field.Title>
       {fields.map((feature, index) => (
         <FeatureListItem
@@ -154,6 +162,7 @@ export function FeatureListEditor({prefix, withImages = false}: FeatureListEdito
           index={index}
           prefix={prefix}
           withImages={withImages}
+          imageCardType={imageCardType}
           isOpen={activeFeatureIndex === index}
           onOpenChange={open => setActiveFeatureIndex(open ? index : null)}
           onDelete={() => {
@@ -171,14 +180,14 @@ export function FeatureListEditor({prefix, withImages = false}: FeatureListEdito
         className="w-max"
         onClick={() => {
           append({
-            title: `${withImages ? 'Step' : 'Feature'} ${fields.length + 1}`,
+            title: `${!withImages ? 'Feature' : imageCardType === 'product' ? 'Product' : 'Step'} ${fields.length + 1}`,
             description: '',
           });
           setActiveFeatureIndex(fields.length);
         }}
       >
         <PlusIcon />
-        <Trans message={withImages ? "Add step" : "Add new feature"} />
+        <Trans message={!withImages ? 'Add new feature' : imageCardType === 'product' ? 'Add product card' : 'Add step'} />
       </Button>
     </div>
   );
@@ -191,6 +200,7 @@ type FeatureListItemProps = {
   index: number;
   prefix: string;
   withImages?: boolean;
+  imageCardType?: 'journey' | 'product';
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete: () => void;
@@ -202,6 +212,7 @@ function FeatureListItem({
   index,
   prefix,
   withImages,
+  imageCardType,
   isOpen,
   onOpenChange,
   onDelete,
@@ -254,7 +265,11 @@ function FeatureListItem({
             </Drawer.Close>
           </Drawer.Header>
           <Drawer.Body>
-            <EditFeatureForm formPathPrefix={formPathPrefix} withImages={withImages} />
+            <EditFeatureForm
+              formPathPrefix={formPathPrefix}
+              withImages={withImages}
+              imageCardType={imageCardType}
+            />
           </Drawer.Body>
           <Drawer.Footer>
             <Button
@@ -281,14 +296,15 @@ function FeatureListItem({
 type EditFeatureFormProps = {
   formPathPrefix: string;
   withImages?: boolean;
+  imageCardType?: 'journey' | 'product';
 };
-function EditFeatureForm({formPathPrefix, withImages}: EditFeatureFormProps) {
+function EditFeatureForm({formPathPrefix, withImages, imageCardType}: EditFeatureFormProps) {
   return (
     <Field.Group>
       {withImages ? (
         <LandingPageImageSelector
           formPrefix={formPathPrefix}
-          label={<Trans message="Step image" />}
+          label={<Trans message={imageCardType === 'product' ? 'Product illustration' : 'Step image'} />}
         />
       ) : <IconDialogTrigger formPrefix={formPathPrefix} />}
 

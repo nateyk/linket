@@ -112,11 +112,9 @@
     },
     {
       "name": "features-grid",
-      "title": "Your ideas come in all forms. Your storefront can too.",
-      "description": "Sell what you know, share what you make, and offer your services from the same page.",
-      "badge": "What you can create",
-      "maxColumns": 4,
-      "iconsOnTop": true,
+      "title": "Sell more than just downloads",
+      "description": "Ebooks, digital downloads, courses, and creative services—all from your own storefront.",
+      "badge": "What you can sell",
       "features": [
         {
           "icon": "stores",
@@ -138,7 +136,8 @@
           "title": "Creator services",
           "description": "Let customers discover your skills and request your services."
         }
-      ]
+      ],
+      "presentation": "catalog"
     },
     {
       "name": "feature-with-screenshot",

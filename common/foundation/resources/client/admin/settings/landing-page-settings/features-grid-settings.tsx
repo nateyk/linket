@@ -14,6 +14,7 @@ import {useFormContext, useWatch} from 'react-hook-form';
 const presentationOptions = [
   {value: 'standard', label: 'Standard feature grid'},
   {value: 'journey', label: 'Image-led journey steps'},
+  {value: 'catalog', label: 'Product showcase cards'},
 ] as const;
 
 const maxColumnsOptions = [
@@ -32,6 +33,8 @@ export function FeaturesGridSettings({index}: Props) {
   const title = useWatch({name: `${prefix}.title`});
   const {getValues, setValue} = useFormContext();
   const isJourney = presentation === 'journey';
+  const isCatalog = presentation === 'catalog';
+  const isImageLayout = isJourney || isCatalog;
   const isCreatorJourney = title === 'From your first idea to your first sale';
 
   function enableImageJourney() {
@@ -92,7 +95,7 @@ export function FeaturesGridSettings({index}: Props) {
         <Field.Error />
       </HookForm.Field>
 
-      {isCreatorJourney && !isJourney ? (
+      {isCreatorJourney && !isImageLayout ? (
         <div className="flex flex-col items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 p-4">
           <div>
             <p className="text-sm font-semibold text-foreground">
@@ -110,16 +113,24 @@ export function FeaturesGridSettings({index}: Props) {
       ) : null}
 
       <p className="text-sm leading-6 text-muted-foreground">
-        <Trans message={isJourney
-          ? 'Open each journey step to upload or replace its image.'
-          : 'Choose Image-led journey steps above to replace the icon cards with editable images.'} />
+        <Trans message={
+          isCatalog
+            ? 'Open a product card to upload a licensed illustration, 3D render or image. Empty image slots keep your current icons.'
+            : isJourney
+              ? 'Open each journey step to upload or replace its image.'
+              : 'Choose an image-led layout above to replace the icon cards with editable images.'
+        } />
       </p>
 
-      <FeatureListEditor prefix={prefix} withImages={isJourney} />
+      <FeatureListEditor
+        prefix={prefix}
+        withImages={isImageLayout}
+        imageCardType={isCatalog ? 'product' : 'journey'}
+      />
 
       <Field.Separator />
 
-      {!isJourney ? <HookForm.Field name={`${prefix}.maxColumns`}>
+      {!isImageLayout ? <HookForm.Field name={`${prefix}.maxColumns`}>
         <Field.Label>
           <Trans message="Maximum columns" />
         </Field.Label>
