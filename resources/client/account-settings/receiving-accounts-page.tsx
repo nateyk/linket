@@ -403,10 +403,12 @@ export function Component() {
         <Button
           disabled={loading || busy || loadError || availableBanks.length === 0}
           onClick={openNewAccount}
-          className="gap-1.5"
+          className="size-10 shrink-0 px-0 sm:h-9 sm:w-auto sm:gap-1.5 sm:px-4"
         >
-          <PlusIcon className="size-4" />
-          <Trans message="Add payout account" />
+          <PlusIcon className="size-4" aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">
+            <Trans message="Add payout account" />
+          </span>
         </Button>
       }
     >
