@@ -82,18 +82,6 @@ export function Component() {
         <DashboardLayout.SectionScrollContainer className="mx-0 px-0">
           {items.length > 0 && (
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-3">
-              <div className="flex items-center justify-between gap-4 px-1">
-                <p className="text-sm font-medium">
-                  {items.length === 1 ? (
-                    <Trans message=":count profile" values={{count: items.length}} />
-                  ) : (
-                    <Trans message=":count profiles" values={{count: items.length}} />
-                  )}
-                </p>
-                <p className="hidden text-xs text-muted-foreground sm:block">
-                  <Trans message="Select a profile to edit it" />
-                </p>
-              </div>
               <Item.Group>
                 {items.map(biolink => (
                   <BiolinkCard
