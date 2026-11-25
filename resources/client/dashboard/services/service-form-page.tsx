@@ -458,7 +458,7 @@ function ServiceFormPage() {
       <h1 className="sr-only">
         {isEditing ? <Trans message="Edit service" /> : <Trans message="Create a service" />}
       </h1>
-      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-auto max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">
+      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-auto max-sm:flex-1 max-sm:overflow-hidden max-sm:text-base max-sm:font-semibold">
         <Breadcrumb.Item className="max-sm:hidden">
           <Breadcrumb.Link to="/dashboard/services">
             <Trans message="My Services" />
@@ -466,7 +466,7 @@ function ServiceFormPage() {
         </Breadcrumb.Item>
         <Breadcrumb.Separator className="max-sm:hidden" />
         <Breadcrumb.Item className="max-sm:min-w-0">
-          <Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">
+          <Breadcrumb.Page className="font-semibold max-sm:block max-sm:min-w-0 max-sm:truncate">
             {isEditing ? <Trans message="Edit service" /> : <Trans message="Create a service" />}
           </Breadcrumb.Page>
         </Breadcrumb.Item>
