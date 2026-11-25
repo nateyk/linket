@@ -19,6 +19,7 @@ import {FormattedDate} from '@ui/i18n/formatted-date';
 import {FormattedRelativeTime} from '@ui/i18n/formatted-relative-time';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
+import {useIsMobileMediaQuery} from '@ui/utils/hooks/is-mobile-media-query';
 import {
   CalendarDaysIcon,
   ChartNoAxesCombinedIcon,
@@ -501,6 +502,7 @@ function OrdersTable({
   emptyMessage?: ReactNode;
 }) {
   const {trans} = useTrans();
+  const isMobile = useIsMobileMediaQuery();
   if (loading) return <TableLoading />;
   if (error) {
     return (
@@ -540,7 +542,8 @@ function OrdersTable({
 
   return (
     <>
-      <div className="divide-y md:hidden" role="list" aria-label={trans({message: 'Orders'})}>
+      {isMobile ? (
+      <div className="divide-y" role="list" aria-label={trans({message: 'Orders'})}>
         {orders.map(order => (
           <article key={order.uuid} role="listitem" className="min-w-0 space-y-3 px-4 py-3">
             <div className="flex min-w-0 items-start gap-3">
@@ -585,7 +588,8 @@ function OrdersTable({
           </article>
         ))}
       </div>
-      <div className="hidden min-w-0 max-w-full overflow-x-auto md:block">
+      ) : (
+      <div className="min-w-0 max-w-full overflow-x-auto">
         <Table.Root
           aria-label={trans({message: 'Orders'})}
         className="w-max min-w-full"
@@ -680,6 +684,7 @@ function OrdersTable({
         </Table.Body>
         </Table.Root>
       </div>
+      )}
     </>
   );
 }
