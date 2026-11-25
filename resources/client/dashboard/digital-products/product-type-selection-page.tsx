@@ -25,7 +25,7 @@ export function Component() {
         </DashboardLayout.SectionTitle>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-xl flex-col gap-5 py-4">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 py-4">
           <div className="flex items-start gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/8 text-primary ring-1 ring-primary/15">
               <PackagePlusIcon className="size-5" aria-hidden="true" />
