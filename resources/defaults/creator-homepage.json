@@ -81,7 +81,7 @@
     {
       "name": "feature-with-screenshot",
       "title": "Not just a bio page. Your own corner of the internet.",
-      "description": "Give your personal brand and your business one home. Visitors can explore your work, discover products, and find the right way to connect with you.",
+      "description": "Build a storefront that reflects your brand, looks great on mobile, and gives your audience one place to explore your products and connect with you.",
       "badge": "A storefront that's yours",
       "presentation": "creator",
       "wrapIconsInBg": false,
@@ -108,7 +108,9 @@
           "title": "Built for mobile",
           "description": "Showcase your work on the screens your audience uses every day."
         }
-      ]
+      ],
+      "mediaVariant": "browser",
+      "imageAlt": "Illustration of a Linket creator storefront"
     },
     {
       "name": "features-grid",
@@ -141,9 +143,9 @@
     },
     {
       "name": "feature-with-screenshot",
-      "title": "Your sales. Your customers. Your money.",
-      "description": "Buyers pay for eligible digital products through Chapa checkout. Access is granted after payment confirmation. Creators can request withdrawals of eligible earnings.",
-      "badge": "Payments built for Ethiopian creators",
+      "title": "A clearer path from checkout to confirmed orders.",
+      "description": "Eligible customers use Chapa checkout. Linket grants paid-product access after payment verification. Creators can request withdrawals of eligible earnings, with transfers subject to approval and verified settlement.",
+      "badge": "Chapa checkout for eligible digital products",
       "presentation": "creator",
       "forceDarkMode": true,
       "wrapIconsInBg": false,
@@ -157,20 +159,22 @@
       "features": [
         {
           "icon": "settings",
-          "title": "Chapa checkout",
-          "description": "Offer a hosted payment experience for eligible paid digital products."
+          "title": "Hosted checkout",
+          "description": "Buyers pay through Chapa for eligible digital products."
         },
         {
           "icon": "insights",
-          "title": "Payment confirmation",
-          "description": "Paid digital downloads unlock after successful payment confirmation."
+          "title": "Verified purchases",
+          "description": "Orders and digital access update only after payment confirmation."
         },
         {
           "icon": "stores",
-          "title": "Reliable purchase access",
-          "description": "Eligible buyers can access their purchases and authorized re-downloads."
+          "title": "Withdrawal tracking",
+          "description": "Request eligible earnings and follow payout review and settlement status."
         }
-      ]
+      ],
+      "mediaVariant": "checkout",
+      "imageAlt": "Illustration of a digital product checkout"
     },
     {
       "name": "features-grid",

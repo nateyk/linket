@@ -25,6 +25,12 @@ import {
   useWatch,
 } from 'react-hook-form';
 
+const creatorMediaVariantOptions = [
+  {value: 'standard', label: <Trans message="Standard screenshot" />},
+  {value: 'browser', label: <Trans message="Browser and mobile preview" />},
+  {value: 'checkout', label: <Trans message="Checkout screenshot" />},
+] as const;
+
 const imageSizeOptions = [
   {value: 'xs', label: <Trans message="Extra small" />},
   {value: 'sm', label: <Trans message="Small" />},
@@ -38,6 +44,9 @@ type Props = {
 export function FeatureSectionSettings({index}: Props) {
   const prefix =
     `client.landingPage.sections.${index}` as `client.landingPage.sections.${number}`;
+  const presentation = useWatch({name: `${prefix}.presentation`});
+  const mediaVariant = useWatch({name: `${prefix}.mediaVariant`});
+  const isCreatorShowcase = presentation === 'creator';
   return (
     <Field.Group>
       <HookForm.Field name={`${prefix}.badge`}>
@@ -74,6 +83,54 @@ export function FeatureSectionSettings({index}: Props) {
         formPrefix={prefix}
         label={<Trans message="Screenshot" />}
       />
+      {isCreatorShowcase ? (
+        <>
+          <p className="text-sm leading-6 text-muted-foreground">
+            <Trans message="Use a real Linket screenshot when available. The existing local artwork is only an illustration and can be replaced here." />
+          </p>
+          <HookForm.Field name={`${prefix}.mediaVariant`}>
+            <Field.Label>
+              <Trans message="Screenshot presentation" />
+            </Field.Label>
+            <Select.Root items={creatorMediaVariantOptions}>
+              <Select.Trigger className="w-full">
+                <Select.Value placeholder={<Trans message="Standard screenshot" />} />
+              </Select.Trigger>
+              <Select.Content>
+                {creatorMediaVariantOptions.map(option => (
+                  <Select.Item key={option.value} value={option.value}>
+                    {option.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
+            <Field.Error />
+          </HookForm.Field>
+          <HookForm.Field name={`${prefix}.imageAlt`}>
+            <Field.Label>
+              <Trans message="Screenshot alternative text" />
+            </Field.Label>
+            <Input placeholder="Describe what the screenshot shows" />
+            <Field.Error />
+          </HookForm.Field>
+          {mediaVariant === 'browser' ? (
+            <>
+              <LandingPageImageSelector
+                formPrefix={prefix}
+                imagePath={`${prefix}.mobileImage`}
+                label={<Trans message="Optional mobile screenshot" />}
+              />
+              <HookForm.Field name={`${prefix}.mobileImageAlt`}>
+                <Field.Label>
+                  <Trans message="Mobile screenshot alternative text" />
+                </Field.Label>
+                <Input placeholder="Describe the mobile view" />
+                <Field.Error />
+              </HookForm.Field>
+            </>
+          ) : null}
+        </>
+      ) : null}
 
       <HookForm.Field name={`${prefix}.imageSize`}>
         <Field.Label>
