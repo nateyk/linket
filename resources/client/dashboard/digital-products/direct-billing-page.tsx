@@ -3,6 +3,8 @@ import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
+import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
@@ -22,6 +24,11 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {useIsMobileMediaQuery} from '@ui/utils/hooks/is-mobile-media-query';
 import {
   CalendarDaysIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ArrowUpDownIcon,
+  Columns3Icon,
+  DownloadIcon,
   ChartNoAxesCombinedIcon,
   CircleDollarSignIcon,
   EyeIcon,
@@ -36,6 +43,7 @@ import {
   ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -118,6 +126,7 @@ type OrderDetail = Order & {
   } | null;
 };
 
+type OrderSort = 'newest' | 'oldest' | 'amount_desc' | 'amount_asc' | 'buyer_asc' | 'buyer_desc';
 const PAGE_SIZE_OPTIONS = [15, 25, 50] as const;
 
 const emptyPagination: PaginationData = {
@@ -161,6 +170,12 @@ export function Component() {
   const [orderPerPage, setOrderPerPage] = useState(() =>
     pageSizeFrom(searchParams.get('per_page')),
   );
+  const [orderSort, setOrderSort] = useState<OrderSort>(() => {
+    const raw = searchParams.get('sort');
+    return ['newest', 'oldest', 'amount_desc', 'amount_asc', 'buyer_asc', 'buyer_desc'].includes(raw ?? '')
+      ? raw as OrderSort
+      : 'newest';
+  });
   const debouncedOrderSearch = useDebouncedValue(orderSearch, 300);
 
   const [detailUuid, setDetailUuid] = useState<string>();
@@ -181,6 +196,7 @@ export function Component() {
           to: orderTo || undefined,
           page: orderPage,
           per_page: orderPerPage,
+          sort: orderSort,
         },
       });
       if (sequence !== ordersRequest.current) return;
@@ -202,6 +218,7 @@ export function Component() {
     orderTo,
     orderPage,
     orderPerPage,
+    orderSort,
   ]);
 
   useEffect(() => {
@@ -276,6 +293,8 @@ export function Component() {
                 <Card.Content className="px-0">
                   <OrdersTable
                     orders={orders}
+                    sort={orderSort}
+                    onSortChange={value => {setOrderSort(value); setOrderPage(1);}}
                     loading={ordersLoading}
                     error={ordersError}
                     onView={setDetailUuid}
