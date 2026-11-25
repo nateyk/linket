@@ -298,7 +298,7 @@ export function Component() {
                   />}
                 />
               </Card.Content>
-                {!ordersLoading && !ordersError && ordersPagination.total > 0 && (
+                {!ordersError && ordersPagination.total > 0 && (
                   <Card.Footer className="min-w-0">
                     <Pagination
                       page={ordersPagination.current_page}
@@ -428,7 +428,7 @@ function OrderFilters({
 }) {
   const isFiltered = status !== 'all' || !!search || !!from || !!to;
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <div className="contents sm:flex sm:min-w-0 sm:flex-wrap sm:items-center sm:gap-2">
       <div className="relative w-full min-w-0 sm:w-64">
         <SearchIcon aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -488,7 +488,7 @@ function OrderFilters({
         </Popover.Root>
       </div>
       {isFiltered && (
-        <Button variant="ghost" size="sm" color="default" className="shrink-0" onClick={() => {
+        <Button variant="ghost" size="sm" color="default" className="shrink-0 max-sm:order-last" onClick={() => {
           onStatusChange('all');
           onSearchChange('');
           onFromChange('');
@@ -540,11 +540,11 @@ function OrdersTable({
   return (
     <div className="grid min-w-0 gap-3">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0 flex-1 basis-full sm:basis-auto">{filters}</div>
+        <div className="contents sm:block sm:min-w-0 sm:flex-1">{filters}</div>
         <Dropdown.Root>
           <Dropdown.Trigger render={
             <Button variant="outline" color="default" className="ms-auto" aria-label={trans({message: 'Choose visible columns'})}>
-              <Columns3Icon aria-hidden="true" /><Trans message="Columns" />
+              <Columns3Icon aria-hidden="true" /><span className="hidden min-[400px]:inline"><Trans message="Columns" /></span>
             </Button>
           } />
           <Dropdown.Content align="end">
@@ -592,7 +592,7 @@ function OrdersTable({
           </Empty.Root>
         </div>
       ) : (
-        <div role="region" aria-label={trans({message: 'Scrollable orders table'})} tabIndex={0} className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-card-sm border border-border focus-visible:outline-2 focus-visible:outline-ring">
+        <div role="region" aria-label={trans({message: 'Scrollable orders table'})} tabIndex={0} className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-card-sm border border-border focus-visible:outline-2 focus-visible:outline-foreground">
           <Table.Root aria-label={trans({message: 'Orders'})} className="border-separate border-spacing-0 text-[13px] [&_th]:border-b [&_th]:border-border [&_td]:border-b [&_td]:border-border/60 [&_tbody_tr:last-child_td]:border-b-0">
             <Table.Header>
               <Table.Row className="hover:bg-transparent">
@@ -674,7 +674,7 @@ function OrderSortHead({
   const current = sort === ascending ? 'ascending' : sort === descending ? 'descending' : 'none';
   return (
     <Table.Head className={align === 'end' ? 'h-10 px-3 text-end' : 'h-10 px-3'} aria-sort={current}>
-      <Button variant="ghost" size="sm" className="h-8 gap-1 px-1 text-xs text-muted-foreground hover:text-foreground"
+      <Button variant="ghost" size="sm" color="default" className="h-8 gap-1 px-1 text-xs text-muted-foreground hover:text-foreground"
         onClick={() => onChange(sort === descending ? ascending
           : sort === ascending ? descending
           : ascending === 'amount_asc' ? descending : ascending)}>
