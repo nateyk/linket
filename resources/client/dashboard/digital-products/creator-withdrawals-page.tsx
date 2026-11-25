@@ -177,15 +177,26 @@ export function Component() {
           <Trans message="Withdrawals" />
           <WithdrawalsInfoTrigger />
         </DashboardLayout.SectionTitle>
-        <Button variant="outline" disabled={loading} onClick={() => void loadData()}>
-          <RefreshCwIcon />
-          <span className="hidden sm:inline">
+        <Button
+          variant="outline"
+          className="size-10 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3"
+          disabled={loading}
+          onClick={() => void loadData()}
+        >
+          <RefreshCwIcon aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">
             <Trans message="Refresh" />
           </span>
         </Button>
-        <Button disabled={loading || !summary} onClick={() => setWithdrawOpen(true)}>
-          <HandCoinsIcon />
-          <Trans message="Request withdrawal" />
+        <Button
+          className="size-10 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3"
+          disabled={loading || !summary}
+          onClick={() => setWithdrawOpen(true)}
+        >
+          <HandCoinsIcon aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">
+            <Trans message="Request withdrawal" />
+          </span>
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
