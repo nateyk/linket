@@ -253,7 +253,7 @@ function MobileCreatorProfile({
       {activeTab === 'profile' && (
         <section
           aria-label={trans(message('Profile'))}
-          className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="min-w-0 pb-4 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <CreatorCard biolink={biolink} appearance={appearance} profile={profile} />
           {showAds && (
@@ -261,16 +261,17 @@ function MobileCreatorProfile({
               <AdHost slot="biolink_top" />
             </div>
           )}
-          {/* Profile is identity only on mobile. Products/About switch via
-              bottom nav so content is not duplicated under a second control. */}
+          {/* Profile is identity only on mobile; the sticky section header
+              switches views without duplicating the creator card. */}
         </section>
       )}
 
       {hasProducts && activeTab === 'products' && (
         <section
           aria-label={trans(message('Products'))}
-          className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="min-w-0 pb-4 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
+          <h2 className="sr-only"><Trans message="Products" /></h2>
           <ShopSection
             widget={shopWidget}
             biolink={biolink}
@@ -283,16 +284,21 @@ function MobileCreatorProfile({
       {hasServices && activeTab === 'services' && (
         <section
           aria-label={trans(message('Services'))}
-          className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="min-w-0 pb-4 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <ServicesSection biolink={biolink} appearance={appearance} showHeading={false} />
+          <h2 className="sr-only"><Trans message="Services" /></h2>
+          <ServicesSection
+            biolink={biolink}
+            appearance={appearance}
+            showHeading={false}
+          />
         </section>
       )}
 
       {hasAbout && activeTab === 'about' && (
         <section
           aria-label={trans(message('About'))}
-          className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="min-w-0 pb-4 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <AboutSection profile={profile} appearance={appearance} />
         </section>
@@ -300,7 +306,6 @@ function MobileCreatorProfile({
       <span className="sr-only" role="status">
         {sectionLabel}
       </span>
-
     </div>
   );
 }
@@ -634,7 +639,13 @@ function CreatorProfileContent({
   }
 
   if (hasServices) {
-    return <ServicesSection biolink={biolink} appearance={appearance} showHeading={false} />;
+    return (
+      <ServicesSection
+        biolink={biolink}
+        appearance={appearance}
+        showHeading={false}
+      />
+    );
   }
 
   return <AboutSection profile={profile} appearance={appearance} />;
