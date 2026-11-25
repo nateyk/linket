@@ -37,6 +37,8 @@ type Props = {
 };
 export function FeatureWithScreenshot({config}: Props) {
   const creator = config.presentation === 'creator';
+  const BadgeTag = creator ? 'p' : 'h2';
+  const TitleTag = creator ? 'h2' : 'p';
   const isSmallPanel = config.inPanel && config.imageSize !== 'lg';
   const isLargePanel = config.inPanel && !isSmallPanel;
 
@@ -72,14 +74,14 @@ export function FeatureWithScreenshot({config}: Props) {
               >
                 <div className="lg:max-w-lg">
                   {config.badge ? (
-                    <p className="text-base/7 font-semibold text-primary">
+                    <BadgeTag className="text-base/7 font-semibold text-primary">
                       <Trans message={config.badge} />
-                    </p>
+                    </BadgeTag>
                   ) : null}
                   {config.title ? (
-                    <h2 className="mt-2 text-4xl font-semibold tracking-tight text-pretty text-foreground sm:text-5xl">
+                    <TitleTag className="mt-2 text-4xl font-semibold tracking-tight text-pretty text-foreground sm:text-5xl">
                       <Trans message={config.title} />
-                    </h2>
+                    </TitleTag>
                   ) : null}
                   {config.description ? (
                     <p className="mt-6 text-lg/8 text-muted-foreground">
