@@ -165,7 +165,11 @@ describe('R06 product type picker semantics', () => {
     expect(cards).toHaveLength(4);
     for (const card of cards) {
       expect(card.className).toContain('min-h-40');
-      expect(card.className).toContain('bg-card');
+      if (card === cards[1]) {
+        expect(card.className).toContain('bg-primary/5');
+      } else {
+        expect(card.className).toContain('bg-card');
+      }
       expect(card.querySelectorAll('[role="radio"]')).toHaveLength(1);
       expect(card.querySelector('[data-selection-glyph]')).toBeNull();
     }
