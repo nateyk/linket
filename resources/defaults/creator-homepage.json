@@ -257,7 +257,8 @@
           "variant": "default",
           "color": "primary"
         }
-      ]
+      ],
+      "presentation": "starfield"
     },
     {
       "name": "footer"
