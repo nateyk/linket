@@ -16,6 +16,8 @@ const config = {
   title: 'Make something worth sharing',
   description: 'Build your storefront and sell.',
   buttons: [{
+    id: 'create-storefront',
+    order: 0,
     label: 'Create your storefront',
     action: '/register',
     type: 'route' as const,
