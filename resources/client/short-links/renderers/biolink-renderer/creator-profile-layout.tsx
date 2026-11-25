@@ -14,6 +14,7 @@ import {ServicesSection} from '@app/services/public/services-section';
 import {
   biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
+  resolveBiolinkSegmentedTabsAppearance,
   resolveBiolinkContainerRadius,
   shouldUseLightBiolinkLogo,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
@@ -23,7 +24,6 @@ import {AdHost} from '@common/admin/ads/ad-host';
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {LinkButton} from '@shadcn/button/button';
-import BottomNavBar from '@shadcn/bottom-nav-bar';
 import {Card} from '@shadcn/card/card';
 import {Trans} from '@ui/i18n/trans';
 import {message} from '@ui/i18n/message';
@@ -34,14 +34,11 @@ import {cn} from '@ui/utils/cn';
 import {isAbsoluteUrl} from '@ui/utils/urls/is-absolute-url';
 import {
   BadgeCheckIcon,
-  BriefcaseBusinessIcon,
   MailIcon,
-  UserIcon,
-  PackageIcon,
-  InfoIcon,
 } from 'lucide-react';
 import {renderAboutHtml} from './about-markdown';
 import {StoreFront} from './store-front';
+import {Background} from './biolink-background';
 import {Link} from 'react-router';
 import {useCallback, useEffect, useRef, useState, type ReactNode} from 'react';
 
@@ -70,7 +67,7 @@ export function CreatorProfileLayout({
     .at(-1) as BiolinkWidget | undefined;
 
   return (
-    <main className="relative z-4 min-h-screen px-4 pt-[max(1.25rem,var(--safe-top,env(safe-area-inset-top,0px)))] pb-[calc(6rem_+_var(--safe-bottom,env(safe-area-inset-bottom,0px)))] sm:px-6 sm:pt-8 @4xl:px-8 @4xl:py-10">
+    <main className="relative z-4 min-h-screen px-4 pt-[max(1.25rem,var(--safe-top,env(safe-area-inset-top,0px)))] pb-[max(1.5rem,var(--safe-bottom,env(safe-area-inset-bottom,0px)))] sm:px-6 sm:pt-8 @4xl:px-8 @4xl:py-10">
       <div className="mx-auto w-full max-w-7xl @4xl:hidden">
         <MobileCreatorProfile
           biolink={biolink}
@@ -159,28 +156,22 @@ function MobileCreatorProfile({
   });
   const {trans} = useTrans();
   const biolinkNavItems = [
-    {label: trans(message('Profile')), icon: UserIcon, value: 'profile'},
+    {label: trans(message('Profile')), value: 'profile'},
     ...(hasProducts
-      ? [{label: trans(message('Products')), icon: PackageIcon, value: 'products'}]
+      ? [{label: trans(message('Products')), value: 'products'}]
       : []),
     ...(hasServices
-      ? [
-          {
-            label: trans(message('Services')),
-            icon: BriefcaseBusinessIcon,
-            value: 'services',
-          },
-        ]
+      ? [{label: trans(message('Services')), value: 'services'}]
       : []),
     ...(hasAbout
-      ? [{label: trans(message('About')), icon: InfoIcon, value: 'about'}]
+      ? [{label: trans(message('About')), value: 'about'}]
       : []),
   ];
+  const segmentedAppearance = resolveBiolinkSegmentedTabsAppearance(appearance);
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
 
-  // Nav buttons and the editor's tab sync share this exact path: switch
-  // section, jump back to the top (instant — no smooth animation, so
-  // prefers-reduced-motion is honored by construction).
+  // The sticky section navigation and editor preview share one selection
+  // path. Return to the top instantly, respecting reduced-motion preferences.
   const selectSection = useCallback((value: string) => {
     setActiveTab(value);
     window.scrollTo({top: 0});
@@ -205,10 +196,9 @@ function MobileCreatorProfile({
     selectSection(target);
   }, [previewSection, selectSection]);
 
-  // Mobile is navigation, not tabs: the bottom bar is a real nav (buttons
-  // with aria-pressed) switching plain sections — never a tablist without
-  // tabs, which announced toggles as tabpanels with no associated tab.
-  // Each section carries its own translated label for AT.
+  // Mobile uses a sticky section navigation, not ARIA tabs: these are
+  // buttons with aria-pressed switching labelled, non-tabpanel sections.
+  // The desktop StoreFront continues using real tab semantics.
   const sectionLabel =
     activeTab === 'products'
       ? trans(message('Products'))
@@ -219,7 +209,47 @@ function MobileCreatorProfile({
           : trans(message('Profile'));
 
   return (
-    <div className="relative min-w-0 gap-0">
+    <div className="relative min-w-0">
+      {showNavigation && (
+        <nav
+          aria-label={trans(message('Creator profile sections'))}
+          data-testid="mobile-storefront-section-nav"
+          className="sticky top-[var(--safe-top,env(safe-area-inset-top,0px))] z-20 -mx-4 mb-3 isolate sm:-mx-6"
+        >
+          <Background appearance={appearance} viewportFixed omitNoiseDef />
+          <div className="relative min-w-0 overflow-x-auto px-4 py-2 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div
+              className={cn(
+                segmentedAppearance.listClassName,
+                'mx-auto flex w-max min-w-full items-center justify-center gap-1',
+              )}
+              style={segmentedAppearance.style}
+            >
+              {biolinkNavItems.map(item => {
+                const selected = item.value === activeTab;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => selectSection(item.value)}
+                    className={cn(
+                      'min-h-11 min-w-fit flex-1 px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-focus)]',
+                      selected
+                        ? buttonAppearance.className
+                        : 'rounded-button text-[var(--biolink-muted-text)] hover:bg-[var(--biolink-surface-muted)] hover:text-[var(--biolink-text)]',
+                    )}
+                    style={selected ? buttonAppearance.style : undefined}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </nav>
+      )}
+
       {activeTab === 'profile' && (
         <section
           aria-label={trans(message('Profile'))}
@@ -245,6 +275,7 @@ function MobileCreatorProfile({
             widget={shopWidget}
             biolink={biolink}
             appearance={appearance}
+            showHeading={false}
           />
         </section>
       )}
@@ -254,7 +285,7 @@ function MobileCreatorProfile({
           aria-label={trans(message('Services'))}
           className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <ServicesSection biolink={biolink} appearance={appearance} />
+          <ServicesSection biolink={biolink} appearance={appearance} showHeading={false} />
         </section>
       )}
 
@@ -270,31 +301,6 @@ function MobileCreatorProfile({
         {sectionLabel}
       </span>
 
-      {showNavigation && (
-        <div className="flex justify-center py-6 @4xl:hidden">
-          <BottomNavBar
-            items={biolinkNavItems.map(item => ({label: item.label, icon: item.icon}))}
-            activeIndex={biolinkNavItems.findIndex(item => item.value === activeTab)}
-            onIndexChange={(idx: number) => {
-              const item = biolinkNavItems[idx];
-              if (item) {
-                selectSection(item.value);
-              }
-            }}
-            radius="rounded-button"
-            // Shell + idle items use --biolink-* so the bar stays in the buyer
-            // world (dashboard bg-card/muted leaked a dark pill on light pages).
-            className={cn(
-              biolinkSurfaceEdgeClassName,
-              'bg-[var(--biolink-surface)]/95 shadow-lg shadow-black/5 backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--biolink-surface)]/80',
-            )}
-            inactiveButtonClassName="text-[var(--biolink-muted-text)] hover:bg-[var(--biolink-surface-muted)] hover:text-[var(--biolink-text)]"
-            activeButtonClassName={buttonAppearance.className}
-            activeButtonStyle={buttonAppearance.style}
-            stickyBottom
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -509,7 +515,7 @@ function ShopSection({
   widget,
   biolink,
   appearance,
-  showHeading = true,
+  showHeading = false,
 }: {
   widget: BiolinkWidget;
   biolink: Biolink;
@@ -628,7 +634,7 @@ function CreatorProfileContent({
   }
 
   if (hasServices) {
-    return <ServicesSection biolink={biolink} appearance={appearance} />;
+    return <ServicesSection biolink={biolink} appearance={appearance} showHeading={false} />;
   }
 
   return <AboutSection profile={profile} appearance={appearance} />;
