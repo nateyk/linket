@@ -123,7 +123,7 @@ export function FeatureWithScreenshot({config}: Props) {
                     config.alignLeft && '-order-1 flex items-start justify-end',
                   )}
                 >
-                  {creator && config.mediaVariant ? (
+                  {creator && (config.mediaVariant === 'browser' || config.mediaVariant === 'checkout') ? (
                     <CreatorScreenshotFrame config={config} />
                   ) : config.imagePanel ? (
                     <ScreenshotPanel config={config} />
