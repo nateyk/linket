@@ -95,7 +95,7 @@ export function FeaturesGridSettings({index}: Props) {
         <Field.Error />
       </HookForm.Field>
 
-      {isCreatorJourney && !isJourney ? (
+      {isCreatorJourney && !isImageLayout ? (
         <div className="flex flex-col items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 p-4">
           <div>
             <p className="text-sm font-semibold text-foreground">
