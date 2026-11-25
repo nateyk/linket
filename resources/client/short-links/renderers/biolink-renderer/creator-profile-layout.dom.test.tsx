@@ -216,6 +216,10 @@ describe('creator profile on mobile', () => {
     expect(within(mobileBranch()).queryByTestId('storefront')).toBeNull();
     expect(sectionNav()).toBeTruthy();
     expect(section('Products')!.querySelector('h2:not(.sr-only)')).toBeNull();
+    expect(within(section('Products')!).getByRole('heading', {
+      name: 'Products',
+      level: 2,
+    }).className).toContain('sr-only');
     expect(section('Profile')).toBeNull();
     expect(section('About')).toBeNull();
   });
@@ -266,7 +270,11 @@ describe('creator profile on mobile', () => {
     expect(
       await within(section('Services')!).findByText('No services yet'),
     ).toBeTruthy();
-    expect(within(section('Services')!).queryByRole('heading', {name: 'Services'})).toBeNull();
+    const heading = within(section('Services')!).getByRole('heading', {
+      name: 'Services',
+      level: 2,
+    });
+    expect(heading.className).toContain('sr-only');
     expect(section('Products')).toBeNull();
   });
 
@@ -331,6 +339,25 @@ describe('creator profile on mobile', () => {
 
     expect(within(mobileBranch()).queryByRole('navigation')).toBeNull();
     expect(section('Profile')).toBeTruthy();
+  });
+
+  test('a product-only desktop store omits the redundant Products and item-count header', () => {
+    render(
+      <CreatorProfileLayout
+        biolink={makeBiolink()}
+        appearance={null}
+        content={[shopWidget]}
+        profileConfig={{
+          ...makeBiolink().profile_config,
+          about_html: '',
+        } as never}
+      />,
+    );
+
+    const desktop = desktopBranch();
+    expect(within(desktop).getByTestId('shop-widget')).toBeTruthy();
+    expect(within(desktop).queryByRole('heading', {name: 'Products'})).toBeNull();
+    expect(within(desktop).queryByTestId('storefront')).toBeNull();
   });
 
   test('the desktop grid keeps both sections side by side', () => {
