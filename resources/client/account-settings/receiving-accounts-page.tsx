@@ -243,6 +243,7 @@ function PayoutAccountCard({
 }
 
 export function Component() {
+  const {trans} = useTrans();
   const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
   const [availableBanks, setAvailableBanks] = useState<BankOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -403,12 +404,12 @@ export function Component() {
         <Button
           disabled={loading || busy || loadError || availableBanks.length === 0}
           onClick={openNewAccount}
-          className="size-10 shrink-0 px-0 sm:h-9 sm:w-auto sm:gap-1.5 sm:px-4"
+          className="h-10 shrink-0 gap-1 px-3 sm:h-9 sm:gap-1.5 sm:px-4"
+          aria-label={trans({message: 'Add payout account'})}
         >
           <PlusIcon className="size-4" aria-hidden="true" />
-          <span className="sr-only sm:not-sr-only">
-            <Trans message="Add payout account" />
-          </span>
+          <span className="sm:hidden"><Trans message="Add" /></span>
+          <span className="hidden sm:inline"><Trans message="Add payout account" /></span>
         </Button>
       }
     >
