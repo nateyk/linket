@@ -1,6 +1,7 @@
 import {AdHost} from '@common/admin/ads/ad-host';
 import {useSettingsPreviewMode} from '@common/admin/settings/preview/use-settings-preview-mode';
 import {DefaultMetaTags} from '@common/seo/default-meta-tags';
+import {CreatorStories} from '@common/ui/landing-page/creator-stories/creator-stories';
 import {CtaSimpleCentered} from '@common/ui/landing-page/cta/cta-simple-centered';
 import {LandingPageFaq} from '@common/ui/landing-page/faq/landing-page-faq';
 import {FeatureWithScreenshot} from '@common/ui/landing-page/features/feature-with-screenshot';
@@ -105,6 +106,8 @@ function Section({config, index}: SectionProps) {
       return <FeatureWithScreenshot config={config} />;
     case 'features-grid':
       return <FeaturesGrid config={config} />;
+    case 'creator-stories':
+      return <CreatorStories config={config} />;
     case 'faq':
       return <LandingPageFaq config={config} />;
     case 'cta-simple-centered':
