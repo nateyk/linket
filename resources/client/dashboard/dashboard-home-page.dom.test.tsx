@@ -83,9 +83,12 @@ it('shows refund-adjusted sales, order counts, units, and average order from Cha
   showDashboard();
   expect(await screen.findByText('164000 ETB cents')).toBeTruthy();
   expect(screen.getByText('41000 ETB cents')).toBeTruthy();
+  expect(screen.getByText('Sales')).toBeTruthy();
+  expect(screen.getByText('Orders')).toBeTruthy();
   expect(screen.getByText('Items sold')).toBeTruthy();
-  expect(screen.getByText('Net of completed refunds')).toBeTruthy();
-  expect(screen.getByText('Paid Chapa orders')).toBeTruthy();
+  expect(screen.getByText('Average order')).toBeTruthy();
+  expect(screen.queryByText('Net of completed refunds')).toBeNull();
+  expect(screen.queryByText('Paid Chapa orders')).toBeNull();
   expect(screen.queryByText('Verification allowance')).toBeNull();
   expect(screen.queryByText('Available for payout')).toBeNull();
 });

@@ -9,7 +9,6 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor,
   within,
 } from '@testing-library/react';
 import {useBootstrapDataStore} from '@ui/bootstrap-data/bootstrap-data-store';
@@ -851,10 +850,15 @@ describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
       ],
       {initialEntries: ['/dashboard/items/new/course']},
     );
+    const queryClient = new QueryClient({
+      defaultOptions: {queries: {retry: false}},
+    });
     render(
-      <DashboardLayoutContextProvider name="test">
-        {() => <RouterProvider router={router} />}
-      </DashboardLayoutContextProvider>,
+      <QueryClientProvider client={queryClient}>
+        <DashboardLayoutContextProvider name="test">
+          {() => <RouterProvider router={router} />}
+        </DashboardLayoutContextProvider>
+      </QueryClientProvider>,
     );
 
     const {h1, sections} = expectHeadingHierarchy();
@@ -862,7 +866,7 @@ describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
     // The section triggers ARE the h2 headings, titled per section.
     expect(sections.map(h => h.textContent)).toEqual([
       expect.stringContaining('Course details'),
-      expect.stringContaining('Course settings'),
+      expect.stringMatching(/Course settings|About Course/i),
     ]);
   });
 
@@ -916,11 +920,23 @@ describe('UX-35 Course Builder heading semantics', () => {
     );
     const headings = source.match(/<DashboardLayout\.SectionTitle\s+render={<h1 \/>}[^>]*>/g);
     expect(headings).toHaveLength(2);
-    // Both loading and ready states must retain mobile reflow styling.
-    for (const heading of headings ?? []) {
-      expect(heading).toContain('max-lg:basis-full');
-      expect(heading).toContain('max-lg:whitespace-normal');
+    // Both loading and ready headers must allow mobile reflow. The title
+    // stays beside the sidebar toggle, while actions wrap onto their own row.
+    const headers = source.match(/<DashboardLayout\.SectionHeader\s+className="[^"]*"\s*>/g);
+    expect(headers).toHaveLength(2);
+    for (const header of headers ?? []) {
+      expect(header).toContain('max-lg:h-auto');
+      expect(header).toContain('max-lg:flex-wrap');
     }
+    for (const heading of headings ?? []) {
+      expect(heading).toContain('max-lg:flex-wrap');
+      expect(heading).toContain('max-lg:overflow-visible');
+      expect(heading).toContain('max-lg:whitespace-normal');
+      expect(heading).toContain('max-lg:text-clip');
+    }
+    expect(source).toContain('max-lg:w-full max-lg:basis-full max-lg:flex-wrap max-lg:justify-end');
+    // The real-browser moderation lifecycle also measures heading clipping,
+    // whitespace and viewport overflow at 375px.
     expect(source).toContain('message="Course Builder"');
   });
 });

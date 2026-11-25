@@ -1,10 +1,10 @@
 import {
-  BanknoteArrowUpIcon,
   BriefcaseBusinessIcon,
   ChartColumnBigIcon,
   FolderIcon,
   FormIcon,
   GlobeIcon,
+  HandCoinsIcon,
   HomeIcon,
   LayoutTemplateIcon,
   LinkIcon,
@@ -42,7 +42,7 @@ export const dashboardSidebarIcons: Record<
   '/dashboard/items': <PackageIcon />,
   '/dashboard/services': <BriefcaseBusinessIcon />,
   '/dashboard/orders': <ShoppingBagIcon />,
-  '/dashboard/withdrawals': <BanknoteArrowUpIcon />,
+  '/dashboard/withdrawals': <HandCoinsIcon />,
   '/dashboard/sales-payouts': <ShoppingBagIcon />,
   '/dashboard/sales-payments': <ShoppingBagIcon />,
 };

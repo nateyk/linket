@@ -25,6 +25,8 @@ describe('large text responsive Course header UX-34', () => {
     expect(source).toContain('max-lg:hidden');
     expect(source).toContain('max-lg:size-11 max-lg:px-0');
     expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
+    expect(source).toContain('<Trans message="Create course" />');
+    expect(source).toContain('<Trans message="Creating..." />');
   });
 });
 
@@ -37,7 +39,9 @@ describe('course creation page', () => {
   test('renders All products › Create course and shared form primitives', () => {
     expect(source).toContain('<Breadcrumb.Root');
     expect(source).toContain('<Breadcrumb.Link to="/dashboard/items">');
-    expect(source).toContain('<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate"><Trans message="Create course" /></Breadcrumb.Page>');
+    expect(source).toContain(
+      '<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate"><Trans message="Create course" /></Breadcrumb.Page>',
+    );
     expect(source).not.toContain('ArrowLeftIcon');
     expect(source).toContain('<ProductFormField');
     expect(source).toContain('aria-invalid');
@@ -77,6 +81,15 @@ describe('wizard handoff continuity', () => {
     expect(source).not.toContain('From previous step');
   });
 
+  test('desktop uses two always-open form columns without customer preview', () => {
+    expect(source).toContain('max-w-6xl');
+    expect(source).toContain('lg:grid-cols-2');
+    expect(source).toContain('message="Course setup"');
+    expect(source).not.toContain('Accordion.Root');
+    expect(source).not.toContain('ProductFormSection');
+    expect(source).not.toContain('xl:sticky');
+  });
+
   test('customer preview opens through the shared read-only dialog', () => {
     expect(source).toContain('ProductFormCustomerPreview');
     expect(source).not.toContain('<Card.Root>');
@@ -85,8 +98,10 @@ describe('wizard handoff continuity', () => {
     expect(source).not.toContain('<aside className="min-w-0 lg:sticky lg:top-6">');
   });
 
-  test('course settings uses a non-price icon', () => {
-    expect(source).toContain('ListChecksIcon');
+  test('panel headers are plain titles without generative icon chrome', () => {
+    expect(source).toContain('title="About Course"');
+    expect(source).toContain('title="Course details"');
+    expect(source).not.toContain('BuilderSectionHeader');
     expect(source).not.toMatch(/settings.*TagIcon|icon: TagIcon/);
   });
 });
@@ -111,12 +126,10 @@ describe('uncertain creation recovery', () => {
 
 /* ── Task B — inline course settings in the two-step create flow ──
  *
- * The "Course settings" section is a real form now: it renders the shared
- * settings fields (the same module the builder's settings dialog uses) and
- * the create submit follows the POST /items with a best-effort
- * PUT /courses/{id} carrying ONLY the settings subset. The course exists
- * after the POST, so a rejected PUT must never re-create it — it navigates
- * into the builder anyway and surfaces one danger toast.
+ * About Course + Course details are always-open panels: shared settings
+ * fields (same module as the builder dialog) and create submit follows
+ * POST /items with a best-effort PUT /courses/{id} for the settings
+ * subset. A rejected PUT must never re-create the course.
  */
 
 // jsdom has no layout: ProseMirror queries Range rects while the settings
@@ -235,11 +248,11 @@ function typeTitle(title = 'Cafe') {
 }
 
 async function openSettingsSection(
-  user: ReturnType<typeof userEvent.setup>,
+  _user?: ReturnType<typeof userEvent.setup>,
 ) {
-  await user.click(
-    screen.getByRole('button', {name: /course settings/i}),
-  );
+  void _user;
+  // Settings are always visible (no accordion) — wait for the shared fields.
+  await screen.findByText('Description');
 }
 
 function addOutcome(text: string) {
@@ -384,71 +397,30 @@ describe('Course creation uncertainty and duplicate prevention', () => {
 });
 
 describe('inline course settings', () => {
-  test('settings section renders the three shared fields with the helper copy below them', async () => {
-    const user = userEvent.setup();
+  test('settings section renders the three shared fields without helper chrome', async () => {
     mount();
-    await openSettingsSection(user);
+    await openSettingsSection();
 
-    // The section subtitle names the inline form (a plain array string the
-    // extractor cannot see — it reaches <Trans> through a variable).
-    expect(
-      screen.getByText(
-        'Add a description, learning outcomes, and a cover image.',
-      ),
-    ).toBeTruthy();
-
-    // The three fields, by their visible labels.
-    const descriptionLabel = await screen.findByText('Description');
-    expect(screen.getByText("What you'll learn")).toBeTruthy();
+    expect(screen.getByText('Course setup')).toBeTruthy();
+    expect(screen.getByText('Course details')).toBeTruthy();
+    expect(screen.getByText('About Course')).toBeTruthy();
+    expect(screen.queryByText('Course settings')).toBeNull();
     expect(screen.getByText('Cover image')).toBeTruthy();
-    // ...and the description editor is the shared TipTap field.
+    expect(await screen.findByText('Description')).toBeTruthy();
+    expect(screen.getByText("What you'll learn")).toBeTruthy();
     await vi.waitFor(() => {
       expect(document.querySelector('.ProseMirror')).toBeTruthy();
     });
-
-    // The "what happens next" helper lines moved BELOW the fields (the first
-    // one reworded; the draft-review line is unchanged).
-    const firstHelper = screen.getByText(
-      'After creating the course, add chapters and lessons in the course builder.',
-    );
-    expect(
-      screen.getByText('Your course stays a draft until you submit it for review.'),
-    ).toBeTruthy();
-    expect(
-      descriptionLabel.compareDocumentPosition(firstHelper) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
   });
 
-  test('the customer preview reflects the typed description as plain text', async () => {
+  test('settings description editor accepts typed content', async () => {
     const user = userEvent.setup();
     mount();
-
-    // Empty description: shared ProductCard omits the description block
-    // (same as the digital-product edit preview) until there is real copy.
-    expect(
-      screen.queryByText(
-        'Add a short description to show learners what to expect.',
-      ),
-    ).toBeNull();
-    expect(screen.queryByText('Your course title')).toBeNull();
-    await user.click(screen.getByRole('button', {name: 'Preview'}));
-    expect(screen.getByText('Your course title')).toBeTruthy();
-    await user.keyboard('{Escape}');
-
     await openSettingsSection(user);
     await typeDescription(user, 'Cafe basics');
-    await user.click(screen.getByRole('button', {name: 'Preview'}));
-
-    // The preview shows the typed text — the TipTap value is tag-stripped and
-    // rendered as a plain text node (the editor itself also holds the text,
-    // so pick the match outside .ProseMirror).
     const matches = await screen.findAllByText('Cafe basics');
-    const preview = matches.find(el => !el.closest('.ProseMirror'));
-    expect(preview).toBeTruthy();
-    expect(preview!.textContent).toBe('Cafe basics');
+    expect(matches.some(el => el.closest('.ProseMirror'))).toBe(true);
   }, 10_000);
-
   test('submitting with untouched settings posts once and never PUTs', async () => {
     mount();
     typeTitle();

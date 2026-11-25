@@ -33,11 +33,11 @@ import {
   ChevronRightIcon,
   CircleAlertIcon,
   CircleDollarSignIcon,
-  Clock3Icon,
+  LandmarkIcon,
   Link2Icon,
   MapPinIcon,
-  ReceiptTextIcon,
   PackageCheckIcon,
+  ReceiptTextIcon,
   type LucideIcon,
 } from 'lucide-react';
 import {ReactNode, useCallback, useRef, useState} from 'react';
@@ -132,7 +132,6 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
   const cards: Array<{
     key: string;
     label: ReactNode;
-    scope: ReactNode;
     value: number | null | undefined;
     icon: LucideIcon;
     format: 'currency' | 'number';
@@ -141,55 +140,51 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
     {
       key: 'sales',
       label: <Trans message="Sales" />,
-      scope: <Trans message="Net of completed refunds" />,
       value: metricValue(summary?.net_sales_cents),
-      icon: CircleDollarSignIcon,
+      icon: LandmarkIcon,
       format: 'currency',
-      tone: 'text-primary bg-primary/10',
+      tone: 'bg-primary/10 text-primary',
     },
     {
       key: 'orders',
       label: <Trans message="Orders" />,
-      scope: <Trans message="Paid Chapa orders" />,
       value: metricValue(summary?.paid_orders_count),
       icon: ReceiptTextIcon,
       format: 'number',
-      tone: 'text-positive bg-positive/10',
+      tone: 'bg-positive/10 text-positive',
     },
     {
       key: 'items-sold',
       label: <Trans message="Items sold" />,
-      scope: <Trans message="Units in paid orders" />,
       value: metricValue(summary?.items_sold_count),
       icon: PackageCheckIcon,
       format: 'number',
-      tone: 'text-muted-foreground bg-muted',
+      tone: 'bg-warning/10 text-warning',
     },
     {
       key: 'average-order',
       label: <Trans message="Average order" />,
-      scope: <Trans message="Net sales per paid order" />,
       value: metricValue(summary?.average_order_cents),
-      icon: ChartNoAxesCombinedIcon,
+      icon: CircleDollarSignIcon,
       format: 'currency',
-      tone: 'text-muted-foreground bg-muted',
+      tone: 'bg-muted text-muted-foreground',
     },
   ];
 
   return (
-    <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section
+      aria-label="Sales summary"
+      className="grid min-w-0 grid-cols-2 gap-3 xl:grid-cols-4"
+    >
       {cards.map(card => {
         const Icon = card.icon;
 
         return (
-          <Card key={card.key} size="sm" className="min-h-32 gap-3">
+          <Card key={card.key} size="sm" className="min-h-32 min-w-0 gap-3">
             <Card.Header>
-              <Card.Title className="text-sm font-normal leading-snug text-muted-foreground whitespace-normal">
+              <Card.Title className="truncate text-sm font-normal text-muted-foreground">
                 {card.label}
               </Card.Title>
-              <Card.Description className="text-xs">
-                {card.scope}
-              </Card.Description>
               <Card.Action>
                 <span
                   className={`flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4 ${card.tone}`}
@@ -202,18 +197,18 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
               {card.value === null ? (
                 <Skeleton className="h-8 w-28" />
               ) : card.value === undefined ? (
-                <p className="text-2xl font-semibold tracking-tight text-muted-foreground tabular-nums">
+                <p className="text-2xl font-bold tracking-tight text-muted-foreground tabular-nums">
                   —
                 </p>
               ) : card.format === 'currency' ? (
-                <p className="truncate text-2xl font-semibold tracking-tight tabular-nums">
+                <p className="truncate text-2xl font-bold tracking-tight tabular-nums">
                   <FormattedCurrency
                     valueInCents={card.value}
                     currency={currency}
                   />
                 </p>
               ) : (
-                <p className="text-2xl font-semibold tracking-tight tabular-nums">
+                <p className="text-2xl font-bold tracking-tight tabular-nums">
                   <FormattedNumber value={card.value} />
                 </p>
               )}
@@ -536,7 +531,7 @@ function RecentOrderRow({order}: {order: DashboardOrder}) {
         </span>
       </span>
       <span className="hidden min-w-0 flex-col md:flex">
-        <span className="truncate">
+        <span className="truncate text-sm">
           {buyerLabel || <Trans message="Guest buyer" />}
         </span>
         <span className="truncate text-xs text-muted-foreground">
@@ -552,11 +547,16 @@ function RecentOrderRow({order}: {order: DashboardOrder}) {
       <span className="hidden md:block">
         <OrderStatusBadge status={order.status} />
       </span>
-      <span className="w-24 text-end font-mono font-medium tabular-nums">
-        <FormattedCurrency
-          valueInCents={order.gross_amount_cents}
-          currency={order.currency}
-        />
+      <span className="flex w-auto flex-col items-end gap-1 md:w-24">
+        <span className="font-mono text-sm font-medium tabular-nums">
+          <FormattedCurrency
+            valueInCents={order.gross_amount_cents}
+            currency={order.currency}
+          />
+        </span>
+        <span className="md:hidden">
+          <OrderStatusBadge status={order.status} />
+        </span>
       </span>
     </Link>
   );

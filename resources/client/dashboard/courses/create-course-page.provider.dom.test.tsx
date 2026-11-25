@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * Critical-2 regression: the "Course settings" panel mounts the shared
+ * Critical-2 regression: the Course details panel mounts the shared
  * CourseSettingsCoverField → CroppedCover, whose upload hook reads
  * FileUploadContext — a `createContext(null!)`. The create page returned
  * DashboardLayout.MainSection with no provider, so CLICKING the settings
@@ -16,7 +16,6 @@
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {render, screen} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {beforeAll, expect, test, vi} from 'vitest';
 import {Component} from './create-course-page';
@@ -60,8 +59,7 @@ vi.mock('@common/http/query-client', async () => {
   };
 });
 
-test('opening Course settings renders the real cover field without a provider error', async () => {
-  const user = userEvent.setup();
+test('Course details renders the real cover field without a provider error', async () => {
   const router = createMemoryRouter(
     [{path: '/dashboard/items/new/course', element: <Component />}],
     {initialEntries: ['/dashboard/items/new/course?billing=free']},
@@ -77,10 +75,7 @@ test('opening Course settings renders the real cover field without a provider er
   );
 
   // Deliberately no FileUploadProvider here — the page must supply it.
-  await user.click(screen.getByRole('button', {name: /course settings/i}));
-
-  // The real CroppedCover dropzone mounts (it reads the upload store the
-  // page provides) instead of throwing out of render.
+  // Cover lives in Course details and is always open (no accordion).
   expect(await screen.findByText('Cover image')).toBeTruthy();
   expect(
     await screen.findByText('Select file to upload or drag-and-drop file'),

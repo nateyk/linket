@@ -605,7 +605,10 @@ function CourseBuilder() {
       <DashboardLayout.MainSection>
         <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
           <DashboardLayout.SidebarToggle />
-          <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip max-lg:text-xl">
+          <DashboardLayout.SectionTitle
+            render={<h1 />}
+            className="max-lg:flex-wrap max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip max-lg:text-xl"
+          >
             <Trans message="Course Builder" />
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
@@ -656,20 +659,25 @@ function CourseBuilder() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip max-lg:text-xl">
-          <Trans message="Course Builder" />
+        <DashboardLayout.SectionTitle
+          render={<h1 />}
+          className="max-lg:flex-wrap max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip max-lg:text-xl"
+        >
+          <span className="min-w-0 max-lg:break-words">
+            <Trans message="Course Builder" />
+          </span>
           {course.product.status === 'approved' && (
-            <Badge variant="positive" className="ml-2">
+            <Badge variant="positive" className="ms-2">
               <Trans message="Published" />
             </Badge>
           )}
           {course.product.status === 'pending_approval' && (
-            <Badge variant="secondary" className="ml-2">
+            <Badge variant="secondary" className="ms-2">
               <Trans message="In review" />
             </Badge>
           )}
         </DashboardLayout.SectionTitle>
-        <div className="flex min-w-0 items-center gap-2 max-lg:ml-auto">
+        <div className="flex min-w-0 items-center gap-2 max-lg:w-full max-lg:basis-full max-lg:flex-wrap max-lg:justify-end lg:shrink-0">
           <div className="hidden items-center gap-2 lg:flex">
             <Button
               variant="outline"
@@ -747,11 +755,6 @@ function CourseBuilder() {
             </Dropdown.Content>
           </Dropdown.Root>
           <div className="flex min-w-0 flex-col items-end gap-1">
-            {!hasPublishedLesson && canSubmit && !publishing && (
-              <p className="text-xs text-muted-foreground">
-                <Trans message="Publish at least one lesson to submit for review." />
-              </p>
-            )}
             {!canSubmit && (
               <p className="text-xs text-muted-foreground">
                 <Trans message="Edits will return this course to draft." />
@@ -764,17 +767,12 @@ function CourseBuilder() {
                   <span className="inline-flex">
                     <Button
                       size="sm"
+                      aria-label="Submit for review"
                       onClick={() => void submit()}
                       disabled={publishing || !canSubmit || !hasPublishedLesson}
                     >
                       <Trans
-                        message={
-                          publishing
-                            ? 'Submitting...'
-                            : hasPublishedLesson
-                              ? 'Submit for review'
-                              : 'Add a published lesson'
-                        }
+                        message={publishing ? 'Submitting...' : 'Submit'}
                       />
                     </Button>
                   </span>
@@ -984,8 +982,8 @@ function CourseBuilder() {
                                           className={cn(
                                             'flex items-center gap-2 rounded-card-sm p-2 text-sm',
                                             selectedLesson?.id === lesson.id
-                                              ? 'bg-primary/10'
-                                              : 'bg-card hover:bg-muted/30',
+                                              ? 'bg-selected'
+                                              : 'hover:bg-hover',
                                           )}
                                         >
                                           <div className="hidden lg:block">
@@ -1480,14 +1478,13 @@ function EditorContentSync({content}: {content: string}) {
 
 function LessonEditor({
   lesson,
-  chapterId,
   onSaved,
   onSelectLesson,
   onBackToCurriculum,
   dirtyCheckRef,
 }: {
   lesson: Lesson;
-  chapterId: number | null;
+  chapterId?: number | null;
   onSaved: () => void;
   onSelectLesson: (l: Lesson) => void;
   onBackToCurriculum: () => void;
@@ -1872,20 +1869,18 @@ function LessonEditor({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="self-start lg:hidden"
-        onClick={onBackToCurriculum}
-      >
-        <ArrowLeftIcon data-icon="inline-start" />
-        <Trans message="Back to curriculum" />
-      </Button>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          <Trans message="Chapter :id • Lesson editor" values={{id: chapterId}} />
-        </p>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="self-start lg:hidden"
+          onClick={onBackToCurriculum}
+        >
+          <ArrowLeftIcon data-icon="inline-start" />
+          <Trans message="Back to curriculum" />
+        </Button>
+        <div className="ms-auto flex items-center gap-2">
           {hasUnsavedChanges() && (
             <span role="status" className="text-xs font-medium text-warning">
               <Trans message="Unsaved edits" />
@@ -1893,9 +1888,9 @@ function LessonEditor({
           )}
           <Badge variant={status === 'published' ? 'positive' : 'outline'}>
             {status === 'published' ? (
-              <Trans message="Published lesson" />
+              <Trans message="Published" />
             ) : (
-              <Trans message="Draft lesson" />
+              <Trans message="Draft" />
             )}
           </Badge>
         </div>
@@ -1943,27 +1938,13 @@ function LessonEditor({
             </Select.Group>
           </Select.Content>
         </Select.Root>
-        <p className="text-xs text-muted-foreground">
-          <Trans
-            message={
-              contentType === 'video'
-                ? 'Readable content is preserved when switching types.'
-                : 'Video summary is preserved when switching types.'
-            }
-          />
-        </p>
       </Field.Root>
 
       {contentType === 'video' && (
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <VideoIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-              <p className="text-sm font-medium"><Trans message="Video" /></p>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              <Trans message="Upload a video for playback inside Linket, or paste a YouTube/Vimeo URL." />
-            </p>
+          <div className="flex items-center gap-2">
+            <VideoIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+            <p className="text-sm font-medium"><Trans message="Video" /></p>
           </div>
           <div className="flex flex-col gap-4">
             <SharedFileUploader
@@ -1981,17 +1962,13 @@ function LessonEditor({
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
-              <div className="relative flex justify-center text-xs text-muted-foreground bg-card px-2"><Trans message="or" /></div>
+              <div className="relative flex justify-center bg-card px-2 text-xs text-muted-foreground">
+                <Trans message="or" />
+              </div>
             </div>
-            <Alert fillStyle="subtleFill">
-              <Alert.Description>
-                <Trans message="YouTube and Vimeo embeds can be opened or shared outside Linket. Upload a video file for playback that stays inside your store." />
-              </Alert.Description>
-            </Alert>
             <Field.Root>
               <Field.Label><Trans message="Video URL" /></Field.Label>
               <Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
-              <Field.Description><Trans message="Paste a YouTube or Vimeo URL" /></Field.Description>
             </Field.Root>
             {(videoUrl || videoFileEntryId) && (
               <div className="rounded-card border bg-muted/20 p-3 text-xs">

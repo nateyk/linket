@@ -13,8 +13,32 @@ import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, RouterProvider} from 'react-router';
-import {beforeEach, describe, expect, test, vi} from 'vitest';
+import {beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
 import {Component} from './create-course-page';
+
+// Settings are always mounted, so TipTap/ProseMirror is always present —
+// stub layout APIs jsdom omits (same as create-course-page.test.tsx).
+beforeAll(() => {
+  const emptyRect: DOMRect = {
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    toJSON: () => ({}),
+  };
+  Range.prototype.getBoundingClientRect = () => emptyRect;
+  Range.prototype.getClientRects = () =>
+    ({
+      length: 0,
+      item: () => null,
+      [Symbol.iterator]: function* () {},
+    }) as unknown as DOMRectList;
+  document.elementFromPoint = () => document.body;
+});
 
 const mockPost = vi.hoisted(() => vi.fn());
 
@@ -65,11 +89,10 @@ function submitForm() {
   fireEvent.submit(form as HTMLFormElement);
 }
 
-async function typeTitle(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(
-    screen.getByRole('textbox', {name: /course title/i}),
-    'Ethiopian coffee course',
-  );
+function typeTitle(title = 'Ethiopian coffee course') {
+  fireEvent.change(screen.getByRole('textbox', {name: /course title/i}), {
+    target: {value: title},
+  });
 }
 
 beforeEach(() => {
@@ -81,7 +104,7 @@ describe('paid course price gate', () => {
   test('empty price blocks submit and shows the wizard copy inline', async () => {
     const user = userEvent.setup();
     mount();
-    await typeTitle(user);
+    typeTitle();
 
     const priceInput = screen.getByLabelText(/price \(etb\)/i) as HTMLInputElement;
     expect(priceInput.value).toBe('10');
@@ -98,12 +121,12 @@ describe('paid course price gate', () => {
   });
 
   test('a zero price is not a paid price', async () => {
-    const user = userEvent.setup();
     mount();
-    await typeTitle(user);
+    typeTitle();
 
-    await user.clear(screen.getByLabelText(/price \(etb\)/i));
-    await user.type(screen.getByLabelText(/price \(etb\)/i), '0');
+    fireEvent.change(screen.getByLabelText(/price \(etb\)/i), {
+      target: {value: '0'},
+    });
 
     submitForm();
 
@@ -112,13 +135,12 @@ describe('paid course price gate', () => {
   });
 
   test('a valid price submits in cents and routes to the builder', async () => {
-    const user = userEvent.setup();
     mount();
-    await typeTitle(user);
+    typeTitle();
 
-    const priceInput = screen.getByLabelText(/price \(etb\)/i) as HTMLInputElement;
-    await user.clear(priceInput);
-    await user.type(priceInput, '25.5');
+    fireEvent.change(screen.getByLabelText(/price \(etb\)/i), {
+      target: {value: '25.5'},
+    });
 
     submitForm();
 
@@ -137,9 +159,8 @@ describe('paid course price gate', () => {
   });
 
   test('free billing keeps submitting zero without a price error', async () => {
-    const user = userEvent.setup();
     mount('/dashboard/items/new/course?billing=free');
-    await typeTitle(user);
+    typeTitle();
     expect(screen.queryByLabelText(/price \(etb\)/i)).toBeNull();
 
     submitForm();
@@ -184,8 +205,8 @@ describe('page shell: one h1, and a title that owns the header row', () => {
     mount();
 
     const bar = screen.getByRole('progressbar');
-    // routed through trans() (final-fix item 3) but unchanged for English
-    expect(bar.getAttribute('aria-label')).toBe('Product setup progress');
+    expect(bar.getAttribute('aria-label')).toBe('Course setup progress');
+    expect(screen.getByText('Course setup')).not.toBeNull();
   });
 });
 
@@ -207,10 +228,9 @@ describe('course setup customer preview on demand', () => {
   });
 
   test('previews the current course title without creating a course', async () => {
-    const user = userEvent.setup();
     mount('/dashboard/items/new/course?billing=paid&price_cents=1000');
-    await typeTitle(user);
-    await user.click(screen.getByRole('button', {name: 'Preview'}));
+    typeTitle();
+    fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
     expect(screen.getByText('Ethiopian coffee course')).not.toBeNull();
     expect(mockPost).not.toHaveBeenCalled();
   });

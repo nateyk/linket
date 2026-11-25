@@ -200,9 +200,6 @@ export function CourseSettingsOutcomesField({
       <Field.Label>
         <Trans message="What you'll learn" />
       </Field.Label>
-      <Field.Description>
-        <Trans message="Add up to 8 outcome bullets that students will achieve." />
-      </Field.Description>
       <OutcomesChipList outcomes={outcomes} onChange={onChange} />
     </Field.Root>
   );
@@ -230,9 +227,6 @@ export function CourseSettingsCoverField({
         aspect={16 / 9}
         label={trans(message('Cover image'))}
       />
-      <Field.Description>
-        <Trans message="Recommended size: 1200×675 (16:9) · Max 5MB" />
-      </Field.Description>
     </Field.Root>
   );
 }

@@ -1,7 +1,6 @@
 import {apiClient} from '@common/http/query-client';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
@@ -12,16 +11,16 @@ import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
+import {cn} from '@ui/utils/cn';
 import {isAxiosError} from 'axios';
-import {EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
-import {FormEvent, useRef, useState} from 'react';
+import {EyeIcon, GraduationCapIcon, TriangleAlertIcon} from 'lucide-react';
+import {FormEvent, type ReactNode, useRef, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
 import {parseEtbToCents, parseWizardPrefill, priceForBillingMode, type BillingMode} from '../digital-products/product-create-flow';
 import {BillingModePicker} from '../digital-products/billing-mode-picker';
 import {isUncertainMutationOutcome} from '../digital-products/request-outcome';
 import {ProductFormField} from '../digital-products/product-form-field';
 import {ProductFormProgress} from '../digital-products/product-form-progress';
-import {ProductFormSection} from '../digital-products/product-form-section';
 import {ProductFormCustomerPreview} from '../digital-products/product-preview';
 import {ProductPreviewDialog} from '../digital-products/product-preview-dialog';
 import {
@@ -54,7 +53,6 @@ export function Component() {
   const uncertainRequest = useRef(false);
   const [creationUncertain, setCreationUncertain] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [openSection, setOpenSection] = useState<string | null>('details');
   // Inline course settings (Task B): the same shared fields the builder's
   // CourseSettingsDialog renders, filled in before the course exists.
   const [description, setDescription] = useState('');
@@ -75,10 +73,11 @@ export function Component() {
   // Intentionally lighter than the digital-product edit page: chapters and
   // lessons are authored in the course builder after creation, so this setup
   // form has no files or storefront-placement sections.
-  const sections = [
-    {id: 'details', title: 'Course details', description: 'Name your course and confirm its price.', icon: GraduationCapIcon, isComplete: !!title.trim() && !!billingMode && (isFree || (parseEtbToCents(price) ?? 0) > 0)},
-    {id: 'settings', title: 'Course settings', description: 'Add a description, learning outcomes, and a cover image.', icon: ListChecksIcon, isComplete: hasSettingsContent},
-  ];
+  const detailsComplete =
+    !!title.trim() &&
+    !!billingMode &&
+    (isFree || (parseEtbToCents(price) ?? 0) > 0);
+  const completedSections = [detailsComplete, hasSettingsContent].filter(Boolean).length;
   const createCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // A missing response may mean the server already created the Course.
@@ -96,7 +95,10 @@ export function Component() {
       }
     }
     setErrors(next);
-    if (Object.keys(next).length) { setOpenSection('details'); document.getElementById(next.title ? 'course-title' : billingMode ? 'course-price' : 'course-billing')?.focus(); return; }
+    if (Object.keys(next).length) {
+      document.getElementById(next.title ? 'course-title' : billingMode ? 'course-price' : 'course-billing')?.focus();
+      return;
+    }
     createInFlight.current = true;
     setCreating(true); setError(undefined);
     try {
@@ -150,7 +152,9 @@ export function Component() {
       setCreating(false);
     }
   };
-  const previewPrice = isFree ? trans({message: 'Free'}) : `ETB ${(Number(price) || 0).toFixed(2)}`;
+  const previewPrice = isFree
+    ? trans({message: 'Free'})
+    : `ETB ${(Number(price) || 0).toFixed(2)}`;
   // The settings panel mounts CroppedCover, whose upload hook reads the
   // FileUploadContext — same provider wrap as the builder and the
   // digital-product form, or opening the section throws during render.
@@ -169,79 +173,177 @@ export function Component() {
           <Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate"><Trans message="Create course" /></Breadcrumb.Page>
         </Breadcrumb.Item>
       </Breadcrumb.Root>
-      {/* Header actions mirror the digital-product edit page: icon + label
-          that collapses to icon-only below 1024px. aria-labels keep the
-          collapsed buttons named. */}
       <div className="ms-auto flex shrink-0 items-center gap-2 max-sm:ms-0 max-sm:gap-1">
-        <Button type="button" variant="outline" size="sm" className="max-lg:size-11 max-lg:px-0"
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="max-lg:size-11 max-lg:px-0"
           aria-label={trans({message: 'Preview'})}
-          onClick={() => setPreviewOpen(true)}>
+          onClick={() => setPreviewOpen(true)}
+        >
           <EyeIcon className="size-4" aria-hidden="true" />
           <span className="max-lg:hidden"><Trans message="Preview" /></span>
         </Button>
-        {creationUncertain && <Button variant="outline" size="sm" className="min-h-11 max-lg:size-11 max-lg:px-0" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><ListChecksIcon className="hidden size-4 max-lg:block" aria-hidden="true" /><span className="max-lg:hidden"><Trans message="Check My Items" /></span></Button>}<Button size="sm" className="max-lg:size-11 max-lg:px-0" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating || creationUncertain}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-lg:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
+        {creationUncertain && (
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link to="/dashboard/items" />}
+          >
+            <Trans message="Check My Items" />
+          </Button>
+        )}
+        <Button
+          size="sm"
+          className="max-lg:size-11 max-lg:px-0"
+          type="submit"
+          form="course-create-form"
+          aria-label={
+            creating
+              ? trans({message: 'Creating...'})
+              : trans({message: 'Create course'})
+          }
+          disabled={creating || creationUncertain}
+        >
+          {creating ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <GraduationCapIcon className="size-4" data-icon="inline-start" />
+          )}
+          <span className="max-lg:hidden">
+            {creating ? <Trans message="Creating..." /> : <Trans message="Create course" />}
+          </span>
+        </Button>
+      </div>
     </DashboardLayout.SectionHeader>
-    <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto w-full max-w-3xl py-4 sm:py-5">
+    <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto w-full max-w-6xl py-4 sm:py-5">
       {error && <Alert.Root role="alert" variant="destructive" fillStyle="subtleFill" className="mb-5"><TriangleAlertIcon /><Alert.Description>{error}</Alert.Description></Alert.Root>}
-      {/* Focused Course setup column; customer preview opens only on request. */}
-      <div className="flex min-w-0 flex-col gap-5">
-        <div className="flex min-w-0 flex-col gap-4">
-          {/* Existing URLs still prefill billing/price; new courses select them inline. */}
-          <ProductFormProgress completed={sections.filter(s => s.isComplete).length} total={sections.length} />
-          <Accordion.Root variant="bordered" value={openSection ? [openSection] : []} onValueChange={value => setOpenSection(value[0] ?? null)}>
-            {sections.map(section => <ProductFormSection key={section.id} {...section} hasError={section.id === 'details' && !!(errors.title || errors.price)}>{section.id === 'details' ? <div className="flex flex-col gap-4">
-              <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} aria-errormessage={errors.title ? "course-title-error" : undefined} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
-              <div id="course-billing" className="flex flex-col gap-2" tabIndex={-1}>
-                <p className="text-sm font-medium"><Trans message="Free or paid?" /></p>
-                <BillingModePicker
-                  value={billingMode}
-                  onValueChange={mode => {
-                    if (!mode) return;
-                    setBillingMode(mode);
-                    setPrice(current => priceForBillingMode(current, mode));
-                    setErrors(current => ({...current, price: undefined}));
-                  }}
-                />
+      <div className="flex min-w-0 flex-col gap-4">
+        <ProductFormProgress
+          completed={completedSections}
+          total={2}
+          heading={<Trans message="Course setup" />}
+          progressAriaLabel="Course setup progress"
+        />
+        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2 lg:gap-5">
+          <CreateCoursePanel
+            title="Course details"
+            hasError={!!(errors.title || errors.price)}
+          >
+            <ProductFormField label="Course title" error={errors.title} htmlFor="course-title" required>
+              <Input
+                id="course-title"
+                aria-invalid={!!errors.title}
+                aria-errormessage={errors.title ? 'course-title-error' : undefined}
+                value={title}
+                maxLength={160}
+                onChange={event => {
+                  setTitle(event.target.value);
+                  setErrors(current => ({...current, title: undefined}));
+                }}
+                placeholder="Course title"
+                autoFocus
+              />
+            </ProductFormField>
+            <CourseSettingsCoverField
+              value={coverUrl}
+              onChange={(url, fileId) => {
+                setCoverUrl(url);
+                setCoverFileId(fileId);
+              }}
+            />
+            <div id="course-billing" className="flex flex-col gap-2" tabIndex={-1}>
+              <p className="text-sm font-medium"><Trans message="Free or paid?" /></p>
+              <BillingModePicker
+                value={billingMode}
+                onValueChange={mode => {
+                  if (!mode) return;
+                  setBillingMode(mode);
+                  setPrice(current => priceForBillingMode(current, mode));
+                  setErrors(current => ({...current, price: undefined}));
+                }}
+              />
+            </div>
+            {isFree ? (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-sm font-medium"><Trans message="Price" /></p>
+                <Badge variant="secondary"><Trans message="Free" /></Badge>
               </div>
-              {isFree ? (
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm font-medium"><Trans message="Price" /></p>
-                  <Badge variant="secondary"><Trans message="Free" /></Badge>
-                </div>
-              ) : billingMode === 'paid' ? (
-                <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} aria-errormessage={errors.price ? "course-price-error" : undefined} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>
-              ) : null}
-            </div> : <div className="flex flex-col gap-4">
-              {/* Same shared settings fields as the builder's CourseSettingsDialog; the two-step submit threads them into PUT /courses/{id}. */}
-              <CourseSettingsDescriptionField inputId="course-create" value={description} onChange={setDescription} />
-              <CourseSettingsOutcomesField outcomes={outcomes} onChange={setOutcomes} />
-              <CourseSettingsCoverField value={coverUrl} onChange={(url, fileId) => { setCoverUrl(url); setCoverFileId(fileId); }} />
-              {/* What happens NEXT — below the fields now that the inline form is the section's focus. */}
-              <div className="flex flex-col gap-1"><p className="text-sm font-medium"><Trans message="After creating the course, add chapters and lessons in the course builder." /></p><p className="text-xs text-muted-foreground"><Trans message="Your course stays a draft until you submit it for review." /></p></div>
-            </div>}</ProductFormSection>)}
-          </Accordion.Root>
+            ) : billingMode === 'paid' ? (
+              <ProductFormField label="Price (ETB)" error={errors.price} htmlFor="course-price" required>
+                <InputGroup>
+                  <InputGroupAddon align="inline-start">
+                    <InputGroupText>ETB</InputGroupText>
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="course-price"
+                    aria-invalid={!!errors.price}
+                    aria-errormessage={errors.price ? 'course-price-error' : undefined}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={event => {
+                      setPrice(event.target.value);
+                      setErrors(current => ({...current, price: undefined}));
+                    }}
+                    placeholder="0.00"
+                  />
+                </InputGroup>
+              </ProductFormField>
+            ) : null}
+          </CreateCoursePanel>
+          <CreateCoursePanel title="About Course">
+            <CourseSettingsDescriptionField inputId="course-create" value={description} onChange={setDescription} />
+            <CourseSettingsOutcomesField outcomes={outcomes} onChange={setOutcomes} />
+          </CreateCoursePanel>
         </div>
-
-
       </div>
       <ProductPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen}>
-          <ProductFormCustomerPreview
-            title={title}
-            emptyTitle="Your course title"
-            price={previewPrice}
-            productType="course"
-            coverUrl={coverUrl || undefined}
-            description={descriptionText || undefined}
-            imageFallback={
-              <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                <GraduationCapIcon className="size-8" aria-hidden="true" />
-                <span className="text-xs">
-                  <Trans message="Add a cover image" />
-                </span>
-              </div>
-            }
-          />
+        <ProductFormCustomerPreview
+          title={title}
+          emptyTitle="Your course title"
+          price={previewPrice}
+          productType="course"
+          coverUrl={coverUrl || undefined}
+          description={descriptionText || undefined}
+          imageFallback={
+            <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+              <GraduationCapIcon className="size-8" aria-hidden="true" />
+              <span className="text-xs">
+                <Trans message="Add a cover image" />
+              </span>
+            </div>
+          }
+        />
       </ProductPreviewDialog>
     </form></DashboardLayout.SectionContent>
   </DashboardLayout.MainSection></FileUploadProvider>;
+}
+
+function CreateCoursePanel({
+  title,
+  hasError = false,
+  children,
+}: {
+  title: string;
+  hasError?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={cn(
+        'flex min-w-0 flex-col rounded-card border bg-card',
+        hasError && 'border-destructive/40',
+      )}
+    >
+      <div className="border-b px-4 py-3">
+        <h2 className="text-sm font-medium tracking-tight">
+          <Trans message={title} />
+        </h2>
+      </div>
+      <div className="flex flex-col gap-4 p-4">{children}</div>
+    </section>
+  );
 }

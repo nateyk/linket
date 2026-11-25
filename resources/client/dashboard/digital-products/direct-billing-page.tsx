@@ -22,8 +22,8 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {
   CalendarDaysIcon,
   ChartNoAxesCombinedIcon,
-  ChevronRightIcon,
   CircleDollarSignIcon,
+  EyeIcon,
   LandmarkIcon,
   PackageCheckIcon,
   ReceiptTextIcon,
@@ -41,7 +41,7 @@ import {
 import {useSearchParams} from 'react-router';
 import {PaymentStatusLabel} from './payment-status-badge';
 
-type Pagination = {
+type PaginationData = {
   current_page: number;
   last_page: number;
   total: number;
@@ -119,7 +119,7 @@ type OrderDetail = Order & {
 
 const PAGE_SIZE_OPTIONS = [15, 25, 50] as const;
 
-const emptyPagination: Pagination = {
+const emptyPagination: PaginationData = {
   current_page: 1,
   last_page: 1,
   total: 0,
@@ -128,20 +128,19 @@ const emptyPagination: Pagination = {
 
 const orderStatusOptions = [
   {value: 'all', label: <Trans message="All statuses" />},
-  {value: 'pending_payment', label: <Trans message="Payment pending" />},
-  {value: 'verifying', label: <Trans message="Payment processing" />},
-  {value: 'paid', label: <Trans message="Payment verified" />},
+  {value: 'pending_payment', label: <Trans message="Pending" />},
+  {value: 'verifying', label: <Trans message="Verifying" />},
+  {value: 'paid', label: <Trans message="Paid" />},
   {value: 'fulfilled', label: <Trans message="Fulfilled" />},
   {value: 'expired', label: <Trans message="Expired" />},
 ];
-
 export function Component() {
   const [searchParams] = useSearchParams();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersPagination, setOrdersPagination] =
-    useState<Pagination>(emptyPagination);
+    useState<PaginationData>(emptyPagination);
   const [summary, setSummary] = useState<Summary>();
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string>();
@@ -317,6 +316,7 @@ function SummaryCards({summary}: {summary?: Summary}) {
     icon: LucideIcon;
     label: ReactNode;
     value: ReactNode;
+    tone: string;
   }> = [
     {
       key: 'net-sales',
@@ -325,12 +325,14 @@ function SummaryCards({summary}: {summary?: Summary}) {
       value: summary ? (
         <FormattedCurrency valueInCents={summary.net_sales_cents} currency={summary.currency} />
       ) : '—',
+      tone: 'bg-primary/10 text-primary',
     },
     {
       key: 'orders',
       icon: ReceiptTextIcon,
       label: <Trans message="Orders" />,
       value: summary?.paid_orders_count ?? '—',
+      tone: 'bg-positive/10 text-positive',
     },
     {
       key: 'profit',
@@ -344,6 +346,7 @@ function SummaryCards({summary}: {summary?: Summary}) {
       value: summary ? (
         <FormattedCurrency valueInCents={summary.gross_profit_cents} currency={summary.currency} />
       ) : '—',
+      tone: 'bg-warning/10 text-warning',
     },
     {
       key: 'average',
@@ -352,11 +355,12 @@ function SummaryCards({summary}: {summary?: Summary}) {
       value: summary ? (
         <FormattedCurrency valueInCents={summary.average_order_cents} currency={summary.currency} />
       ) : '—',
+      tone: 'bg-muted text-muted-foreground',
     },
   ];
 
   return (
-    <section aria-label="Sales summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section aria-label="Sales summary" className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4">
       {metrics.map(metric => {
         const Icon = metric.icon;
         return (
@@ -366,7 +370,9 @@ function SummaryCards({summary}: {summary?: Summary}) {
                 {metric.label}
               </Card.Title>
               <Card.Action>
-                <span className="flex size-9 items-center justify-center rounded-card-sm bg-muted text-muted-foreground [&>svg]:size-4">
+                <span
+                  className={`flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4 ${metric.tone}`}
+                >
                   <Icon aria-hidden="true" />
                 </span>
               </Card.Action>
@@ -533,114 +539,131 @@ function OrdersTable({
   }
 
   return (
-    <div className="min-w-0 overflow-x-auto">
-        <Table.Root
-          aria-label={trans({message: 'Orders'})}
-          className="w-max min-w-full"
-        >
-          <Table.Header>
-            <Table.Row className="hover:bg-transparent">
-              <Table.Head className="h-12 min-w-56 px-4">
-                <Trans message="Product" />
-              </Table.Head>
-              <Table.Head className="h-12 min-w-44 px-4">
-                <Trans message="Buyer" />
-              </Table.Head>
-              <Table.Head className="h-12 min-w-28 px-4 text-end">
-                <Trans message="Amount" />
-              </Table.Head>
-              <Table.Head className="h-12 min-w-36 px-4">
-                <Trans message="Date" />
-              </Table.Head>
-              <Table.Head className="h-12 min-w-28 px-4">
-                <Trans message="Status" />
-              </Table.Head>
-              <Table.Head className="h-12 w-12 px-4">
-                <span className="sr-only">
-                  <Trans message="Actions" />
-                </span>
-              </Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {orders.map(order => (
-              <Table.Row key={order.uuid}>
-                <Table.Cell className="min-w-56 px-4 py-3 align-middle whitespace-normal">
-                  <span className="flex min-w-0 items-center gap-3">
-                    <OrderMark order={order} />
-                    <span className="min-w-0">
-                      <span
-                        className="block truncate font-medium"
-                        title={order.product?.title ?? undefined}
-                      >
-                        {order.product?.title ?? (
-                          <Trans message="Deleted product" />
-                        )}
-                      </span>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
-                        #{order.uuid.slice(0, 8)}
-                        {order.transaction_reference
-                          ? ` · ${order.transaction_reference}`
-                          : ''}
-                      </span>
+    <div className="min-w-0 max-w-full overflow-x-auto">
+      <Table.Root
+        aria-label={trans({message: 'Orders'})}
+        className="w-max min-w-full"
+      >
+        <Table.Header>
+          <Table.Row className="hover:bg-transparent">
+            <Table.Head className="h-11 min-w-56 px-4">
+              <Trans message="Product" />
+            </Table.Head>
+            <Table.Head className="h-11 min-w-44 px-4">
+              <Trans message="Buyer" />
+            </Table.Head>
+            <Table.Head className="h-11 min-w-28 px-4 text-end">
+              <Trans message="Amount" />
+            </Table.Head>
+            <Table.Head className="h-11 min-w-36 px-4">
+              <Trans message="Date" />
+            </Table.Head>
+            <Table.Head className="h-11 min-w-28 px-4">
+              <Trans message="Status" />
+            </Table.Head>
+            <Table.Head className="h-11 w-12 px-4">
+              <span className="sr-only">
+                <Trans message="Actions" />
+              </span>
+            </Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {orders.map(order => (
+            <Table.Row key={order.uuid}>
+              <Table.Cell className="min-w-56 max-w-72 px-4 py-3 align-middle whitespace-normal">
+                <span className="flex min-w-0 items-center gap-3">
+                  <OrderMark order={order} />
+                  <span className="min-w-0">
+                    <span
+                      className="block truncate text-sm font-medium"
+                      title={order.product?.title ?? undefined}
+                    >
+                      {order.product?.title ?? (
+                        <Trans message="Deleted product" />
+                      )}
+                    </span>
+                    <span className="block truncate font-mono text-xs text-muted-foreground">
+                      #{order.uuid.slice(0, 8)}
+                      {order.transaction_reference
+                        ? ` · ${order.transaction_reference}`
+                        : ''}
                     </span>
                   </span>
-                </Table.Cell>
-                <Table.Cell className="min-w-44 px-4 py-3 align-middle whitespace-normal">
-                  <span className="block truncate leading-5">
-                    {order.buyer_name || (
-                      <span className="text-muted-foreground">
-                        <Trans message="Guest buyer" />
-                      </span>
-                    )}
-                  </span>
-                  <span className="block h-4 truncate text-xs text-muted-foreground">
-                    {order.buyer_email}
-                  </span>
-                </Table.Cell>
-                <Table.Cell className="min-w-28 px-4 py-3 text-end align-middle font-medium tabular-nums">
-                  <FormattedCurrency
-                    valueInCents={order.gross_amount_cents}
-                    currency={order.currency ?? 'ETB'}
+                </span>
+              </Table.Cell>
+              <Table.Cell className="min-w-44 max-w-56 px-4 py-3 align-middle whitespace-normal">
+                <span className="block truncate text-sm leading-5">
+                  {order.buyer_name || (
+                    <span className="text-muted-foreground">
+                      <Trans message="Guest buyer" />
+                    </span>
+                  )}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {order.buyer_email}
+                </span>
+              </Table.Cell>
+              <Table.Cell className="min-w-28 px-4 py-3 text-end align-middle text-sm font-medium tabular-nums">
+                <FormattedCurrency
+                  valueInCents={order.gross_amount_cents}
+                  currency={order.currency ?? 'ETB'}
+                />
+              </Table.Cell>
+              <Table.Cell className="min-w-36 px-4 py-3 align-middle whitespace-normal text-muted-foreground">
+                <span className="block truncate text-sm">
+                  <FormattedDate preset="short" date={order.created_at} />
+                </span>
+                <span className="block truncate text-xs">
+                  <FormattedRelativeTime
+                    date={order.paid_at ?? order.created_at}
                   />
-                </Table.Cell>
-                <Table.Cell className="min-w-36 px-4 py-3 align-middle whitespace-normal text-muted-foreground">
-                  <span className="block truncate">
-                    <FormattedDate preset="short" date={order.created_at} />
-                  </span>
-                  <span className="block h-4 truncate text-xs">
-                    <FormattedRelativeTime date={order.paid_at ?? order.created_at} />
-                  </span>
-                </Table.Cell>
-                <Table.Cell className="min-w-28 px-4 py-3 align-middle">
-                  <OrderStatusBadge status={order.status} compact />
-                </Table.Cell>
-                <Table.Cell className="w-12 px-4 py-3 text-end align-middle">
-                  <Tooltip.Provider>
-                    <Tooltip.Root>
-                      <Tooltip.Trigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label={trans({message: 'View details'})}
-                            onClick={() => onView(order.uuid)}
-                          >
-                            <ChevronRightIcon />
-                          </Button>
-                        }
-                      />
-                      <Tooltip.Content>
-                        <Trans message="View details" />
-                      </Tooltip.Content>
-                    </Tooltip.Root>
-                  </Tooltip.Provider>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
+                </span>
+              </Table.Cell>
+              <Table.Cell className="min-w-28 px-4 py-3 align-middle">
+                <OrderStatusBadge status={order.status} />
+              </Table.Cell>
+              <Table.Cell className="w-12 px-4 py-3 text-end align-middle">
+                <ViewOrderButton
+                  label={trans({message: 'View details'})}
+                  onClick={() => onView(order.uuid)}
+                />
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table.Root>
     </div>
+  );
+}
+
+function ViewOrderButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label={label}
+              onClick={onClick}
+            >
+              <EyeIcon />
+            </Button>
+          }
+        />
+        <Tooltip.Content>
+          <Trans message="View details" />
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
   );
 }
 
@@ -748,20 +771,16 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
   const currency = order.currency ?? 'ETB';
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-5">
       <Item.Root
         variant="muted"
         size="sm"
         className="min-w-0 rounded-card-sm border-0"
       >
-        <Item.Media
-          align="center"
-          variant="icon"
-          className="size-10 rounded-card-xs bg-background text-muted-foreground ring-1 ring-foreground/10"
-        >
-          <ReceiptTextIcon />
+        <Item.Media className="size-9 overflow-hidden rounded-card-sm p-0">
+          <OrderMark order={order} />
         </Item.Media>
-        <Item.Content className="min-w-0">
+        <Item.Content className="min-w-0 gap-1">
           <Item.Title className="line-clamp-2 whitespace-normal">
             {order.product?.title ?? <Trans message="Deleted product" />}
           </Item.Title>
@@ -769,7 +788,7 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
             {order.buyer_name || <Trans message="Guest buyer" />}
             {order.buyer_email ? ` · ${order.buyer_email}` : null}
           </Item.Description>
-          <Item.Description>
+          <Item.Description className="text-xs">
             <Trans
               message="Created :date"
               values={{
@@ -778,9 +797,9 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
             />
           </Item.Description>
         </Item.Content>
-        <Item.Actions className="basis-full justify-between border-t pt-3 md:ms-6 md:basis-auto md:border-0 md:pt-0">
+        <Item.Actions className="basis-full items-center justify-between border-t pt-3 md:ms-6 md:basis-auto md:border-0 md:pt-0">
           <OrderStatusBadge status={order.status} />
-          <span className="font-semibold tabular-nums">
+          <span className="text-base font-semibold tabular-nums">
             <FormattedCurrency
               valueInCents={order.gross_amount_cents}
               currency={currency}
@@ -789,58 +808,47 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
         </Item.Actions>
       </Item.Root>
 
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-        <DetailSection title={<Trans message="Payment information" />}>
+      <DetailSection title={<Trans message="Payment information" />}>
+        <DetailRow
+          label={<Trans message="Transaction reference" />}
+          value={
+            <span className="break-all font-mono text-xs">
+              {order.transaction_reference ?? '—'}
+            </span>
+          }
+        />
+        <DetailRow
+          label={<Trans message="Payment gateway" />}
+          value={paymentMethodLabel(order)}
+        />
+        {order.paid_at && (
           <DetailRow
-            label={<Trans message="Transaction reference" />}
-            value={
-              <span className="break-all font-mono text-xs">
-                {order.transaction_reference ?? '—'}
-              </span>
-            }
+            label={<Trans message="Paid at" />}
+            value={<FormattedDate preset="timestamp" date={order.paid_at} />}
           />
+        )}
+        {(order.platform_fee_cents ?? 0) > 0 && (
           <DetailRow
-            label={<Trans message="Payment gateway" />}
-            value={paymentMethodLabel(order)}
-          />
-          {(order.platform_fee_cents ?? 0) > 0 && (
-            <DetailRow
-              label={<Trans message="Platform fee" />}
-              value={
-                <FormattedCurrency
-                  valueInCents={order.platform_fee_cents ?? 0}
-                  currency={currency}
-                />
-              }
-            />
-          )}
-          <DetailRow
-            label={<Trans message="Your earnings" />}
+            label={<Trans message="Platform fee" />}
             value={
               <FormattedCurrency
-                valueInCents={order.creator_earnings_cents ?? 0}
+                valueInCents={order.platform_fee_cents ?? 0}
                 currency={currency}
               />
             }
-            emphasis
           />
-        </DetailSection>
-
-        {order.payment_gateway === 'chapa' && (
-          <DetailSection title={<Trans message="Chapa payment status" />}>
-            <DetailRow label={<Trans message="Status" />} value={<OrderStatusBadge status={order.status} />} />
-            {order.paid_at && (
-              <DetailRow
-                label={<Trans message="Paid at" />}
-                value={<FormattedDate preset="timestamp" date={order.paid_at} />}
-              />
-            )}
-            <p className="text-xs text-muted-foreground">
-              <Trans message="Payment status reflects Linket's recorded Chapa confirmation. Refunds and payouts are tracked separately." />
-            </p>
-          </DetailSection>
         )}
-      </div>
+        <DetailRow
+          label={<Trans message="Your earnings" />}
+          value={
+            <FormattedCurrency
+              valueInCents={order.creator_earnings_cents ?? 0}
+              currency={currency}
+            />
+          }
+          emphasis
+        />
+      </DetailSection>
 
       <DetailSection title={<Trans message="Delivery" />}>
         <div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
@@ -859,7 +867,7 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
         </div>
         {!['paid', 'fulfilled'].includes(order.status) ? (
           <p className="text-sm text-muted-foreground">
-            <Trans message="Buyer downloads remain locked until the payment is verified." />
+            <Trans message="Buyer downloads remain locked until payment is confirmed." />
           </p>
         ) : (order.delivery?.entitlements_count ?? 0) === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -1032,8 +1040,8 @@ function DetailSection({
   children: ReactNode;
 }) {
   return (
-    <section className="border-t border-border py-4 first:border-t-0 first:pt-0">
-      <h3 className="mb-3 text-base font-medium">{title}</h3>
+    <section className="flex flex-col gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0">
+      <h3 className="text-sm font-medium">{title}</h3>
       <div className="flex flex-col gap-2.5">{children}</div>
     </section>
   );
@@ -1063,7 +1071,7 @@ function OrderMark({order}: {order: Order}) {
   const coverUrl = order.product?.cover_url;
 
   return (
-    <span className="flex size-9 shrink-0 overflow-hidden rounded-card-sm bg-muted">
+    <span className="flex size-9 shrink-0 overflow-hidden rounded-card-sm bg-muted ring-1 ring-foreground/10">
       {coverUrl ? (
         <img src={coverUrl} alt="" className="size-full object-cover" />
       ) : (
@@ -1075,13 +1083,7 @@ function OrderMark({order}: {order: Order}) {
   );
 }
 
-function OrderStatusBadge({
-  status,
-  compact = false,
-}: {
-  status: string;
-  compact?: boolean;
-}) {
+function OrderStatusBadge({status}: {status: string}) {
   return (
     <Badge
       variant={statusBadgeVariant(status)}
@@ -1089,35 +1091,9 @@ function OrderStatusBadge({
         status === 'manual_review' ? 'bg-warning/10 text-warning' : undefined
       }
     >
-      {compact ? (
-        <OrderStatusShortLabel status={status} />
-      ) : (
-        <PaymentStatusLabel status={status} />
-      )}
+      <PaymentStatusLabel status={status} />
     </Badge>
   );
-}
-
-function OrderStatusShortLabel({status}: {status: string}) {
-  switch (status) {
-    case 'pending':
-    case 'pending_payment':
-      return <Trans message="Pending" />;
-    case 'verifying':
-      return <Trans message="Verifying" />;
-    case 'paid':
-    case 'completed':
-    case 'fulfilled':
-      return <Trans message="Paid" />;
-    case 'failed_verification':
-      return <Trans message="Rejected" />;
-    case 'manual_review':
-      return <Trans message="Review" />;
-    case 'expired':
-      return <Trans message="Expired" />;
-    default:
-      return null;
-  }
 }
 
 function Pagination({
@@ -1287,7 +1263,7 @@ function paginationItems(
   ];
 }
 
-function paginationFrom(value: Partial<Pagination> | undefined): Pagination {
+function paginationFrom(value: Partial<PaginationData> | undefined): PaginationData {
   return {
     current_page: Number(value?.current_page ?? 1),
     last_page: Number(value?.last_page ?? 1),

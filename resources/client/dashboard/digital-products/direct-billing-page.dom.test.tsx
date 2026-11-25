@@ -491,7 +491,7 @@ it('keeps Orders Chapa-only even for bookmarked retired gateway filters', async 
   expect(api.get).not.toHaveBeenCalledWith('/api/v1/storefront/direct-orders/transactions', expect.anything());
 });
 
-it('shows Chapa status without obsolete provider verification panels', async () => {
+it('folds Chapa payment details into payment information without a separate status panel', async () => {
   mockApi({
     orders: [baseOrder],
     detail: {
@@ -504,15 +504,22 @@ it('shows Chapa status without obsolete provider verification panels', async () 
     },
   });
   render(<Component />);
-  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
-  expect(await screen.findByText('Chapa payment status')).toBeTruthy();
+  expect(screen.getByRole('option', {name: 'Paid'})).toBeTruthy();
+  const viewDetails = await screen.findByRole('button', {name: 'View details'});
+  expect(viewDetails.querySelector('svg')).toBeTruthy();
+  fireEvent.click(viewDetails);
+  expect(await screen.findByText('Payment information')).toBeTruthy();
   expect(screen.getByText('Paid at')).toBeTruthy();
   expect(screen.getByText('Payment gateway')).toBeTruthy();
+  expect(screen.queryByText('Chapa payment status')).toBeNull();
+  // Orders table badge + filter option + summary badge.
+  expect(screen.getAllByText('Paid')).toHaveLength(3);
+  expect(screen.queryByText('Payment verified')).toBeNull();
   expect(screen.queryByText('Verification history')).toBeNull();
   expect(screen.queryByText('Historical verification evidence')).toBeNull();
   expect(screen.queryByText('Historical receiving account')).toBeNull();
   expect(screen.queryByText('No provider verification has been recorded for this order.')).toBeNull();
-  expect(screen.getByText(/Payment status reflects Linket/)).toBeTruthy();
+  expect(screen.queryByText(/Payment status reflects Linket/)).toBeNull();
 });
 
 it('surfaces order loading errors', async () => {
