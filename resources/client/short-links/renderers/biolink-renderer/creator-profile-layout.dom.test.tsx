@@ -342,15 +342,15 @@ describe('creator profile on mobile', () => {
   });
 
   test('a product-only desktop store omits the redundant Products and item-count header', () => {
+    const biolink = makeBiolink() as unknown as {
+      profile_config: Record<string, unknown>;
+    };
+    biolink.profile_config.about_html = '';
     render(
       <CreatorProfileLayout
-        biolink={makeBiolink()}
+        biolink={biolink as never}
         appearance={null}
         content={[shopWidget]}
-        profileConfig={{
-          ...makeBiolink().profile_config,
-          about_html: '',
-        } as never}
       />,
     );
 
