@@ -507,11 +507,11 @@ function OrderFilters({
 
 
 type OptionalOrderColumn = 'buyer' | 'amount' | 'date' | 'status';
-const orderColumns: {id: OptionalOrderColumn; label: string}[] = [
-  {id: 'buyer', label: 'Buyer'},
-  {id: 'amount', label: 'Amount'},
-  {id: 'date', label: 'Date'},
-  {id: 'status', label: 'Status'},
+const orderColumns: {id: OptionalOrderColumn; label: ReactNode}[] = [
+  {id: 'buyer', label: <Trans message="Buyer" />},
+  {id: 'amount', label: <Trans message="Amount" />},
+  {id: 'date', label: <Trans message="Date" />},
+  {id: 'status', label: <Trans message="Status" />},
 ];
 
 function OrdersTable({
@@ -595,7 +595,7 @@ function OrdersTable({
                   <Dropdown.CheckboxItem key={column.id} checked={visible[column.id]}
                     onCheckedChange={checked => setVisible(previous => ({...previous, [column.id]: checked}))}
                     onSelect={event => event.preventDefault()}>
-                    <Trans message={column.label} />
+                    {column.label}
                   </Dropdown.CheckboxItem>
                 ))}
               </Dropdown.Content>
@@ -731,7 +731,9 @@ function OrderSortHead({
   return (
     <Table.Head className={align === 'end' ? 'h-10 px-3 text-end' : 'h-10 px-3'} aria-sort={current}>
       <Button variant="ghost" size="sm" className="h-8 gap-1 px-1 text-xs text-muted-foreground hover:text-foreground"
-        onClick={() => onChange(sort === descending ? ascending : descending)}>
+        onClick={() => onChange(sort === descending ? ascending
+          : sort === ascending ? descending
+          : ascending === 'amount_asc' ? descending : ascending)}>
         {label}
         {active
           ? sort === ascending ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />
