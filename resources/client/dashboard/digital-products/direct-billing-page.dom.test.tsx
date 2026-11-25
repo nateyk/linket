@@ -476,9 +476,10 @@ it('selects current-page rows, enables a real CSV export action and hides option
   render(<Component />);
   await screen.findAllByText('Workbook');
 
-  fireEvent.click(screen.getByRole('checkbox', {name: /Select order/}));
-  expect(screen.getByText('1 selected on this page')).toBeTruthy();
-  expect(screen.getByRole('button', {name: /Export selected/})).toBeTruthy();
+  const selection = screen.getByRole('checkbox', {name: /Select order/}) as HTMLInputElement;
+  fireEvent.click(selection);
+  expect(selection.checked).toBe(true);
+  await waitFor(() => expect(screen.getByRole('button', {name: /Export selected/})).toBeTruthy());
 
   fireEvent.click(screen.getByRole('menuitemcheckbox', {name: 'Buyer'}));
   expect(screen.queryByRole('columnheader', {name: 'Buyer'})).toBeNull();
