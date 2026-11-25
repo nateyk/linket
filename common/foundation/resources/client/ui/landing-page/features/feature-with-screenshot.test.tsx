@@ -56,7 +56,7 @@ describe('creator homepage product screenshot showcase', () => {
 
   it('keeps existing standard screenshot rendering for older configurations', () => {
     const html = renderToStaticMarkup(
-      <FeatureWithScreenshot config={base} />,
+      <FeatureWithScreenshot config={{...base, mediaVariant: 'standard'}} />,
     );
     expect(html).not.toContain('data-slot="creator-screenshot-frame"');
     expect(html).toContain('/images/desktop-store.png');
