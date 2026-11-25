@@ -18,12 +18,12 @@ import {Table} from '@shadcn/table/table';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
-import {FormattedRelativeTime} from '@ui/i18n/formatted-relative-time';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
-import {useIsMobileMediaQuery} from '@ui/utils/hooks/is-mobile-media-query';
 import {
   CalendarDaysIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ArrowDownIcon,
   ArrowUpIcon,
   ArrowUpDownIcon,
@@ -255,8 +255,8 @@ export function Component() {
         <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5">
           <SummaryCards summary={summary} />
 
-          <div className="flex flex-col gap-5">
-              <div className="flex flex-col gap-3">
+          <Card.Root size="sm" className="min-w-0 gap-4 rounded-card-sm">
+              <Card.Content className="flex min-w-0 flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <h2 className="text-base font-medium">
                     <Trans message="Orders" />
@@ -265,7 +265,15 @@ export function Component() {
                     <Trans message="Orders and payment status. Only paid orders count as sales." />
                   </p>
                 </div>
-                <OrderFilters
+                <OrdersTable
+                    orders={orders}
+                    sort={orderSort}
+                    onSortChange={value => {setOrderSort(value); setOrderPage(1);}}
+                    loading={ordersLoading}
+                    error={ordersError}
+                    onView={setDetailUuid}
+                    onRetry={() => void loadOrders()}
+                    filters={<OrderFilters
                     status={orderStatus}
                     search={orderSearch}
                     from={orderFrom}
@@ -287,22 +295,11 @@ export function Component() {
                       setOrderTo(value);
                       setOrderPage(1);
                     }}
-                  />
-              </div>
-              <Card.Root size="sm" className="rounded-card-sm">
-                <Card.Content className="px-0">
-                  <OrdersTable
-                    orders={orders}
-                    sort={orderSort}
-                    onSortChange={value => {setOrderSort(value); setOrderPage(1);}}
-                    loading={ordersLoading}
-                    error={ordersError}
-                    onView={setDetailUuid}
-                    onRetry={() => void loadOrders()}
-                  />
-                </Card.Content>
-                {ordersPagination.last_page > 1 && (
-                  <Card.Footer className="border-t pt-4">
+                  />}
+                />
+              </Card.Content>
+                {!ordersLoading && !ordersError && ordersPagination.total > 0 && (
+                  <Card.Footer className="min-w-0">
                     <Pagination
                       page={ordersPagination.current_page}
                       lastPage={ordersPagination.last_page}
@@ -317,8 +314,7 @@ export function Component() {
                     />
                   </Card.Footer>
                 )}
-              </Card.Root>
-          </div>
+          </Card.Root>
         </div>
       </DashboardLayout.SectionContent>
 
@@ -432,21 +428,21 @@ function OrderFilters({
 }) {
   const isFiltered = status !== 'all' || !!search || !!from || !!to;
   return (
-    <div className="flex flex-col gap-2 md:flex-row md:items-center">
-      <div className="relative min-w-0 flex-1">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="relative w-full min-w-0 sm:w-64">
         <SearchIcon aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           bindToHookForm={false}
-          className="ps-9"
+          className="h-9 ps-9"
           aria-label="Search orders"
-          placeholder="Product, buyer or reference"
+          placeholder="Search orders"
           value={search}
           onChange={event => onSearchChange(event.target.value)}
         />
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
         <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
-          <Select.Trigger aria-label="Order status" className="w-full md:w-52">
+          <Select.Trigger aria-label="Order status" className="h-9 min-w-0 flex-1 sm:w-36 sm:flex-none">
             <Select.Value placeholder={<Trans message="All statuses" />}>
               {statusOptions.find(option => option.value === status)?.label ?? <Trans message="All statuses" />}
             </Select.Value>
@@ -463,7 +459,7 @@ function OrderFilters({
         </Select.Root>
         <Popover.Root>
           <Popover.Trigger render={
-            <Button variant="outline" className="shrink-0" aria-label="Filter by date">
+            <Button variant="outline" color="default" className="shrink-0" aria-label="Filter by date">
               <CalendarDaysIcon />
               <Trans message="Dates" />
               {(from || to) && <span aria-hidden="true" className="size-1.5 rounded-full bg-primary" />}
@@ -492,7 +488,7 @@ function OrderFilters({
         </Popover.Root>
       </div>
       {isFiltered && (
-        <Button variant="ghost" size="sm" className="self-start md:self-auto" onClick={() => {
+        <Button variant="ghost" size="sm" color="default" className="shrink-0" onClick={() => {
           onStatusChange('all');
           onSearchChange('');
           onFromChange('');
@@ -515,7 +511,7 @@ const orderColumns: {id: OptionalOrderColumn; label: ReactNode}[] = [
 ];
 
 function OrdersTable({
-  orders, loading, error, onView, onRetry, emptyMessage, sort, onSortChange,
+  orders, loading, error, onView, onRetry, emptyMessage, sort, onSortChange, filters,
 }: {
   orders: Order[];
   loading: boolean;
@@ -523,11 +519,11 @@ function OrdersTable({
   onView: (uuid: string) => void;
   onRetry?: () => void;
   emptyMessage?: ReactNode;
+  filters: ReactNode;
   sort: OrderSort;
   onSortChange: (value: OrderSort) => void;
 }) {
   const {trans} = useTrans();
-  const isMobile = useIsMobileMediaQuery();
   const [selection, setSelection] = useState<Record<string, boolean>>({});
   const [visible, setVisible] = useState<Record<OptionalOrderColumn, boolean>>({
     buyer: true, amount: true, date: true, status: true,
@@ -541,112 +537,63 @@ function OrdersTable({
   const toggleAll = (checked: boolean) =>
     setSelection(checked ? Object.fromEntries(orders.map(order => [order.uuid, true])) : {});
 
-  if (loading) return <TableLoading />;
-  if (error) {
-    return (
-      <div className="flex flex-col items-start gap-3 px-5 py-8" role="alert">
-        <p className="text-sm text-destructive">{error}</p>
-        {onRetry && <Button variant="outline" size="sm" onClick={onRetry}>
-          <RefreshCwIcon aria-hidden="true" /><Trans message="Try again" />
-        </Button>}
-      </div>
-    );
-  }
-  if (!orders.length) {
-    return (
-      <Empty.Root>
-        <Empty.Header>
-          <Empty.Media variant="icon"><ReceiptTextIcon /></Empty.Media>
-          <Empty.Title><Trans message="No orders found" /></Empty.Title>
-          <Empty.Description>{emptyMessage ??
-            <Trans message="Orders will appear here after a buyer tries to purchase one of your products." />}
-          </Empty.Description>
-        </Empty.Header>
-      </Empty.Root>
-    );
-  }
-
   return (
-    <div className="min-w-0">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2.5 sm:px-4">
-        <p className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
-          {selectedOrders.length
-            ? <Trans message=":count selected on this page" values={{count: selectedOrders.length}} />
-            : <Trans message=":count orders on this page" values={{count: orders.length}} />}
-        </p>
-        <div className="flex items-center gap-2">
-          {selectedOrders.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => exportSelectedOrders(selectedOrders)}>
-              <DownloadIcon aria-hidden="true" />
-              <Trans message="Export selected" />
-              <span className="tabular-nums">({selectedOrders.length})</span>
+    <div className="grid min-w-0 gap-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0 flex-1 basis-full sm:basis-auto">{filters}</div>
+        <Dropdown.Root>
+          <Dropdown.Trigger render={
+            <Button variant="outline" color="default" className="ms-auto" aria-label={trans({message: 'Choose visible columns'})}>
+              <Columns3Icon aria-hidden="true" /><Trans message="Columns" />
             </Button>
-          )}
-          {!isMobile && (
-            <Dropdown.Root>
-              <Dropdown.Trigger render={
-                <Button variant="outline" size="sm" aria-label={trans({message: 'Choose visible columns'})}>
-                  <Columns3Icon aria-hidden="true" /><Trans message="Columns" />
-                </Button>
-              } />
-              <Dropdown.Content align="end">
-                <Dropdown.GroupLabel><Trans message="Show columns" /></Dropdown.GroupLabel>
-                {orderColumns.map(column => (
-                  <Dropdown.CheckboxItem key={column.id} checked={visible[column.id]}
-                    onCheckedChange={checked => setVisible(previous => ({...previous, [column.id]: checked}))}
-                    onSelect={event => event.preventDefault()}>
-                    {column.label}
-                  </Dropdown.CheckboxItem>
-                ))}
-              </Dropdown.Content>
-            </Dropdown.Root>
-          )}
-        </div>
+          } />
+          <Dropdown.Content align="end">
+            <Dropdown.GroupLabel><Trans message="Show columns" /></Dropdown.GroupLabel>
+            {orderColumns.map(column => (
+              <Dropdown.CheckboxItem key={column.id} checked={visible[column.id]}
+                onCheckedChange={checked => setVisible(previous => ({...previous, [column.id]: checked}))}
+                onSelect={event => event.preventDefault()}>
+                {column.label}
+              </Dropdown.CheckboxItem>
+            ))}
+          </Dropdown.Content>
+        </Dropdown.Root>
       </div>
 
-      {isMobile ? (
-        <div className="divide-y divide-border/70" role="list" aria-label={trans({message: 'Orders'})}>
-          {orders.map(order => (
-            <article key={order.uuid} role="listitem" className="min-w-0 px-3 py-3">
-              <div className="flex min-w-0 items-start gap-3">
-                <Checkbox bindToHookForm={false} checked={!!selection[order.uuid]}
-                  onCheckedChange={checked => toggle(order.uuid, checked)}
-                  aria-label={trans({message: 'Select order :id', values: {id: order.uuid.slice(0, 8)}})}
-                  className="mt-2" />
-                <OrderMark order={order} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">
-                    {order.product?.title ?? <Trans message="Deleted product" />}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {order.buyer_name || <Trans message="Guest buyer" />}
-                  </p>
-                  {order.buyer_email && <p className="truncate text-xs text-muted-foreground">{order.buyer_email}</p>}
-                  <p className="truncate font-mono text-xs text-muted-foreground">
-                    {'#' + order.uuid.slice(0, 8)}
-                  </p>
-                </div>
-                <ViewOrderButton label={trans({message: 'View details'})}
-                  onClick={() => onView(order.uuid)} />
-              </div>
-              <div className="mt-2.5 flex min-w-0 items-center justify-between gap-2 ps-7">
-                <div className="flex min-w-0 flex-col items-start gap-1">
-                  <OrderStatusBadge status={order.status} />
-                  <span className="text-xs text-muted-foreground">
-                    <FormattedDate preset="short" date={order.created_at} />
-                  </span>
-                </div>
-                <span className="shrink-0 text-sm font-semibold tabular-nums">
-                  <FormattedCurrency valueInCents={order.gross_amount_cents}
-                    currency={order.currency ?? 'ETB'} />
-                </span>
-              </div>
-            </article>
-          ))}
+      {!loading && !error && selectedOrders.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2" aria-live="polite">
+          <span className="text-xs text-muted-foreground tabular-nums">
+            <Trans message=":count selected on this page" values={{count: selectedOrders.length}} />
+          </span>
+          <Button variant="outline" color="default" size="sm" onClick={() => exportSelectedOrders(selectedOrders)}>
+            <DownloadIcon aria-hidden="true" /><Trans message="Export selected" />
+            <span className="tabular-nums">({selectedOrders.length})</span>
+          </Button>
+        </div>
+      )}
+
+      {loading ? <TableLoading /> : error ? (
+        <div className="flex flex-col items-start gap-3 rounded-card-sm border border-border px-4 py-8" role="alert">
+          <p className="text-sm text-destructive">{error}</p>
+          {onRetry && <Button variant="outline" size="sm" onClick={onRetry}>
+            <RefreshCwIcon aria-hidden="true" /><Trans message="Try again" />
+          </Button>}
+        </div>
+      ) : !orders.length ? (
+        <div className="rounded-card-sm border border-border">
+          <Empty.Root>
+            <Empty.Header>
+              <Empty.Media variant="icon"><ReceiptTextIcon /></Empty.Media>
+              <Empty.Title><Trans message="No orders found" /></Empty.Title>
+              <Empty.Description>{emptyMessage ??
+                <Trans message="Orders will appear here after a buyer tries to purchase one of your products." />}
+              </Empty.Description>
+            </Empty.Header>
+          </Empty.Root>
         </div>
       ) : (
-        <div className="min-w-0 overflow-x-auto">
-          <Table.Root aria-label={trans({message: 'Orders'})} className="min-w-[720px] border-collapse">
+        <div role="region" aria-label={trans({message: 'Scrollable orders table'})} tabIndex={0} className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-card-sm border border-border focus-visible:outline-2 focus-visible:outline-ring">
+          <Table.Root aria-label={trans({message: 'Orders'})} className="border-separate border-spacing-0 text-[13px] [&_th]:border-b [&_th]:border-border [&_td]:border-b [&_td]:border-border/60 [&_tbody_tr:last-child_td]:border-b-0">
             <Table.Header>
               <Table.Row className="hover:bg-transparent">
                 <Table.Head className="h-10 w-10 px-3">
@@ -655,7 +602,7 @@ function OrdersTable({
                     onCheckedChange={toggleAll}
                     aria-label={trans({message: 'Select all orders on this page'})} />
                 </Table.Head>
-                <Table.Head className="h-10 min-w-52 px-3 text-xs text-muted-foreground"><Trans message="Product" /></Table.Head>
+                <Table.Head className="h-10 min-w-44 px-3 text-xs text-muted-foreground"><Trans message="Product" /></Table.Head>
                 {visible.buyer && <OrderSortHead label={<Trans message="Buyer" />}
                   sort={sort} ascending="buyer_asc" descending="buyer_desc" onChange={onSortChange} />}
                 {visible.amount && <OrderSortHead label={<Trans message="Amount" />}
@@ -663,46 +610,43 @@ function OrdersTable({
                 {visible.date && <OrderSortHead label={<Trans message="Date" />}
                   sort={sort} ascending="oldest" descending="newest" onChange={onSortChange} />}
                 {visible.status && <Table.Head className="h-10 px-3 text-xs text-muted-foreground"><Trans message="Status" /></Table.Head>}
-                <Table.Head className="h-10 w-12 px-3"><span className="sr-only"><Trans message="Actions" /></span></Table.Head>
+                <Table.Head className="sticky end-0 z-10 h-10 w-12 bg-card px-2 text-end text-xs text-muted-foreground"><span className="sr-only"><Trans message="Actions" /></span></Table.Head>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {orders.map(order => (
-                <Table.Row key={order.uuid} selected={!!selection[order.uuid]} className="hover:bg-muted/40">
-                  <Table.Cell className="w-10 px-3 py-2.5">
+                <Table.Row key={order.uuid} selected={!!selection[order.uuid]} className="group hover:bg-muted/40">
+                  <Table.Cell className="w-10 px-3 py-2">
                     <Checkbox bindToHookForm={false} checked={!!selection[order.uuid]}
                       onCheckedChange={checked => toggle(order.uuid, checked)}
                       aria-label={trans({message: 'Select order :id', values: {id: order.uuid.slice(0, 8)}})} />
                   </Table.Cell>
-                  <Table.Cell className="min-w-52 max-w-72 px-3 py-2.5 whitespace-normal">
+                  <Table.Cell className="min-w-44 max-w-64 px-3 py-2 whitespace-normal">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <OrderMark order={order} />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium" title={order.product?.title ?? undefined}>
+                        <span className="block truncate text-[13px] font-medium" title={order.product?.title ?? undefined}>
                           {order.product?.title ?? <Trans message="Deleted product" />}
                         </span>
-                        <span className="block truncate font-mono text-xs text-muted-foreground">
+                        <span className="block truncate text-xs tabular-nums text-muted-foreground">
                           {'#' + order.uuid.slice(0, 8)}
                           {order.transaction_reference ? ' · ' + order.transaction_reference : ''}
                         </span>
                       </span>
                     </span>
                   </Table.Cell>
-                  {visible.buyer && <Table.Cell className="min-w-36 max-w-52 px-3 py-2.5 whitespace-normal">
-                    <span className="block truncate text-sm">{order.buyer_name || <Trans message="Guest buyer" />}</span>
+                  {visible.buyer && <Table.Cell className="min-w-36 max-w-52 px-3 py-2 whitespace-normal">
+                    <span className="block truncate text-[13px]">{order.buyer_name || <Trans message="Guest buyer" />}</span>
                     <span className="block truncate text-xs text-muted-foreground">{order.buyer_email}</span>
                   </Table.Cell>}
-                  {visible.amount && <Table.Cell className="min-w-28 px-3 py-2.5 text-end text-sm font-medium tabular-nums">
+                  {visible.amount && <Table.Cell className="min-w-28 px-3 py-2 text-end text-[13px] tabular-nums">
                     <FormattedCurrency valueInCents={order.gross_amount_cents} currency={order.currency ?? 'ETB'} />
                   </Table.Cell>}
-                  {visible.date && <Table.Cell className="min-w-28 px-3 py-2.5 whitespace-normal">
-                    <span className="block text-sm"><FormattedDate preset="short" date={order.created_at} /></span>
-                    <span className="block text-xs text-muted-foreground">
-                      <FormattedRelativeTime date={order.paid_at ?? order.created_at} />
-                    </span>
+                  {visible.date && <Table.Cell className="min-w-28 px-3 py-2 whitespace-nowrap">
+                    <span className="block text-[13px]"><FormattedDate preset="short" date={order.created_at} /></span>
                   </Table.Cell>}
-                  {visible.status && <Table.Cell className="px-3 py-2.5"><OrderStatusBadge status={order.status} /></Table.Cell>}
-                  <Table.Cell className="w-12 px-3 py-2.5 text-end">
+                  {visible.status && <Table.Cell className="px-3 py-2"><OrderStatusBadge status={order.status} /></Table.Cell>}
+                  <Table.Cell className={`sticky end-0 z-10 w-12 px-2 py-1 text-end ${selection[order.uuid] ? 'bg-muted' : 'bg-card group-hover:bg-muted'}`}>
                     <ViewOrderButton label={trans({message: 'View details'})}
                       onClick={() => onView(order.uuid)} />
                   </Table.Cell>
@@ -781,7 +725,8 @@ function ViewOrderButton({
           render={
             <Button
               variant="ghost"
-              size="icon-xs"
+              color="default"
+              size="icon"
               aria-label={label}
               onClick={onClick}
             >
@@ -1217,10 +1162,9 @@ function OrderStatusBadge({status}: {status: string}) {
   return (
     <Badge
       variant={statusBadgeVariant(status)}
-      className={
-        status === 'manual_review' ? 'bg-warning/10 text-warning' : undefined
-      }
+      className={`h-[22px] gap-1.5 rounded-full px-2 text-[11.5px] font-medium ${status === 'manual_review' ? 'bg-warning/10 text-warning' : ''}`}
     >
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       <PaymentStatusLabel status={status} />
     </Badge>
   );
@@ -1246,8 +1190,12 @@ function Pagination({
   const items = paginationItems(page, lastPage);
 
   return (
-    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
+    <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="tabular-nums" aria-live="polite">
+          <Trans message=":from–:to of :total" values={{from: total ? (page - 1) * perPage + 1 : 0, to: Math.min(page * perPage, total), total}} />
+        </span>
+        <div className="hidden items-center gap-2 sm:flex">
         <span><Trans message="Rows" /></span>
         <Select.Root
           name={pageSizeName}
@@ -1273,22 +1221,24 @@ function Pagination({
             </Select.Group>
           </Select.Content>
         </Select.Root>
-        <span aria-live="polite">
-          <Trans message="of :total" values={{total}} />
-        </span>
+        </div>
       </div>
 
       <nav
-        className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start"
+        className="ms-auto flex min-w-0 items-center gap-1"
         aria-label="Pagination"
       >
         <Button
-          variant="outline"
+          variant="ghost"
+          color="default"
           size="sm"
+          className="px-2"
+          aria-label="Previous"
           disabled={page <= 1}
           onClick={() => onChange(page - 1)}
         >
-          <Trans message="Previous" />
+          <ChevronLeftIcon aria-hidden="true" />
+          <span className="max-sm:sr-only"><Trans message="Previous" /></span>
         </Button>
 
         <div className="hidden items-center gap-1 sm:flex">
@@ -1296,13 +1246,10 @@ function Pagination({
             typeof item === 'number' ? (
               <Button
                 key={item}
-                variant={item === page ? 'outline' : 'ghost'}
+                variant={item === page ? 'default' : 'ghost'}
+                color={item === page ? 'primary' : 'default'}
                 size="sm"
-                className={
-                  item === page
-                    ? 'min-w-9 bg-muted px-2 font-medium'
-                    : 'min-w-9 px-2'
-                }
+                className="min-w-8 px-2 font-medium tabular-nums"
                 aria-current={item === page ? 'page' : undefined}
                 aria-label={`Go to page ${item}`}
                 onClick={() => onChange(item)}
@@ -1329,12 +1276,16 @@ function Pagination({
         </span>
 
         <Button
-          variant="outline"
+          variant="ghost"
+          color="default"
           size="sm"
+          className="px-2"
+          aria-label="Next"
           disabled={page >= lastPage}
           onClick={() => onChange(page + 1)}
         >
-          <Trans message="Next" />
+          <span className="max-sm:sr-only"><Trans message="Next" /></span>
+          <ChevronRightIcon aria-hidden="true" />
         </Button>
       </nav>
     </div>
