@@ -10,30 +10,42 @@ return new class extends Migration {
         if (! $row) return;
 
         $page = json_decode($row->value, true);
-        $legacy = json_decode(file_get_contents(resource_path('defaults/creator-showcase-pre-migration.json')), true);
-        $preset = json_decode(file_get_contents(resource_path('defaults/creator-homepage.json')), true);
-        if (! is_array($page['sections'] ?? null) || ! is_array($legacy) || ! is_array($preset['sections'] ?? null)) return;
+        if (! is_array($page['sections'] ?? null)) return;
 
-        $changed = false;
-        foreach ($page['sections'] as $i => $section) {
-            if ($section == $legacy['store']) {
-                $page['sections'][$i] = $preset['sections'][2];
-                $changed = true;
-            } elseif ($section == $legacy['payment']) {
-                $page['sections'][$i] = $preset['sections'][4];
-                $changed = true;
-            }
-        }
+        $legacy = $this->readJson('defaults/creator-showcase-pre-migration.json');
+        $preset = $this->readJson('defaults/creator-homepage.json');
+        $newSections = $this->replaceStockSections($page['sections'], $legacy, $preset);
+        if ($newSections === $page['sections']) return;
 
-        if ($changed) {
-            DB::table('settings')->where('name', 'landingPage')->update([
-                'value' => json_encode($page, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            ]);
-        }
+        $page['sections'] = $newSections;
+        DB::table('settings')->where('name', 'landingPage')->update([
+            'value' => json_encode($page, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+
+    private function readJson(string $relativePath): array
+    {
+        return json_decode(file_get_contents(resource_path($relativePath)), true);
+    }
+
+    private function replaceStockSections(array $sections, array $legacy, array $preset): array
+    {
+        return array_map(
+            fn ($section) => $this->replaceSection($section, $legacy, $preset),
+            $sections,
+        );
+    }
+
+    private function replaceSection(mixed $section, array $legacy, array $preset): mixed
+    {
+        if ($section == $legacy['store']) return $preset['sections'][2];
+        if ($section == $legacy['payment']) return $preset['sections'][4];
+
+        return $section;
     }
 
     public function down(): void
     {
-        // Editorial settings may have changed since migration; never overwrite them.
+        // Never overwrite edits to published storefront and payment messaging.
     }
 };
