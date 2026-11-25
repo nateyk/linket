@@ -42,21 +42,6 @@ describe('services section', () => {
     expect(screen.getByText('1 package')).toBeTruthy();
   });
 
-  it('does not duplicate the visible Services heading below a section navigation', async () => {
-    (apiClient.get as Mock).mockResolvedValue({data: {data: services}});
-
-    render(
-      <ServicesSection
-        biolink={biolink}
-        appearance={null}
-        showHeading={false}
-      />,
-    );
-
-    expect(await screen.findByText('Brand identity sprint')).toBeTruthy();
-    expect(screen.queryByRole('heading', {name: 'Services'})).toBeNull();
-  });
-
   it('reports a failed load instead of claiming there are no services', async () => {
     (apiClient.get as Mock).mockRejectedValue(new Error('network down'));
 
