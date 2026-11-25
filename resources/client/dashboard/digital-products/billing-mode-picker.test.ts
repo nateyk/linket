@@ -18,10 +18,12 @@ describe('billing mode picker', () => {
     expect(source).toContain("'paid'");
     expect(source).toContain('OptionRowContent');
   });
-  test('type picker rows render through the shared row component', () => {
-    expect(read('product-type-picker.tsx')).toContain('OptionRowContent');
-    expect(read('product-type-picker.tsx')).toContain(
-      'onValueChange: (value: ProductType | null) => void',
-    );
+  test('type picker uses a responsive card grid while billing keeps row options', () => {
+    const picker = read('product-type-picker.tsx');
+    expect(picker).toContain('grid-cols-2');
+    expect(picker).toContain('sm:grid-cols-4');
+    expect(picker).toContain('RadioGroupItem');
+    expect(picker).toContain('onValueChange: (value: ProductType | null) => void');
+    expect(picker).not.toContain('OptionRowContent');
   });
 });
