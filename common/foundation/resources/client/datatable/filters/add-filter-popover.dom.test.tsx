@@ -2,7 +2,7 @@
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 import type {ComponentProps, ReactElement, ReactNode} from 'react';
 import {afterEach, expect, it, vi} from 'vitest';
-import type {BackendFilter} from './backend-filter';
+import {FilterOperator, type BackendFilter} from './backend-filter';
 import {AddFilterPopover} from './add-filter-popover';
 
 const mocks = vi.hoisted(() => ({
@@ -76,7 +76,7 @@ const filters: BackendFilter[] = [
     label: 'Device',
     popoverContent: ({onApply, onDismiss}) => (
       <div>
-        <button onClick={() => onApply({value: 'mobile', operator: 'eq'})}>
+        <button onClick={() => onApply({value: 'mobile', operator: FilterOperator.eq})}>
           Select mobile
         </button>
         <button onClick={onDismiss}>Back to filters</button>
@@ -87,7 +87,7 @@ const filters: BackendFilter[] = [
     key: 'browser',
     label: 'Browser',
     popoverContent: ({onApply}) => (
-      <button onClick={() => onApply({value: 'Chrome', operator: 'contains'})}>
+      <button onClick={() => onApply({value: 'Chrome', operator: FilterOperator.contains})}>
         Select Chrome
       </button>
     ),
@@ -116,7 +116,7 @@ it('opens the compact mobile filter, applies the selected device and closes the 
   fireEvent.click(screen.getByRole('button', {name: 'Select mobile'}));
 
   expect(mocks.setQueryState).toHaveBeenCalledWith({
-    device: {value: 'mobile', operator: 'eq'},
+    device: {value: 'mobile', operator: FilterOperator.eq},
   });
   expect(screen.queryByTestId('filter-popover-panel')).toBeNull();
 });
@@ -134,7 +134,7 @@ it('allows returning to the filter list and choosing another filter', () => {
   fireEvent.click(screen.getByRole('button', {name: 'Select Chrome'}));
 
   expect(mocks.setQueryState).toHaveBeenCalledWith({
-    browser: {value: 'Chrome', operator: 'contains'},
+    browser: {value: 'Chrome', operator: FilterOperator.contains},
   });
 });
 
