@@ -12,6 +12,11 @@ import {Trans} from '@ui/i18n/trans';
 import {ChevronRight, PlusIcon} from 'lucide-react';
 import {useFieldArray, useWatch} from 'react-hook-form';
 
+const ctaVisualOptions = [
+  {value: 'standard', label: <Trans message="Minimal" />},
+  {value: 'starfield', label: <Trans message="Subtle starfield" />},
+] as const;
+
 const buttonVariantOptions = [
   {value: 'default', label: <Trans message="Default" />},
   {value: 'outline', label: <Trans message="Outline" />},
@@ -123,6 +128,25 @@ export function CtaSectionSettings({index}: Props) {
       </div>
 
       <Field.Separator />
+
+      <HookForm.Field name={`${prefix}.presentation`}>
+        <Field.Label>
+          <Trans message="CTA background" />
+        </Field.Label>
+        <Select.Root items={ctaVisualOptions}>
+          <Select.Trigger className="w-full">
+            <Select.Value placeholder={<Trans message="Minimal" />} />
+          </Select.Trigger>
+          <Select.Content>
+            {ctaVisualOptions.map(option => (
+              <Select.Item key={option.value} value={option.value}>
+                {option.label}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Root>
+        <Field.Error />
+      </HookForm.Field>
 
       <HookForm.Field name={`${prefix}.forceDarkMode`}>
         <Field.Label>
