@@ -476,7 +476,7 @@ it('selects current-page rows, enables a real CSV export action and hides option
   render(<Component />);
   await screen.findAllByText('Workbook');
 
-  fireEvent.click(screen.getByRole('checkbox', {name: 'Select order order-1'}));
+  fireEvent.click(screen.getByRole('checkbox', {name: /Select order/}));
   expect(screen.getByText('1 selected on this page')).toBeTruthy();
   expect(screen.getByRole('button', {name: /Export selected/})).toBeTruthy();
 
