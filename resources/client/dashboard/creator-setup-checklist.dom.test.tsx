@@ -40,8 +40,13 @@ it('derives setup completion from stores, product files, and usable receiving ac
   expect(screen.getByText('Publish product in storefront')).toBeTruthy();
   expect(screen.getByText('Make your first sale')).toBeTruthy();
   expect(screen.getByText('Up next')).toBeTruthy();
-  expect(screen.getByRole('link', {name: /Continue setup/i}).getAttribute('href')).toBe('/dashboard/items/22/edit');
+  expect(screen.getByRole('link', {name: 'Review product'}).getAttribute('href')).toBe('/dashboard/items/22/edit');
   expect(screen.getByRole('link', {name: 'Publish product in storefront'}).getAttribute('href')).toBe('/dashboard/items/22/edit');
+  expect(document.querySelector('li[aria-current="step"]')?.textContent).toContain('Get product approved');
+  fireEvent.click(screen.getByRole('button', {name: 'Hide setup steps'}));
+  expect(screen.getByRole('button', {name: 'View setup steps'}).getAttribute('aria-expanded')).toBe('false');
+  await waitFor(() => expect(screen.getByRole('link', {name: 'Review product'}).getAttribute('href')).toBe('/dashboard/items/22/edit'));
+  expect(screen.getByText('4 of 7 setup steps complete')).toBeTruthy();
 });
 
 
@@ -82,16 +87,18 @@ it('lets a creator dismiss the checklist only after setup is complete and rememb
   const view = render(<QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>);
 
   expect(await screen.findByText('7 of 7 setup steps complete')).toBeTruthy();
+  expect(screen.getByText('Storefront setup complete')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'View setup steps'}).getAttribute('aria-expanded')).toBe('false');
   const dismiss = screen.getByRole('button', {name: 'Remove setup checklist from dashboard'});
   fireEvent.click(dismiss);
-  expect(screen.queryByText('Get your storefront ready to sell')).toBeNull();
+  expect(screen.queryByText('Storefront setup complete')).toBeNull();
   expect(localStorage.getItem('creator-setup-checklist-dismissed-v1:77')).toBe('true');
 
   view.unmount();
   const nextClient = new QueryClient({defaultOptions: {queries: {retry: false}}});
   render(<QueryClientProvider client={nextClient}><CreatorSetupChecklist /></QueryClientProvider>);
   await waitFor(() =>
-    expect(screen.queryByText('Get your storefront ready to sell')).toBeNull(),
+    expect(screen.queryByText('Storefront setup complete')).toBeNull(),
   );
 });
 
@@ -107,7 +114,7 @@ it('does not count an approved course as published until its lessons are publish
   render(<QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>);
 
   expect(await screen.findByText('4 of 7 setup steps complete')).toBeTruthy();
-  expect(screen.getByRole('link', {name: /Continue setup/i}).getAttribute('href')).toBe('/dashboard/items/22/edit');
+  expect(screen.getByRole('link', {name: 'Upload file'}).getAttribute('href')).toBe('/dashboard/items/22/edit');
 
   product.course.published_at = '2026-10-30T00:00:00Z';
   await act(() => client.invalidateQueries({queryKey: ['creator-setup-checklist']}));
@@ -116,7 +123,7 @@ it('does not count an approved course as published until its lessons are publish
   expect(screen.queryByRole('link', {name: 'Publish product in storefront'})).toBeNull();
   expect(screen.getByText('Up next')).toBeTruthy();
   expect(screen.getByText('Upload product file')).toBeTruthy();
-  expect(screen.getByRole('link', {name: /Continue setup/i}).getAttribute('href')).toBe(
+  expect(screen.getByRole('link', {name: 'Upload file'}).getAttribute('href')).toBe(
     '/dashboard/items/22/edit',
   );
 });
@@ -156,14 +163,14 @@ it('refreshes progress when returning to the dashboard after completing a setup 
   const dashboard = () => <QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>;
   const page = render(dashboard());
   expect(await screen.findByText('0 of 7 setup steps complete')).toBeTruthy();
-  expect(screen.getByRole('link', {name: /Continue setup/i}).getAttribute('href')).toBe('/dashboard/stores');
+  expect(screen.getByRole('link', {name: 'Create storefront'}).getAttribute('href')).toBe('/dashboard/stores');
 
   page.unmount();
   stores = [{id: 9}];
   render(dashboard());
   expect(await screen.findByText('1 of 7 setup steps complete')).toBeTruthy();
   expect(screen.queryByRole('link', {name: 'Create storefront'})).toBeNull();
-  expect(screen.getByRole('link', {name: /Continue setup/i}).getAttribute('href')).toBe('/dashboard/items/new');
+  expect(screen.getByRole('link', {name: 'Add product'}).getAttribute('href')).toBe('/dashboard/items/new');
 });
 
 
@@ -211,4 +218,21 @@ it('keeps account setup complete when the configured bank is unavailable', async
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
   render(<QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>);
   expect(await screen.findByText('1 of 7 setup steps complete')).toBeTruthy();
+});
+
+
+it('lets a creator review the completed steps without showing an active setup action', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/stores') return Promise.resolve({data: {data: [{id: 9}]}});
+    if (url === '/api/v1/storefront/products') return Promise.resolve({data: {data: [{id: 22, status: 'approved', files: [{id: 1}], biolink_ids: [9], sales_count: 1}]}});
+    if (url === '/api/v1/storefront/payment-methods') return Promise.resolve({data: {data: [{account_configured: true}]}});
+    throw new Error(`Unexpected URL: ${url}`);
+  });
+  const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
+  render(<QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>);
+  await screen.findByText('Storefront setup complete');
+  fireEvent.click(screen.getByRole('button', {name: 'View setup steps'}));
+  expect(await screen.findByText('Make your first sale')).toBeTruthy();
+  expect(screen.queryByText('Up next')).toBeNull();
+  expect(screen.getAllByText('Complete')).toHaveLength(7);
 });
