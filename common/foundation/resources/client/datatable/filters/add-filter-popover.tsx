@@ -2,6 +2,7 @@ import {Button} from '@shadcn/button/button';
 import {Popover} from '@shadcn/popover/popover';
 import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {ListFilterIcon, PlusIcon} from 'lucide-react';
 import {FilterTrans} from './filter-trans';
 import {ComponentProps, ReactElement, useState} from 'react';
@@ -14,6 +15,7 @@ interface Props {
   variant?: ComponentProps<typeof Button>['variant'];
   disabled?: boolean;
   className?: string;
+  compactOnMobile?: boolean;
 }
 export function AddFilterPopover({
   filters,
@@ -21,8 +23,10 @@ export function AddFilterPopover({
   variant = 'outline',
   disabled,
   className,
+  compactOnMobile = false,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const {trans} = useTrans();
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
@@ -31,12 +35,19 @@ export function AddFilterPopover({
             variant={variant}
             color={color}
             disabled={disabled}
-            className={className}
+            className={
+              compactOnMobile
+                ? `size-10 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3 ${className ?? ''}`
+                : className
+            }
+            aria-label={trans({message: 'Filter'})}
           />
         }
       >
-        <ListFilterIcon />
-        <Trans message="Filter" />
+        <ListFilterIcon aria-hidden="true" />
+        <span className={compactOnMobile ? 'sr-only sm:not-sr-only' : undefined}>
+          <Trans message="Filter" />
+        </span>
       </Popover.Trigger>
       <Popover.Portal>
         <Content filters={filters} onClose={() => setOpen(false)} />
@@ -81,7 +92,7 @@ function Content({
 
   return (
     // w-74 allows date ranger picker to fully fit
-    <Popover.Content className="w-74 overflow-hidden p-1.5">
+    <Popover.Content className="max-h-[min(65dvh,32rem)] w-74 max-w-[calc(100vw-2rem)] overflow-y-auto p-1.5">
       {selectedFilter?.popoverContent
         ? selectedFilter.popoverContent({
             filter: selectedFilter,

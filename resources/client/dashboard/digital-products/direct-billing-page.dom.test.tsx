@@ -216,6 +216,36 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+it('renders readable mobile order cards without desktop table or single-page navigation', async () => {
+  const originalMatchMedia = window.matchMedia;
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: (query: string) => ({
+      matches: query === '(max-width: 768px)',
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }),
+  });
+
+  try {
+    mockApi({orders: [baseOrder], lastPage: 1, total: 1});
+    render(<Component />);
+
+    const list = await screen.findByRole('list', {name: 'Orders'});
+    expect(list.querySelectorAll('[role="listitem"]')).toHaveLength(1);
+    expect(screen.queryByRole('table', {name: 'Orders'})).toBeNull();
+    expect(screen.getByRole('button', {name: 'View details'})).toBeTruthy();
+    expect(screen.queryByRole('navigation', {name: 'Pagination'})).toBeNull();
+    expect(screen.getAllByText('Workbook').length).toBeGreaterThan(0);
+  } finally {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: originalMatchMedia,
+    });
+  }
+});
+
 it('applies redirected order filters to the controls and request', async () => {
   window.history.replaceState({}, '', '/dashboard/orders?status=paid&search=Workbook&from=2026-10-01&to=2026-10-29&page=2&per_page=25');
   mockApi({orders: [baseOrder], lastPage: 3, total: 30});

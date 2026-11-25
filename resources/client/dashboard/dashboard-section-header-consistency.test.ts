@@ -35,13 +35,15 @@ describe('dashboard header visual and semantic consistency', () => {
     ['course', course, '/dashboard/items'],
   ])('%s editor uses parent › current-page breadcrumbs instead of a Back icon + large title', (_name, source, route) => {
     expect(source).toContain(_name === 'service'
-      ? '<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-auto max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">'
+      ? '<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-auto max-sm:flex-1 max-sm:overflow-hidden max-sm:text-base max-sm:font-semibold">'
       : '<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-0 max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">');
     expect(source).toContain(`<Breadcrumb.Link to="${route}">`);
     expect(source).toContain(_name === 'service'
       ? '<Breadcrumb.Separator className="max-sm:hidden" />'
       : '<Breadcrumb.Separator />');
-    expect(source).toContain('<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">');
+    expect(source).toContain(_name === 'service'
+      ? '<Breadcrumb.Page className="font-semibold max-sm:block max-sm:min-w-0 max-sm:truncate">'
+      : '<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">');
     expect(source).toContain('max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1 max-sm:px-2 max-sm:py-0');
     expect(source).toContain('max-sm:ms-0 max-sm:gap-1');
     expect(source).toContain('<h1 className="sr-only">');
@@ -70,10 +72,12 @@ describe('dashboard header visual and semantic consistency', () => {
   });
 
   test('Insights retains its canonical header, semantic title and tabs', () => {
-    expect(insights).toContain('<DashboardLayout.SectionHeader className="max-md:h-auto max-md:flex-wrap max-md:py-2">');
+    expect(insights).toContain('<DashboardLayout.SectionHeader className="max-md:h-auto max-md:flex-wrap max-md:gap-y-2 max-md:py-3">');
     expect(insights).not.toContain('SectionHeader className="border-none"');
     expect(insights).not.toContain('compactOnMobile={false}');
-    expect(insights).toContain('max-md:order-3 max-md:w-full max-md:justify-end');
+    expect(insights).toContain('max-md:order-3 max-md:w-full max-md:justify-between');
+    expect(insights).toContain('<AddFilterPopover');
+    expect(insights).toContain('compactOnMobile');
     expect(insights).toContain('<DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>');
     expect(insights).toContain('className="mx-(--section-spacing) border-b"');
   });

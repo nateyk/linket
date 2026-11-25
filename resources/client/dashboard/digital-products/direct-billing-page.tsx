@@ -19,6 +19,7 @@ import {FormattedDate} from '@ui/i18n/formatted-date';
 import {FormattedRelativeTime} from '@ui/i18n/formatted-relative-time';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
+import {useIsMobileMediaQuery} from '@ui/utils/hooks/is-mobile-media-query';
 import {
   CalendarDaysIcon,
   ChartNoAxesCombinedIcon,
@@ -281,7 +282,7 @@ export function Component() {
                     onRetry={() => void loadOrders()}
                   />
                 </Card.Content>
-                {ordersPagination.total > 0 && (
+                {ordersPagination.last_page > 1 && (
                   <Card.Footer className="border-t pt-4">
                     <Pagination
                       page={ordersPagination.current_page}
@@ -501,6 +502,7 @@ function OrdersTable({
   emptyMessage?: ReactNode;
 }) {
   const {trans} = useTrans();
+  const isMobile = useIsMobileMediaQuery();
   if (loading) return <TableLoading />;
   if (error) {
     return (
@@ -539,49 +541,97 @@ function OrdersTable({
   }
 
   return (
-    <div className="min-w-0 max-w-full overflow-x-auto">
-      <Table.Root
-        aria-label={trans({message: 'Orders'})}
-        className="w-max min-w-full"
-      >
-        <Table.Header>
-          <Table.Row className="hover:bg-transparent">
-            <Table.Head className="h-11 min-w-56 px-4">
-              <Trans message="Product" />
-            </Table.Head>
-            <Table.Head className="h-11 min-w-44 px-4">
-              <Trans message="Buyer" />
-            </Table.Head>
-            <Table.Head className="h-11 min-w-28 px-4 text-end">
-              <Trans message="Amount" />
-            </Table.Head>
-            <Table.Head className="h-11 min-w-36 px-4">
-              <Trans message="Date" />
-            </Table.Head>
-            <Table.Head className="h-11 min-w-28 px-4">
-              <Trans message="Status" />
-            </Table.Head>
-            <Table.Head className="h-11 w-12 px-4">
-              <span className="sr-only">
-                <Trans message="Actions" />
-              </span>
-            </Table.Head>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
+    <>
+      {isMobile ? (
+        <div className="divide-y" role="list" aria-label={trans({message: 'Orders'})}>
           {orders.map(order => (
-            <Table.Row key={order.uuid}>
-              <Table.Cell className="min-w-56 max-w-72 px-4 py-3 align-middle whitespace-normal">
-                <span className="flex min-w-0 items-center gap-3">
-                  <OrderMark order={order} />
-                  <span className="min-w-0">
-                    <span
-                      className="block truncate text-sm font-medium"
-                      title={order.product?.title ?? undefined}
+            <article key={order.uuid} role="listitem" className="min-w-0 space-y-3 px-4 py-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <OrderMark order={order} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+                      {order.product?.title ?? <Trans message="Deleted product" />}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-10 shrink-0"
+                      aria-label={trans({message: 'View details'})}
+                      onClick={() => onView(order.uuid)}
                     >
-                      {order.product?.title ?? (
-                        <Trans message="Deleted product" />
-                      )}
+                      <EyeIcon aria-hidden="true" />
+                    </Button>
+                  </div>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {order.buyer_name || <Trans message="Guest buyer" />}
+                  </p>
+                  {order.buyer_email && (
+                    <p className="truncate text-xs text-muted-foreground">{order.buyer_email}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex min-w-0 items-center justify-between gap-3 border-t pt-3">
+                <div className="min-w-0 space-y-1">
+                  <OrderStatusBadge status={order.status} />
+                  <p className="text-xs text-muted-foreground">
+                    <FormattedDate preset="short" date={order.created_at} />
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-semibold tabular-nums">
+                  <FormattedCurrency
+                    valueInCents={order.gross_amount_cents}
+                    currency={order.currency ?? 'ETB'}
+                  />
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="min-w-0 max-w-full overflow-x-auto">
+          <Table.Root
+            aria-label={trans({message: 'Orders'})}
+            className="w-max min-w-full"
+          >
+            <Table.Header>
+              <Table.Row className="hover:bg-transparent">
+                <Table.Head className="h-11 min-w-56 px-4">
+                  <Trans message="Product" />
+                </Table.Head>
+                <Table.Head className="h-11 min-w-44 px-4">
+                  <Trans message="Buyer" />
+                </Table.Head>
+                <Table.Head className="h-11 min-w-28 px-4 text-end">
+                  <Trans message="Amount" />
+                </Table.Head>
+                <Table.Head className="h-11 min-w-36 px-4">
+                  <Trans message="Date" />
+                </Table.Head>
+                <Table.Head className="h-11 min-w-28 px-4">
+                  <Trans message="Status" />
+                </Table.Head>
+                <Table.Head className="h-11 w-12 px-4">
+                  <span className="sr-only">
+                    <Trans message="Actions" />
+                  </span>
+                </Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {orders.map(order => (
+                <Table.Row key={order.uuid}>
+                  <Table.Cell className="min-w-56 max-w-72 px-4 py-3 align-middle whitespace-normal">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <OrderMark order={order} />
+                      <span className="min-w-0">
+                        <span
+                          className="block truncate text-sm font-medium"
+                          title={order.product?.title ?? undefined}
+                        >
+                        {order.product?.title ?? (
+                          <Trans message="Deleted product" />
+                          )}
                     </span>
                     <span className="block truncate font-mono text-xs text-muted-foreground">
                       #{order.uuid.slice(0, 8)}
@@ -631,9 +681,11 @@ function OrdersTable({
               </Table.Cell>
             </Table.Row>
           ))}
-        </Table.Body>
-      </Table.Root>
-    </div>
+          </Table.Body>
+        </Table.Root>
+      </div>
+      )}
+    </>
   );
 }
 
@@ -1117,7 +1169,7 @@ function Pagination({
 
   return (
     <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
         <span><Trans message="Rows" /></span>
         <Select.Root
           name={pageSizeName}
