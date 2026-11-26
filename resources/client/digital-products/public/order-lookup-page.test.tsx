@@ -47,6 +47,8 @@ describe('my-portal protected actions', () => {
       2,
     );
     expect(recovery).toContain('Enter the 6-digit code from your email.');
+    expect(recovery).not.toContain('focus-within:outline-foreground');
+    expect(recovery).toContain('group-has-[:focus-visible]:outline-primary');
     expect(recovery).not.toContain('fill-amber-400');
     expect(recovery).not.toContain('certificate');
     expect(recovery).not.toContain('-mt-2');

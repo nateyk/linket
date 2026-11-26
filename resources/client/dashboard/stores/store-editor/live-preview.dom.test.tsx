@@ -241,6 +241,15 @@ describe('LivePreview follows the editor tab (A-06)', () => {
     expect(send.mock.calls[1][1]).toBe(window.location.origin);
   });
 
+  test('shows a placeholder skeleton until the preview frame signals ready', async () => {
+    const {container} = render(<LivePreview />);
+    expect(container.querySelector('[data-slot="skeleton"]')).toBeTruthy();
+    ready();
+    await waitFor(() =>
+      expect(container.querySelector('[data-slot="skeleton"]')).toBeNull(),
+    );
+  });
+
   test('tab changes post the mapped section; insights holds the last one', () => {
     const {send, rerender} = renderFrame();
     ready();

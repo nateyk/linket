@@ -96,7 +96,7 @@ export function ServiceCard({
       style={{boxShadow: buttonAppearance.style.boxShadow}}
       classNames={{
         root: cn(
-          'bg-[var(--biolink-surface)] text-[var(--biolink-text)]',
+          'bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-xl backdrop-saturate-150',
           biolinkSurfaceEdgeClassName,
         ),
         media: 'bg-[var(--biolink-surface-muted)]',

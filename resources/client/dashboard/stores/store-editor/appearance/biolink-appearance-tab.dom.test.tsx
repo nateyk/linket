@@ -50,6 +50,8 @@ test('appearance sections use compact, theme-aware collapsible cards', () => {
     expect(section.classList.contains('rounded-card-sm')).toBe(true);
     expect(section.classList.contains('border-border')).toBe(true);
     expect(section.classList.contains('bg-card')).toBe(true);
+    expect(section.classList.contains('data-open:shadow-bottom')).toBe(true);
+    expect(section.classList.contains('data-open:shadow')).toBe(false);
   }
 });
 
@@ -104,4 +106,22 @@ test('background choices fit a narrow editor and expose their active state', () 
   fireEvent.click(trigger('Image'));
   expect(trigger('Image').getAttribute('aria-pressed')).toBe('true');
   expect(trigger('Solid').getAttribute('aria-pressed')).toBe('false');
+
+  // Effect options keep unique label IDs and expose aria-pressed.
+  const mono = trigger('Mono');
+  expect(mono.getAttribute('aria-pressed')).toBe('false');
+  expect(mono.getAttribute('aria-labelledby')).not.toBe(mono.getAttribute('id'));
+});
+
+test('button style options expose aria-pressed and semantic selection chrome', () => {
+  renderAppearanceTab();
+  fireEvent.click(trigger('Buttons'));
+
+  const solid = trigger('Solid');
+  const glass = trigger('Glass');
+  expect(solid.getAttribute('aria-pressed')).toBe('true');
+  expect(glass.getAttribute('aria-pressed')).toBe('false');
+  expect(solid.className).toContain('focus-visible:outline-ring');
+  fireEvent.click(glass);
+  expect(glass.getAttribute('aria-pressed')).toBe('true');
 });

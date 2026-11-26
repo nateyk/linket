@@ -118,7 +118,7 @@ export function StorefrontAiAppearancePreview() {
   }
 
   return (
-    <section className="space-y-3 border-b border-border pb-4" aria-label="Storefront appearance suggestions">
+    <section className="flex flex-col gap-3 border-b border-border pb-4" aria-label="Storefront appearance suggestions">
       <div>
         <h3 className="text-sm font-medium"><Trans message="Appearance ideas" /></h3>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -132,6 +132,11 @@ export function StorefrontAiAppearancePreview() {
             type="button"
             size="sm"
             variant="outline"
+            className={
+              preview?.preset === item.id
+                ? 'border-primary bg-primary/10 text-foreground'
+                : undefined
+            }
             disabled={loading || appearanceIsDirty}
             aria-pressed={preview?.preset === item.id}
             onClick={() => void requestPreview(item.id)}
@@ -151,7 +156,7 @@ export function StorefrontAiAppearancePreview() {
         <Trans message="Loading preview…" />
       </p>}
       {preview && !appearanceIsDirty && (
-        <div className="space-y-2 rounded-card-xs border border-border bg-muted/20 p-3" aria-live="polite">
+        <div className="flex flex-col gap-2 rounded-card-sm border border-border bg-muted/30 p-3" aria-live="polite">
           <p className="text-xs font-medium">
             <Trans message="Proposed differences — not applied" />
           </p>
@@ -173,7 +178,7 @@ export function StorefrontAiAppearancePreview() {
                     ? currentButtons?.radius ?? 'rounded-sm'
                     : preview.changes.btnConfig?.radius ?? currentButtons?.radius ?? 'rounded-sm';
                   return (
-                    <div key={which} className="space-y-2 rounded-card-xs border border-border bg-background p-3">
+                    <div key={which} className="flex flex-col gap-2 rounded-card-sm border border-border bg-background p-3">
                       <p className="text-xs font-medium">
                         {which === 'before' ? <Trans message="Current" /> : <Trans message="Suggested" />}
                       </p>

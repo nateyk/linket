@@ -78,9 +78,11 @@ export function PatternBackgroundTab({
             value?.backgroundSize === background.backgroundSize;
           return (
             <button
+              type="button"
+              aria-pressed={isActive}
               className={cn(
-                'aspect-square rounded-lg outline-offset-2 outline-primary focus-visible:outline-2',
-                isActive && 'outline-2',
+                'aspect-square rounded-input border border-border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
+                isActive && 'border-primary ring-2 ring-primary/30',
               )}
               key={index}
               style={

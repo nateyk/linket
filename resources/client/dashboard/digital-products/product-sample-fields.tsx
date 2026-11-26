@@ -73,17 +73,22 @@ export function ProductSampleFields({
   };
 
   return (
-    <div className="flex flex-col gap-3" id="product-samples" tabIndex={-1}>
+    <div
+      className="flex flex-col gap-3"
+      id="product-samples"
+      tabIndex={-1}
+      aria-describedby={error ? 'product-samples-error' : undefined}
+    >
       {kind === 'audio' ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           <Trans message="Full tracks stay private; previews are public." />
         </p>
       ) : productType === 'digital' ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           <Trans message="Full product files stay private; the sample is public." />
         </p>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           <Trans message="Full ebook stays private; sample pages are public." />
         </p>
       )}
@@ -112,12 +117,16 @@ export function ProductSampleFields({
       )}
 
       {atAudioCap && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           <Trans message="You can add up to 8 preview tracks." />
         </p>
       )}
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p id="product-samples-error" role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
       {!!samples.length && (
         <ul className="flex flex-col gap-2">
@@ -129,7 +138,7 @@ export function ProductSampleFields({
                   <AttachmentMedia>
                     <Icon aria-hidden="true" />
                   </AttachmentMedia>
-                  <AttachmentContent>
+                  <AttachmentContent className={kind === 'audio' ? 'min-w-44 flex-1' : undefined}>
                     {kind === 'audio' ? (
                       <Input
                         aria-label={trans(message('Preview title'))}
@@ -157,13 +166,13 @@ export function ProductSampleFields({
                         : null}
                     </AttachmentDescription>
                   </AttachmentContent>
-                  <AttachmentActions>
+                  <AttachmentActions className="ms-auto">
                     {kind === 'audio' && (
                       <>
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="icon-sm"
                           disabled={index === 0}
                           aria-label={trans(message('Move preview up'))}
                           onClick={() => onChange(moveSample(samples, index, -1))}
@@ -173,7 +182,7 @@ export function ProductSampleFields({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="icon-sm"
                           disabled={index === samples.length - 1}
                           aria-label={trans(message('Move preview down'))}
                           onClick={() => onChange(moveSample(samples, index, 1))}

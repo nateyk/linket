@@ -52,12 +52,13 @@ describe('dashboard header visual and semantic consistency', () => {
     expect(source).toContain('ms-auto flex');
   });
 
-  test('service and product headers keep status badges out of the title while preserving product review feedback', () => {
+  test('service and product editors keep headers clean and preserve actionable review feedback', () => {
     const productHeader = product.split('</DashboardLayout.SectionHeader>')[0];
     const serviceHeader = service.split('</DashboardLayout.SectionHeader>')[0];
     expect(productHeader).not.toContain('<ProductStatus');
+    expect(product).not.toContain('<ProductStatus');
     expect(serviceHeader).not.toContain('<Badge');
-    expect(product).toContain('hasPendingUpdate={product.has_pending_update === true}');
+    expect(product).toContain('product.has_pending_update === true');
     expect(service).toContain('<Trans message="Create a service" />');
   });
 

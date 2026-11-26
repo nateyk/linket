@@ -36,7 +36,7 @@ export function parseSkills(value: string | undefined): string[] {
 
 /** The same box and focus ring as the combobox chips field. */
 const chipsContainerStyles =
-  'flex min-h-9 flex-wrap items-center gap-1.5 rounded-input border border-input bg-transparent bg-clip-padding px-3 py-1.5 text-sm transition-[color,box-shadow,background-color] focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring has-aria-invalid:border-destructive has-aria-invalid:outline-destructive has-aria-invalid:focus-within:outline-1 has-data-[slot=skills-chip]:px-1.5 dark:bg-input/30';
+  'flex min-h-9 flex-wrap items-center gap-1.5 rounded-input border border-input bg-transparent bg-clip-padding px-3 py-1.5 text-sm transition-[color,box-shadow,background-color] hover:border-foreground/20 focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring has-aria-invalid:border-destructive has-aria-invalid:outline-destructive has-aria-invalid:focus-within:outline-1 has-data-[slot=skills-chip]:px-1.5 dark:bg-input/30';
 
 const chipStyles =
   'flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 rounded-md bg-secondary px-2 text-xs font-medium whitespace-nowrap text-secondary-foreground has-data-[slot=skills-chip-remove]:pe-0 dark:bg-input/60';
@@ -143,12 +143,13 @@ export function SkillsChipsField({placeholder}: {placeholder?: string}) {
           value={draft}
           disabled={field?.disabled}
           placeholder={placeholder}
+          autoComplete="off"
           onChange={event => setDraft(event.target.value)}
           onBlur={() => field?.onBlur()}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           data-slot="skills-chip-input"
-          className="h-7 min-w-16 flex-1 rounded-none border-0 px-0 text-sm outline-none"
+          className="h-7 min-w-16 flex-1 rounded-none border-0 bg-transparent px-0 py-0 text-sm shadow-none ring-0 focus-visible:outline-none aria-invalid:focus-visible:outline-none dark:bg-transparent"
         />
       </div>
       {/* Always mounted so screen readers announce the cap message when its

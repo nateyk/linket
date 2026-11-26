@@ -57,21 +57,21 @@ function StyleSelector({value, onChange}: StyleSelectorProps) {
           active={selectedVariant === 'solid'}
           onClick={() => onChange({...value, variant: 'solid'})}
         >
-          <span className="block h-6 w-full rounded-button bg-border" />
+          <span className="block h-5 w-full rounded-button bg-foreground/85" />
         </ButtonStyleItem>
         <ButtonStyleItem
           label={<Trans message="Glass" />}
           active={selectedVariant === 'glass'}
           onClick={() => onChange({...value, variant: 'glass'})}
         >
-          <span className="block h-6 w-full rounded-button border border-white" />
+          <span className="block h-5 w-full rounded-button border border-border bg-background/70" />
         </ButtonStyleItem>
         <ButtonStyleItem
           label={<Trans message="Outline" />}
           active={selectedVariant === 'outline'}
           onClick={() => onChange({...value, variant: 'outline'})}
         >
-          <span className="block h-6 w-full rounded-button border border-border" />
+          <span className="block h-5 w-full rounded-button border-2 border-foreground/45 bg-transparent" />
         </ButtonStyleItem>
       </div>
     </div>
@@ -268,22 +268,28 @@ function ButtonStyleItem({
   const id = useId();
   return (
     <div
-      className="group flex flex-col items-center gap-2"
+      className="group flex flex-col items-center gap-1.5"
       data-active={active}
     >
       <button
         id={id}
+        aria-pressed={active}
         aria-labelledby={label ? `${id}-label` : undefined}
         onClick={onClick}
         type="button"
         className={cn(
-          'flex h-12 w-full items-center justify-center rounded-card-sm bg-accent p-3 text-sm outline-offset-3 outline-primary group-data-active:outline-2 focus-visible:outline-2',
+          'flex h-11 w-full items-center justify-center rounded-card-sm border border-border bg-muted/40 p-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
+          active &&
+            'border-primary bg-primary/10 ring-1 ring-primary hover:bg-primary/15',
         )}
       >
         {children}
       </button>
       {label ? (
-        <div className="text-xs" id={`${id}-label`}>
+        <div
+          className="text-xs font-medium text-muted-foreground group-data-[active=true]:text-foreground"
+          id={`${id}-label`}
+        >
           {label}
         </div>
       ) : null}

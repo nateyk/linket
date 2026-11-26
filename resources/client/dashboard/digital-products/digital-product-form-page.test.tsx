@@ -527,10 +527,11 @@ describe('product editor compact breadcrumb header', () => {
     expect(header).not.toContain('<ProductStatus');
   });
 
-  test('preserves a single canonical header divider, compact mobile layout and review feedback in the body', () => {
+  test('preserves a single canonical header divider, compact mobile layout and non-cluttered review feedback in the body', () => {
     expect(source).toContain('max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1');
     expect(source).toContain('max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden');
-    expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
+    expect(source).toContain('product.has_pending_update === true');
+    expect(source).not.toContain('<ProductStatus');
     expect(source).toContain('ms-auto flex');
   });
 });
@@ -551,9 +552,12 @@ describe('type-specific details copy and layout consistency', () => {
     expect(source).toContain('productType={effectiveFileType}');
   });
 
-  test('uses flex gap-4 and border-border in authoring layout and skeleton', () => {
+  test('uses flex gap-4 and subtle border dividers in authoring layout and skeleton', () => {
     expect(source).not.toContain('space-y-4');
     expect(source).toContain('flex min-w-0 flex-col gap-4');
-    expect(source).toContain('border-t border-border pt-4');
+    expect(source).toContain('border-t border-border/60 pt-4');
+    expect(source).toContain('grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6');
+    expect(source).toContain('rounded-input border-input bg-background');
+    expect(source).toContain('showHint={!hidePricing}');
   });
 });

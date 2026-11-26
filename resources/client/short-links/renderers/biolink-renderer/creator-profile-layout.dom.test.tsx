@@ -4,7 +4,10 @@
 import {render, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
-import {CreatorProfileLayout} from './creator-profile-layout';
+import {
+  computeVisibleSkillCount,
+  CreatorProfileLayout,
+} from './creator-profile-layout';
 
 /**
  * On a phone the profile shows one section at a time and the floating bottom
@@ -502,33 +505,40 @@ describe('creator profile cover and verification polish', () => {
     expect(cover).toBeTruthy();
     expect(cover!.parentElement!.className).toContain('aspect-[3/1]');
     expect(cover!.parentElement!.className).toContain('overflow-hidden');
-    // Media-backed cards have no pale outer ring against dark cover edges.
-    expect(cover!.closest('[data-slot="card"]')!.className).toContain('ring-0');
+    expect(cover!.parentElement!.className).toContain('rounded-t-[inherit]');
+    // Media-backed cards drop the card root backdrop/fill behind the cover so white anti-aliasing never bleeds against a hard shadow edge.
+    const card = cover!.closest('[data-slot="card"]')!;
+    expect(card.className).toContain('ring-0');
+    expect(card.className).toContain('bg-transparent');
+    expect(card.className).toContain('backdrop-blur-none');
+    const cardBody = card.querySelector('[data-slot="card-content"]');
+    expect(cardBody?.className).toContain('border-x');
+    expect(cardBody?.className).toContain('border-b');
+    expect(cardBody?.className).toContain('rounded-b-[inherit]');
+    expect(cardBody?.className).toContain('bg-[var(--biolink-surface)]');
+    expect(cardBody?.className).toContain('backdrop-blur-xl');
+    expect(cardBody?.className).toContain('backdrop-saturate-150');
     expect(cover!.className).toContain('absolute');
     expect(cover!.className).toContain('-inset-px');
     expect(cover!.className).toContain('size-[calc(100%_+_2px)]');
+    expect(cover!.className).toContain('max-w-none');
     expect(cover!.className).toContain('block');
     expect(cover!.className).toContain('object-cover');
 
     const verified = within(mobile).getByRole('img', {
       name: 'Verified creator',
     });
-    expect(verified.parentElement!.className).toContain('-mt-10');
-    // The badge sits on the circular photo edge. Negative end/bottom offsets
-    // put it outside the avatar's bounding box and leave a visible gap.
-    expect(verified.classList.contains('bottom-1')).toBe(true);
-    expect(verified.classList.contains('end-1')).toBe(true);
-    expect(verified.classList.contains('-bottom-1')).toBe(false);
-    expect(verified.classList.contains('-end-1')).toBe(false);
-    expect(verified.className).toContain('size-4');
-    expect(verified.className).toContain('rounded-full');
-    expect(verified.className).toContain('bg-[var(--biolink-surface)]');
-    expect(verified.className).not.toContain('ring-');
+    const heading = within(mobile).getByRole('heading', {name: 'Nathanael'});
+    // Verified badge sits beside the display name rather than over the avatar photo.
+    expect(verified.parentElement).toBe(heading.parentElement);
+    expect(verified.closest('[data-slot="avatar"]')).toBeNull();
+    expect(verified.className).toContain('size-4.5');
+    expect(verified.className).toContain('shrink-0');
     const iconClass = verified.querySelector('svg')!.getAttribute('class')!;
     expect(iconClass).toContain('size-full');
     expect(iconClass).toContain('fill-[var(--biolink-accent)]');
     expect(iconClass).toContain('text-[var(--biolink-accent-foreground)]');
-    expect(within(mobile).getByRole('heading', {name: 'Nathanael'}).querySelector('svg')).toBeNull();
+    expect(heading.querySelector('svg')).toBeNull();
   });
 
   test.each([
@@ -537,7 +547,7 @@ describe('creator profile cover and verification polish', () => {
     ['rounded-lg', 'rounded-card'],
     ['rounded-full', 'rounded-full'],
   ] as const)(
-    'keeps the badge compact across Appearance radius %s',
+    'keeps the verified badge beside the display name across Appearance radius %s',
     (radius, avatarRadius) => {
       render(
         <CreatorProfileLayout
@@ -552,12 +562,10 @@ describe('creator profile cover and verification polish', () => {
       expect(avatar).toBeTruthy();
       expect(avatar!.className).toContain(avatarRadius);
 
+      const heading = within(mobile).getByRole('heading', {name: 'Nathanael'});
       const badge = within(mobile).getByRole('img', {name: 'Verified creator'});
-      expect(badge.className).toContain('size-4');
-      expect(badge.className).toContain('rounded-full');
-      expect(badge.classList.contains('end-1')).toBe(true);
-      expect(badge.classList.contains('bottom-1')).toBe(true);
-      expect(badge.className).not.toContain('ring-');
+      expect(badge.parentElement).toBe(heading.parentElement);
+      expect(avatar!.parentElement!.contains(badge)).toBe(false);
     },
   );
 
@@ -565,13 +573,14 @@ describe('creator profile cover and verification polish', () => {
     render(
       <CreatorProfileLayout
         biolink={makeBiolink()}
-        appearance={null}
+        appearance={{btnConfig: {shadow: 'soft'}} as never}
         content={[]}
       />,
     );
     const card = mobileBranch().querySelector<HTMLElement>('[data-slot="card"]');
     expect(card).toBeTruthy();
     expect(card!.className).toContain('ring-(color:--biolink-border)');
+    expect(card!.className).toContain('outline-(color:--biolink-border)');
     expect(card!.className).not.toContain('ring-0');
   });
 
@@ -587,8 +596,13 @@ describe('creator profile cover and verification polish', () => {
 
     const statusLabel = within(mobileBranch()).getByText('Available for work');
     const badge = statusLabel.parentElement!;
-    expect(badge.className).toContain('bg-[var(--biolink-surface-strong)]');
-    expect(badge.className).toContain('rounded-button');
+    expect(badge.className).toContain('bg-[var(--biolink-surface)]');
+    expect(badge.className).toContain('backdrop-blur-md');
+    expect(badge.className).toContain('backdrop-saturate-150');
+    expect(badge.className).toContain('px-2');
+    expect(badge.className).toContain('py-0.5');
+    expect(badge.className).toContain('text-[11px]');
+    expect(badge.className).toContain('rounded-badge');
     expect(badge.className).toContain('border-positive/20');
     // A passive status does not inherit the Appearance button's hard shadow.
     expect(badge.hasAttribute('style')).toBe(false);
@@ -684,5 +698,112 @@ describe('public creator card responsive readability (SF-06)', () => {
     );
     expect(instagram.className).toContain('pointer-coarse:min-h-11');
     expect(instagram.className).toContain('pointer-coarse:min-w-11');
+  });
+
+  test('phone preview skips mounting duplicate hidden desktop grid', () => {
+    const {container} = render(
+      <CreatorProfileLayout
+        biolink={makeBiolink()}
+        appearance={null}
+        content={[shopWidget]}
+        isPreview
+      />,
+    );
+
+    expect(container.querySelector('.\\@4xl\\:hidden')).toBeTruthy();
+    expect(container.querySelector('.hidden.\\@4xl\\:grid')).toBeNull();
+  });
+
+  test('computeVisibleSkillCount keeps skills within two rows and reserves +N room', () => {
+    // 7 skills fit in 2 rows (<= 318px each row); an 8th long typo spills to row 3.
+    expect(
+      computeVisibleSkillCount({
+        itemWidths: [62, 98, 60, 56, 72, 60, 84, 128],
+        overflowBadgeWidth: 36,
+        containerWidth: 318,
+      }),
+    ).toBe(7);
+
+    // If the +1 badge would push row 2 past containerWidth, drop one more chip.
+    expect(
+      computeVisibleSkillCount({
+        itemWidths: [100, 100, 100, 150, 140, 120],
+        overflowBadgeWidth: 40,
+        containerWidth: 318,
+      }),
+    ).toBe(4);
+
+    // All fit within two rows -> no trimming needed.
+    expect(
+      computeVisibleSkillCount({
+        itemWidths: [60, 60, 60, 60, 60],
+        overflowBadgeWidth: 36,
+        containerWidth: 318,
+      }),
+    ).toBe(5);
+  });
+
+  test('renders +N overflow chip when measured skills exceed two rows and reveals hidden skills on click', async () => {
+    const user = userEvent.setup();
+    const biolink = makeBiolink() as unknown as {
+      profile_config: Record<string, unknown>;
+    };
+    biolink.profile_config.skills = [
+      'Design',
+      'Photography',
+      'Adobe',
+      'Figma',
+      'InDesign',
+      'Nextjs',
+      'JavaScript',
+      'Phoafasdfajsdkff',
+    ];
+
+    const clientWidthSpy = vi
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(318);
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.hasAttribute('data-skill-overflow-measure')) {
+          return {width: 36, height: 26, top: 0, left: 0, right: 36, bottom: 26, x: 0, y: 0, toJSON: () => ({})} as DOMRect;
+        }
+        if (this.hasAttribute('data-skill-measure')) {
+          const text = this.textContent ?? '';
+          const width = text.length > 12 ? 140 : 72;
+          return {width, height: 26, top: 0, left: 0, right: width, bottom: 26, x: 0, y: 0, toJSON: () => ({})} as DOMRect;
+        }
+        return {width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({})} as DOMRect;
+      });
+
+    try {
+      render(
+        <CreatorProfileLayout
+          biolink={biolink as never}
+          appearance={null}
+          content={[]}
+          isPreview
+        />,
+      );
+
+      const list = within(mobileBranch()).getByTestId('creator-skills-list');
+      expect(within(list).queryByText('Phoafasdfajsdkff')).toBeNull();
+
+      const overflowTrigger = within(list).getByRole('button', {
+        name: /more skill/i,
+      });
+      expect(overflowTrigger.textContent).toBe('+1');
+      expect(overflowTrigger.className).toContain('rounded-badge');
+
+      await user.click(overflowTrigger);
+      const popover = document.body.querySelector<HTMLElement>(
+        '[data-slot="popover-content"]',
+      );
+      expect(popover).toBeTruthy();
+      expect(within(popover!).getByText('Phoafasdfajsdkff')).toBeTruthy();
+    } finally {
+      clientWidthSpy.mockRestore();
+      rectSpy.mockRestore();
+    }
   });
 });

@@ -1,7 +1,7 @@
 import {BackgroundStyle} from '@app/dashboard/stores/store-editor/appearance/background-style';
 import {StorefrontAiAppearancePreview} from './storefront-ai-appearance-preview';
 import {ButtonStyle} from '@app/dashboard/stores/store-editor/appearance/button-style';
-import {appearanceHeaderClassnames} from '@app/dashboard/stores/store-editor/appearance/header-classnames';
+import {resolveBiolinkThemeVariables} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
 import {
@@ -18,12 +18,13 @@ import {
 } from '@common/ui/font-selector/font-selector';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Field} from '@shadcn/forms/field';
+import {Switch} from '@shadcn/forms/switch/switch';
 import {ColorField} from '@ui/color-picker/color-field';
 import {
   BrowserSafeFonts,
   normalizeFontConfig,
 } from '@ui/fonts/font-picker/browser-safe-fonts';
-import {Switch} from '@ui/forms/toggle/switch';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {
@@ -33,7 +34,7 @@ import {
   MousePointerClickIcon,
   TypeIcon,
 } from 'lucide-react';
-import {useState} from 'react';
+import {useId, useState} from 'react';
 
 export function Component() {
   const {biolink} = useSettings();
@@ -129,21 +130,30 @@ export function Component() {
 }
 
 function TextStyle() {
+  const fontTriggerId = useId();
   const updateAppearance = useBiolinkEditorStore(s => s.updateAppearance);
   const currentValue =
     useBiolinkEditorStore(s => s.appearance?.fontConfig) || BrowserSafeFonts[0];
   const bgConfig = useBiolinkEditorStore(s => s.appearance?.bgConfig);
+  const resolvedText = resolveBiolinkThemeVariables({bgConfig})[
+    '--biolink-text'
+  ];
+  const fallbackTextColor =
+    typeof resolvedText === 'string' && !resolvedText.startsWith('var(')
+      ? resolvedText
+      : '#000';
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="w-full">
-        <div className={appearanceHeaderClassnames.h3}>
+      <Field.Root className="w-full">
+        <Field.Label htmlFor={fontTriggerId}>
           <Trans message="Font" />
-        </div>
+        </Field.Label>
         <Dialog.Root>
           <Dialog.Trigger
             render={
               <Button
+                id={fontTriggerId}
                 variant="outline"
                 className="w-full justify-between rounded-input"
               />
@@ -157,7 +167,7 @@ function TextStyle() {
             <ChevronDownIcon data-icon="inline-end" />
           </Dialog.Trigger>
           <Dialog.Portal>
-            <Dialog.Backdrop className="supports-backdrop-filter:backdrop-blur-none" />
+            <Dialog.Backdrop />
             <Dialog.Content className="sm:max-w-xl">
               <Dialog.Header>
                 <Dialog.Title>
@@ -177,11 +187,11 @@ function TextStyle() {
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
-      </div>
+      </Field.Root>
       <ColorField
         className="w-full max-w-none"
         label={<Trans message="Color" />}
-        value={bgConfig?.color || '#000'}
+        value={bgConfig?.color || fallbackTextColor}
         onChange={newValue => {
           updateAppearance({
             bgConfig: {
@@ -196,6 +206,7 @@ function TextStyle() {
 }
 
 function BrandingStyle() {
+  const brandingSwitchId = useId();
   const updateAppearance = useBiolinkEditorStore(s => s.updateAppearance);
   const {branding, biolink} = useSettings();
   const {isSubscribed} = useAuth();
@@ -222,17 +233,23 @@ function BrandingStyle() {
         </NoFeaturePermissionPopover.Root>
       )}
 
-      <Switch
-        disabled={!isSubscribed}
-        checked={currentValue}
-        onChange={e => {
-          updateAppearance({
-            hideBranding: e.target.checked,
-          });
-        }}
-      >
-        <Trans message="Hide :site logo" values={{site: branding.site_name}} />
-      </Switch>
+      <Field.Root orientation="horizontal" className="items-center">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <Field.Label htmlFor={brandingSwitchId}>
+            <Trans message="Hide :site logo" values={{site: branding.site_name}} />
+          </Field.Label>
+        </div>
+        <Switch
+          id={brandingSwitchId}
+          disabled={!isSubscribed}
+          checked={currentValue}
+          onCheckedChange={checked => {
+            updateAppearance({
+              hideBranding: checked,
+            });
+          }}
+        />
+      </Field.Root>
     </div>
   );
 }

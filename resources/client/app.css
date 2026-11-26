@@ -15,6 +15,18 @@
   isolation: isolate;
 }
 
+:root {
+  --store-collapsible-open-shadow: 0 6px 6px -6px rgb(0 0 0 / 0.14);
+}
+
+.dark {
+  --store-collapsible-open-shadow: 0 6px 8px -6px rgb(0 0 0 / 0.36);
+}
+
+@utility shadow-bottom {
+  box-shadow: var(--store-collapsible-open-shadow);
+}
+
 /* Scrollbars are hidden on every device and page; wheel, touch and
  * keyboard scrolling still work — only the bar is hidden.
  * `.compact-scrollbar`, `.scrollbar-thin` and `.[scrollbar-width:thin]`

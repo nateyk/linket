@@ -121,12 +121,11 @@ describe('painted-panel colors and locale safety', () => {
     expect(page).toContain('observer.observe(action)');
   });
 
-  test('forwards appearance into creator card, reviews, and branding lockup', () => {
+  test('forwards appearance into reviews and branding lockup without duplicating the creator tab', () => {
     const page = readPage();
 
-    expect(page).toMatch(
-      /<ProductCreatorCard[\s\S]*?appearance=\{data\.appearance\}/,
-    );
+    expect(page).not.toContain('ProductCreatorCard');
+    expect(page).not.toContain("value: 'creator'");
     expect(page).toMatch(
       /<ProductReviewsBlock[\s\S]*?appearance=\{data\.appearance\}/,
     );
@@ -150,5 +149,20 @@ describe('painted-panel colors and locale safety', () => {
 
   test('wraps the page tree in a reduced-motion config', () => {
     expect(readPage()).toContain('<MotionConfig reducedMotion="user">');
+  });
+
+  test('renders pdf and audio samples inside product tabs when present', () => {
+    const page = readPage();
+
+    expect(page).toMatch(
+      /if\s*\(\s*audioSamples\.length\s*>\s*0\s*\|\|\s*pdfSample\s*\)\s*\{[\s\S]*?value:\s*'sample'/,
+    );
+    expect(page).toMatch(
+      /<ProductSampleTracklist\s+appearance=\{data\.appearance\}\s*\/>/,
+    );
+    expect(page).toMatch(
+      /<ProductSamplePdf[\s\S]*?sample=\{pdfSample!?\}[\s\S]*?appearance=\{data\.appearance\}/,
+    );
+    expect(page).not.toContain('{audioSamples.length > 0 && <ProductSampleTracklist />}');
   });
 });

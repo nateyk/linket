@@ -170,14 +170,14 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                   {(!!service.category || !!service.skills.length) && (
                     <div className="flex flex-wrap items-center gap-1.5">
                       {service.category && (
-                        <span className="rounded-full bg-[var(--biolink-surface)] px-2.5 py-1 text-xs font-medium text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border)">
+                        <span className="rounded-badge bg-[var(--biolink-surface)] px-2.5 py-1 text-xs font-medium text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border)">
                           {service.category}
                         </span>
                       )}
                       {service.skills.map(skill => (
                         <span
                           key={skill}
-                          className="rounded-full px-2.5 py-1 text-xs font-medium text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)"
+                          className="rounded-badge px-2.5 py-1 text-xs font-medium text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)"
                         >
                           {skill}
                         </span>
@@ -190,12 +190,16 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                       <Avatar.Root
                         size="sm"
                         className={cn(
-                          'overflow-hidden bg-[var(--biolink-surface-muted)] after:border-[var(--biolink-border)]',
+                          'overflow-hidden bg-[var(--biolink-surface-muted)] after:rounded-[inherit] after:border-[var(--biolink-border)]',
                           containerRadius.avatarClassName,
                         )}
                       >
-                        <Avatar.Image src={avatarUrl} alt="" />
-                        <Avatar.ColorFallback>
+                        <Avatar.Image
+                          src={avatarUrl}
+                          alt=""
+                          className={containerRadius.avatarClassName}
+                        />
+                        <Avatar.ColorFallback className={containerRadius.avatarClassName}>
                           {displayName}
                         </Avatar.ColorFallback>
                       </Avatar.Root>

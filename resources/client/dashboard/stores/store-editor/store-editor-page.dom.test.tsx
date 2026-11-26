@@ -203,12 +203,17 @@ test('saving a creator-reviewed preset sends the source fingerprint through the 
   });
 });
 
-test('editor page has exactly one h1, the store name (A-09)', async () => {
+test('editor page uses line-variant dashboard tabs and has one h1 (A-09)', async () => {
   renderEditor();
 
   const h1 = await screen.findByRole('heading', {level: 1});
   expect(h1.textContent).toBe('Nathanael Yitbarek');
   expect(document.querySelectorAll('h1')).toHaveLength(1);
+  expect(
+    document
+      .querySelector('[data-slot="tabs-list"]')
+      ?.getAttribute('data-variant'),
+  ).toBe('line');
 });
 
 test('arrow keys switch tabs with history.replace, guard never fires (A-11)', async () => {
@@ -482,7 +487,7 @@ test('a 422 lists and links failing fields and focuses the first invalid one (A-
     apiError(422, {
       message: 'The given data was invalid.',
       errors: {
-        bio: ['The bio must not be greater than 600 characters.'],
+        bio: ['The bio must not be greater than 150 characters.'],
         display_name: ['The display name field is required.'],
       },
     }),
@@ -498,7 +503,7 @@ test('a 422 lists and links failing fields and focuses the first invalid one (A-
   expect(within(alert).getByRole('link', {name: 'Short bio'})).toBeTruthy();
   expect(within(alert).getByRole('link', {name: 'Display name'})).toBeTruthy();
   expect(alert.textContent).toContain(
-    'The bio must not be greater than 600 characters.',
+    'The bio must not be greater than 150 characters.',
   );
 
   // Focus moves to the first invalid field (keys iterate in fixture order).

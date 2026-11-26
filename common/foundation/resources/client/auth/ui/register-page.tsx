@@ -4,13 +4,21 @@ import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
 import {HookForm} from '@shadcn/forms/form/hook-form';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
-import {LinkStyle} from '@ui/buttons/external-link';
+import {Spinner} from '@shadcn/spinner/spinner';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {toast} from '@ui/toast/toast';
-import {ReactNode} from 'react';
+import {EyeIcon, EyeOffIcon} from 'lucide-react';
+import {ReactNode, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import {Link, Navigate, useLocation, useSearchParams} from 'react-router';
 import {useCaptcha} from '../../captcha/use-captcha';
@@ -27,6 +35,9 @@ interface Props {
 }
 export function RegisterPage({inviteType, fields, children}: Props) {
   const {branding, registration} = useSettings();
+  const {trans} = useTrans();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const {captchaToken, captchaEnabled, resetCaptcha} = useCaptcha('register');
 
   const {pathname} = useLocation();
@@ -58,20 +69,22 @@ export function RegisterPage({inviteType, fields, children}: Props) {
     heading = <Trans message="First, let's create your account" />;
   }
 
-  const footerMessage = (
-    <Trans
-      values={{
-        a: parts => (
-          <Link
-            className={`${LinkStyle} inline-flex min-h-6 items-center`}
-            to="/login"
-          >
-            {parts}
-          </Link>
-        ),
-      }}
-      message="Already have an account? <a>Sign in.</a>"
-    />
+  const signinPrompt = (
+    <p className="text-sm text-muted-foreground">
+      <Trans
+        values={{
+          a: parts => (
+            <Link
+              className="font-medium text-primary hover:underline"
+              to="/login"
+            >
+              {parts}
+            </Link>
+          ),
+        }}
+        message="Already have an account? <a>Sign in</a>"
+      />
+    </p>
   );
 
   return (
@@ -82,16 +95,14 @@ export function RegisterPage({inviteType, fields, children}: Props) {
           <Trans message="Register" />
         </StaticPageTitle>
 
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h1>
-          <p className="text-sm text-muted-foreground">
-            {isRegisteringUsingInvite || isBillingRegister ? null : (
-              <Trans message="Please enter your details to create an account." />
-            )}
-          </p>
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {heading}
+          </h1>
+          {signinPrompt}
         </div>
 
-        <div className="space-y-5">
+        <div className="flex flex-col gap-5">
           <HookForm.Root
             form={form}
             onSubmit={async payload => {
@@ -111,7 +122,7 @@ export function RegisterPage({inviteType, fields, children}: Props) {
             }}
           >
             <Field.Group className="gap-4">
-              <HookForm.Field name="email" disabled={!!searchParamsEmail}>
+              <HookForm.Field name="email" className="gap-1.5" disabled={!!searchParamsEmail}>
                 <Field.Label htmlFor="register-email">
                   <Trans message="Email Address" />
                 </Field.Label>
@@ -120,36 +131,69 @@ export function RegisterPage({inviteType, fields, children}: Props) {
                   type="email"
                   placeholder="you@example.com"
                   autoComplete="email"
+                  className="h-10"
                   required
                 />
                 <Field.Error />
               </HookForm.Field>
 
-              <HookForm.Field name="password">
+              <HookForm.Field name="password" className="gap-1.5">
                 <Field.Label htmlFor="register-password">
                   <Trans message="Password" />
                 </Field.Label>
-                <Input
-                  id="register-password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  required
-                />
+                <InputGroup className="h-10">
+                  <InputGroupInput
+                    id="register-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    required
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      size="icon-xs"
+                      aria-label={trans(
+                        showPassword
+                          ? message('Hide password')
+                          : message('Show password'),
+                      )}
+                      aria-pressed={showPassword}
+                      onClick={() => setShowPassword(value => !value)}
+                    >
+                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
                 <Field.Error />
               </HookForm.Field>
 
-              <HookForm.Field name="password_confirmation">
+              <HookForm.Field name="password_confirmation" className="gap-1.5">
                 <Field.Label htmlFor="register-password-confirmation">
                   <Trans message="Confirm password" />
                 </Field.Label>
-                <Input
-                  id="register-password-confirmation"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  required
-                />
+                <InputGroup className="h-10">
+                  <InputGroupInput
+                    id="register-password-confirmation"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    required
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      size="icon-xs"
+                      aria-label={trans(
+                        showConfirmPassword
+                          ? message('Hide confirm password')
+                          : message('Show confirm password'),
+                      )}
+                      aria-pressed={showConfirmPassword}
+                      onClick={() => setShowConfirmPassword(value => !value)}
+                    >
+                      {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
                 <Field.Error />
               </HookForm.Field>
 
@@ -158,23 +202,21 @@ export function RegisterPage({inviteType, fields, children}: Props) {
               <PolicyCheckboxes />
               <Button
                 className="w-full"
+                size="lg"
                 type="submit"
                 variant="default"
                 color="primary"
                 disabled={register.isPending}
               >
+                {register.isPending && <Spinner data-icon="inline-start" />}
                 <Trans message="Create account" />
               </Button>
             </Field.Group>
           </HookForm.Root>
           <SocialAuthSection
             isUsingInvite={isRegisteringUsingInvite}
-            dividerMessage={<Trans message="Or continue with" />}
+            dividerMessage={<Trans message="or" />}
           />
-        </div>
-
-        <div className="text-sm text-muted-foreground">
-          {footerMessage}
         </div>
       </AuthLayoutV2>
     </GuestRoute>

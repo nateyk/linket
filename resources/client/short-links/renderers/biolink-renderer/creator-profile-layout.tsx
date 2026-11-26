@@ -15,6 +15,7 @@ import {
   biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
   resolveBiolinkContainerRadius,
+  resolveBiolinkPublicAppearanceStyle,
   shouldUseLightBiolinkLogo,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
@@ -25,6 +26,7 @@ import {Badge} from '@shadcn/badge/badge';
 import {LinkButton} from '@shadcn/button/button';
 import BottomNavBar from '@shadcn/bottom-nav-bar';
 import {Card} from '@shadcn/card/card';
+import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
 import {message} from '@ui/i18n/message';
 import {useTrans} from '@ui/i18n/use-trans';
@@ -44,7 +46,16 @@ import {renderAboutHtml} from './about-markdown';
 import {StoreFront} from './store-front';
 import {Background} from './biolink-background';
 import {Link} from 'react-router';
-import {useCallback, useEffect, useRef, useState, type ReactNode} from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 interface CreatorProfileLayoutProps {
   biolink: Biolink;
@@ -52,6 +63,8 @@ interface CreatorProfileLayoutProps {
   content: NonNullable<Biolink['content']>;
   profileConfig?: CreatorProfileConfig;
   showAds?: boolean;
+  /** Phone preview frame renders only the mobile 393px branch. */
+  isPreview?: boolean;
   /** Section the editor's current tab maps to; only set in preview mode. */
   previewSection?: StorePreviewSection;
 }
@@ -62,6 +75,7 @@ export function CreatorProfileLayout({
   content,
   profileConfig,
   showAds,
+  isPreview = false,
   previewSection,
 }: CreatorProfileLayoutProps) {
   const profile = profileConfig || getCreatorProfileConfig(biolink);
@@ -83,23 +97,25 @@ export function CreatorProfileLayout({
         />
       </div>
 
-      <div className="mx-auto hidden w-full max-w-7xl gap-6 @4xl:grid @4xl:grid-cols-[360px_minmax(0,1fr)] @4xl:items-start @4xl:gap-8">
-        <CreatorCard
-          biolink={biolink}
-          appearance={appearance}
-          profile={profile}
-        />
-
-        <div className="flex min-w-0 flex-col gap-6">
-          {showAds && <AdHost slot="biolink_top" />}
-          <CreatorProfileContent
-            profile={profile}
-            shopWidget={shopWidget}
+      {!isPreview && (
+        <div className="mx-auto hidden w-full max-w-7xl gap-6 @4xl:grid @4xl:grid-cols-[360px_minmax(0,1fr)] @4xl:items-start @4xl:gap-8">
+          <CreatorCard
             biolink={biolink}
             appearance={appearance}
+            profile={profile}
           />
+
+          <div className="flex min-w-0 flex-col gap-6">
+            {showAds && <AdHost slot="biolink_top" />}
+            <CreatorProfileContent
+              profile={profile}
+              shopWidget={shopWidget}
+              biolink={biolink}
+              appearance={appearance}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }
@@ -327,7 +343,7 @@ function MobileCreatorProfile({
             // world (dashboard bg-card/muted leaked a dark pill on light pages).
             className={cn(
               biolinkSurfaceEdgeClassName,
-              'bg-[var(--biolink-surface)]/95 shadow-lg shadow-black/5 backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--biolink-surface)]/80',
+              'rounded-card bg-[var(--biolink-surface)]/95 shadow-lg shadow-black/5 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-[var(--biolink-surface)]',
             )}
             inactiveButtonClassName="text-[var(--biolink-muted-text)] hover:bg-[var(--biolink-surface-muted)] hover:text-[var(--biolink-text)]"
             activeButtonClassName={buttonAppearance.className}
@@ -340,7 +356,249 @@ function MobileCreatorProfile({
   );
 }
 
-function CreatorCard({
+const skillChipClassName =
+  // Tinted fill + thin ring so chips read on the white card face
+  // (surface-muted alone washed out to white). Radius follows Appearance ->
+  // Corner roundness (`rounded-badge`).
+  'h-auto max-w-full min-w-0 truncate whitespace-nowrap rounded-badge border-transparent bg-[color-mix(in_srgb,var(--biolink-text)_8%,var(--biolink-surface))]! px-2.5 py-1 text-xs font-medium leading-snug text-[var(--biolink-text)]! ring-1 ring-(color:--biolink-border)';
+
+const overflowSkillTriggerClassName =
+  'inline-flex h-auto shrink-0 items-center justify-center rounded-badge bg-[var(--biolink-surface)] px-2.5 py-1 text-xs font-medium leading-snug tabular-nums text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border) transition-colors hover:bg-[color-mix(in_srgb,var(--biolink-text)_8%,var(--biolink-surface))] hover:text-[var(--biolink-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-focus)]';
+
+/**
+ * Pure row-wrap calculator that caps rendered skill chips at `maxRows` (default 2)
+ * while reserving end-of-row space for the `+N` overflow badge whenever any
+ * skills cannot fit cleanly on the second row.
+ */
+export function computeVisibleSkillCount({
+  itemWidths,
+  overflowBadgeWidth,
+  containerWidth,
+  gap = 6,
+  maxRows = 2,
+}: {
+  itemWidths: number[];
+  overflowBadgeWidth: number;
+  containerWidth: number;
+  gap?: number;
+  maxRows?: number;
+}): number {
+  const total = itemWidths.length;
+  if (total === 0 || containerWidth <= 0) {
+    return total;
+  }
+
+  const fitsWithinMaxRows = (widths: number[]) => {
+    let row = 1;
+    let rowWidth = 0;
+
+    for (const rawWidth of widths) {
+      const width = Math.min(rawWidth, containerWidth);
+      const nextWidth = rowWidth === 0 ? width : rowWidth + gap + width;
+      if (nextWidth <= containerWidth + 0.5) {
+        rowWidth = nextWidth;
+      } else {
+        row += 1;
+        rowWidth = width;
+        if (row > maxRows) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  if (fitsWithinMaxRows(itemWidths)) {
+    return total;
+  }
+
+  for (let count = total - 1; count >= 1; count--) {
+    if (
+      fitsWithinMaxRows([
+        ...itemWidths.slice(0, count),
+        overflowBadgeWidth,
+      ])
+    ) {
+      return count;
+    }
+  }
+
+  return 1;
+}
+
+function CreatorSkillsList({
+  skills,
+  appearance,
+}: {
+  skills: string[];
+  appearance: BiolinkAppearanceConfig | null;
+}) {
+  const {trans} = useTrans();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const formattedSkills = useMemo(
+    () =>
+      skills
+        .map(skill => ({key: skill, label: formatSkillLabel(skill)}))
+        .filter((item): item is {key: string; label: string} => Boolean(item.label)),
+    [skills],
+  );
+  const [visibleCount, setVisibleCount] = useState(formattedSkills.length);
+  const skillsKey = formattedSkills.map(item => item.label).join('\0');
+  const fontFamily = appearance?.fontConfig?.family ?? '';
+  const containerRadius = resolveBiolinkContainerRadius(appearance);
+
+  useLayoutEffect(() => {
+    setVisibleCount(formattedSkills.length);
+  }, [skillsKey, formattedSkills.length]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const measure = measureRef.current;
+    if (!container || !measure || formattedSkills.length === 0) return;
+
+    const recompute = () => {
+      const containerWidth = container.clientWidth;
+      if (containerWidth <= 0) {
+        setVisibleCount(formattedSkills.length);
+        return;
+      }
+
+      const itemEls = Array.from(
+        measure.querySelectorAll<HTMLElement>('[data-skill-measure]'),
+      );
+      const overflowEl = measure.querySelector<HTMLElement>(
+        '[data-skill-overflow-measure]',
+      );
+      if (itemEls.length === 0) return;
+
+      const computedGap = parseFloat(getComputedStyle(measure).columnGap) || 6;
+      const itemWidths = itemEls.map(el => el.getBoundingClientRect().width);
+      const overflowBadgeWidth =
+        overflowEl?.getBoundingClientRect().width ?? 36;
+
+      if (itemWidths.every(w => w <= 0)) {
+        setVisibleCount(formattedSkills.length);
+        return;
+      }
+
+      const nextCount = computeVisibleSkillCount({
+        itemWidths,
+        overflowBadgeWidth,
+        containerWidth,
+        gap: computedGap,
+        maxRows: 2,
+      });
+      setVisibleCount(prev => (prev === nextCount ? prev : nextCount));
+    };
+
+    recompute();
+
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(recompute);
+      observer.observe(container);
+    }
+
+    let cancelled = false;
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      void document.fonts.ready.then(() => {
+        if (!cancelled) recompute();
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+    };
+  }, [skillsKey, fontFamily, formattedSkills.length]);
+
+  if (formattedSkills.length === 0) return null;
+
+  const shownSkills = formattedSkills.slice(0, visibleCount);
+  const hiddenSkills = formattedSkills.slice(visibleCount);
+
+  return (
+    <div ref={containerRef} className="relative min-w-0">
+      {/* Off-flow measurement strip keeps row calculations accurate without layout thrash. */}
+      <div
+        ref={measureRef}
+        aria-hidden="true"
+        className="pointer-events-none invisible fixed -top-[9999px] -left-[9999px] flex items-start gap-1.5"
+      >
+        {formattedSkills.map(item => (
+          <Badge
+            key={item.key}
+            variant="secondary"
+            data-skill-measure=""
+            className={skillChipClassName}
+          >
+            {item.label}
+          </Badge>
+        ))}
+        <span
+          data-skill-overflow-measure=""
+          className={overflowSkillTriggerClassName}
+        >
+          {`+${Math.max(1, formattedSkills.length - 1)}`}
+        </span>
+      </div>
+
+      <div
+        className="flex flex-wrap gap-1.5"
+        data-testid="creator-skills-list"
+      >
+        {shownSkills.map(item => (
+          <Badge key={item.key} variant="secondary" className={skillChipClassName}>
+            {item.label}
+          </Badge>
+        ))}
+
+        {hiddenSkills.length > 0 && (
+          <Popover.Root>
+            <Popover.Trigger
+              type="button"
+              className={overflowSkillTriggerClassName}
+              aria-label={trans(
+                message('Show :count more skills', {
+                  values: {count: hiddenSkills.length},
+                }),
+              )}
+            >
+              {`+${hiddenSkills.length}`}
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                side="top"
+                align="end"
+                className={cn(
+                  'w-auto max-w-72 gap-2 bg-[var(--biolink-surface-strong)] p-3 text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border)',
+                  containerRadius.className,
+                )}
+                style={resolveBiolinkPublicAppearanceStyle(appearance)}
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {hiddenSkills.map(item => (
+                    <Badge
+                      key={item.key}
+                      variant="secondary"
+                      className={skillChipClassName}
+                    >
+                      {item.label}
+                    </Badge>
+                  ))}
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const CreatorCard = memo(function CreatorCard({
   biolink,
   appearance,
   profile,
@@ -362,28 +620,37 @@ function CreatorCard({
     biolink.is_verified === 'true' ||
     biolink.is_verified === '1';
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const containerRadius = resolveBiolinkContainerRadius(appearance);
+  const shadowEdge =
+    buttonAppearance.style.boxShadow &&
+    !profile.cover_url &&
+    'outline-1 -outline-offset-1 outline-(color:--biolink-border)';
   // Appearance → Buttons → Shadow soft-pops the profile shell the same way
   // it lifts Message / social / View actions. Empty string = flat (None).
   const buttonShadow = buttonAppearance.style.boxShadow;
-  const containerRadius = resolveBiolinkContainerRadius(appearance);
 
   return (
     <Card.Root
       className={cn(
-        'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-md',
+        'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-xl backdrop-saturate-150',
         biolinkSurfaceEdgeClassName,
-        // The image itself defines the cover edge. A light shell ring against
-        // dark photography appears as a stray 1px white outline at rounded corners.
-        profile.cover_url && 'ring-0',
+        shadowEdge,
+        profile.cover_url && 'bg-transparent backdrop-blur-none ring-0',
         '@4xl:sticky @4xl:top-8',
         containerRadius.className,
       )}
       style={{boxShadow: buttonShadow}}
     >
-      <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden bg-[var(--biolink-surface-muted)] bg-linear-to-br from-[var(--biolink-surface-muted)] to-[var(--biolink-surface-strong)]">
+      <div
+        className={cn(
+          'relative aspect-[3/1] w-full shrink-0 overflow-hidden rounded-t-[inherit]',
+          !profile.cover_url &&
+            'bg-[var(--biolink-surface-muted)] bg-linear-to-br from-[var(--biolink-surface-muted)] to-[var(--biolink-surface-strong)]',
+        )}
+      >
         {profile.cover_url && (
           <img
-            className="absolute -inset-px block size-[calc(100%_+_2px)] object-cover object-center"
+            className="absolute -inset-px block size-[calc(100%_+_2px)] max-w-none object-cover object-center"
             src={profile.cover_url}
             alt=""
           />
@@ -391,29 +658,35 @@ function CreatorCard({
         {profile.available_for_work && (
           <Badge
             variant="positive"
-            className="absolute end-3 top-3 z-10 h-auto max-w-[calc(100%-1.5rem)] gap-1.5 rounded-button border-positive/20 bg-[var(--biolink-surface-strong)] px-2.5 py-1 text-positive backdrop-blur-sm sm:end-4 sm:top-4"
+            className="absolute end-2.5 top-2.5 z-10 h-auto max-w-[calc(100%-1.25rem)] gap-1 rounded-badge border-positive/20 bg-[var(--biolink-surface)] px-2 py-0.5 text-[11px] leading-tight font-medium text-[var(--biolink-positive,var(--color-positive))] backdrop-blur-md backdrop-saturate-150 sm:end-3 sm:top-3"
           >
             <span
               data-slot="status-indicator"
               aria-hidden="true"
-              className="relative flex size-2 shrink-0"
+              className="relative flex size-1.5 shrink-0"
             >
-              <span className="absolute inset-0 rounded-full bg-positive/60 motion-safe:animate-ping" />
-              <span className="relative size-2 rounded-full bg-positive" />
+              <span className="absolute inset-0 rounded-full bg-[var(--biolink-positive,var(--color-positive))] opacity-60 motion-safe:animate-ping" />
+              <span className="relative size-1.5 rounded-full bg-[var(--biolink-positive,var(--color-positive))]" />
             </span>
             <Trans message="Available for work" />
           </Badge>
         )}
       </div>
 
-      <Card.Content className="px-4 pb-4 sm:px-5 sm:pb-5">
+      <Card.Content
+        className={cn(
+          'px-4 pb-4 sm:px-5 sm:pb-5',
+          profile.cover_url &&
+            'rounded-b-[inherit] border-x border-b border-[var(--biolink-border)] bg-[var(--biolink-surface)] backdrop-blur-xl backdrop-saturate-150',
+        )}
+      >
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 sm:gap-4">
           {/* The avatar clips its photo; the compact verification mark is anchored on the visible lower-right
               arc, not the bottom-right corner of the square avatar box. */}
           <div className="relative z-10 -mt-10 size-22 shrink-0">
             <Avatar.Root
               className={cn(
-                'aspect-square size-full overflow-hidden bg-[var(--biolink-surface-muted)] ring-2 ring-[var(--biolink-surface)] after:rounded-[inherit] after:border-[var(--biolink-border)]',
+                'aspect-square size-full overflow-hidden bg-[var(--biolink-surface-muted)] ring-2 ring-[var(--biolink-surface)] after:rounded-[inherit] after:border-[var(--biolink-border)] after:mix-blend-normal',
                 containerRadius.avatarClassName,
               )}
             >
@@ -425,32 +698,39 @@ function CreatorCard({
                 src={profile.avatar_url}
                 alt={profile.display_name}
               />
-              <Avatar.ColorFallback className={containerRadius.avatarClassName}>
+              <Avatar.ColorFallback
+                className={cn(
+                  'bg-[var(--biolink-accent)]! text-[var(--biolink-accent-foreground)]!',
+                  containerRadius.avatarClassName,
+                )}
+              >
                 {profile.display_name}
               </Avatar.ColorFallback>
             </Avatar.Root>
-            {isVerified && (
-              <span
-                role="img"
-                aria-label={trans(message('Verified creator'))}
-                className="absolute end-1 bottom-1 z-10 flex size-4 items-center justify-center rounded-full bg-[var(--biolink-surface)]"
-              >
-                <BadgeCheckIcon
-                  className="size-full fill-[var(--biolink-accent)] text-[var(--biolink-accent-foreground)]"
-                  aria-hidden="true"
-                />
-              </span>
-            )}
           </div>
 
-          {/* Name + title baseline with the avatar foot; wrap instead of
+          {/* Name + verified check + title baseline with the avatar foot; wrap instead of
               truncating mid-word so titles like "Architect" stay readable. */}
           <div className="flex min-w-0 flex-col justify-end gap-1 pb-0.5">
-            <h1 className="min-w-0 text-xl leading-snug font-semibold tracking-tight text-pretty text-[var(--biolink-text)] sm:text-2xl">
-              <span className="line-clamp-2 break-words [overflow-wrap:anywhere]">
-                {profile.display_name}
-              </span>
-            </h1>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h1 className="min-w-0 text-xl leading-snug font-semibold tracking-tight text-pretty text-[var(--biolink-text)] sm:text-2xl">
+                <span className="line-clamp-2 break-words [overflow-wrap:anywhere]">
+                  {profile.display_name}
+                </span>
+              </h1>
+              {isVerified && (
+                <span
+                  role="img"
+                  aria-label={trans(message('Verified creator'))}
+                  className="inline-flex size-4.5 shrink-0 items-center justify-center sm:size-5"
+                >
+                  <BadgeCheckIcon
+                    className="size-full fill-[var(--biolink-accent)] text-[var(--biolink-accent-foreground)]"
+                    aria-hidden="true"
+                  />
+                </span>
+              )}
+            </div>
             {(profile.profile_title || profile.headline) && (
               <p className="line-clamp-2 text-sm leading-snug text-pretty text-[var(--biolink-muted-text)]">
                 {profile.profile_title || profile.headline}
@@ -488,26 +768,10 @@ function CreatorCard({
           )}
 
           {visibleSkills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {visibleSkills.map(skill => {
-                const label = formatSkillLabel(skill);
-                if (!label) return null;
-                return (
-                  <Badge
-                    key={skill}
-                    variant="secondary"
-                    className={cn(
-                      // Tinted fill + thin ring so chips read on the white
-                      // card face (surface-muted alone washed out to white).
-                      // Radius follows Appearance → Corner roundness.
-                      'h-auto max-w-full min-w-0 rounded-button border-transparent bg-[color-mix(in_srgb,var(--biolink-text)_8%,var(--biolink-surface))]! px-2.5 py-1 text-xs font-medium leading-snug break-words whitespace-normal text-[var(--biolink-text)]! ring-1 ring-(color:--biolink-border)',
-                    )}
-                  >
-                    {label}
-                  </Badge>
-                );
-              })}
-            </div>
+            <CreatorSkillsList
+              skills={visibleSkills}
+              appearance={appearance}
+            />
           )}
 
           {visibleSocialLinks.length > 0 && (
@@ -544,7 +808,7 @@ function CreatorCard({
       </Card.Content>
     </Card.Root>
   );
-}
+});
 
 function ShopSection({
   widget,
@@ -692,8 +956,10 @@ function AboutSection({
   return (
     <Card.Root
       className={cn(
-        'min-w-0 gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-md',
+        'min-w-0 gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-xl backdrop-saturate-150',
         biolinkSurfaceEdgeClassName,
+        buttonShadow &&
+          'outline-1 -outline-offset-1 outline-(color:--biolink-border)',
         containerRadius.className,
         'p-5 pb-6',
       )}

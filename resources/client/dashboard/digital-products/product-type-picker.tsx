@@ -88,7 +88,7 @@ export function ProductTypePicker({
               'group flex min-w-0 cursor-pointer flex-col items-start gap-3 rounded-card-sm border p-3.5 text-start whitespace-normal outline-none transition-[border-color,background-color] has-[:focus-visible]:border-transparent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-ring',
               selected
                 ? 'border-primary/60 bg-primary/5'
-                : 'border-border bg-card hover:border-foreground/20 hover:bg-muted/30',
+                : 'border-border/75 bg-card hover:border-foreground/20 hover:bg-muted/30',
             )}
           >
             <div className="flex w-full items-center justify-between gap-3">
@@ -99,7 +99,7 @@ export function ProductTypePicker({
                   'flex size-9 shrink-0 items-center justify-center rounded-card-sm transition-colors',
                   selected
                     ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-foreground group-hover:bg-accent',
+                    : 'bg-muted text-foreground group-hover:bg-foreground/10',
                 )}
               >
                 <Icon className="size-4" />

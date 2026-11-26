@@ -10,7 +10,7 @@ import {cn} from '@ui/utils/cn';
  * theme variables are unset.
  */
 export const biolinkSurfaceCard = cn(
-  'gap-0 overflow-hidden bg-[var(--biolink-surface-strong,color-mix(in_srgb,var(--color-background)_94%,transparent))] py-0 text-[var(--biolink-text,var(--color-foreground))] [box-shadow:var(--biolink-surface-shadow,none)]',
+  'gap-0 overflow-hidden bg-[var(--biolink-surface,var(--color-background))]! py-0 text-[var(--biolink-text,var(--color-foreground))] backdrop-blur-xl backdrop-saturate-150 [box-shadow:var(--biolink-surface-shadow,none)]',
   biolinkSurfaceEdgeClassName,
 );
 

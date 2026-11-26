@@ -57,4 +57,33 @@ describe('storefront tab panels', () => {
     expect(heading.className).toContain('sr-only');
     expect(screen.getByText('Bio')).toBeTruthy();
   });
+
+  test.each(['rounded-none', 'rounded-sm', 'rounded-lg', 'rounded-full'] as const)(
+    'tabs list, indicator, and tabs follow Appearance Corner roundness %s without leaving rounded-full behind',
+    radius => {
+      render(
+        <StoreFront
+          appearance={{btnConfig: {radius}} as never}
+          tabs={[
+            {id: 'products', label: 'Products', content: <p>Midnight Signals</p>},
+            {id: 'services', label: 'Services', content: <p>Consulting</p>},
+            {id: 'about', label: 'About', content: <p>Bio</p>},
+          ]}
+        />,
+      );
+
+      const list = screen.getByRole('tablist', {name: 'Creator profile sections'});
+      const tabs = screen.getAllByRole('tab');
+      const indicator = list.querySelector('span[aria-hidden], span:not([role])') ?? list.lastElementChild!;
+
+      expect(list.className.split(/\s+/)).not.toContain('rounded-full');
+      expect(list.className.split(/\s+/)).not.toContain('rounded-button');
+      expect(list.className.split(/\s+/)).toContain('rounded-card');
+      expect(indicator.className.split(/\s+/)).toContain('rounded-button');
+      for (const tab of tabs) {
+        expect(tab.className.split(/\s+/)).not.toContain('rounded-full');
+        expect(tab.className.split(/\s+/)).toContain('rounded-button');
+      }
+    },
+  );
 });

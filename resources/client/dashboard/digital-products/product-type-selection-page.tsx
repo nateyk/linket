@@ -27,20 +27,20 @@ export function Component() {
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 py-4">
           <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/8 text-primary ring-1 ring-primary/15">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/10 text-primary ring-1 ring-primary/15">
               <PackagePlusIcon className="size-5" aria-hidden="true" />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex flex-col gap-1">
               <h2 className="text-lg leading-tight font-semibold">
                 <Trans message="What are you selling?" />
               </h2>
-              <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+              <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
                 <Trans message="Choose a type to open its editor." />
               </p>
             </div>
           </div>
           <ProductTypePicker value={selectedType} onValueChange={setSelectedType} />
-          <div className="flex items-center justify-between border-t border-border pt-4">
+          <div className="flex items-center justify-between border-t border-border/60 pt-4">
             <Button variant="ghost" render={<Link to="/dashboard/items" />}>
               <ArrowLeftIcon data-icon="inline-start" />
               <Trans message="All products" />

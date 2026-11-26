@@ -26,6 +26,7 @@ import {
 } from '@shadcn/attachment/attachment';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
+import {Badge} from '@shadcn/badge/badge';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
@@ -38,6 +39,7 @@ import {
 } from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
+import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
@@ -93,7 +95,7 @@ import {
   ProductFormSection,
   type ProductSetupSection,
 } from './product-form-section';
-import {ProductPreview, ProductStatus} from './product-preview';
+import {ProductPreview} from './product-preview';
 import {ProductAiCopyReview} from './product-ai-copy-review';
 import type {ProductType} from './product-type-picker';
 
@@ -193,7 +195,7 @@ function NonCourseAuthoringLayout({
       <ProductAuthoringSteps type={type} active={activeStep} completed={completed} onSelect={onSelect} />
       <div className="flex min-w-0 flex-col gap-4">
         {children}
-        <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-border/60 pt-4">
           {previous ? (
             <Button type="button" size="sm" variant="outline" className="min-h-11"
               onClick={() => onSelect(previous)}>
@@ -848,7 +850,13 @@ function DigitalProductForm() {
   const sampleFields = previewKind ? (
     <ProductSampleFields
       kind={previewKind}
-      productType={effectiveFileType === 'digital' ? 'digital' : 'ebook'}
+      productType={
+        effectiveFileType === 'digital'
+          ? 'digital'
+          : effectiveFileType === 'ebook'
+            ? 'ebook'
+            : undefined
+      }
       samples={samples}
       onChange={actions.setSamples}
       error={fieldErrors.sample_file_ids || fieldErrors.sample_titles}
@@ -922,7 +930,11 @@ function DigitalProductForm() {
             }
             onClick={() => void save(false)}
           >
-            <SaveIcon className="size-4" />
+            {saving ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <SaveIcon className="size-4" aria-hidden="true" />
+            )}
             <span className="max-lg:hidden">
               {saving ? (
                 <Trans message="Saving..." />
@@ -941,7 +953,11 @@ function DigitalProductForm() {
             }
             onClick={() => void save(true)}
           >
-            <SendIcon className="size-4" />
+            {submitting ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <SendIcon className="size-4" aria-hidden="true" />
+            )}
             <span className="max-lg:hidden">
               {submitting ? (
                 <Trans message="Submitting..." />
@@ -956,43 +972,44 @@ function DigitalProductForm() {
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className={effectiveFileType !== 'course' ? 'mx-auto w-full max-w-5xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
           {!loading && !unavailable && (effectiveFileType === 'course' || !!product || saving || creationUncertain) && (
-            <div role="status" aria-live="polite" className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>
-                {saving ? (
-                  <Trans message="Saving changes..." />
-                ) : creationUncertain ? (
-                  <Trans message="Creation outcome unconfirmed" />
-                ) : !product ? (
-                  <Trans message="Not saved yet" />
-                ) : product.status === 'draft' && aiCopySaveConflict ? (
-                  <Trans message="Product changed — AI copy was not saved." />
-                ) : product.status === 'draft' && autoSaveState === 'saving' ? (
-                  <Trans message="Saving draft..." />
-                ) : product.status === 'draft' && autoSaveState === 'failed' ? (
-                  <Trans message="Autosave failed. Changes are still on this page." />
-                ) : dirty ? (
-                  <Trans message="Unsaved changes" />
-                ) : product.status === 'draft' ? (
-                  <Trans message="Draft saved" />
-                ) : (
-                  <Trans message="No unsaved changes" />
-                )}
-              </span>
-              {product && product.status !== 'draft' && (
-                <ProductStatus
-                  status={product.status}
-                  hasPendingUpdate={product.has_pending_update === true}
-                />
+            <span role="status" aria-live="polite" className="sr-only">
+              {saving ? (
+                <Trans message="Saving changes..." />
+              ) : creationUncertain ? (
+                <Trans message="Creation outcome unconfirmed" />
+              ) : !product ? (
+                <Trans message="Not saved yet" />
+              ) : product.status === 'draft' && aiCopySaveConflict ? (
+                <Trans message="Product changed — AI copy was not saved." />
+              ) : product.status === 'draft' && autoSaveState === 'saving' ? (
+                <Trans message="Saving draft..." />
+              ) : product.status === 'draft' && autoSaveState === 'failed' ? (
+                <Trans message="Autosave failed. Changes are still on this page." />
+              ) : dirty ? (
+                <Trans message="Unsaved changes" />
+              ) : product.status === 'draft' ? (
+                <Trans message="Draft saved" />
+              ) : (
+                <Trans message="No unsaved changes" />
               )}
-              {product?.status === 'draft' && autoSaveState === 'failed' && dirty && (
+            </span>
+          )}
+          <div className="mb-4 flex flex-col gap-3 empty:hidden">
+          {!loading && !unavailable && product?.status === 'draft' && autoSaveState === 'failed' && dirty && (
+            <Alert.Root variant="warning" role="alert" fillStyle="subtleFill">
+              <TriangleAlertIcon aria-hidden="true" />
+              <Alert.Description className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  <Trans message="Autosave failed. Changes are still on this page." />
+                </span>
                 <Button type="button" variant="outline" size="sm" onClick={() => actions.autoSave()}>
                   <Trans message="Retry save" />
                 </Button>
-              )}
-            </div>
+              </Alert.Description>
+            </Alert.Root>
           )}
           {aiCopySaveConflict && (
-            <Alert.Root variant="warning" role="alert" fillStyle="subtleFill" className="mb-5">
+            <Alert.Root variant="warning" role="alert" fillStyle="subtleFill">
               <TriangleAlertIcon aria-hidden="true" />
               <Alert.Description>
                 <Trans message="The product changed after AI copy approval. Autosave is stopped and your edits are still here. Copy your wording before refreshing, then generate a fresh suggestion." />
@@ -1000,7 +1017,7 @@ function DigitalProductForm() {
             </Alert.Root>
           )}
           {(creationUncertain || submissionRecovery) && (
-            <Alert.Root variant="warning" role="alert" fillStyle="subtleFill" className="mb-5">
+            <Alert.Root variant="warning" role="alert" fillStyle="subtleFill">
               <TriangleAlertIcon aria-hidden="true" />
               <Alert.Description className="flex flex-col items-start gap-2">
                 {creationUncertain ? (
@@ -1023,7 +1040,6 @@ function DigitalProductForm() {
               role="alert"
               variant="destructive"
               fillStyle="subtleFill"
-              className="mb-5"
             >
               <TriangleAlertIcon />
               <Alert.Description>{error}</Alert.Description>
@@ -1035,7 +1051,7 @@ function DigitalProductForm() {
               type="button"
               size="sm"
               variant="outline"
-              className="mb-4"
+              className="self-start"
               onClick={() => setProductLoadRetry(current => current + 1)}
             >
               <Trans message="Retry loading product" />
@@ -1043,7 +1059,7 @@ function DigitalProductForm() {
           )}
 
           {product?.status === 'approved' && product.has_pending_update === true && (
-            <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
+            <Alert.Root variant="warning" fillStyle="subtleFill">
               <Clock3Icon />
               <Alert.Description>
                 <Trans message="This product remains approved while an update is under review." />
@@ -1052,7 +1068,7 @@ function DigitalProductForm() {
           )}
 
           {product?.status === 'approved' && dirty && product.has_pending_update !== true && (
-            <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
+            <Alert.Root variant="warning" fillStyle="subtleFill">
               <TriangleAlertIcon />
               <Alert.Description>
                 <Trans message="Changes to approved products may require review. The published version remains available during review." />
@@ -1061,7 +1077,7 @@ function DigitalProductForm() {
           )}
 
           {product && biolinkIds.length > 0 && product.status !== 'approved' && (
-            <Alert.Root className="mb-5 border-primary/20 bg-primary/5">
+            <Alert.Root className="border-primary/20 bg-primary/5">
               <Link2Icon />
               <Alert.Description>
                 <Trans message="Storefronts selected. This product cannot appear publicly until it is approved." />
@@ -1070,7 +1086,7 @@ function DigitalProductForm() {
           )}
 
           {(productType === 'course' || product?.type === 'course') && (
-            <Alert.Root className="mb-5 border-primary/20 bg-primary/5">
+            <Alert.Root className="border-primary/20 bg-primary/5">
               <GraduationCapIcon />
               <Alert.Title>
                 <Trans message="Course product" />
@@ -1094,6 +1110,7 @@ function DigitalProductForm() {
               </Alert.Description>
             </Alert.Root>
           )}
+          </div>
 
           {loading ? (
             effectiveFileType === 'course' ? (
@@ -1390,26 +1407,26 @@ const PRODUCT_DETAILS_COPY: Record<'digital' | 'ebook' | 'audio' | 'course', Pro
   digital: {
     titleLabel: 'Product title',
     titlePlaceholder: 'My digital guide',
-    titleDescription: 'Choose a clear title customers can easily understand.',
-    descriptionHint: 'Describe what buyers receive and who this product is for.',
+    titleDescription: 'Shown on your storefront and checkout.',
+    descriptionHint: 'Summarize what buyers receive.',
     coverLabel: 'Cover image',
-    coverHint: 'Shown on your product listing and Storefronts (16:9 recommended).',
+    coverHint: 'JPG, PNG, or WebP · 16:9 recommended.',
   },
   ebook: {
     titleLabel: 'Book title',
     titlePlaceholder: 'e.g. Modern Ethiopian Coffee Guide',
-    titleDescription: 'Use the book or comic title readers will see on your storefront.',
-    descriptionHint: 'Summarize the book, key chapters, and reading format.',
+    titleDescription: 'Shown to readers on your storefront.',
+    descriptionHint: 'Summarize the book and format.',
     coverLabel: 'Book cover',
-    coverHint: 'Shown on your storefront and reader preview (16:9 recommended).',
+    coverHint: 'JPG, PNG, or WebP · 16:9 recommended.',
   },
   audio: {
     titleLabel: 'Audio title',
     titlePlaceholder: 'e.g. Morning Focus Soundscapes',
-    titleDescription: 'Name the track, podcast episode, or audio collection.',
-    descriptionHint: 'Describe the tracks, runtime, or listening experience.',
+    titleDescription: 'Track, podcast, or collection name.',
+    descriptionHint: 'Describe tracks or runtime.',
     coverLabel: 'Cover artwork',
-    coverHint: 'Displayed as artwork on your storefront and audio player (16:9 recommended).',
+    coverHint: 'JPG, PNG, or WebP · 16:9 recommended.',
   },
   course: {
     titleLabel: 'Product title',
@@ -1507,7 +1524,12 @@ function DetailsPanel({
         htmlFor="product-description"
         onBlur={() => validateField('description', description)}
       >
-        <DescriptionEditor key={copyRevision} value={description} onChange={onDescriptionChange} />
+        <DescriptionEditor
+          key={copyRevision}
+          value={description}
+          invalid={!!errors.description}
+          onChange={onDescriptionChange}
+        />
       </ProductFormField>
       {productId != null && (
         <ProductAiCopyReview
@@ -1532,6 +1554,7 @@ function DetailsPanel({
           onChange={onCoverChange}
           uploadType="linkImages"
           aspect={16 / 9}
+          showHint={!hidePricing}
           label={trans({message: copy.coverLabel})}
           className={hidePricing ? 'aspect-video h-auto w-full max-w-lg' : 'aspect-video h-auto w-full'}
         />
@@ -1597,6 +1620,7 @@ function PricingFields({
             aria-invalid={!!errors.price_cents}
             aria-errormessage={errors.price_cents ? "product-price-error" : undefined}
             type="number"
+            inputMode="decimal"
             min="0"
             step="0.01"
             value={price}
@@ -1605,16 +1629,16 @@ function PricingFields({
           />
         </InputGroup>
         {legacyCurrency && legacyCurrency.toLowerCase() !== 'etb' && (
-          <label className="mt-2 flex items-start gap-3 rounded-card-sm border border-border bg-muted/30 p-3 text-sm">
+          <label className="mt-2 flex items-start gap-3 rounded-card-sm border border-border/75 bg-muted/30 p-3 text-sm">
             <Checkbox
               checked={convertToEtb}
               onCheckedChange={value => onConvertToEtbChange(value === true)}
             />
-            <span>
+            <span className="flex flex-col gap-0.5">
               <span className="block font-medium">
                 <Trans message="Convert this product price to ETB" />
               </span>
-              <span className="mt-0.5 block text-sm text-muted-foreground">
+              <span className="block text-xs text-muted-foreground">
                 <Trans message="Set the correct Ethiopian birr amount above. Existing sales remain in their original currency." />
               </span>
             </span>
@@ -1632,9 +1656,11 @@ function PricingFields({
 
 function DescriptionEditor({
   value,
+  invalid = false,
   onChange,
 }: {
   value: string;
+  invalid?: boolean;
   onChange: (value: string) => void;
 }) {
   return (
@@ -1651,8 +1677,17 @@ function DescriptionEditor({
           The boundary stays because an editable surface with a toolbar
           needs one (DESIGN.md field spec), it just stops being card
           chrome. */}
-      <div className="overflow-hidden rounded-input border border-input transition-colors focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring">
-        <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
+      <div
+        id="product-description"
+        aria-invalid={invalid || undefined}
+        aria-errormessage={invalid ? 'product-description-error' : undefined}
+        className={
+          invalid
+            ? 'overflow-hidden rounded-input border border-destructive transition-colors focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-destructive'
+            : 'overflow-hidden rounded-input border border-input transition-colors focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring'
+        }
+      >
+        <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border/60 bg-muted/25 px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />
           <FontStyleButtons />
@@ -1663,7 +1698,7 @@ function DescriptionEditor({
           <Divider />
           <ClearFormatButton />
         </div>
-        <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none px-3 py-2.5 dark:prose-invert" />
+        <TiptapEditorContent className="prose prose-sm min-h-44 max-w-none px-3 py-2.5 dark:prose-invert" />
       </div>
     </TipTapEditorProvider>
   );
@@ -1778,15 +1813,18 @@ function BioPagesPanel({
   const {trans} = useTrans();
   if (loadStatus === 'loading') {
     return (
-      <p role="status" className="py-4 text-sm text-muted-foreground">
-        <Trans message="Loading Storefronts..." />
-      </p>
+      <div role="status" className="flex flex-col gap-2 py-2">
+        <Skeleton className="h-11 w-full max-w-lg rounded-input" />
+        <span className="sr-only">
+          <Trans message="Loading Storefronts..." />
+        </span>
+      </div>
     );
   }
 
   if (loadStatus === 'error') {
     return (
-      <div role="status" className="flex flex-col items-start gap-3 py-4">
+      <div role="status" className="flex flex-col items-start gap-3 py-2">
         <p className="text-sm text-muted-foreground">
           <Trans message="Unable to load Storefronts. Your product can still be saved or submitted. Retry to choose placement." />
         </p>
@@ -1799,7 +1837,7 @@ function BioPagesPanel({
 
   if (!biolinks.length) {
     return (
-      <div className="flex flex-col gap-2 py-4 text-sm text-muted-foreground">
+      <div className="flex flex-col gap-2 py-2 text-sm text-muted-foreground">
         <p>
           <Trans message="You can sell this product directly. Create a Storefront later if you want to display it there." />
         </p>
@@ -1807,8 +1845,10 @@ function BioPagesPanel({
     );
   }
 
+  const selectedBiolinks = biolinks.filter(page => selectedIds.includes(page.id));
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       <Dropdown.Root>
         <Dropdown.Trigger
           render={
@@ -1816,7 +1856,7 @@ function BioPagesPanel({
               type="button"
               variant="outline"
               size="lg"
-              className="flex min-h-11 w-full max-w-lg items-center justify-between gap-3 text-start font-normal"
+              className="flex min-h-11 w-full max-w-lg items-center justify-between gap-3 rounded-input border-input bg-background px-3 text-start font-normal"
             />
           }
           aria-label={trans({message: 'Choose Storefronts'})}
@@ -1868,6 +1908,15 @@ function BioPagesPanel({
           </Dropdown.Group>
         </Dropdown.Content>
       </Dropdown.Root>
+      {selectedBiolinks.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedBiolinks.map(page => (
+            <Badge key={page.id} variant="secondary">
+              {page.name}
+            </Badge>
+          ))}
+        </div>
+      )}
       <p className="sr-only" role="status" aria-live="polite">
         {selectedIds.length > 0 ? (
           <Trans
@@ -1887,35 +1936,46 @@ function BioPagesPanel({
 
 /* ── Skeleton ─── */
 
-/** Approximate the actual non-course sections without giant blank slabs. */
+/** Match the 4-step rail + single active section layout to prevent layout shift. */
 function NonCourseEditorSkeleton() {
   return (
-    <div role="status" aria-busy="true" data-testid="non-course-editor-skeleton" className="flex min-w-0 flex-col gap-4">
+    <div
+      role="status"
+      aria-busy="true"
+      data-testid="non-course-editor-skeleton"
+      className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6"
+    >
       <span className="sr-only"><Trans message="Loading product editor" /></span>
-      <div aria-hidden="true" className="flex items-center justify-between gap-2 border-b border-border pb-3">
-        {Array.from({length: 5}, (_, index) => (
-          <Skeleton key={index} className="size-8 rounded-full" />
+      <div
+        aria-hidden="true"
+        className="grid grid-cols-4 gap-2 border-b border-border/60 pb-3 xl:grid-cols-1 xl:gap-5 xl:border-b-0 xl:border-e xl:pb-0 xl:pe-4"
+      >
+        {Array.from({length: 4}, (_, index) => (
+          <div key={index} className="flex flex-col items-center gap-1.5 xl:flex-row xl:items-start xl:gap-3">
+            <Skeleton className="size-8 shrink-0 rounded-full" />
+            <div className="hidden flex-1 flex-col gap-1.5 xl:flex">
+              <Skeleton className="h-3.5 w-24 rounded-input" />
+              <Skeleton className="h-3 w-36 rounded-input" />
+            </div>
+          </div>
         ))}
       </div>
       <div aria-hidden="true" className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4 rounded-card-sm border border-border p-4 sm:p-5">
-          <Skeleton className="h-5 w-40 rounded-input" />
+        <div className="flex flex-col gap-4 rounded-card-sm border border-border/75 bg-card p-4 sm:p-5">
+          <div className="flex flex-col gap-1.5 border-b border-border/60 pb-3">
+            <Skeleton className="h-5 w-40 rounded-input" />
+            <Skeleton className="h-3.5 w-64 max-w-full rounded-input" />
+          </div>
           <div className="flex flex-col gap-2">
             <Skeleton className="h-4 w-24 rounded-input" />
             <Skeleton className="h-10 w-full rounded-input" />
           </div>
           <div className="flex flex-col gap-2">
             <Skeleton className="h-4 w-28 rounded-input" />
-            <Skeleton className="h-28 w-full rounded-input" />
+            <Skeleton className="h-44 w-full rounded-input" />
           </div>
           <Skeleton className="aspect-video w-full max-w-lg rounded-input" />
         </div>
-        {['files', 'samples', 'price', 'storefront'].map(section => (
-          <div key={section} className="flex min-w-0 items-center justify-between gap-3 rounded-card-sm border border-border p-4 sm:p-5">
-            <Skeleton className="h-5 w-36 max-w-full rounded-input" />
-            <Skeleton className="size-8 shrink-0 rounded-full" />
-          </div>
-        ))}
       </div>
     </div>
   );

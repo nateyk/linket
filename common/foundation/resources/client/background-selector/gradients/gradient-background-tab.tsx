@@ -167,7 +167,7 @@ function DirectionPicker({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const activeStyle = 'text-primary border-primary';
+  const activeStyle = 'border-primary bg-primary/10 text-primary';
   return (
     <section>
       <Field.Title className="mb-2">
@@ -178,6 +178,7 @@ function DirectionPicker({
           size="icon-sm"
           variant="outline"
           color="default"
+          aria-pressed={value === '0deg'}
           className={value === '0deg' ? activeStyle : undefined}
           onClick={() => onChange('0deg')}
         >
@@ -187,6 +188,7 @@ function DirectionPicker({
           size="icon-sm"
           variant="outline"
           color="default"
+          aria-pressed={value === '180deg'}
           className={value === '180deg' ? activeStyle : undefined}
           onClick={() => onChange('180deg')}
         >
@@ -196,6 +198,7 @@ function DirectionPicker({
           size="icon-sm"
           variant="outline"
           color="default"
+          aria-pressed={value === '90deg'}
           className={value === '90deg' ? activeStyle : undefined}
           onClick={() => onChange('90deg')}
         >
@@ -205,6 +208,7 @@ function DirectionPicker({
           size="icon-sm"
           variant="outline"
           color="default"
+          aria-pressed={value === '135deg'}
           className={value === '135deg' ? activeStyle : undefined}
           onClick={() => onChange('135deg')}
         >
@@ -214,6 +218,7 @@ function DirectionPicker({
           size="icon-sm"
           variant="outline"
           color="default"
+          aria-pressed={value === '225deg'}
           className={value === '225deg' ? activeStyle : undefined}
           onClick={() => onChange('225deg')}
         >
@@ -223,6 +228,7 @@ function DirectionPicker({
           size="icon-sm"
           variant="outline"
           color="default"
+          aria-pressed={value === '45deg'}
           className={value === '45deg' ? activeStyle : undefined}
           onClick={() => onChange('45deg')}
         >
@@ -232,6 +238,7 @@ function DirectionPicker({
           size="icon-sm"
           variant="outline"
           color="default"
+          aria-pressed={value === '325deg'}
           className={value === '325deg' ? activeStyle : undefined}
           onClick={() => onChange('325deg')}
         >
@@ -258,7 +265,8 @@ function PreMadeGradientsList({
         {GradientBackgrounds.map(gradient => (
           <button
             type="button"
-            className="size-10 rounded-full border outline-offset-2 outline-primary focus-visible:outline-2 data-active:outline-2"
+            aria-pressed={value?.backgroundImage === gradient.backgroundImage}
+            className="size-10 rounded-full border border-border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[active=true]:border-primary data-[active=true]:ring-2 data-[active=true]:ring-primary/30 motion-reduce:transition-none"
             key={gradient.backgroundImage}
             data-active={value?.backgroundImage === gradient.backgroundImage}
             style={{

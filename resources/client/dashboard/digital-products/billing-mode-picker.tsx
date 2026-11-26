@@ -57,9 +57,10 @@ export function BillingModePicker({
         <label
           key={option.id}
           className={cn(
-            'flex w-full shrink-0 cursor-pointer items-center justify-start gap-3 rounded-card-sm border border-border bg-card px-3 py-2.5 text-start whitespace-normal outline-none transition-[border-color,background-color] hover:border-foreground/15 hover:bg-muted/30 has-[:focus-visible]:border-transparent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-ring',
-            value === option.id &&
-              'border-primary/60 bg-primary/5',
+            'flex w-full shrink-0 cursor-pointer items-center justify-start gap-3 rounded-card-sm border px-3 py-2.5 text-start whitespace-normal outline-none transition-[border-color,background-color] has-[:focus-visible]:border-transparent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-ring',
+            value === option.id
+              ? 'border-primary/60 bg-primary/5'
+              : 'border-border/75 bg-card hover:border-foreground/20 hover:bg-muted/30',
           )}
         >
           <OptionRowContent

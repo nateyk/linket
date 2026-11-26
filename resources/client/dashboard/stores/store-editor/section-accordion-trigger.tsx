@@ -93,7 +93,7 @@ export function SectionCollapsibleTrigger({
             ? `${ids.descriptionId} ${phraseId}`
             : ids.descriptionId
         }
-        className="group/builder-trigger flex min-h-16 w-full items-center gap-2 rounded-card-sm px-3 py-2 text-start text-sm transition-colors hover:bg-muted/60 data-panel-open:bg-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+        className="group/builder-trigger flex min-h-16 w-full items-center gap-2 rounded-card-sm px-3 py-2 text-start text-sm transition-colors hover:bg-muted/50 data-panel-open:rounded-b-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
       >
         <SectionLabelIdsContext.Provider value={ids}>
           {children}
