@@ -32,9 +32,10 @@ describe('dedicated E-book editor', () => {
     expect(section.className).toContain('rounded-card-sm');
     expect(section.className).toContain('p-4 sm:p-5');
     const heading = within(section).getByRole('heading', {level: 2});
-    expect(heading.className).toContain('border-b');
-    expect(heading.className).toContain('pb-3');
-    expect(heading.className).toContain('mb-4');
+    const header = heading.closest('header') ?? heading;
+    expect(header.className).toContain('border-b');
+    expect(header.className).toContain('pb-3');
+    expect(header.className).toContain('mb-4');
   });
 
   test('supports PDF or EPUB without repeating instructions in a help popover', () => {

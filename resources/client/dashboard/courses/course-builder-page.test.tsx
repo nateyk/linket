@@ -94,7 +94,7 @@ describe('course builder mobile navigation', () => {
       /useState<'curriculum' \| 'editor'>\(\s*'curriculum',?\s*\)/,
     );
     expect(source).toMatch(
-      /w-full min-w-0 flex-col overflow-hidden border-b bg-card lg:w-\[36%\] lg:border-r lg:border-b-0',\s*mobileSurface === 'editor' && 'hidden lg:flex'/,
+      /w-full min-w-0 flex-col overflow-hidden border-b border-border bg-card lg:w-\[36%\] lg:border-r lg:border-b-0',\s*mobileSurface === 'editor' && 'hidden lg:flex'/,
     );
     expect(source).toMatch(
       /min-w-0 flex-1 flex-col overflow-y-auto bg-muted\/10 p-4',\s*mobileSurface === 'curriculum' && 'hidden lg:flex'/,
@@ -728,6 +728,9 @@ describe('builder surfaces avoid nested cards', () => {
     expect(source).not.toContain('bg-primary/5 ring-1 ring-primary/20');
     expect(source).toContain("? 'bg-selected'");
     expect(source).not.toContain("? 'bg-primary/10'");
+    expect(source).toContain('overflow-hidden rounded-card-sm border border-border bg-card');
+    expect(source).toContain('bg-transparent!');
+    expect(source).toContain('text-foreground/65 transition-colors hover:bg-hover hover:text-foreground');
   });
 
   test('the video block is a section in the form, not a card', () => {

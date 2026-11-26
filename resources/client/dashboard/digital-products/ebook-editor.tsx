@@ -20,6 +20,9 @@ export function EbookEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'details'}
         id="ebook-information"
         title={<Trans message="Book information" />}
+        description={
+          <Trans message="Book title, description, and cover shown to readers." />
+        }
       >
         {details}
       </ProductEditorSection>
@@ -27,6 +30,9 @@ export function EbookEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'files'}
         id="ebook-private-files"
         title={<Trans message="Book files" />}
+        description={
+          <Trans message="Private EPUB or PDF files unlocked after purchase." />
+        }
       >
         {files}
       </ProductEditorSection>
@@ -34,6 +40,9 @@ export function EbookEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'files'}
         id="ebook-public-sample"
         title={<Trans message="Sample pages (optional)" />}
+        description={
+          <Trans message="Optional public PDF sample so readers can preview pages." />
+        }
       >
         {sample}
       </ProductEditorSection>
@@ -41,6 +50,9 @@ export function EbookEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'pricing'}
         id="ebook-pricing"
         title={<Trans message="Price" />}
+        description={
+          <Trans message="Offer free access or set a book price in ETB." />
+        }
       >
         {pricing}
       </ProductEditorSection>
@@ -48,6 +60,9 @@ export function EbookEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'storefront'}
         id="ebook-storefront"
         title={<Trans message="Storefront placement (optional)" />}
+        description={
+          <Trans message="Choose which storefronts feature this e-book once approved." />
+        }
       >
         {storefront}
       </ProductEditorSection>

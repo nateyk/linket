@@ -4,10 +4,12 @@ import {encodeCanvasToImageFile} from '@common/uploads/utils/encode-cropped-imag
 import {Button} from '@shadcn/button/button';
 import {HookForm} from '@shadcn/forms/form/hook-form';
 import {Slider} from '@shadcn/forms/slider/slider';
+import {Spinner} from '@shadcn/spinner/spinner';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
+import {RotateCcwIcon, ZoomInIcon, ZoomOutIcon} from 'lucide-react';
 import * as React from 'react';
 import Cropper, {type Area} from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
@@ -52,8 +54,22 @@ export function aspectFitCropSize(
 }
 
 /**
- * Stage box sized to the crop aspect so wide covers stay short and avatars
- * stay near-square — never a tall gray letterbox around a thin strip.
+ * Aspect-aware dialog width so square crops avoid dead side margins and wide
+ * covers have horizontal room without bloated modal chrome.
+ */
+export function cropDialogWidthClass(aspect: number = 1): string {
+  if (aspect <= 1.15) {
+    return 'max-w-[min(calc(100vw-1.5rem),28rem)] sm:max-w-md';
+  }
+  if (aspect >= 2.5) {
+    return 'max-w-[min(calc(100vw-1.5rem),42rem)] sm:max-w-2xl';
+  }
+  return 'max-w-[min(calc(100vw-1.5rem),36rem)] sm:max-w-xl';
+}
+
+/**
+ * Stage box sized to both crop aspect and maxHeight (`min(100%, maxHeight * aspect)`)
+ * so the active crop area fills the stage without dead left/right white bars.
  */
 export function cropStageBoxStyle(
   aspect: number,
@@ -62,17 +78,15 @@ export function cropStageBoxStyle(
   const wide = aspect >= 2.5;
   const landscape = aspect >= 1.45;
   const maxHeight = wide
-    ? 'min(24dvh, 170px)'
+    ? 'min(38dvh, 240px)'
     : landscape
-      ? 'min(31dvh, 240px)'
-      : 'min(37dvh, 300px)';
+      ? 'min(52dvh, 340px)'
+      : 'min(54dvh, 384px)';
 
   return {
     aspectRatio: `${aspect}`,
-    width: '100%',
+    width: `min(100%, calc(${maxHeight} * ${aspect}))`,
     maxHeight,
-    // Dialog width is already aspect-aware; stage fills that content box
-    // instead of capping at 360px and leaving L/R gutters inside the dialog.
     maxWidth: '100%',
     ...(radius ? ({'--crop-radius': radius} as React.CSSProperties) : {}),
   };
@@ -163,7 +177,7 @@ export function ImageCrop({
 
   const setZoomClamped = React.useCallback(
     (value: number) => {
-      setZoom(Math.min(3, Math.max(minZoom, Math.round(value * 10) / 10)));
+      setZoom(Math.min(3, Math.max(minZoom, Math.round(value * 100) / 100)));
     },
     [minZoom],
   );
@@ -254,6 +268,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     setZoom,
     setMinZoom,
     setCroppedAreaPixels,
+    handleReset,
   } = useImageCropContext();
 
   const stageRef = React.useRef<HTMLDivElement>(null);
@@ -347,13 +362,28 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           ref={stageRef}
           data-crop-radius={radius ? '' : undefined}
           style={cropStageBoxStyle(lockedAspect, radius)}
-          className="image-crop-stage relative overflow-hidden rounded-card bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="image-crop-stage relative overflow-hidden rounded-card-sm bg-muted ring-1 ring-foreground/15 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
           role="group"
           tabIndex={0}
           aria-label={trans(message('Image crop area'))}
           aria-describedby={cropInstructionsId}
           onKeyDown={event => {
             if (event.target !== event.currentTarget) return;
+            if (event.key === '+' || event.key === '=') {
+              event.preventDefault();
+              setZoom(zoom + 0.15);
+              return;
+            }
+            if (event.key === '-' || event.key === '_') {
+              event.preventDefault();
+              setZoom(zoom - 0.15);
+              return;
+            }
+            if (event.key === '0') {
+              event.preventDefault();
+              handleReset();
+              return;
+            }
             const step = event.shiftKey ? 20 : 6;
             const delta = {
               ArrowLeft: {x: -step, y: 0},
@@ -367,7 +397,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           }}
         >
           <span id={cropInstructionsId} className="sr-only">
-            <Trans message="Drag to move the image, or use arrow keys. Hold Shift for larger steps." />
+            <Trans message="Drag to move the image, or use arrow keys. Hold Shift for larger steps, or press plus and minus to zoom." />
           </span>
           <Cropper
             key={cropperKey}
@@ -377,7 +407,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
             minZoom={minZoom}
             aspect={lockedAspect}
             cropSize={cropSize}
-            showGrid={false}
+            showGrid
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
@@ -385,37 +415,111 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           />
         </div>
       </div>
+      <ImageCropZoomControls
+        zoom={zoom}
+        minZoom={minZoom}
+        onZoomChange={setZoom}
+      />
+    </div>
+  );
+}
+
+export interface ImageCropZoomControlsProps {
+  zoom: number;
+  minZoom?: number;
+  maxZoom?: number;
+  step?: number;
+  buttonStep?: number;
+  disabled?: boolean;
+  onZoomChange: (zoom: number) => void;
+  className?: string;
+}
+
+/**
+ * Unified zoom toolbar shared across ImageCrop and ImageSelectorDialog:
+ * prominent Zoom Out / Zoom In icon buttons, accessible Slider, and
+ * tabular percentage readout.
+ */
+export function ImageCropZoomControls({
+  zoom,
+  minZoom = 1,
+  maxZoom = 3,
+  step = 0.05,
+  buttonStep = 0.15,
+  disabled,
+  onZoomChange,
+  className,
+}: ImageCropZoomControlsProps) {
+  const {trans} = useTrans();
+  const safeZoom = Number.isFinite(zoom) ? zoom : minZoom;
+  const clamp = (next: number) =>
+    Math.min(maxZoom, Math.max(minZoom, Math.round(next * 100) / 100));
+
+  return (
+    <div className={cn('flex items-center gap-1.5', className)}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
+        aria-label={trans(message('Zoom out'))}
+        disabled={disabled || safeZoom <= minZoom + 0.001}
+        onClick={() => onZoomChange(clamp(safeZoom - buttonStep))}
+      >
+        <ZoomOutIcon />
+      </Button>
+
       {/* Isolate from HookForm.Field: CroppedAvatar/Cover nest inside
           avatar_url / cover_url fields, and Slider would otherwise bind
           the URL string → NaN → visibility:hidden thumb. */}
       <HookForm.FieldContext.Provider value={undefined}>
         <Slider
           min={minZoom}
-          max={3}
-          step={0.1}
-          value={Number.isFinite(zoom) ? zoom : minZoom}
+          max={maxZoom}
+          step={step}
+          value={safeZoom}
+          disabled={disabled}
           onValueChange={next => {
             const raw = Array.isArray(next) ? next[0] : next;
-            setZoom(
+            onZoomChange(
               typeof raw === 'number' && Number.isFinite(raw) ? raw : minZoom,
             );
           }}
-          className="flex items-center gap-3"
+          className="flex min-w-0 flex-1 items-center"
         >
-          <Slider.Label className="shrink-0 text-xs text-muted-foreground">
+          <Slider.Label className="sr-only">
             <Trans message="Zoom" />
           </Slider.Label>
-          <Slider.Control className="min-w-0 flex-1 py-2">
-            <Slider.Track className="data-horizontal:h-2.5">
+          <Slider.Control className="min-w-0 flex-1 py-1">
+            <Slider.Track className="bg-foreground/12 data-horizontal:h-1.5">
               <Slider.Indicator />
             </Slider.Track>
             <Slider.Thumb
               aria-label={trans(message('Zoom'))}
-              className="size-4 border-2 border-background bg-primary shadow-none ring-1 ring-primary/25"
+              className="size-3.5 border-2 border-card bg-primary shadow-xs ring-1 ring-primary/25"
             />
           </Slider.Control>
         </Slider>
       </HookForm.FieldContext.Provider>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
+        aria-label={trans(message('Zoom in'))}
+        disabled={disabled || safeZoom >= maxZoom - 0.001}
+        onClick={() => onZoomChange(clamp(safeZoom + buttonStep))}
+      >
+        <ZoomInIcon />
+      </Button>
+
+      <span
+        aria-hidden="true"
+        className="w-9 shrink-0 select-none text-end text-xs text-muted-foreground tabular-nums"
+      >
+        {Math.round(safeZoom * 100)}%
+      </span>
     </div>
   );
 }
@@ -461,6 +565,7 @@ export function ImageCropApply({
       onClick={() => void handleApply()}
       disabled={disabled}
     >
+      {isApplying && <Spinner data-icon="inline-start" />}
       {children ?? <Trans message="Apply crop" />}
     </Button>
   );
@@ -503,7 +608,12 @@ export function ImageCropReset({
       className={className}
       onClick={handleReset}
     >
-      {children ?? <Trans message="Reset" />}
+      {children ?? (
+        <>
+          <RotateCcwIcon data-icon="inline-start" />
+          <Trans message="Reset" />
+        </>
+      )}
     </Button>
   );
 }

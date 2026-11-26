@@ -126,8 +126,9 @@ function SidebarRoot({
         data-variant={variant}
         data-collapsible={status === 'collapsed' ? collapsible : ''}
         className={cn(
-          'group flex h-full flex-col pt-1.5 text-foreground',
-          variant === 'floating' && 'rounded-card bg-background shadow-sm',
+          'group flex h-full min-h-0 flex-col overflow-hidden pt-1.5 text-foreground',
+          variant === 'floating' &&
+            'rounded-card bg-background shadow-sm ring-1 ring-border/60',
           variant === 'default' && (side === 'left' ? 'border-e' : 'border-s'),
           activeWidth,
           className,

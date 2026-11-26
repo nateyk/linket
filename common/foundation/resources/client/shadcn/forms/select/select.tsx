@@ -84,7 +84,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="dropdown-trigger"
       className={cn(
-        "flex h-9 w-fit items-center justify-between gap-1.5 rounded-input border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap transition-colors hover:border-foreground/20 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:outline-destructive data-placeholder:text-muted-foreground *:data-[slot=dropdown-value]:line-clamp-1 *:data-[slot=dropdown-value]:flex *:data-[slot=dropdown-value]:items-center *:data-[slot=dropdown-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex h-9 w-fit items-center justify-between gap-1.5 rounded-input border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap transition-colors hover:border-foreground/20 focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:outline-destructive data-placeholder:text-muted-foreground *:data-[slot=dropdown-value]:line-clamp-1 *:data-[slot=dropdown-value]:flex *:data-[slot=dropdown-value]:items-center *:data-[slot=dropdown-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       onBlur={mergedOnBlur}

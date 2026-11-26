@@ -68,7 +68,43 @@ vi.mock('@shadcn/forms/slider/slider', () => ({
   ),
 }));
 vi.mock('@shadcn/image-crop/image-crop', () => ({
+  cropDialogWidthClass: () => 'sm:max-w-md',
   cropStageBoxStyle: (aspect: number) => ({aspectRatio: String(aspect), width: '100%'}),
+  ImageCropZoomControls: ({
+    zoom,
+    minZoom = 1,
+    maxZoom = 3,
+    disabled,
+    onZoomChange,
+  }: {
+    zoom: number;
+    minZoom?: number;
+    maxZoom?: number;
+    disabled?: boolean;
+    onZoomChange: (zoom: number) => void;
+  }) => (
+    <div>
+      <button
+        type="button"
+        aria-label="Zoom out"
+        disabled={disabled || zoom <= minZoom}
+        onClick={() => onZoomChange(Math.max(minZoom, zoom - 0.15))}
+      />
+      <input
+        type="range"
+        aria-label="Zoom"
+        value={zoom}
+        disabled={disabled}
+        onChange={e => onZoomChange(Number(e.target.value))}
+      />
+      <button
+        type="button"
+        aria-label="Zoom in"
+        disabled={disabled || zoom >= maxZoom}
+        onClick={() => onZoomChange(Math.min(maxZoom, zoom + 0.15))}
+      />
+    </div>
+  ),
 }));
 vi.mock('@shadcn/progress/progress', () => ({
   Progress: {Root: 'div', Track: 'div', Indicator: 'div'},
@@ -177,6 +213,31 @@ test('keyboard pans the crop, Shift increases the step, Reset restores it', () =
   expect(screen.getByTestId('cropper').getAttribute('data-crop-x')).toBe('0');
   expect(screen.getByTestId('cropper').getAttribute('data-crop-y')).toBe('0');
   expect(screen.getByRole('button', {name: 'Upload'}).hasAttribute('disabled')).toBe(true);
+});
+
+test('zoom buttons and keyboard shortcuts adjust zoom between 100% and 300%', () => {
+  renderUpload();
+  chooseImage();
+  const stage = screen.getByLabelText('Image crop area');
+  const zoomIn = screen.getByRole('button', {name: 'Zoom in'});
+  const zoomOut = screen.getByRole('button', {name: 'Zoom out'});
+  const slider = screen.getByLabelText('Zoom') as HTMLInputElement;
+
+  expect(zoomOut.hasAttribute('disabled')).toBe(true);
+  expect(slider.value).toBe('1');
+
+  fireEvent.click(zoomIn);
+  expect(Number(slider.value)).toBeCloseTo(1.15, 2);
+  expect(zoomOut.hasAttribute('disabled')).toBe(false);
+
+  fireEvent.keyDown(stage, {key: '+'});
+  expect(Number(slider.value)).toBeCloseTo(1.3, 2);
+
+  fireEvent.keyDown(stage, {key: '-'});
+  expect(Number(slider.value)).toBeCloseTo(1.15, 2);
+
+  fireEvent.keyDown(stage, {key: '0'});
+  expect(slider.value).toBe('1');
 });
 
 test('completed crop uploads the encoded file using the existing callback', async () => {

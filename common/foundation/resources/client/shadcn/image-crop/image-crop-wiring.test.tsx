@@ -96,6 +96,25 @@ describe('cropper measured window (wiring)', () => {
       `window fills inset stage inside 640px (got ${cropArea!.style.width})`,
     ).toBeGreaterThan(580);
 
+    // 6. zoom buttons adjust zoom and update tabular percentage readout
+    const zoomIn = container.querySelector(
+      'button[aria-label="Zoom in"]',
+    ) as HTMLButtonElement | null;
+    const zoomOut = container.querySelector(
+      'button[aria-label="Zoom out"]',
+    ) as HTMLButtonElement | null;
+    expect(zoomIn).not.toBeNull();
+    expect(zoomOut).not.toBeNull();
+    expect(container.textContent).toContain('100%');
+    await act(async () => {
+      zoomIn!.click();
+    });
+    expect(container.textContent).toContain('115%');
+    await act(async () => {
+      zoomOut!.click();
+    });
+    expect(container.textContent).toContain('100%');
+
     await act(async () => {
       root.unmount();
     });

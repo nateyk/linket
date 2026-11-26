@@ -154,17 +154,16 @@ describe('R06 product type picker semantics', () => {
     expect(options[3].className).not.toContain('bg-primary/5');
   });
 
-  test('cards use a two-column mobile and four-column desktop layout without a second selection indicator', () => {
+  test('cards use a one-column mobile and two-column desktop layout without a second selection indicator', () => {
     const {container} = render(
       <ProductTypePicker value="ebook" onValueChange={() => {}} />,
     );
     const group = screen.getByRole('radiogroup', {name: 'Product type'});
-    expect(group.className).toContain('grid-cols-2');
-    expect(group.className).toContain('sm:grid-cols-4');
+    expect(group.className).toContain('grid-cols-1');
+    expect(group.className).toContain('sm:grid-cols-2');
     const cards = Array.from(container.querySelectorAll('label'));
     expect(cards).toHaveLength(4);
     for (const card of cards) {
-      expect(card.className).toContain('min-h-40');
       if (card === cards[1]) {
         expect(card.className).toContain('bg-primary/5');
       } else {
@@ -175,6 +174,12 @@ describe('R06 product type picker semantics', () => {
     }
     expect(cards[1].className).toContain('border-primary/60');
     expect(cards[0].className).not.toContain('border-primary/60');
+
+    const selectedIcon = cards[1].querySelector('[data-slot="product-type-icon"]');
+    expect(selectedIcon?.className).toContain('bg-primary');
+    expect(selectedIcon?.className).toContain('text-primary-foreground');
+    expect(selectedIcon?.className).not.toContain('bg-muted');
+    expect(selectedIcon?.className).not.toContain('group-hover:bg-');
   });
 
   test('the complete card is clickable and updates the selection', async () => {

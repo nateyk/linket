@@ -6,16 +6,43 @@
  * `.image-crop-stage` so nothing else inherits the wash.
  *
  * When `[data-crop-radius]` is set, the frame also previews the radius the
- * cropped image will render with on the storefront.
+ * cropped image will render with on the storefront (or circle for avatars).
  */
 
+.image-crop-stage {
+  background-color: color-mix(
+    in srgb,
+    var(--color-muted) 86%,
+    var(--color-foreground)
+  );
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--color-foreground) 12%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 12px 12px;
+}
+
+.image-crop-stage .reactEasyCrop_Container {
+  cursor: grab;
+}
+
+.image-crop-stage .reactEasyCrop_Container:active {
+  cursor: grabbing;
+}
+
 .image-crop-stage .reactEasyCrop_CropArea {
-  border: 1px solid
-    color-mix(in srgb, var(--color-foreground) 28%, transparent);
-  /* Quieter wash than the stock sample — enough to separate the window,
-     not a theatrical vignette. */
-  box-shadow: 0 0 0 9999px
-    color-mix(in srgb, var(--color-background) 55%, transparent);
+  border: 2px solid
+    color-mix(in srgb, var(--color-background) 92%, transparent);
+  /* Double rim + neutral dark scrim so the active crop region stays crisp
+     and clearly separated from both light/dark photos and the dialog card. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-foreground) 45%, transparent),
+    0 0 0 9999px color-mix(in srgb, var(--color-toast) 55%, transparent);
+}
+
+.image-crop-stage .reactEasyCrop_CropAreaGrid::before,
+.image-crop-stage .reactEasyCrop_CropAreaGrid::after {
+  border-color: color-mix(in srgb, var(--color-background) 55%, transparent);
 }
 
 [data-crop-radius] .reactEasyCrop_CropArea {

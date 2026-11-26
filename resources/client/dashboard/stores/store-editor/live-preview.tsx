@@ -191,7 +191,7 @@ export function LivePreview() {
           the phone can take the full height of the sidebar. */}
       <div
         className={cn(
-          'flex h-full w-full min-w-0 shrink-0 flex-col overflow-hidden border-t bg-muted px-2 py-3 lg:h-full lg:w-[min(36vw,28rem)] lg:min-w-88 lg:border-t-0 lg:border-l lg:border-border/60 lg:px-3 lg:py-4',
+          'flex h-full w-full min-w-0 shrink-0 flex-col overflow-hidden border-t bg-muted/35 px-2 py-3 lg:h-full lg:w-[min(36vw,28rem)] lg:min-w-88 lg:border-t-0 lg:border-l lg:border-border/60 lg:px-3 lg:py-4',
           'max-lg:hidden',
           isInsightsTab && 'hidden',
         )}

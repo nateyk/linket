@@ -69,27 +69,6 @@ vi.mock('@shadcn/card/card', () => ({
     Action: 'div',
   },
 }));
-vi.mock('@shadcn/item/item', () => ({
-  Item: {
-    Root: ({
-      render: _render,
-      variant: _variant,
-      size: _size,
-      ...props
-    }: React.ComponentProps<'div'> & {
-      render?: React.ReactNode;
-      variant?: string;
-      size?: string;
-    }) => <div {...props} />,
-    Media: 'div',
-    Content: 'div',
-    Row: 'div',
-    Title: 'div',
-    Description: 'p',
-    Actions: 'div',
-    Group: 'div',
-  },
-}));
 vi.mock('@shadcn/badge/badge', () => ({
   Badge: ({variant: _variant, className, ...props}: React.ComponentProps<'span'> & {variant?: string}) => (
     <span className={className} {...props} />
@@ -106,25 +85,6 @@ vi.mock('@shadcn/button/button', () => ({
     size?: string;
     color?: string;
   }) => <button {...props} />,
-}));
-vi.mock('@shadcn/forms/checkbox/checkbox', () => ({
-  Checkbox: ({checked, indeterminate: _indeterminate, bindToHookForm: _bind,
-    onCheckedChange, ...props}: any) => (
-    <input type="checkbox" checked={checked}
-      onChange={event => onCheckedChange(event.target.checked)} {...props} />
-  ),
-}));
-vi.mock('@shadcn/dropdown/dropdown', () => ({
-  Dropdown: {
-    Root: ({children}: any) => <div>{children}</div>,
-    Trigger: ({render}: any) => <>{render}</>,
-    Content: ({children}: any) => <div>{children}</div>,
-    GroupLabel: 'p',
-    CheckboxItem: ({checked, onCheckedChange, onSelect: _select, children}: any) => (
-      <button type="button" role="menuitemcheckbox" aria-checked={checked}
-        onClick={() => onCheckedChange(!checked)}>{children}</button>
-    ),
-  },
 }));
 vi.mock('@shadcn/skeleton/skeleton', () => ({
   Skeleton: () => <span data-testid="skeleton" />,
@@ -166,10 +126,14 @@ vi.mock('@shadcn/dialog/dialog', () => ({
     Portal: ({children}: {children: React.ReactNode}) => <>{children}</>,
     Backdrop: () => null,
     Content: 'div',
-    Header: 'header',
+    Header: (props: React.ComponentProps<'header'>) => (
+      <header data-slot="dialog-header" {...props} />
+    ),
     Title: 'h2',
     Description: 'p',
-    Body: 'div',
+    Body: (props: React.ComponentProps<'div'>) => (
+      <div data-slot="dialog-body" {...props} />
+    ),
     Footer: 'footer',
     CloseButton: 'button',
   },
@@ -235,7 +199,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-it('keeps the invoice-style table and column controls on mobile', async () => {
+it('keeps the invoice-style table without checkboxes or column picker on mobile', async () => {
   const originalMatchMedia = window.matchMedia;
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
@@ -258,14 +222,15 @@ it('keeps the invoice-style table and column controls on mobile', async () => {
     expect(scrollRegion.tabIndex).toBe(0);
     expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
     expect(screen.queryByRole('list', {name: 'Orders'})).toBeNull();
-    expect(screen.getByRole('button', {name: 'Choose visible columns'})).toBeTruthy();
+    expect(screen.queryByRole('button', {name: 'Choose visible columns'})).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('button', {name: /Export selected/})).toBeNull();
     expect(screen.getByRole('button', {name: 'View details'}).closest('td')?.className).toContain('sticky');
     expect(screen.getByRole('button', {name: 'Previous'})).toHaveProperty('disabled', true);
     expect(screen.getByRole('button', {name: 'Next'})).toHaveProperty('disabled', true);
     expect(screen.getByText('1–1 of 1')).toBeTruthy();
-    fireEvent.click(screen.getByRole('menuitemcheckbox', {name: 'Buyer'}));
-    expect(screen.queryByRole('columnheader', {name: 'Buyer'})).toBeNull();
     expect(screen.getByRole('columnheader', {name: 'Product'})).toBeTruthy();
+    expect(screen.getByRole('columnheader', {name: 'Buyer'})).toBeTruthy();
     expect(screen.getByRole('button', {name: 'View details'})).toBeTruthy();
   } finally {
     Object.defineProperty(window, 'matchMedia', {
@@ -275,11 +240,11 @@ it('keeps the invoice-style table and column controls on mobile', async () => {
   }
 });
 
-it('keeps search and column visibility controls available when orders are empty', async () => {
+it('keeps search filters available and omits column visibility control when orders are empty', async () => {
   mockApi({orders: [], lastPage: 1, total: 0});
   render(<Component />);
   expect(await screen.findByText('No orders found')).toBeTruthy();
-  expect(screen.getByRole('button', {name: 'Choose visible columns'})).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Choose visible columns'})).toBeNull();
   expect(screen.getByLabelText('Search orders')).toBeTruthy();
   expect(screen.queryByRole('navigation', {name: 'Pagination'})).toBeNull();
 });
@@ -490,19 +455,31 @@ it('sorts full filtered orders on the server and resets to page one', async () =
   ));
 });
 
-it('selects current-page rows, enables a real CSV export action and hides optional columns', async () => {
-  mockApi({orders: [baseOrder]});
+it('falls back to product initials when an order cover image fails to load', async () => {
+  mockApi({
+    orders: [
+      {
+        ...baseOrder,
+        product: {
+          id: 2,
+          title: 'AI Video Studio',
+          status: 'approved',
+          cover_url: '/missing-cover.png',
+        },
+      },
+    ],
+  });
   render(<Component />);
-  await screen.findAllByText('Workbook');
+  await screen.findAllByText('AI Video Studio');
 
-  const selection = screen.getByRole('checkbox', {name: /Select order/}) as HTMLInputElement;
-  fireEvent.click(selection);
-  expect(selection.checked).toBe(true);
-  await waitFor(() => expect(screen.getByRole('button', {name: /Export selected/})).toBeTruthy());
+  const img = document.querySelector('img[src="/missing-cover.png"]');
+  expect(img).toBeTruthy();
+  fireEvent.error(img!);
 
-  fireEvent.click(screen.getByRole('menuitemcheckbox', {name: 'Buyer'}));
-  expect(screen.queryByRole('columnheader', {name: 'Buyer'})).toBeNull();
-  expect(screen.getByRole('columnheader', {name: 'Product'})).toBeTruthy();
+  expect(document.querySelector('img[src="/missing-cover.png"]')).toBeNull();
+  expect(screen.getByText('A')).toBeTruthy();
+  expect(screen.queryByRole('checkbox')).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Choose visible columns'})).toBeNull();
 });
 
 it('changes rows per page with server-backed pagination and resets to page one', async () => {
@@ -620,6 +597,46 @@ it('folds Chapa payment details into payment information without a separate stat
   expect(screen.queryByText('Historical receiving account')).toBeNull();
   expect(screen.queryByText('No provider verification has been recorded for this order.')).toBeNull();
   expect(screen.queryByText(/Payment status reflects Linket/)).toBeNull();
+});
+
+it('shows structured summary, copyable reference, and delivery file breakdown in Order details', async () => {
+  mockApi({
+    orders: [baseOrder],
+    detail: {
+      ...baseOrder,
+      buyer_email: 'buyer@example.com',
+      paid_at: '2026-11-17T08:00:00Z',
+      creator_earnings_cents: 9000,
+      platform_fee_cents: 1000,
+      delivery: {
+        status: 'access_granted',
+        entitlements_count: 1,
+        downloaded_count: 2,
+        download_limit: 10,
+        files: [{name: 'Creator-Handbook.pdf', download_count: 2, download_limit: 10}],
+      },
+    },
+  });
+
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
+
+  expect(await screen.findByText('Creator-Handbook.pdf')).toBeTruthy();
+  expect(screen.getAllByText('Buyer One').length).toBeGreaterThan(0);
+  expect(screen.getByText('buyer@example.com')).toBeTruthy();
+  expect(screen.getByText('2 of 10 downloads used across 1 files')).toBeTruthy();
+  expect(screen.queryByRole('progressbar')).toBeNull();
+  expect(screen.getByRole('button', {name: 'Copy transaction reference'})).toBeTruthy();
+  expect(screen.getByText('Platform fee')).toBeTruthy();
+  expect(screen.getByText('Your earnings')).toBeTruthy();
+
+  const body = document.querySelector('[data-slot="dialog-body"]')!;
+  const header = document.querySelector('[data-slot="dialog-header"]')!;
+  expect(body.className).toContain('scroll-fade-y');
+  expect(header.className).toContain('border-transparent');
+  fireEvent.scroll(body, {target: {scrollTop: 24}});
+  expect(header.className).toContain('shadow-sm');
+  expect(header.className).toContain('border-border');
 });
 
 it('surfaces order loading errors', async () => {

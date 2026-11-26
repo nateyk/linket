@@ -26,7 +26,7 @@ export function ServiceDescriptionEditor({
       initialContent={value}
       onChange={onChange}
     >
-      <div className="overflow-hidden rounded-input border border-input">
+      <div className="overflow-hidden rounded-input border border-input transition-colors focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring">
         <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />

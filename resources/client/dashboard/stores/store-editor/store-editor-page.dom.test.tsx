@@ -563,3 +563,14 @@ test('Save & leave shares the failure states and stays in the editor (A-07)', as
     screen.getByRole('button', {name: /Save changes/}).hasAttribute('disabled'),
   ).toBe(false);
 });
+
+test('dashboard section uses floating rounded-card chrome with overflow clipping for all four corners', async () => {
+  await renderLoadedEditor();
+  const section = document.querySelector('[data-slot="dashboard-section"]')!;
+  expect(section).not.toBeNull();
+  expect(section.getAttribute('data-variant')).toBe('floating');
+  expect(section.className).toContain('rounded-card');
+  expect(section.className).toContain('overflow-hidden');
+  expect(section.className).toContain('shadow-sm');
+  expect(section.className).toContain('ring-1');
+});

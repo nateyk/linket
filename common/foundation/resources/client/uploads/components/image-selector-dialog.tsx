@@ -13,9 +13,11 @@ import {useControlledState} from '@react-stately/utils';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Empty} from '@shadcn/empty/empty';
-import {Slider} from '@shadcn/forms/slider/slider';
-import {HookForm} from '@shadcn/forms/form/hook-form';
-import {cropStageBoxStyle} from '@shadcn/image-crop/image-crop';
+import {
+  ImageCropZoomControls,
+  cropDialogWidthClass,
+  cropStageBoxStyle,
+} from '@shadcn/image-crop/image-crop';
 import {Progress} from '@shadcn/progress/progress';
 import {toast} from '@shadcn/toast/toast';
 import {Trans} from '@ui/i18n/trans';
@@ -26,7 +28,7 @@ import {cn} from '@ui/utils/cn';
 import {prettyBytes} from '@ui/utils/files/pretty-bytes';
 import {UploadedFile} from '@ui/utils/files/uploaded-file';
 import {FileInputType} from '@ui/utils/files/file-input-config';
-import {UploadIcon} from 'lucide-react';
+import {RotateCcwIcon, UploadIcon} from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -190,9 +192,16 @@ function ImageSelectorDialogContent({
     uploadOptions,
   ]);
 
+  const cropAspect = cropDimensions.width / cropDimensions.height;
+
   return (
-    <Dialog.Content className="max-h-[calc(100dvh-1rem)] gap-2.5 overflow-y-auto p-3 sm:max-w-xl sm:p-4">
-      <Dialog.Header className="gap-0.5 pr-8">
+    <Dialog.Content
+      className={cn(
+        'max-h-[calc(100dvh-1rem)] gap-2 overflow-y-auto p-3.5 sm:p-4',
+        selectedImageUrl ? cropDialogWidthClass(cropAspect) : 'sm:max-w-lg',
+      )}
+    >
+      <Dialog.Header className="min-h-7 justify-center gap-0.5 pr-9">
         <Dialog.Title>
           <Trans message="Upload image" />
         </Dialog.Title>
@@ -200,19 +209,36 @@ function ImageSelectorDialogContent({
           <Trans message="Choose an image, reposition it and adjust Zoom before uploading." />
         </Dialog.Description>
       </Dialog.Header>
-      <Dialog.Body className="-mx-3 flex-none grow-0 px-3 py-0 sm:-mx-4 sm:px-4">
+      <Dialog.Body className="-mx-3.5 flex-none grow-0 px-3.5 py-0 sm:-mx-4 sm:px-4">
         {selectedImageUrl ? (
-          <>
+          <div className="flex flex-col gap-2">
             <div className="flex w-full justify-center">
               <div
                 role="group"
                 tabIndex={0}
                 aria-label={trans(message('Image crop area'))}
                 aria-describedby={cropInstructionsId}
-                style={cropStageBoxStyle(cropDimensions.width / cropDimensions.height)}
-                className="image-crop-stage relative overflow-hidden rounded-input bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                style={cropStageBoxStyle(cropAspect)}
+                className="image-crop-stage relative overflow-hidden rounded-card-sm bg-muted ring-1 ring-foreground/15 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
                 onKeyDown={event => {
                   if (event.target !== event.currentTarget) return;
+                  if (event.key === '+' || event.key === '=') {
+                    event.preventDefault();
+                    setZoom(current => Math.min(3, Math.round((current + 0.15) * 100) / 100));
+                    return;
+                  }
+                  if (event.key === '-' || event.key === '_') {
+                    event.preventDefault();
+                    setZoom(current => Math.max(1, Math.round((current - 0.15) * 100) / 100));
+                    return;
+                  }
+                  if (event.key === '0') {
+                    event.preventDefault();
+                    setCrop({x: 0, y: 0});
+                    setZoom(1);
+                    setCroppedAreaPixels(null);
+                    return;
+                  }
                   const step = event.shiftKey ? 20 : 6;
                   const offsets = {
                     ArrowLeft: {x: -step, y: 0},
@@ -227,13 +253,14 @@ function ImageSelectorDialogContent({
                 }}
               >
                 <span id={cropInstructionsId} className="sr-only">
-                  <Trans message="Drag to reposition the image, or use arrow keys. Hold Shift for larger steps." />
+                  <Trans message="Drag to reposition the image, or use arrow keys. Hold Shift for larger steps, or press plus and minus to zoom." />
                 </span>
                 <Cropper
                   image={selectedImageUrl}
                   crop={crop}
                   zoom={zoom}
-                  aspect={cropDimensions.width / cropDimensions.height}
+                  aspect={cropAspect}
+                  showGrid
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={handleCropComplete}
@@ -241,26 +268,12 @@ function ImageSelectorDialogContent({
                 {isUploading && <UploadProgress percentage={percentage} />}
               </div>
             </div>
-            <HookForm.FieldContext.Provider value={undefined}>
-              <Slider
-                min={1}
-                max={3}
-                step={0.1}
-                value={zoom}
-                onValueChange={next => setZoom((next as number) ?? 1)}
-                disabled={isBusy}
-                className="flex items-center gap-3"
-              >
-                <Slider.Label className="shrink-0 text-xs text-muted-foreground">
-                  <Trans message="Zoom" />
-                </Slider.Label>
-                <Slider.Control className="min-w-0 flex-1 py-2">
-                  <Slider.Track><Slider.Indicator /></Slider.Track>
-                  <Slider.Thumb aria-label={trans(message('Zoom'))} />
-                </Slider.Control>
-              </Slider>
-            </HookForm.FieldContext.Provider>
-          </>
+            <ImageCropZoomControls
+              zoom={zoom}
+              disabled={isBusy}
+              onZoomChange={setZoom}
+            />
+          </div>
         ) : (
           <Dropzone
             disabled={isBusy}
@@ -271,7 +284,7 @@ function ImageSelectorDialogContent({
       </Dialog.Body>
 
       {selectedImageUrl && (
-        <Dialog.Footer className="-mx-3 -mb-3 flex-row flex-wrap items-center justify-end gap-1.5 border-t border-border/60 px-3 pt-2.5 pb-3 sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-3 sm:pb-4">
+        <Dialog.Footer className="-mx-3.5 -mb-3.5 flex-row flex-wrap items-center justify-end gap-1.5 border-t border-border/60 px-3.5 pt-2.5 pb-3.5 sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2.5 sm:pb-4">
           <Button
             type="button"
             variant="ghost"
@@ -284,6 +297,7 @@ function ImageSelectorDialogContent({
               setCroppedAreaPixels(null);
             }}
           >
+            <RotateCcwIcon data-icon="inline-start" />
             <Trans message="Reset" />
           </Button>
           <Dialog.CloseButton variant="outline" size="sm" disabled={isBusy}>
@@ -337,7 +351,7 @@ function Dropzone({
         }}
       />
 
-      <Empty.Root>
+      <Empty.Root className="gap-2 p-4">
         <Empty.Header>
           <Empty.Media variant="icon">
             <UploadIcon />

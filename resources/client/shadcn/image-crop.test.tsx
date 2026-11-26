@@ -94,13 +94,15 @@ describe('reusable image crop composer', () => {
       'utf8',
     );
 
-    // Stage height follows the crop aspect — not a fixed tall gray box
+    // Stage height follows the crop aspect and width shrinks with maxHeight * aspect
     expect(cropSource).toContain('cropStageBoxStyle');
     expect(cropSource).toContain('aspectRatio');
     expect(cropSource).toContain('image-crop-stage');
     expect(cropSource).not.toContain('h-[min(36dvh,360px)]');
     expect(cropSource).not.toContain('sm:h-[min(44dvh,440px)]');
-    expect(selectorSource).toContain('sm:max-w-2xl');
+    expect(cropSource).toContain('cropDialogWidthClass');
+    expect(cropSource).toContain('sm:max-w-2xl');
+    expect(selectorSource).toContain('cropDialogWidthClass');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
     // fixed window, no scroll: the image pans under it to reach any region
@@ -113,7 +115,7 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('coverZoomForCrop');
     expect(cropSource).toContain('aspectFitCropSize');
     expect(cropSource).toContain('minZoom={minZoom}');
-    expect(cropSource).toContain('showGrid={false}');
+    expect(cropSource).toContain('showGrid');
     // observer re-attaches when the stage mounts (imageUrl), never stuck on null ref
     expect(cropSource).toContain('stageSizeRef');
     expect(cropSource).toContain('}, [imageUrl]);');
@@ -122,14 +124,14 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('aria-describedby={cropInstructionsId}');
     expect(cropSource).toContain('focus-visible:outline-2');
     expect(cropSource).toContain('setCrop(previous =>');
-    // slider-driven zoom with themed thumb, clamped minZoom-3
+    // shared zoom controls with noticeable zoom-in / zoom-out buttons & themed slider
+    expect(cropSource).toContain('ImageCropZoomControls');
+    expect(cropSource).toContain('ZoomOutIcon');
+    expect(cropSource).toContain('ZoomInIcon');
     expect(cropSource).toContain('<Slider');
-    expect(cropSource).toContain('size-4');
+    expect(cropSource).toContain('size-3.5');
     expect(cropSource).toContain('bg-primary');
-    expect(cropSource).toContain('Math.min(3');
-    expect(cropSource).not.toContain('zoomIn');
-    expect(cropSource).not.toContain('zoomOut');
-    expect(cropSource).not.toContain('ImageCropZoomControls');
+    expect(cropSource).toContain('Math.min(maxZoom');
     // ratio always locked to the caller aspect, remount is keyed to the
     // measured window so the engine starts from final values
     expect(cropSource).toContain('lockedAspect');
@@ -144,16 +146,18 @@ describe('reusable image crop composer', () => {
 });
 
 describe('crop stage box style', () => {
-  test('wide covers stay short; avatars stay near-square', async () => {
+  test('gives covers and avatars spacious stage dimensions without empty side gutters', async () => {
     const {cropStageBoxStyle} = await import('@shadcn/image-crop/image-crop');
     const cover = cropStageBoxStyle(3);
     expect(cover.aspectRatio).toBe('3');
-    expect(String(cover.maxHeight)).toContain('170px');
+    expect(String(cover.maxHeight)).toContain('240px');
+    expect(String(cover.width)).toContain('min(100%');
 
     const avatar = cropStageBoxStyle(1);
     expect(avatar.aspectRatio).toBe('1');
     expect(avatar.maxWidth).toBe('100%');
-    expect(String(avatar.maxHeight)).toContain('300px');
+    expect(String(avatar.maxHeight)).toContain('384px');
+    expect(String(avatar.width)).toContain('min(100%');
   });
 });
 

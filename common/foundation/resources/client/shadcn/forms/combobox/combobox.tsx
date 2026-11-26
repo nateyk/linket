@@ -344,7 +344,7 @@ function ComboboxChips({
       <ComboboxPrimitive.Chips
         data-slot="dropdown-chips"
         className={cn(
-          'flex min-h-9 flex-wrap items-center gap-1.5 rounded-input border border-input bg-transparent bg-clip-padding px-3 py-1.5 text-sm transition-[color,box-shadow,background-color] focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid has-aria-invalid:border-destructive has-aria-invalid:outline-destructive has-aria-invalid:focus-within:outline-1 has-data-[slot=dropdown-chip]:px-1.5 dark:bg-input/30',
+          'flex min-h-9 flex-wrap items-center gap-1.5 rounded-input border border-input bg-transparent bg-clip-padding px-3 py-1.5 text-sm transition-[color,box-shadow,background-color] focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring has-aria-invalid:border-destructive has-aria-invalid:outline-destructive has-aria-invalid:focus-within:outline-1 has-data-[slot=dropdown-chip]:px-1.5 dark:bg-input/30',
           className,
         )}
         {...props}

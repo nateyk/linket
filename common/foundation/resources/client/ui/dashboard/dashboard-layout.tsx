@@ -45,7 +45,7 @@ function Root({
           className={cn(
             // Keep positioned controls visible at the outer shell boundary.
             // Individual content sections own their scrolling and clipping.
-            'group/dashboard-layout relative isolate flex h-screen supports-[height:100dvh]:h-dvh flex-col bg-background',
+            'group/dashboard-layout relative isolate flex h-screen supports-[height:100dvh]:h-dvh flex-col overflow-clip bg-background',
             !isMobileMode &&
               'has-data-[variant=floating]:gap-2 has-data-[variant=floating]:p-2 light:has-data-[variant=floating]:bg-muted light:has-data-[variant=inset]:bg-muted',
             className,
@@ -63,7 +63,7 @@ function Content({className, ...props}: ComponentProps<'div'>) {
     <div
       data-slot="dashboard-content"
       className={cn(
-        'flex min-h-0 flex-1 overflow-hidden has-data-[variant=floating]:gap-2',
+        'flex min-h-0 flex-1 has-data-[variant=floating]:gap-2',
         className,
       )}
       {...props}
@@ -87,7 +87,7 @@ function Navbar({
       data-slot="navbar"
       data-variant={variant}
       className={cn(
-        'flex items-center gap-4 px-2',
+        'flex shrink-0 items-center gap-4 px-2',
         className,
         variant === 'default' && 'border-b bg-background py-2',
       )}
@@ -112,10 +112,10 @@ function Section({
     props: mergeProps<'section'>(
       {
         className: cn(
-          'flex h-full min-h-0 min-w-0 flex-col bg-background [--section-spacing:--spacing(4)] md:[--section-spacing:--spacing(6)]',
+          'flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background [--section-spacing:--spacing(4)] md:[--section-spacing:--spacing(6)]',
           variant === 'floating' &&
             !isMobileMode &&
-            'rounded-card bg-card dark:bg-card',
+            'rounded-card bg-card shadow-sm ring-1 ring-border/60',
           className,
         ),
       },
@@ -138,7 +138,7 @@ function SectionHeader({className, ...props}: ComponentProps<'div'>) {
     <div
       data-slot="section-header"
       className={cn(
-        'flex h-14 w-full min-w-0 shrink-0 items-center gap-2 border-b px-(--section-spacing) **:data-[slot="sidebar-toggle-button"]:-ms-1',
+        'flex h-14 w-full min-w-0 shrink-0 items-center gap-2 border-b border-border px-(--section-spacing) **:data-[slot="sidebar-toggle-button"]:-ms-1',
         className,
       )}
       {...props}
@@ -175,7 +175,7 @@ function SectionContent({className, ...props}: ComponentProps<'div'>) {
     <div
       data-slot="section-content"
       className={cn(
-        'flex min-h-0 flex-auto flex-col gap-(--section-spacing) p-(--section-spacing) not-[data-slot="section-scroll-container"]:overflow-y-auto',
+        'flex min-h-0 flex-1 flex-col gap-(--section-spacing) overflow-y-auto overscroll-y-contain p-(--section-spacing) has-[>[data-slot="section-scroll-container"]]:overflow-hidden',
         className,
       )}
       {...props}
@@ -204,7 +204,7 @@ function SectionScrollContainer({
     <div
       data-slot="section-scroll-container"
       className={cn(
-        '-mx-(--section-spacing) flex-auto scrollbar-thumb-foreground/20 scrollbar-track-transparent overflow-y-auto px-(--section-spacing)',
+        '-mx-(--section-spacing) min-h-0 flex-1 scrollbar-thumb-foreground/20 scrollbar-track-transparent overflow-y-auto overscroll-y-contain px-(--section-spacing)',
         className,
       )}
     >

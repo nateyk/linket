@@ -38,7 +38,6 @@ import {
 } from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
-import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
@@ -192,13 +191,13 @@ function NonCourseAuthoringLayout({
       data-testid="product-authoring-layout"
     >
       <ProductAuthoringSteps type={type} active={activeStep} completed={completed} onSelect={onSelect} />
-      <div className="min-w-0 space-y-4">
+      <div className="flex min-w-0 flex-col gap-4">
         {children}
-        <div className="flex items-center justify-between gap-3 border-t pt-4">
+        <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
           {previous ? (
             <Button type="button" size="sm" variant="outline" className="min-h-11"
               onClick={() => onSelect(previous)}>
-              <ChevronLeftIcon className="size-4 rtl:rotate-180" aria-hidden="true" />
+              <ChevronLeftIcon className="size-4 rtl:rotate-180" data-icon="inline-start" aria-hidden="true" />
               <Trans message="Previous step" />
             </Button>
           ) : (
@@ -210,7 +209,7 @@ function NonCourseAuthoringLayout({
             <Button type="button" size="sm" className="ms-auto min-h-11"
               onClick={() => onSelect(next)}>
               <Trans message="Continue" />
-              <ChevronRightIcon className="size-4 rtl:rotate-180" aria-hidden="true" />
+              <ChevronRightIcon className="size-4 rtl:rotate-180" data-icon="inline-end" aria-hidden="true" />
             </Button>
           ) : (
             <span className="ms-auto text-xs text-muted-foreground">
@@ -793,6 +792,7 @@ function DigitalProductForm() {
 
   const detailsFields = (
     <DetailsPanel
+      productType={effectiveFileType}
       title={title}
       description={description}
       productId={product?.id}
@@ -1259,6 +1259,7 @@ function DigitalProductForm() {
                       >
                         {section === 'details' && (
                           <DetailsPanel
+                            productType={effectiveFileType}
                             title={title}
                             description={description}
                             productId={product?.id}
@@ -1376,7 +1377,52 @@ function DigitalProductForm() {
 
 /* ─── Details Panel ── */
 
+type ProductDetailsCopy = {
+  titleLabel: string;
+  titlePlaceholder: string;
+  titleDescription: string;
+  descriptionHint: string;
+  coverLabel: string;
+  coverHint: string;
+};
+
+const PRODUCT_DETAILS_COPY: Record<'digital' | 'ebook' | 'audio' | 'course', ProductDetailsCopy> = {
+  digital: {
+    titleLabel: 'Product title',
+    titlePlaceholder: 'My digital guide',
+    titleDescription: 'Choose a clear title customers can easily understand.',
+    descriptionHint: 'Describe what buyers receive and who this product is for.',
+    coverLabel: 'Cover image',
+    coverHint: 'Shown on your product listing and Storefronts (16:9 recommended).',
+  },
+  ebook: {
+    titleLabel: 'Book title',
+    titlePlaceholder: 'e.g. Modern Ethiopian Coffee Guide',
+    titleDescription: 'Use the book or comic title readers will see on your storefront.',
+    descriptionHint: 'Summarize the book, key chapters, and reading format.',
+    coverLabel: 'Book cover',
+    coverHint: 'Shown on your storefront and reader preview (16:9 recommended).',
+  },
+  audio: {
+    titleLabel: 'Audio title',
+    titlePlaceholder: 'e.g. Morning Focus Soundscapes',
+    titleDescription: 'Name the track, podcast episode, or audio collection.',
+    descriptionHint: 'Describe the tracks, runtime, or listening experience.',
+    coverLabel: 'Cover artwork',
+    coverHint: 'Displayed as artwork on your storefront and audio player (16:9 recommended).',
+  },
+  course: {
+    titleLabel: 'Product title',
+    titlePlaceholder: 'My digital guide',
+    titleDescription: 'Choose a clear title customers can easily understand.',
+    descriptionHint: 'Describe what customers will receive.',
+    coverLabel: 'Cover image',
+    coverHint: 'Shown on your product listing and Storefronts.',
+  },
+};
+
 function DetailsPanel({
+  productType = 'digital',
   title,
   description,
   productId,
@@ -1395,6 +1441,7 @@ function DetailsPanel({
   errors,
   hidePricing = false,
 }: {
+  productType?: 'digital' | 'ebook' | 'audio' | 'course';
   title: string;
   description: string;
   productId?: number;
@@ -1417,11 +1464,12 @@ function DetailsPanel({
   const {validateField} = arguments[0] as {validateField: (field: string, value: string) => void};
   const {trans} = useTrans();
   const [copyRevision, setCopyRevision] = useState(0);
+  const copy = PRODUCT_DETAILS_COPY[productType];
   return (
     <div className="flex flex-col gap-4">
       <ProductFormField
-        label="Product title"
-        description={hidePricing ? undefined : "Choose a clear title customers can easily understand."}
+        label={copy.titleLabel}
+        description={copy.titleDescription}
         error={errors.title}
         htmlFor="product-title"
         required
@@ -1434,7 +1482,7 @@ function DetailsPanel({
           value={title}
           maxLength={160}
           onChange={event => onTitleChange(event.target.value)}
-          placeholder="My digital guide"
+          placeholder={trans({message: copy.titlePlaceholder})}
         />
       </ProductFormField>
 
@@ -1454,7 +1502,7 @@ function DetailsPanel({
 
       <ProductFormField
         label="Description"
-        description={hidePricing ? undefined : "Describe what customers will receive."}
+        description={copy.descriptionHint}
         error={errors.description}
         htmlFor="product-description"
         onBlur={() => validateField('description', description)}
@@ -1474,8 +1522,8 @@ function DetailsPanel({
       )}
 
       <ProductFormField
-        label="Cover image"
-        description={hidePricing ? undefined : "Shown on your product listing and Storefronts."}
+        label={copy.coverLabel}
+        description={copy.coverHint}
         error={errors.cover_file_entry_id}
         htmlFor="product-cover"
       >
@@ -1484,7 +1532,7 @@ function DetailsPanel({
           onChange={onCoverChange}
           uploadType="linkImages"
           aspect={16 / 9}
-          label={trans(message('Cover image'))}
+          label={trans({message: copy.coverLabel})}
           className={hidePricing ? 'aspect-video h-auto w-full max-w-lg' : 'aspect-video h-auto w-full'}
         />
       </ProductFormField>
@@ -1603,7 +1651,7 @@ function DescriptionEditor({
           The boundary stays because an editable surface with a toolbar
           needs one (DESIGN.md field spec), it just stops being card
           chrome. */}
-      <div className="overflow-hidden rounded-input border border-input">
+      <div className="overflow-hidden rounded-input border border-input transition-colors focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring">
         <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />
@@ -1842,28 +1890,28 @@ function BioPagesPanel({
 /** Approximate the actual non-course sections without giant blank slabs. */
 function NonCourseEditorSkeleton() {
   return (
-    <div role="status" aria-busy="true" data-testid="non-course-editor-skeleton" className="min-w-0 space-y-4">
+    <div role="status" aria-busy="true" data-testid="non-course-editor-skeleton" className="flex min-w-0 flex-col gap-4">
       <span className="sr-only"><Trans message="Loading product editor" /></span>
-      <div aria-hidden="true" className="flex items-center justify-between gap-2 border-b pb-3">
+      <div aria-hidden="true" className="flex items-center justify-between gap-2 border-b border-border pb-3">
         {Array.from({length: 5}, (_, index) => (
           <Skeleton key={index} className="size-8 rounded-full" />
         ))}
       </div>
-      <div aria-hidden="true" className="space-y-4">
-        <div className="space-y-4 rounded-card-sm border p-4 sm:p-5">
+      <div aria-hidden="true" className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 rounded-card-sm border border-border p-4 sm:p-5">
           <Skeleton className="h-5 w-40 rounded-input" />
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Skeleton className="h-4 w-24 rounded-input" />
             <Skeleton className="h-10 w-full rounded-input" />
           </div>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Skeleton className="h-4 w-28 rounded-input" />
             <Skeleton className="h-28 w-full rounded-input" />
           </div>
           <Skeleton className="aspect-video w-full max-w-lg rounded-input" />
         </div>
         {['files', 'samples', 'price', 'storefront'].map(section => (
-          <div key={section} className="flex min-w-0 items-center justify-between gap-3 rounded-card-sm border p-4 sm:p-5">
+          <div key={section} className="flex min-w-0 items-center justify-between gap-3 rounded-card-sm border border-border p-4 sm:p-5">
             <Skeleton className="h-5 w-36 max-w-full rounded-input" />
             <Skeleton className="size-8 shrink-0 rounded-full" />
           </div>

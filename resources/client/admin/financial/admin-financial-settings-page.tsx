@@ -316,7 +316,7 @@ function CommissionPoliciesTab() {
                 </label>
                 <input id="payout-hold-days" type="number" min="0" max="30" step="1"
                   value={holdDays} onChange={event => { setHoldDays(event.target.value); setSaved(false); }}
-                  className="h-10 w-full rounded-input border border-border bg-background px-3 text-sm" />
+                  className="h-9 w-full rounded-input border border-input bg-background px-3 text-sm transition-colors hover:border-foreground/20 focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring" />
                 <p className="text-xs text-muted-foreground">
                   <Trans message="0 means verified sales are released immediately. Existing held sales follow the updated policy during reconciliation." />
                 </p>
@@ -327,7 +327,7 @@ function CommissionPoliciesTab() {
                 </label>
                 <input id="minimum-withdrawal-etb" type="number" min="1" max="1000000" step="0.01"
                   value={minimumEtb} onChange={event => { setMinimumEtb(event.target.value); setSaved(false); }}
-                  className="h-10 w-full rounded-input border border-border bg-background px-3 text-sm" />
+                  className="h-9 w-full rounded-input border border-input bg-background px-3 text-sm transition-colors hover:border-foreground/20 focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring" />
                 <p className="text-xs text-muted-foreground">
                   <Trans message="The selected payout provider can require a higher minimum." />
                 </p>

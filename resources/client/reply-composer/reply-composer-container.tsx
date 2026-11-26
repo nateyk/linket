@@ -64,7 +64,7 @@ export default function ReplyComposerContainer({
     >
       <div
         className={clsx(
-          'flex flex-col rounded-input border transition-shadow focus-within:border-primary/90 focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary/90',
+          'flex flex-col rounded-input border border-input transition-colors focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring',
           className,
           height ?? 'max-h-240 min-h-172',
         )}

@@ -2,9 +2,9 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from '@shadcn/forms/radio-group/radio-group';
+import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
-import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {cn} from '@ui/utils/cn';
 import {
   BookIcon,
@@ -59,7 +59,9 @@ export function ProductTypePicker({
       id: 'course',
       icon: GraduationCapIcon,
       title: <Trans message="Course" />,
-      description: <Trans message="A curriculum with chapters, lessons, and video." />,
+      description: (
+        <Trans message="A curriculum with chapters, lessons, and video." />
+      ),
     },
   ];
 
@@ -69,7 +71,7 @@ export function ProductTypePicker({
       value={value ?? ''}
       onValueChange={next => onValueChange(next as ProductType)}
       aria-label={trans({message: 'Product type'})}
-      className="grid w-full min-w-0 grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3"
+      className="grid w-full min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3"
     >
       {PRODUCT_TYPES.map(option => {
         const selected = value === option.id;
@@ -83,34 +85,41 @@ export function ProductTypePicker({
           <label
             key={option.id}
             className={cn(
-              'group relative flex min-h-40 min-w-0 cursor-pointer flex-col items-start gap-3 rounded-card-sm border border-border bg-card p-3 text-start whitespace-normal outline-none transition-[border-color,background-color,box-shadow] hover:border-primary/35 hover:bg-muted/30 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-foreground',
-              selected && 'border-primary/60 bg-primary/5 ring-2 ring-primary/15',
+              'group flex min-w-0 cursor-pointer flex-col items-start gap-3 rounded-card-sm border p-3.5 text-start whitespace-normal outline-none transition-[border-color,background-color] has-[:focus-visible]:border-transparent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-ring',
+              selected
+                ? 'border-primary/60 bg-primary/5'
+                : 'border-border bg-card hover:border-foreground/20 hover:bg-muted/30',
             )}
           >
-            <span
-              aria-hidden="true"
-              className={cn(
-                'flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-primary/10 text-primary transition-colors',
-                selected && 'bg-primary text-primary-foreground',
-              )}
-            >
-              <Icon className="size-4.5" />
-            </span>
-            {/* The real radio remains the only selection indicator. It is
-                visible and keyboard focus draws a ring around the entire card. */}
-            <RadioGroupItem
-              value={option.id}
-              className="absolute end-3 top-3 focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-            <span className="mt-auto flex min-w-0 w-full flex-col gap-1">
+            <div className="flex w-full items-center justify-between gap-3">
+              <span
+                aria-hidden="true"
+                data-slot="product-type-icon"
+                className={cn(
+                  'flex size-9 shrink-0 items-center justify-center rounded-card-sm transition-colors',
+                  selected
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-foreground group-hover:bg-accent',
+                )}
+              >
+                <Icon className="size-4" />
+              </span>
+              {/* The real radio remains the only selection indicator. It is
+                  visible and keyboard focus draws an outline around the card. */}
+              <RadioGroupItem
+                value={option.id}
+                className="focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+            </div>
+            <span className="flex w-full min-w-0 flex-col gap-0.5">
               <span className="text-sm leading-tight font-semibold text-foreground">
                 {option.title}
               </span>
-              <span className="line-clamp-3 text-xs leading-4 text-muted-foreground">
+              <span className="text-xs leading-relaxed text-muted-foreground">
                 {option.description}
               </span>
               {hint && (
-                <span className="line-clamp-1 text-[11px] leading-4 text-muted-foreground">
+                <span className="mt-1 text-[11px] leading-tight font-medium text-muted-foreground">
                   {hint}
                 </span>
               )}

@@ -16,6 +16,7 @@ import {
   ImageCropApply,
   ImageCropContent,
   ImageCropReset,
+  cropDialogWidthClass,
 } from '@shadcn/image-crop/image-crop';
 import {Trans} from '@ui/i18n/trans';
 import {toast} from '@ui/toast/toast';
@@ -23,7 +24,7 @@ import {cn} from '@ui/utils/cn';
 import {prettyBytes} from '@ui/utils/files/pretty-bytes';
 import {UploadedFile} from '@ui/utils/files/uploaded-file';
 import {FileInputType} from '@ui/utils/files/file-input-config';
-import {MoreVerticalIcon, UploadIcon} from 'lucide-react';
+import {MoreVerticalIcon, RotateCcwIcon, UploadIcon} from 'lucide-react';
 import {useCallback, useRef, useState, type CSSProperties} from 'react';
 
 interface CroppedImageSelectorProps {
@@ -169,6 +170,9 @@ export function CroppedImageSelector({
       ? {aspectRatio: String(aspect)}
       : undefined;
 
+  const effectiveCropRadius =
+    cropRadius ?? (shape === 'circle' ? '9999px' : undefined);
+
   return (
     <>
       <input
@@ -313,14 +317,8 @@ export function CroppedImageSelector({
           <Dialog.Backdrop />
           <Dialog.Content
             className={cn(
-              'max-h-[calc(100dvh-1rem)] gap-2.5 overflow-y-auto p-3 sm:p-4',
-              // Dialog.Content ships sm:max-w-md — unprefixed max-w-* does NOT
-              // replace it (tw-merge keeps both variants). Override sm: too.
-              (aspect ?? 1) <= 1.15
-                ? 'max-w-[min(calc(100vw-2rem),24rem)] sm:max-w-sm'
-                : (aspect ?? 1) >= 2.5
-                  ? 'max-w-[min(calc(100vw-2rem),42rem)] sm:max-w-2xl'
-                  : 'max-w-[min(calc(100vw-2rem),36rem)] sm:max-w-xl',
+              'max-h-[calc(100dvh-1rem)] gap-2 overflow-y-auto p-3.5 sm:p-4',
+              cropDialogWidthClass(aspect),
             )}
           >
             {pendingFile ? (
@@ -328,9 +326,9 @@ export function CroppedImageSelector({
                 aspect={aspect}
                 file={pendingFile}
                 onCrop={handleCrop}
-                radius={cropRadius}
+                radius={effectiveCropRadius}
               >
-                <Dialog.Header className="gap-0.5 pr-8">
+                <Dialog.Header className="min-h-7 justify-center gap-0.5 pr-9">
                   <Dialog.Title>
                     {label ? label : <Trans message="Crop image" />}
                   </Dialog.Title>
@@ -340,12 +338,13 @@ export function CroppedImageSelector({
                 </Dialog.Header>
                 {/* flex-none: Dialog.Body defaults to flex-1 and leaves a tall
                     empty band between Zoom and the footer. */}
-                <Dialog.Body className="-mx-3 flex-none grow-0 px-3 py-0 sm:-mx-4 sm:px-4">
+                <Dialog.Body className="-mx-3.5 flex-none grow-0 px-3.5 py-0 sm:-mx-4 sm:px-4">
                   <ImageCropContent />
                 </Dialog.Body>
-                <Dialog.Footer className="-mx-3 -mb-3 flex-row flex-wrap items-center justify-end gap-1.5 border-t border-border/60 px-3 pt-2.5 pb-3 sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-3 sm:pb-4">
+                <Dialog.Footer className="-mx-3.5 -mb-3.5 flex-row flex-wrap items-center justify-end gap-1.5 border-t border-border/60 px-3.5 pt-2.5 pb-3.5 sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2.5 sm:pb-4">
                   <ImageCropReset asChild>
                     <Button type="button" variant="ghost" size="sm" className="mr-auto px-2">
+                      <RotateCcwIcon data-icon="inline-start" />
                       <Trans message="Reset" />
                     </Button>
                   </ImageCropReset>
