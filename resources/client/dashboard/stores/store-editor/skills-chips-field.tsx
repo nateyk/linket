@@ -36,7 +36,7 @@ export function parseSkills(value: string | undefined): string[] {
 
 /** The same box and focus ring as the combobox chips field. */
 const chipsContainerStyles =
-  'flex min-h-9 flex-wrap items-center gap-1.5 rounded-input border border-input bg-transparent bg-clip-padding px-3 py-1.5 text-sm transition-[color,box-shadow,background-color] focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid has-aria-invalid:border-destructive has-aria-invalid:outline-destructive has-aria-invalid:focus-within:outline-1 has-data-[slot=skills-chip]:px-1.5 dark:bg-input/30';
+  'flex min-h-9 flex-wrap items-center gap-1.5 rounded-input border border-input bg-transparent bg-clip-padding px-3 py-1.5 text-sm transition-[color,box-shadow,background-color] focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring has-aria-invalid:border-destructive has-aria-invalid:outline-destructive has-aria-invalid:focus-within:outline-1 has-data-[slot=skills-chip]:px-1.5 dark:bg-input/30';
 
 const chipStyles =
   'flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 rounded-md bg-secondary px-2 text-xs font-medium whitespace-nowrap text-secondary-foreground has-data-[slot=skills-chip-remove]:pe-0 dark:bg-input/60';

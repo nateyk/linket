@@ -620,3 +620,17 @@ describe('inline course settings', () => {
     expect(await screen.findByText('course builder')).toBeTruthy();
   }, 10_000);
 });
+
+describe('core UI consistency with product editors', () => {
+  const courseFields = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-settings-fields.tsx'),
+    'utf8',
+  );
+
+  test('uses rounded-card-sm section chrome and bordered description input without dark overrides', () => {
+    expect(source).toContain('rounded-card-sm border border-border bg-card p-4 sm:p-5');
+    expect(source).toContain('border-b border-border pb-3');
+    expect(courseFields).toContain('rounded-input border border-input bg-background');
+    expect(courseFields).not.toContain('dark:prose-invert');
+  });
+});

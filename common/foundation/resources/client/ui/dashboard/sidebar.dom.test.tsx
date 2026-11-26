@@ -49,5 +49,16 @@ test('layout shell tracks the dynamic viewport without clipping positioned child
   expect(root).toBeTruthy();
   expect(root!.className).toContain('h-screen');
   expect(root!.className).toContain('supports-[height:100dvh]:h-dvh');
+  expect(root!.className).toContain('overflow-clip');
   expect(root!.className).not.toContain('overflow-hidden');
+
+  const nav = document.querySelector<HTMLElement>('[data-slot="sidebar"]');
+  expect(nav!.className).toContain('min-h-0');
+  expect(nav!.className).toContain('overflow-hidden');
+
+  const content = document.querySelector<HTMLElement>(
+    '[data-slot="dashboard-content"]',
+  );
+  expect(content).toBeTruthy();
+  expect(content!.className).not.toContain('overflow-hidden');
 });

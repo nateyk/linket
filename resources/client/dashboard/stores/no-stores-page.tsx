@@ -16,29 +16,31 @@ export function Component() {
         </h1>
       </DashboardLayout.SectionHeader>
 
-      <Empty.Root>
-        <Empty.Header className="max-w-md">
-          <Empty.Media variant="icon">
-            <LayoutPanelTop />
-          </Empty.Media>
-          <Empty.Title>
-            <Trans message="No stores yet" />
-          </Empty.Title>
-          <Empty.Description>
-            <Trans message="This workspace has no stores yet. Create one to get started." />
-          </Empty.Description>
-        </Empty.Header>
-        <Empty.Content>
-          <CreateBiolinkDialog>
-            <Dialog.Trigger
-              render={<Button variant="default" color="primary" />}
-            >
-              <PlusIcon />
-              <Trans message="Create store" />
-            </Dialog.Trigger>
-          </CreateBiolinkDialog>
-        </Empty.Content>
-      </Empty.Root>
+      <DashboardLayout.SectionContent>
+        <Empty.Root>
+          <Empty.Header className="max-w-md">
+            <Empty.Media variant="icon">
+              <LayoutPanelTop />
+            </Empty.Media>
+            <Empty.Title>
+              <Trans message="No stores yet" />
+            </Empty.Title>
+            <Empty.Description>
+              <Trans message="This workspace has no stores yet. Create one to get started." />
+            </Empty.Description>
+          </Empty.Header>
+          <Empty.Content>
+            <CreateBiolinkDialog>
+              <Dialog.Trigger
+                render={<Button variant="default" color="primary" />}
+              >
+                <PlusIcon />
+                <Trans message="Create store" />
+              </Dialog.Trigger>
+            </CreateBiolinkDialog>
+          </Empty.Content>
+        </Empty.Root>
+      </DashboardLayout.SectionContent>
     </DashboardLayout.MainSection>
   );
 }

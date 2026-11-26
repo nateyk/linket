@@ -1,4 +1,5 @@
 @import 'tailwindcss' source(none);
+@import 'shadcn/tailwind.css';
 
 @import '../../common/foundation/resources/client/core/common.css';
 @import './help-center/tickets-portal/ticket-page/customer-ticket-page-layout.css';

@@ -88,7 +88,7 @@ describe('cropped image selector', () => {
 
   test('crop dialog body does not grow into empty whitespace', () => {
     expect(selectorSource).toContain('flex-none grow-0');
-    expect(selectorSource).toContain('gap-2.5');
+    expect(selectorSource).toContain('gap-2');
     expect(selectorSource).toContain('max-h-[calc(100dvh-1rem)]');
     expect(selectorSource).toContain('Dialog.Description className="sr-only"');
   });
@@ -100,20 +100,20 @@ describe('cropped image selector', () => {
   });
 
   test('crop dialog width follows crop aspect (square tight, cover wide)', () => {
-    expect(selectorSource).toContain('sm:max-w-sm');
-    expect(selectorSource).toContain('sm:max-w-2xl');
-    expect(selectorSource).toContain('sm:max-w-xl');
-    expect(selectorSource).toContain('p-3 sm:p-4');
-    expect(selectorSource).toContain(
-      "'max-w-[min(calc(100vw-2rem),24rem)] sm:max-w-sm'",
-    );
+    expect(selectorSource).toContain('cropDialogWidthClass(aspect)');
+    expect(selectorSource).toContain('p-3.5 sm:p-4');
+    expect(cropSource).toContain('sm:max-w-md');
+    expect(cropSource).toContain('sm:max-w-2xl');
+    expect(cropSource).toContain('sm:max-w-xl');
   });
 });
 
-describe('image crop stage density', () => {
-  test('stage wash is quieter than the stock sample and uses token mixes', () => {
-    expect(cropCss).toMatch(/color-mix\(in srgb, var\(--color-background\) 5[0-9]%/);
-    expect(cropCss).toMatch(/color-mix\(in srgb, var\(--color-foreground\) 2[0-9]%/);
+describe('image crop stage contrast', () => {
+  test('stage separates the crop frame from photo and dialog using semantic tokens', () => {
+    expect(cropCss).toContain('--color-toast');
+    expect(cropCss).toContain('--color-foreground');
+    expect(cropCss).toContain('--color-background');
+    expect(cropCss).toContain('--color-muted');
   });
 });
 
@@ -139,6 +139,8 @@ describe('image crop stage chrome', () => {
   test('stage carries the themed crop class and Zoom thumb is named', () => {
     expect(cropSource).toContain('image-crop-stage');
     expect(cropSource).toContain('aria-label={trans(message(\'Zoom\'))}');
+    expect(cropSource).toContain('aria-label={trans(message(\'Zoom out\'))}');
+    expect(cropSource).toContain('aria-label={trans(message(\'Zoom in\'))}');
   });
 });
 
@@ -148,16 +150,16 @@ const legacySelectorSource = fs.readFileSync(
 );
 
 describe('image selector upload dialog', () => {
-  test('uses the shared aspect-aware stage instead of a fixed 320px crop box', () => {
+  test('uses the shared aspect-aware stage and zoom controls instead of duplicate markup', () => {
     expect(legacySelectorSource).toContain('cropStageBoxStyle');
+    expect(legacySelectorSource).toContain('cropDialogWidthClass');
+    expect(legacySelectorSource).toContain('ImageCropZoomControls');
     expect(legacySelectorSource).toContain('image-crop-stage');
     expect(legacySelectorSource).not.toContain('mb-4 h-80');
     expect(legacySelectorSource).toContain('max-h-[calc(100dvh-1rem)]');
   });
 
-  test('provides visible zoom, labelled controls and compact upload actions', () => {
-    expect(legacySelectorSource).toContain('HookForm.FieldContext.Provider');
-    expect(legacySelectorSource).toContain("aria-label={trans(message('Zoom'))}");
+  test('provides labelled controls and compact upload actions', () => {
     expect(legacySelectorSource).toContain('flex-row flex-wrap items-center');
     expect(legacySelectorSource).toContain('Dialog.CloseButton');
     expect(legacySelectorSource).toContain('onDrop={event =>');

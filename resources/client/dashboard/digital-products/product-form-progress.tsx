@@ -49,11 +49,11 @@ export function ProductFormProgress({
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-end lg:justify-between',
+        'flex flex-col gap-3 border-b border-border pb-4 lg:flex-row lg:items-end lg:justify-between',
         className,
       )}
     >
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-1">
         {isSteps ? (
           // Distill: one line — position only. No setup heading.
           <p className="text-sm font-medium">
@@ -67,7 +67,7 @@ export function ProductFormProgress({
             <p className="text-sm font-medium">
               {heading ?? <Trans message="Product setup" />}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               <Trans
                 message=":completed of :total required sections complete"
                 values={{completed, total}}

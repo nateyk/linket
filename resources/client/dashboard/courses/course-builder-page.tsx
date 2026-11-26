@@ -801,12 +801,12 @@ function CourseBuilder() {
           {/* Curriculum */}
           <div
             className={cn(
-              'flex min-h-0 w-full min-w-0 flex-col overflow-hidden border-b bg-card lg:w-[36%] lg:border-r lg:border-b-0',
+              'flex min-h-0 w-full min-w-0 flex-col overflow-hidden border-b border-border bg-card lg:w-[36%] lg:border-r lg:border-b-0',
               mobileSurface === 'editor' && 'hidden lg:flex',
             )}
           >
             {movedNotice && (
-              <div className="border-b px-3 py-3">
+              <div className="border-b border-border px-3 py-3">
                 <Alert.Root className="border-primary/20 bg-primary/5">
                   <Alert.Description className="flex flex-wrap items-center justify-between gap-2">
                     <Trans message="Course details live here in the course builder." />
@@ -817,7 +817,7 @@ function CourseBuilder() {
                 </Alert.Root>
               </div>
             )}
-            <div className="flex items-center justify-between gap-2 border-b p-3">
+            <div className="flex items-center justify-between gap-2 border-b border-border p-3">
               <h2 className="text-sm font-semibold">
                 <Trans message="Curriculum" />
               </h2>
@@ -826,7 +826,7 @@ function CourseBuilder() {
                 variant="outline"
                 onClick={() => void addChapter()}
               >
-                <PlusIcon />
+                <PlusIcon data-icon="inline-start" aria-hidden="true" />
                 <Trans message="New chapter" />
               </Button>
             </div>
@@ -872,28 +872,28 @@ function CourseBuilder() {
                         {dragHandleRef => (
                           <Collapsible
                             defaultOpen
-                            className="overflow-hidden rounded-card-xs border bg-background"
+                            className="overflow-hidden rounded-card-sm border border-border bg-card"
                           >
-                            <div className="flex items-center gap-2 bg-muted/30 p-2">
+                            <div className="flex items-center gap-1.5 border-b border-border bg-muted/40 p-2">
                               <div className="hidden lg:block">
                                 <button
                                   ref={dragHandleRef}
                                   type="button"
                                   aria-label="Reorder chapter"
                                   disabled={!!reordering}
-                                  className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-input text-foreground/65 transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                  <GripVerticalIcon className="size-4" />
+                                  <GripVerticalIcon className="size-4" aria-hidden="true" />
                                 </button>
                               </div>
                               <CollapsibleTrigger
                                 aria-label="Toggle chapter lessons"
-                                className="group flex size-8 shrink-0 items-center justify-center rounded-card-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                className="group flex size-8 shrink-0 items-center justify-center rounded-card-sm text-muted-foreground transition-colors hover:bg-hover hover:text-foreground"
                               >
                                 <ChevronDownIcon className="size-4 transition-transform group-data-panel-open:rotate-180" />
                               </CollapsibleTrigger>
                               <Input
-                                className="h-8 flex-1 border-0 bg-transparent text-sm font-medium focus-visible:ring-1"
+                                className="h-8 flex-1 border-0 bg-transparent! px-1.5 text-sm font-semibold shadow-none hover:bg-hover/60 focus-visible:bg-background"
                                 defaultValue={chapter.title}
                                 onBlur={e =>
                                   void updateChapterTitle(
@@ -981,9 +981,12 @@ function CourseBuilder() {
                                         <div
                                           className={cn(
                                             'flex items-center gap-2 rounded-card-sm p-2 text-sm',
+                                            'transition-colors',
                                             selectedLesson?.id === lesson.id
                                               ? 'bg-selected'
                                               : 'hover:bg-hover',
+                                            selectedLesson?.id === lesson.id &&
+                                              'ring-1 ring-border',
                                           )}
                                         >
                                           <div className="hidden lg:block">
@@ -992,15 +995,28 @@ function CourseBuilder() {
                                               type="button"
                                               aria-label="Reorder lesson"
                                               disabled={!!reordering}
-                                              className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                                              className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-input text-foreground/65 transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
                                             >
-                                              <GripVerticalIcon className="size-3.5" />
+                                              <GripVerticalIcon className="size-4" aria-hidden="true" />
                                             </button>
                                           </div>
-                                          <VideoIcon className="size-3.5 text-muted-foreground" />
+                                          <VideoIcon
+                                            aria-hidden="true"
+                                            className={cn(
+                                              'size-4 shrink-0',
+                                              selectedLesson?.id === lesson.id
+                                                ? 'text-primary'
+                                                : 'text-muted-foreground',
+                                            )}
+                                          />
                                           <button
                                             type="button"
-                                            className="min-w-0 flex-1 truncate rounded-sm text-left font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                            className={cn(
+                                              'min-w-0 flex-1 truncate rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                              selectedLesson?.id === lesson.id
+                                                ? 'font-semibold text-foreground'
+                                                : 'font-medium text-foreground/85',
+                                            )}
                                             aria-current={selectedLesson?.id === lesson.id ? 'true' : undefined}
                                             onClick={() => openLesson(lesson, chapter.id)}
                                           >
@@ -1141,15 +1157,17 @@ function CourseBuilder() {
                                     </SortableCurriculumItem>
                                   ))
                                 )}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="w-full"
-                                  onClick={() => void addLesson(chapter.id)}
-                                >
-                                  <PlusIcon />
-                                  <Trans message="New lesson" />
-                                </Button>
+                                <div className="mt-1 border-t border-border/60 pt-1.5">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="w-full justify-start text-muted-foreground hover:text-foreground"
+                                    onClick={() => void addLesson(chapter.id)}
+                                  >
+                                    <PlusIcon data-icon="inline-start" aria-hidden="true" />
+                                    <Trans message="New lesson" />
+                                  </Button>
+                                </div>
                               </div>
                             </CollapsibleContent>
                           </Collapsible>

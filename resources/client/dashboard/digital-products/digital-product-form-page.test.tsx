@@ -534,3 +534,26 @@ describe('product editor compact breadcrumb header', () => {
     expect(source).toContain('ms-auto flex');
   });
 });
+
+describe('type-specific details copy and layout consistency', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+    'utf8',
+  );
+
+  test('tails title, cover, and descriptions per product type instead of generic guide copy', () => {
+    expect(source).toContain('PRODUCT_DETAILS_COPY');
+    expect(source).toContain("titleLabel: 'Book title'");
+    expect(source).toContain("coverLabel: 'Book cover'");
+    expect(source).toContain("titleLabel: 'Audio title'");
+    expect(source).toContain("coverLabel: 'Cover artwork'");
+    expect(source).toContain("titlePlaceholder: 'My digital guide'");
+    expect(source).toContain('productType={effectiveFileType}');
+  });
+
+  test('uses flex gap-4 and border-border in authoring layout and skeleton', () => {
+    expect(source).not.toContain('space-y-4');
+    expect(source).toContain('flex min-w-0 flex-col gap-4');
+    expect(source).toContain('border-t border-border pt-4');
+  });
+});

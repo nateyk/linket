@@ -39,7 +39,7 @@ function Textarea({
       render={<textarea rows={rows} />}
       data-slot="textarea"
       className={cn(
-        'flex field-sizing-content min-h-16 w-full resize-none rounded-input border border-input bg-transparent px-3 py-3 text-base transition-[color,box-shadow,background-color] placeholder:text-muted-foreground hover:border-foreground/20 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:outline-destructive md:text-sm dark:bg-input/30 dark:disabled:bg-input/80',
+        'flex field-sizing-content min-h-16 w-full resize-none rounded-input border border-input bg-transparent px-3 py-3 text-base transition-[color,box-shadow,background-color] placeholder:text-muted-foreground hover:border-foreground/20 focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:outline-destructive md:text-sm dark:bg-input/30 dark:disabled:bg-input/80',
         className,
       )}
       onChange={mergedOnChange}

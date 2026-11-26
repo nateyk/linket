@@ -34,6 +34,9 @@ export function DigitalProductEditor({
         active={activeStep === undefined || activeStep === 'details'}
         id="digital-product-details"
         title={<Trans message="Product details" />}
+        description={
+          <Trans message="Title, description, and cover shown on your storefront." />
+        }
       >
         {details}
       </ProductEditorSection>
@@ -42,6 +45,9 @@ export function DigitalProductEditor({
         active={activeStep === undefined || activeStep === 'files'}
         id="digital-product-files"
         title={<Trans message="Files buyers receive" />}
+        description={
+          <Trans message="Private downloadable files unlocked after purchase." />
+        }
       >
         {files}
       </ProductEditorSection>
@@ -50,6 +56,9 @@ export function DigitalProductEditor({
         active={activeStep === undefined || activeStep === 'files'}
         id="digital-product-sample"
         title={<Trans message="Sample PDF (optional)" />}
+        description={
+          <Trans message="Optional public preview file to help buyers evaluate before paying." />
+        }
       >
         {sample}
       </ProductEditorSection>
@@ -58,6 +67,9 @@ export function DigitalProductEditor({
         active={activeStep === undefined || activeStep === 'pricing'}
         id="digital-product-pricing"
         title={<Trans message="Price" />}
+        description={
+          <Trans message="Offer free access or set a price in ETB." />
+        }
       >
         {pricing}
       </ProductEditorSection>
@@ -66,6 +78,9 @@ export function DigitalProductEditor({
         active={activeStep === undefined || activeStep === 'storefront'}
         id="digital-product-storefront"
         title={<Trans message="Storefront placement (optional)" />}
+        description={
+          <Trans message="Choose which storefronts feature this product once approved." />
+        }
       >
         {storefront}
       </ProductEditorSection>

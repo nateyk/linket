@@ -738,7 +738,7 @@ function RequestWithdrawalModal({
                   </label>
                   <select
                     id="withdraw-destination"
-                    className="flex h-9 w-full rounded-input border bg-background px-3 text-sm focus-visible:outline-2"
+                    className="flex h-9 w-full rounded-input border border-input bg-background px-3 text-sm transition-colors hover:border-foreground/20 focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
                     value={selectedDestId ?? ''}
                     onChange={e => setSelectedDestId(Number(e.target.value))}
                     disabled={submitting}
@@ -768,7 +768,7 @@ function RequestWithdrawalModal({
                     step="0.01"
                     min={minimumCents / 100}
                     max={maximumCents / 100}
-                    className="flex h-9 w-full rounded-input border bg-background px-3 text-sm focus-visible:outline-2"
+                    className="flex h-9 w-full rounded-input border border-input bg-background px-3 text-sm transition-colors hover:border-foreground/20 focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
                     value={amountStr}
                     onChange={e => setAmountStr(e.target.value)}
                     disabled={submitting}

@@ -229,9 +229,16 @@ export function Component() {
         <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2 lg:gap-5">
           <CreateCoursePanel
             title="Course details"
+            description="Title, cover image, and pricing shown before learners enroll."
             hasError={!!(errors.title || errors.price)}
           >
-            <ProductFormField label="Course title" error={errors.title} htmlFor="course-title" required>
+            <ProductFormField
+              label="Course title"
+              description="Choose a clear course title learners immediately recognize."
+              error={errors.title}
+              htmlFor="course-title"
+              required
+            >
               <Input
                 id="course-title"
                 aria-invalid={!!errors.title}
@@ -242,7 +249,7 @@ export function Component() {
                   setTitle(event.target.value);
                   setErrors(current => ({...current, title: undefined}));
                 }}
-                placeholder="Course title"
+                placeholder={trans({message: 'e.g. Product Design Foundations'})}
                 autoFocus
               />
             </ProductFormField>
@@ -254,7 +261,7 @@ export function Component() {
               }}
             />
             <div id="course-billing" className="flex flex-col gap-2" tabIndex={-1}>
-              <p className="text-sm font-medium"><Trans message="Free or paid?" /></p>
+              <p className="text-sm font-medium leading-5"><Trans message="Free or paid?" /></p>
               <BillingModePicker
                 value={billingMode}
                 onValueChange={mode => {
@@ -266,8 +273,8 @@ export function Component() {
               />
             </div>
             {isFree ? (
-              <div className="flex flex-col gap-1.5">
-                <p className="text-sm font-medium"><Trans message="Price" /></p>
+              <div className="flex flex-col items-start gap-2">
+                <p className="text-sm font-medium leading-5"><Trans message="Price" /></p>
                 <Badge variant="secondary"><Trans message="Free" /></Badge>
               </div>
             ) : billingMode === 'paid' ? (
@@ -294,7 +301,10 @@ export function Component() {
               </ProductFormField>
             ) : null}
           </CreateCoursePanel>
-          <CreateCoursePanel title="About Course">
+          <CreateCoursePanel
+            title="About Course"
+            description="Course overview and key learning outcomes for your storefront."
+          >
             <CourseSettingsDescriptionField inputId="course-create" value={description} onChange={setDescription} />
             <CourseSettingsOutcomesField outcomes={outcomes} onChange={setOutcomes} />
           </CreateCoursePanel>
@@ -324,26 +334,33 @@ export function Component() {
 
 function CreateCoursePanel({
   title,
+  description,
   hasError = false,
   children,
 }: {
   title: string;
+  description?: string;
   hasError?: boolean;
   children: ReactNode;
 }) {
   return (
     <section
       className={cn(
-        'flex min-w-0 flex-col rounded-card border bg-card',
+        'flex min-w-0 flex-col rounded-card-sm border border-border bg-card p-4 sm:p-5',
         hasError && 'border-destructive/40',
       )}
     >
-      <div className="border-b px-4 py-3">
-        <h2 className="text-sm font-medium tracking-tight">
+      <header className="mb-4 flex flex-col gap-1 border-b border-border pb-3">
+        <h2 className="text-base font-semibold leading-6 text-foreground">
           <Trans message={title} />
         </h2>
-      </div>
-      <div className="flex flex-col gap-4 p-4">{children}</div>
+        {description && (
+          <p className="text-xs leading-4 text-muted-foreground">
+            <Trans message={description} />
+          </p>
+        )}
+      </header>
+      <div className="flex min-w-0 flex-col gap-4">{children}</div>
     </section>
   );
 }

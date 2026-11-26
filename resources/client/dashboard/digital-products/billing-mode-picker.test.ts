@@ -18,10 +18,10 @@ describe('billing mode picker', () => {
     expect(source).toContain("'paid'");
     expect(source).toContain('OptionRowContent');
   });
-  test('type picker uses a responsive card grid while billing keeps row options', () => {
+  test('type picker uses a balanced 2-column card grid while billing keeps row options', () => {
     const picker = read('product-type-picker.tsx');
-    expect(picker).toContain('grid-cols-2');
-    expect(picker).toContain('sm:grid-cols-4');
+    expect(picker).toContain('grid-cols-1');
+    expect(picker).toContain('sm:grid-cols-2');
     expect(picker).toContain('RadioGroupItem');
     expect(picker).toContain('onValueChange: (value: ProductType | null) => void');
     expect(picker).not.toContain('OptionRowContent');

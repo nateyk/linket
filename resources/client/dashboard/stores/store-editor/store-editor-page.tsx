@@ -100,15 +100,15 @@ export function Component() {
       data={biolink}
       key={`${biolink.id}-${biolink.builder_mode}`}
     >
-      <DashboardLayout.MainSection variant="default">
+      <DashboardLayout.MainSection>
         <h1 className="sr-only">{biolink.name}</h1>
         <EditorHeaderWithGuard baseUrl={baseUrl} />
-        <section className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-background lg:flex-row lg:overflow-hidden">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background lg:overflow-hidden lg:border-r lg:border-border/60">
+        <section className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-card lg:flex-row lg:overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-card lg:overflow-hidden lg:border-r lg:border-border/60">
             {!isInsightsTab && (
               <Tabs.Root
                 value={selectedTab}
-                className="shrink-0 border-b"
+                className="shrink-0 border-b border-border"
                 onValueChange={value => {
                   const path = tabPaths[String(value)];
                   if (path) {
@@ -142,7 +142,7 @@ export function Component() {
                 </div>
               </Tabs.Root>
             )}
-            <div className="compact-scrollbar min-w-0 overflow-x-hidden lg:min-h-0 lg:flex-auto lg:overflow-y-auto">
+            <div className="compact-scrollbar min-w-0 overflow-x-hidden lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain">
               <div
                 className={
                   isInsightsTab

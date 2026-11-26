@@ -31,8 +31,8 @@ function CourseSettingsDescriptionEditor({
       initialContent={value}
       onChange={onChange}
     >
-      <div className="flex flex-col">
-        <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
+      <div className="flex flex-col overflow-hidden rounded-input border border-input bg-background transition-colors focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring">
+        <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border bg-muted/20 px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />
           <FontStyleButtons />
@@ -43,7 +43,7 @@ function CourseSettingsDescriptionEditor({
           <Divider />
           <ClearFormatButton />
         </div>
-        <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-[60ch] px-3 py-2.5 dark:prose-invert" />
+        <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-[60ch] px-3 py-2.5 text-foreground" />
       </div>
     </TipTapEditorProvider>
   );
@@ -59,11 +59,14 @@ export function CourseSettingsDescriptionField({
   onChange: (value: string) => void;
 }) {
   return (
-    <Field.Root>
-      <Field.Label htmlFor={`${inputId}-description`}>
+    <Field.Root className="min-w-0 gap-2">
+      <Field.Label htmlFor={`${inputId}-description`} className="text-sm font-medium leading-5">
         <Trans message="Description" />
       </Field.Label>
       <CourseSettingsDescriptionEditor value={value} onChange={onChange} />
+      <Field.Description>
+        <Trans message="Summarize who the course is for and what learners will walk away with." />
+      </Field.Description>
     </Field.Root>
   );
 }
@@ -160,7 +163,7 @@ function OutcomesChipList({
               onSortEnd={handleReorder}
             >
               {dragHandleRef => (
-                <div className="flex items-center gap-1.5 rounded-card-sm border bg-background px-2.5 py-1 text-sm">
+                <div className="flex items-center gap-1.5 rounded-card-sm border border-border bg-muted/30 px-2.5 py-1 text-sm">
                   <button
                     ref={dragHandleRef}
                     type="button"
@@ -196,11 +199,14 @@ export function CourseSettingsOutcomesField({
   onChange: (outcomes: {id: string; text: string}[]) => void;
 }) {
   return (
-    <Field.Root>
-      <Field.Label>
+    <Field.Root className="min-w-0 gap-2">
+      <Field.Label className="text-sm font-medium leading-5">
         <Trans message="What you'll learn" />
       </Field.Label>
       <OutcomesChipList outcomes={outcomes} onChange={onChange} />
+      <Field.Description>
+        <Trans message="Add concise outcomes learners achieve by completing this course." />
+      </Field.Description>
     </Field.Root>
   );
 }
@@ -214,8 +220,8 @@ export function CourseSettingsCoverField({
 }) {
   const {trans} = useTrans();
   return (
-    <Field.Root>
-      <Field.Label>
+    <Field.Root className="min-w-0 gap-2">
+      <Field.Label className="text-sm font-medium leading-5">
         <Trans message="Cover image" />
       </Field.Label>
       <CroppedCover
@@ -227,6 +233,9 @@ export function CourseSettingsCoverField({
         aspect={16 / 9}
         label={trans(message('Cover image'))}
       />
+      <Field.Description>
+        <Trans message="Shown on your course listing and Storefronts (16:9 recommended)." />
+      </Field.Description>
     </Field.Root>
   );
 }

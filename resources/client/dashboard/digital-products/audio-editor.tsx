@@ -20,6 +20,9 @@ export function AudioEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'details'}
         id="audio-information"
         title={<Trans message="Audio information" />}
+        description={
+          <Trans message="Audio title, description, and cover artwork for listeners." />
+        }
       >
         {details}
       </ProductEditorSection>
@@ -27,6 +30,9 @@ export function AudioEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'files'}
         id="audio-private-files"
         title={<Trans message="Full audio files" />}
+        description={
+          <Trans message="Private audio tracks or archives unlocked after purchase." />
+        }
       >
         {files}
       </ProductEditorSection>
@@ -34,6 +40,9 @@ export function AudioEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'files'}
         id="audio-public-clips"
         title={<Trans message="Preview clips (optional)" />}
+        description={
+          <Trans message="Optional public audio clips listeners can sample before buying." />
+        }
       >
         {sample}
       </ProductEditorSection>
@@ -41,6 +50,9 @@ export function AudioEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'pricing'}
         id="audio-pricing"
         title={<Trans message="Price" />}
+        description={
+          <Trans message="Offer free access or set an audio price in ETB." />
+        }
       >
         {pricing}
       </ProductEditorSection>
@@ -48,6 +60,9 @@ export function AudioEditor({details, files, sample, pricing, storefront, active
         active={activeStep === undefined || activeStep === 'storefront'}
         id="audio-storefront"
         title={<Trans message="Storefront placement (optional)" />}
+        description={
+          <Trans message="Choose which storefronts feature this audio once approved." />
+        }
       >
         {storefront}
       </ProductEditorSection>

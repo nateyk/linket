@@ -1,17 +1,16 @@
 import {apiClient} from '@common/http/query-client';
 import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {Alert} from '@shadcn/alert/alert';
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
-import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
-import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Empty} from '@shadcn/empty/empty';
 import {Input} from '@shadcn/forms/input/input';
-import {Item} from '@shadcn/item/item';
 import {Popover} from '@shadcn/popover/popover';
+import {Separator} from '@shadcn/separator';
 import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
@@ -20,30 +19,37 @@ import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
+import {cn} from '@ui/utils/cn';
 import {
+  AlertTriangleIcon,
   CalendarDaysIcon,
+  CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CopyIcon,
+  CreditCardIcon,
   ArrowDownIcon,
   ArrowUpIcon,
   ArrowUpDownIcon,
-  Columns3Icon,
-  DownloadIcon,
   ChartNoAxesCombinedIcon,
   CircleDollarSignIcon,
   EyeIcon,
+  FileTextIcon,
+  InfoIcon,
   LandmarkIcon,
+  LockIcon,
+  MailIcon,
   PackageCheckIcon,
   ReceiptTextIcon,
   RefreshCwIcon,
   SearchIcon,
+  UserIcon,
   type LucideIcon,
 } from 'lucide-react';
 import {
   ReactNode,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -256,24 +262,28 @@ export function Component() {
           <SummaryCards summary={summary} />
 
           <Card.Root size="sm" className="min-w-0 gap-4 rounded-card-sm">
-              <Card.Content className="flex min-w-0 flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-base font-medium">
-                    <Trans message="Orders" />
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="Orders and payment status. Only paid orders count as sales." />
-                  </p>
-                </div>
-                <OrdersTable
-                    orders={orders}
-                    sort={orderSort}
-                    onSortChange={value => {setOrderSort(value); setOrderPage(1);}}
-                    loading={ordersLoading}
-                    error={ordersError}
-                    onView={setDetailUuid}
-                    onRetry={() => void loadOrders()}
-                    filters={<OrderFilters
+            <Card.Header>
+              <Card.Title>
+                <Trans message="Orders" />
+              </Card.Title>
+              <Card.Description>
+                <Trans message="Orders and payment status. Only paid orders count as sales." />
+              </Card.Description>
+            </Card.Header>
+            <Card.Content className="flex min-w-0 flex-col gap-4">
+              <OrdersTable
+                orders={orders}
+                sort={orderSort}
+                onSortChange={value => {
+                  setOrderSort(value);
+                  setOrderPage(1);
+                }}
+                loading={ordersLoading}
+                error={ordersError}
+                onView={setDetailUuid}
+                onRetry={() => void loadOrders()}
+                filters={
+                  <OrderFilters
                     status={orderStatus}
                     search={orderSearch}
                     from={orderFrom}
@@ -295,25 +305,26 @@ export function Component() {
                       setOrderTo(value);
                       setOrderPage(1);
                     }}
-                  />}
+                  />
+                }
+              />
+            </Card.Content>
+            {!ordersError && ordersPagination.total > 0 && (
+              <Card.Footer className="min-w-0">
+                <Pagination
+                  page={ordersPagination.current_page}
+                  lastPage={ordersPagination.last_page}
+                  total={ordersPagination.total}
+                  perPage={ordersPagination.per_page}
+                  pageSizeName="orders-per-page"
+                  onChange={setOrderPage}
+                  onPerPageChange={value => {
+                    setOrderPerPage(value);
+                    setOrderPage(1);
+                  }}
                 />
-              </Card.Content>
-                {!ordersError && ordersPagination.total > 0 && (
-                  <Card.Footer className="min-w-0">
-                    <Pagination
-                      page={ordersPagination.current_page}
-                      lastPage={ordersPagination.last_page}
-                      total={ordersPagination.total}
-                      perPage={ordersPagination.per_page}
-                      pageSizeName="orders-per-page"
-                      onChange={setOrderPage}
-                      onPerPageChange={value => {
-                        setOrderPerPage(value);
-                        setOrderPage(1);
-                      }}
-                    />
-                  </Card.Footer>
-                )}
+              </Card.Footer>
+            )}
           </Card.Root>
         </div>
       </DashboardLayout.SectionContent>
@@ -387,7 +398,10 @@ function SummaryCards({summary}: {summary?: Summary}) {
               </Card.Title>
               <Card.Action>
                 <span
-                  className={`flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4 ${metric.tone}`}
+                  className={cn(
+                    'flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4',
+                    metric.tone,
+                  )}
                 >
                   <Icon aria-hidden="true" />
                 </span>
@@ -428,9 +442,12 @@ function OrderFilters({
 }) {
   const isFiltered = status !== 'all' || !!search || !!from || !!to;
   return (
-    <div className="contents sm:flex sm:min-w-0 sm:flex-wrap sm:items-center sm:gap-2">
+    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       <div className="relative w-full min-w-0 sm:w-64">
-        <SearchIcon aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <SearchIcon
+          aria-hidden="true"
+          className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        />
         <Input
           bindToHookForm={false}
           className="h-9 ps-9"
@@ -440,11 +457,19 @@ function OrderFilters({
           onChange={event => onSearchChange(event.target.value)}
         />
       </div>
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
-        <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
-          <Select.Trigger aria-label="Order status" className="h-9 min-w-0 flex-1 sm:w-36 sm:flex-none">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Select.Root
+          value={status}
+          onValueChange={value => onStatusChange(value ?? 'all')}
+        >
+          <Select.Trigger
+            aria-label="Order status"
+            className="h-9 min-w-0 flex-1 sm:w-40 sm:flex-none"
+          >
             <Select.Value placeholder={<Trans message="All statuses" />}>
-              {statusOptions.find(option => option.value === status)?.label ?? <Trans message="All statuses" />}
+              {statusOptions.find(option => option.value === status)?.label ?? (
+                <Trans message="All statuses" />
+              )}
             </Select.Value>
           </Select.Trigger>
           <Select.Content>
@@ -458,60 +483,105 @@ function OrderFilters({
           </Select.Content>
         </Select.Root>
         <Popover.Root>
-          <Popover.Trigger render={
-            <Button variant="outline" color="default" className="shrink-0" aria-label="Filter by date">
-              <CalendarDaysIcon />
-              <Trans message="Dates" />
-              {(from || to) && <span aria-hidden="true" className="size-1.5 rounded-full bg-primary" />}
-            </Button>
-          } />
+          <Popover.Trigger
+            render={
+              <Button
+                variant="outline"
+                color="default"
+                className="shrink-0"
+                aria-label="Filter by date"
+              >
+                <CalendarDaysIcon data-icon="inline-start" />
+                <Trans message="Dates" />
+                {(from || to) && (
+                  <span
+                    aria-hidden="true"
+                    className="size-1.5 rounded-full bg-primary"
+                  />
+                )}
+              </Button>
+            }
+          />
           <Popover.Portal>
-            <Popover.Content align="end" className="w-[min(20rem,calc(100vw-2rem))] rounded-card-sm">
+            <Popover.Content
+              align="end"
+              className="w-[min(20rem,calc(100vw-2rem))] rounded-card-sm"
+            >
               <Popover.Header>
-                <Popover.Title><Trans message="Date range" /></Popover.Title>
+                <Popover.Title>
+                  <Trans message="Date range" />
+                </Popover.Title>
               </Popover.Header>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="flex min-w-0 flex-col gap-1.5 text-sm">
                   <Trans message="From" />
-                  <Input bindToHookForm={false} aria-label="From date" type="date" value={from} max={to || undefined} onChange={event => onFromChange(event.target.value)} />
+                  <Input
+                    bindToHookForm={false}
+                    aria-label="From date"
+                    type="date"
+                    value={from}
+                    max={to || undefined}
+                    onChange={event => onFromChange(event.target.value)}
+                  />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5 text-sm">
                   <Trans message="To" />
-                  <Input bindToHookForm={false} aria-label="To date" type="date" value={to} min={from || undefined} onChange={event => onToChange(event.target.value)} />
+                  <Input
+                    bindToHookForm={false}
+                    aria-label="To date"
+                    type="date"
+                    value={to}
+                    min={from || undefined}
+                    onChange={event => onToChange(event.target.value)}
+                  />
                 </label>
               </div>
-              <Button variant="ghost" size="sm" className="self-end" disabled={!from && !to} onClick={() => {onFromChange(''); onToChange('');}}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="self-end"
+                disabled={!from && !to}
+                onClick={() => {
+                  onFromChange('');
+                  onToChange('');
+                }}
+              >
                 <Trans message="Clear dates" />
               </Button>
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
+        {isFiltered && (
+          <Button
+            variant="ghost"
+            size="sm"
+            color="default"
+            className="shrink-0"
+            onClick={() => {
+              onStatusChange('all');
+              onSearchChange('');
+              onFromChange('');
+              onToChange('');
+            }}
+          >
+            <Trans message="Clear filters" />
+          </Button>
+        )}
       </div>
-      {isFiltered && (
-        <Button variant="ghost" size="sm" color="default" className="shrink-0 max-sm:order-last" onClick={() => {
-          onStatusChange('all');
-          onSearchChange('');
-          onFromChange('');
-          onToChange('');
-        }}>
-          <Trans message="Clear filters" />
-        </Button>
-      )}
     </div>
   );
 }
 
-
-type OptionalOrderColumn = 'buyer' | 'amount' | 'date' | 'status';
-const orderColumns: {id: OptionalOrderColumn; label: ReactNode}[] = [
-  {id: 'buyer', label: <Trans message="Buyer" />},
-  {id: 'amount', label: <Trans message="Amount" />},
-  {id: 'date', label: <Trans message="Date" />},
-  {id: 'status', label: <Trans message="Status" />},
-];
-
 function OrdersTable({
-  orders, loading, error, onView, onRetry, emptyMessage, sort, onSortChange, filters,
+  orders,
+  loading,
+  error,
+  onView,
+  onRetry,
+  emptyMessage,
+  sort,
+  onSortChange,
+  filters,
 }: {
   orders: Order[];
   loading: boolean;
@@ -524,131 +594,143 @@ function OrdersTable({
   onSortChange: (value: OrderSort) => void;
 }) {
   const {trans} = useTrans();
-  const [selection, setSelection] = useState<Record<string, boolean>>({});
-  const [visible, setVisible] = useState<Record<OptionalOrderColumn, boolean>>({
-    buyer: true, amount: true, date: true, status: true,
-  });
-  // Selection never crosses the server's search, filter or pagination boundary.
-  useEffect(() => setSelection({}), [orders]);
-  const selectedOrders = useMemo(() => orders.filter(order => selection[order.uuid]), [orders, selection]);
-  const allSelected = orders.length > 0 && selectedOrders.length === orders.length;
-  const toggle = (uuid: string, checked: boolean) =>
-    setSelection(previous => ({...previous, [uuid]: checked}));
-  const toggleAll = (checked: boolean) =>
-    setSelection(checked ? Object.fromEntries(orders.map(order => [order.uuid, true])) : {});
 
   return (
     <div className="grid min-w-0 gap-3">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <div className="contents sm:block sm:min-w-0 sm:flex-1">{filters}</div>
-        <Dropdown.Root>
-          <Dropdown.Trigger render={
-            <Button variant="outline" color="default" className="ms-auto" aria-label={trans({message: 'Choose visible columns'})}>
-              <Columns3Icon aria-hidden="true" /><span className="hidden min-[400px]:inline"><Trans message="Columns" /></span>
-            </Button>
-          } />
-          <Dropdown.Content align="end">
-            <Dropdown.GroupLabel><Trans message="Show columns" /></Dropdown.GroupLabel>
-            {orderColumns.map(column => (
-              <Dropdown.CheckboxItem key={column.id} checked={visible[column.id]}
-                onCheckedChange={checked => setVisible(previous => ({...previous, [column.id]: checked}))}
-                onSelect={event => event.preventDefault()}>
-                {column.label}
-              </Dropdown.CheckboxItem>
-            ))}
-          </Dropdown.Content>
-        </Dropdown.Root>
-      </div>
+      {filters}
 
-      {!loading && !error && selectedOrders.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2" aria-live="polite">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            <Trans message=":count selected on this page" values={{count: selectedOrders.length}} />
-          </span>
-          <Button variant="outline" color="default" size="sm" onClick={() => exportSelectedOrders(selectedOrders)}>
-            <DownloadIcon aria-hidden="true" /><Trans message="Export selected" />
-            <span className="tabular-nums">({selectedOrders.length})</span>
-          </Button>
-        </div>
-      )}
-
-      {loading ? <TableLoading /> : error ? (
-        <div className="flex flex-col items-start gap-3 rounded-card-sm border border-border px-4 py-8" role="alert">
+      {loading ? (
+        <TableLoading />
+      ) : error ? (
+        <div
+          className="flex flex-col items-start gap-3 rounded-card-sm border border-border px-4 py-8"
+          role="alert"
+        >
           <p className="text-sm text-destructive">{error}</p>
-          {onRetry && <Button variant="outline" size="sm" onClick={onRetry}>
-            <RefreshCwIcon aria-hidden="true" /><Trans message="Try again" />
-          </Button>}
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              <RefreshCwIcon aria-hidden="true" />
+              <Trans message="Try again" />
+            </Button>
+          )}
         </div>
       ) : !orders.length ? (
         <div className="rounded-card-sm border border-border">
           <Empty.Root>
             <Empty.Header>
-              <Empty.Media variant="icon"><ReceiptTextIcon /></Empty.Media>
-              <Empty.Title><Trans message="No orders found" /></Empty.Title>
-              <Empty.Description>{emptyMessage ??
-                <Trans message="Orders will appear here after a buyer tries to purchase one of your products." />}
+              <Empty.Media variant="icon">
+                <ReceiptTextIcon />
+              </Empty.Media>
+              <Empty.Title>
+                <Trans message="No orders found" />
+              </Empty.Title>
+              <Empty.Description>
+                {emptyMessage ?? (
+                  <Trans message="Orders will appear here after a buyer tries to purchase one of your products." />
+                )}
               </Empty.Description>
             </Empty.Header>
           </Empty.Root>
         </div>
       ) : (
-        <div role="region" aria-label={trans({message: 'Scrollable orders table'})} tabIndex={0} className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-card-sm border border-border focus-visible:outline-2 focus-visible:outline-foreground">
-          <Table.Root aria-label={trans({message: 'Orders'})} className="border-separate border-spacing-0 text-[13px] [&_th]:border-b [&_th]:border-border [&_td]:border-b [&_td]:border-border/60 [&_tbody_tr:last-child_td]:border-b-0">
+        <div
+          role="region"
+          aria-label={trans({message: 'Scrollable orders table'})}
+          tabIndex={0}
+          className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-card-sm border border-border focus-visible:outline-2 focus-visible:outline-foreground"
+        >
+          <Table.Root
+            aria-label={trans({message: 'Orders'})}
+            className="w-full border-separate border-spacing-0 text-sm [&_th]:border-b [&_th]:border-border [&_td]:border-b [&_td]:border-border/60 [&_tbody_tr:last-child_td]:border-b-0"
+          >
             <Table.Header>
-              <Table.Row className="hover:bg-transparent">
-                <Table.Head className="h-10 w-10 px-3">
-                  <Checkbox bindToHookForm={false} checked={allSelected}
-                    indeterminate={!allSelected && selectedOrders.length > 0}
-                    onCheckedChange={toggleAll}
-                    aria-label={trans({message: 'Select all orders on this page'})} />
+              <Table.Row className="bg-muted/30 hover:bg-muted/30">
+                <Table.Head className="h-10 min-w-48 px-3 text-xs font-medium text-muted-foreground">
+                  <Trans message="Product" />
                 </Table.Head>
-                <Table.Head className="h-10 min-w-44 px-3 text-xs text-muted-foreground"><Trans message="Product" /></Table.Head>
-                {visible.buyer && <OrderSortHead label={<Trans message="Buyer" />}
-                  sort={sort} ascending="buyer_asc" descending="buyer_desc" onChange={onSortChange} />}
-                {visible.amount && <OrderSortHead label={<Trans message="Amount" />}
-                  sort={sort} ascending="amount_asc" descending="amount_desc" onChange={onSortChange} align="end" />}
-                {visible.date && <OrderSortHead label={<Trans message="Date" />}
-                  sort={sort} ascending="oldest" descending="newest" onChange={onSortChange} />}
-                {visible.status && <Table.Head className="h-10 px-3 text-xs text-muted-foreground"><Trans message="Status" /></Table.Head>}
-                <Table.Head className="sticky end-0 z-10 h-10 w-12 bg-card px-2 text-end text-xs text-muted-foreground"><span className="sr-only"><Trans message="Actions" /></span></Table.Head>
+                <OrderSortHead
+                  label={<Trans message="Buyer" />}
+                  sort={sort}
+                  ascending="buyer_asc"
+                  descending="buyer_desc"
+                  onChange={onSortChange}
+                />
+                <OrderSortHead
+                  label={<Trans message="Amount" />}
+                  sort={sort}
+                  ascending="amount_asc"
+                  descending="amount_desc"
+                  onChange={onSortChange}
+                  align="end"
+                />
+                <OrderSortHead
+                  label={<Trans message="Date" />}
+                  sort={sort}
+                  ascending="oldest"
+                  descending="newest"
+                  onChange={onSortChange}
+                />
+                <Table.Head className="h-10 px-3 text-xs font-medium text-muted-foreground">
+                  <Trans message="Status" />
+                </Table.Head>
+                <Table.Head className="sticky end-0 z-10 h-10 w-12 bg-card px-2 text-end text-xs text-muted-foreground">
+                  <span className="sr-only">
+                    <Trans message="Actions" />
+                  </span>
+                </Table.Head>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {orders.map(order => (
-                <Table.Row key={order.uuid} selected={!!selection[order.uuid]} className="group hover:bg-muted/40">
-                  <Table.Cell className="w-10 px-3 py-2">
-                    <Checkbox bindToHookForm={false} checked={!!selection[order.uuid]}
-                      onCheckedChange={checked => toggle(order.uuid, checked)}
-                      aria-label={trans({message: 'Select order :id', values: {id: order.uuid.slice(0, 8)}})} />
-                  </Table.Cell>
-                  <Table.Cell className="min-w-44 max-w-64 px-3 py-2 whitespace-normal">
+                <Table.Row key={order.uuid} className="group hover:bg-muted/40">
+                  <Table.Cell className="min-w-48 max-w-68 px-3 py-2.5 whitespace-normal">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <OrderMark order={order} />
                       <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-medium" title={order.product?.title ?? undefined}>
-                          {order.product?.title ?? <Trans message="Deleted product" />}
+                        <span
+                          className="block truncate text-sm font-medium text-foreground"
+                          title={order.product?.title ?? undefined}
+                        >
+                          {order.product?.title ?? (
+                            <Trans message="Deleted product" />
+                          )}
                         </span>
-                        <span className="block truncate text-xs tabular-nums text-muted-foreground">
+                        <span className="block truncate text-xs text-muted-foreground tabular-nums">
                           {'#' + order.uuid.slice(0, 8)}
-                          {order.transaction_reference ? ' · ' + order.transaction_reference : ''}
+                          {order.transaction_reference
+                            ? ' · ' + order.transaction_reference
+                            : ''}
                         </span>
                       </span>
                     </span>
                   </Table.Cell>
-                  {visible.buyer && <Table.Cell className="min-w-36 max-w-52 px-3 py-2 whitespace-normal">
-                    <span className="block truncate text-[13px]">{order.buyer_name || <Trans message="Guest buyer" />}</span>
-                    <span className="block truncate text-xs text-muted-foreground">{order.buyer_email}</span>
-                  </Table.Cell>}
-                  {visible.amount && <Table.Cell className="min-w-28 px-3 py-2 text-end text-[13px] tabular-nums">
-                    <FormattedCurrency valueInCents={order.gross_amount_cents} currency={order.currency ?? 'ETB'} />
-                  </Table.Cell>}
-                  {visible.date && <Table.Cell className="min-w-28 px-3 py-2 whitespace-nowrap">
-                    <span className="block text-[13px]"><FormattedDate preset="short" date={order.created_at} /></span>
-                  </Table.Cell>}
-                  {visible.status && <Table.Cell className="px-3 py-2"><OrderStatusBadge status={order.status} /></Table.Cell>}
-                  <Table.Cell className={`sticky end-0 z-10 w-12 px-2 py-1 text-end ${selection[order.uuid] ? 'bg-muted' : 'bg-card group-hover:bg-muted'}`}>
-                    <ViewOrderButton label={trans({message: 'View details'})}
-                      onClick={() => onView(order.uuid)} />
+                  <Table.Cell className="min-w-36 max-w-52 px-3 py-2.5 whitespace-normal">
+                    <span className="block truncate text-sm text-foreground">
+                      {order.buyer_name || <Trans message="Guest buyer" />}
+                    </span>
+                    {order.buyer_email ? (
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {order.buyer_email}
+                      </span>
+                    ) : null}
+                  </Table.Cell>
+                  <Table.Cell className="min-w-28 px-3 py-2.5 text-end text-sm font-medium tabular-nums">
+                    <FormattedCurrency
+                      valueInCents={order.gross_amount_cents}
+                      currency={order.currency ?? 'ETB'}
+                    />
+                  </Table.Cell>
+                  <Table.Cell className="min-w-28 px-3 py-2.5 whitespace-nowrap text-sm text-muted-foreground">
+                    <FormattedDate preset="short" date={order.created_at} />
+                  </Table.Cell>
+                  <Table.Cell className="px-3 py-2.5">
+                    <OrderStatusBadge status={order.status} />
+                  </Table.Cell>
+                  <Table.Cell className="sticky end-0 z-10 w-12 bg-card px-2 py-1.5 text-end group-hover:bg-accent">
+                    <ViewOrderButton
+                      label={trans({message: 'View details'})}
+                      onClick={() => onView(order.uuid)}
+                    />
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -661,7 +743,12 @@ function OrdersTable({
 }
 
 function OrderSortHead({
-  label, sort, ascending, descending, onChange, align = 'start',
+  label,
+  sort,
+  ascending,
+  descending,
+  onChange,
+  align = 'start',
 }: {
   label: ReactNode;
   sort: OrderSort;
@@ -671,44 +758,43 @@ function OrderSortHead({
   align?: 'start' | 'end';
 }) {
   const active = sort === ascending || sort === descending;
-  const current = sort === ascending ? 'ascending' : sort === descending ? 'descending' : 'none';
+  const current =
+    sort === ascending ? 'ascending' : sort === descending ? 'descending' : 'none';
   return (
-    <Table.Head className={align === 'end' ? 'h-10 px-3 text-end' : 'h-10 px-3'} aria-sort={current}>
-      <Button variant="ghost" size="sm" color="default" className="h-8 gap-1 px-1 text-xs text-muted-foreground hover:text-foreground"
-        onClick={() => onChange(sort === descending ? ascending
-          : sort === ascending ? descending
-          : ascending === 'amount_asc' ? descending : ascending)}>
+    <Table.Head
+      className={align === 'end' ? 'h-10 px-3 text-end' : 'h-10 px-3'}
+      aria-sort={current}
+    >
+      <Button
+        variant="ghost"
+        size="sm"
+        color="default"
+        className="h-8 gap-1 px-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+        onClick={() =>
+          onChange(
+            sort === descending
+              ? ascending
+              : sort === ascending
+                ? descending
+                : ascending === 'amount_asc'
+                  ? descending
+                  : ascending,
+          )
+        }
+      >
         {label}
-        {active
-          ? sort === ascending ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />
-          : <ArrowUpDownIcon className="size-3.5 opacity-50" />}
+        {active ? (
+          sort === ascending ? (
+            <ArrowUpIcon className="size-3.5" />
+          ) : (
+            <ArrowDownIcon className="size-3.5" />
+          )
+        ) : (
+          <ArrowUpDownIcon className="size-3.5 opacity-50" />
+        )}
       </Button>
     </Table.Head>
   );
-}
-
-function exportSelectedOrders(orders: Order[]) {
-  // Only selected rows on the loaded page; neutralize user-controlled CSV formulas.
-  const csvField = (value: string | null | undefined) => {
-    const clean = String(value ?? '').replace(/[\r\n\t]+/g, ' ').trim();
-    const escaped = /^[=+\-@\uFF1D\uFF0B\uFF0D\uFF20]/.test(clean) ? "'" + clean : clean;
-    return '"' + escaped.replace(/"/g, '""') + '"';
-  };
-  const fields = ['Order', 'Product', 'Buyer', 'Email', 'Reference', 'Status', 'Amount (cents)', 'Currency', 'Created at'];
-  const rows = orders.map(order => [
-    order.uuid, order.product?.title, order.buyer_name, order.buyer_email,
-    order.transaction_reference, order.status, String(order.gross_amount_cents),
-    order.currency ?? 'ETB', order.created_at,
-  ].map(value => csvField(value)).join(','));
-  const csv = [fields.join(','), ...rows].join('\r\n');
-  const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8'}));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'linket-selected-orders.csv';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function ViewOrderButton({
@@ -753,8 +839,10 @@ function OrderDetailDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [detailRefreshKey, setDetailRefreshKey] = useState(0);
+  const [isBodyScrolled, setIsBodyScrolled] = useState(false);
 
   useEffect(() => {
+    setIsBodyScrolled(false);
     if (!uuid) {
       setDetail(undefined);
       setError(undefined);
@@ -788,8 +876,13 @@ function OrderDetailDialog({
     <Dialog.Root open={!!uuid} onOpenChange={open => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="min-w-0 sm:max-w-xl">
-          <Dialog.Header className="min-w-0">
+        <Dialog.Content className="min-w-0 gap-0 sm:max-w-xl">
+          <Dialog.Header
+            className={cn(
+              '-mx-6 min-w-0 border-b px-6 pb-4 transition-[border-color,box-shadow] duration-200',
+              isBodyScrolled ? 'border-border shadow-sm' : 'border-transparent',
+            )}
+          >
             <Dialog.Title>
               <ReceiptTextIcon />
               <Trans message="Order details" />
@@ -798,20 +891,25 @@ function OrderDetailDialog({
               <Trans message="Recorded payment status and delivery information for this order." />
             </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body className="min-w-0" aria-busy={loading}>
-            {loading && !detail && <TableLoading />}
+          <Dialog.Body
+            className="min-w-0 scroll-fade-y scroll-fade-8 py-4 [--scroll-fade-reveal:64px]"
+            aria-busy={loading}
+            onScroll={event => setIsBodyScrolled(event.currentTarget.scrollTop > 2)}
+          >
+            {loading && !detail && <OrderDetailSkeleton />}
             {loading && detail && (
               <p role="status" className="mb-3 text-xs text-muted-foreground">
                 <Trans message="Refreshing order details..." />
               </p>
             )}
             {error && (
-              <p className="mb-3 text-sm text-destructive" role="alert">
-                {error}
-              </p>
+              <Alert.Root variant="destructive" fillStyle="subtleFill" className="mb-3">
+                <AlertTriangleIcon aria-hidden="true" />
+                <Alert.Description>{error}</Alert.Description>
+              </Alert.Root>
             )}
             {detail && (
-              <div className="flex min-w-0 flex-col gap-5">
+              <div className="flex min-w-0 flex-col gap-4">
                 <OrderDetailContent order={detail} />
                 <CreatorOrderDisputes orderUuid={detail.uuid ?? uuid!} />
               </div>
@@ -825,7 +923,10 @@ function OrderDetailDialog({
               disabled={!uuid || loading}
               onClick={() => setDetailRefreshKey(current => current + 1)}
             >
-              <RefreshCwIcon className={loading ? 'animate-spin' : undefined} />
+              <RefreshCwIcon
+                data-icon="inline-start"
+                className={loading ? 'animate-spin' : undefined}
+              />
               {error && !detail ? (
                 <Trans message="Try again" />
               ) : (
@@ -843,146 +944,293 @@ function OrderDetailDialog({
 }
 
 function OrderDetailContent({order}: {order: OrderDetail}) {
+  const {trans} = useTrans();
   const currency = order.currency ?? 'ETB';
+  const [copiedRef, setCopiedRef] = useState(false);
+
+  const delivery = order.delivery;
+  const entitlementsCount = delivery?.entitlements_count ?? 0;
+  const downloadLimit = delivery?.download_limit ?? 0;
+  const downloadedCount = delivery?.downloaded_count ?? 0;
+  const isPaidOrFulfilled = ['paid', 'fulfilled'].includes(order.status);
+
+  const copyReference = () => {
+    if (!order.transaction_reference || !navigator.clipboard) return;
+    void navigator.clipboard.writeText(order.transaction_reference).then(() => {
+      setCopiedRef(true);
+      window.setTimeout(() => setCopiedRef(false), 1800);
+    });
+  };
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
-      <Item.Root
-        variant="muted"
-        size="sm"
-        className="min-w-0 rounded-card-sm border-0"
-      >
-        <Item.Media className="size-9 overflow-hidden rounded-card-sm p-0">
-          <OrderMark order={order} />
-        </Item.Media>
-        <Item.Content className="min-w-0 gap-1">
-          <Item.Title className="line-clamp-2 whitespace-normal">
-            {order.product?.title ?? <Trans message="Deleted product" />}
-          </Item.Title>
-          <Item.Description className="line-clamp-none break-words">
-            {order.buyer_name || <Trans message="Guest buyer" />}
-            {order.buyer_email ? ` · ${order.buyer_email}` : null}
-          </Item.Description>
-          <Item.Description className="text-xs">
-            <Trans
-              message="Created :date"
-              values={{
-                date: <FormattedDate preset="short" date={order.created_at} />,
-              }}
-            />
-          </Item.Description>
-        </Item.Content>
-        <Item.Actions className="basis-full items-center justify-between border-t pt-3 md:ms-6 md:basis-auto md:border-0 md:pt-0">
-          <OrderStatusBadge status={order.status} />
-          <span className="text-base font-semibold tabular-nums">
-            <FormattedCurrency
-              valueInCents={order.gross_amount_cents}
-              currency={currency}
-            />
-          </span>
-        </Item.Actions>
-      </Item.Root>
-
-      <DetailSection title={<Trans message="Payment information" />}>
-        <DetailRow
-          label={<Trans message="Transaction reference" />}
-          value={
-            <span className="break-all font-mono text-xs">
-              {order.transaction_reference ?? '—'}
+    <div className="flex min-w-0 flex-col gap-3.5">
+      {/* Order summary hero & purchaser details */}
+      <div className="flex min-w-0 flex-col gap-3 rounded-card-sm border border-border bg-muted/35 p-4">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <OrderMark order={order} className="size-11 ring-1 ring-border" />
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="truncate text-base leading-5 font-semibold tracking-tight text-foreground">
+                {order.product?.title ?? <Trans message="Deleted product" />}
+              </p>
+              <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                <span className="font-mono text-foreground/80">
+                  {'#' + order.uuid.slice(0, 8)}
+                </span>
+                {order.created_at && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      <Trans
+                        message="Created :date"
+                        values={{
+                          date: (
+                            <FormattedDate preset="short" date={order.created_at} />
+                          ),
+                        }}
+                      />
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2.5 border-t border-border/60 pt-2.5 sm:flex-col sm:items-end sm:gap-1 sm:border-0 sm:pt-0">
+            <OrderStatusBadge status={order.status} />
+            <span className="text-lg leading-6 font-bold tracking-tight text-foreground tabular-nums">
+              <FormattedCurrency
+                valueInCents={order.gross_amount_cents}
+                currency={currency}
+              />
             </span>
-          }
-        />
-        <DetailRow
-          label={<Trans message="Payment gateway" />}
-          value={paymentMethodLabel(order)}
-        />
-        {order.paid_at && (
-          <DetailRow
-            label={<Trans message="Paid at" />}
-            value={<FormattedDate preset="timestamp" date={order.paid_at} />}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5 border-t border-border/70 pt-3">
+          <p className="flex min-w-0 items-center gap-2 text-xs font-medium text-foreground">
+            <UserIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <span className="truncate">
+              {order.buyer_name || <Trans message="Guest buyer" />}
+            </span>
+          </p>
+          {order.buyer_email ? (
+            <p className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+              <MailIcon className="size-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">{order.buyer_email}</span>
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Payment information */}
+      <section className="flex flex-col gap-2">
+        <h3 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          <CreditCardIcon
+            className="size-4 text-muted-foreground"
+            aria-hidden="true"
           />
-        )}
-        {(order.platform_fee_cents ?? 0) > 0 && (
+          <Trans message="Payment information" />
+        </h3>
+        <div className="flex flex-col gap-1.5">
           <DetailRow
-            label={<Trans message="Platform fee" />}
+            label={<Trans message="Transaction reference" />}
+            value={
+              order.transaction_reference ? (
+                <span className="inline-flex max-w-full items-center gap-1">
+                  <span className="break-all font-mono text-xs text-foreground">
+                    {order.transaction_reference}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={trans({message: 'Copy transaction reference'})}
+                    onClick={copyReference}
+                  >
+                    {copiedRef ? (
+                      <CheckIcon className="text-positive" />
+                    ) : (
+                      <CopyIcon />
+                    )}
+                  </Button>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )
+            }
+          />
+          <DetailRow
+            label={<Trans message="Payment gateway" />}
+            value={paymentMethodLabel(order)}
+          />
+          {order.paid_at && (
+            <DetailRow
+              label={<Trans message="Paid at" />}
+              value={<FormattedDate preset="timestamp" date={order.paid_at} />}
+            />
+          )}
+          {(order.platform_fee_cents ?? 0) > 0 && (
+            <DetailRow
+              label={<Trans message="Platform fee" />}
+              value={
+                <FormattedCurrency
+                  valueInCents={order.platform_fee_cents ?? 0}
+                  currency={currency}
+                />
+              }
+            />
+          )}
+          <DetailRow
+            label={<Trans message="Your earnings" />}
             value={
               <FormattedCurrency
-                valueInCents={order.platform_fee_cents ?? 0}
+                valueInCents={order.creator_earnings_cents ?? 0}
                 currency={currency}
               />
             }
+            emphasis
           />
-        )}
-        <DetailRow
-          label={<Trans message="Your earnings" />}
-          value={
-            <FormattedCurrency
-              valueInCents={order.creator_earnings_cents ?? 0}
-              currency={currency}
-            />
-          }
-          emphasis
-        />
-      </DetailSection>
-
-      <DetailSection title={<Trans message="Delivery" />}>
-        <div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
-          <Badge variant={deliveryBadgeVariant(order.delivery?.status)}>
-            {deliveryStatusLabel(order.delivery?.status, order.status)}
-          </Badge>
-          {order.delivery && order.delivery.entitlements_count > 0 && (
-            <span className="text-muted-foreground">
-              <Trans message=":downloaded of :limit downloads used across :count files" values={{
-                downloaded: order.delivery.downloaded_count,
-                limit: order.delivery.download_limit,
-                count: order.delivery.entitlements_count,
-              }} />
-            </span>
-          )}
         </div>
-        {!['paid', 'fulfilled'].includes(order.status) ? (
-          <p className="text-sm text-muted-foreground">
-            <Trans message="Buyer downloads remain locked until payment is confirmed." />
+      </section>
+
+      <Separator />
+
+      {/* Delivery */}
+      <section className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <PackageCheckIcon
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Trans message="Delivery" />
+          </h3>
+          <Badge variant={deliveryBadgeVariant(delivery?.status)}>
+            {deliveryStatusLabel(delivery?.status, order.status)}
+          </Badge>
+        </div>
+
+        {delivery && entitlementsCount > 0 && (
+          <p className="text-xs text-muted-foreground tabular-nums">
+            <Trans
+              message=":downloaded of :limit downloads used across :count files"
+              values={{
+                downloaded: downloadedCount,
+                limit: downloadLimit,
+                count: entitlementsCount,
+              }}
+            />
           </p>
-        ) : (order.delivery?.entitlements_count ?? 0) === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            <Trans message="No download access has been issued for this order." />
-          </p>
+        )}
+
+        {!isPaidOrFulfilled ? (
+          <div className="flex items-center gap-2 rounded-card-sm bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            <LockIcon className="size-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              <Trans message="Buyer downloads remain locked until payment is confirmed." />
+            </span>
+          </div>
+        ) : entitlementsCount === 0 ? (
+          <div className="flex items-center gap-2 rounded-card-sm bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            <InfoIcon className="size-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              <Trans message="No download access has been issued for this order." />
+            </span>
+          </div>
         ) : null}
-        {!!order.delivery?.files?.length && (
-          <ul className="mt-3 flex flex-col gap-2">
-            {order.delivery.files.map((file, index) => (
-              <li key={[file.name, index].join('-')} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-card-sm bg-muted px-3 py-2 text-sm">
+
+        {!!delivery?.files?.length && (
+          <ul className="flex flex-col gap-1.5">
+            {delivery.files.map((file, index) => (
+              <li
+                key={[file.name, index].join('-')}
+                className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-card-sm bg-muted/50 px-3 py-2 text-sm"
+              >
                 <span className="flex min-w-0 items-center gap-2">
-                  <PackageCheckIcon className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 break-words">{file.name ?? <Trans message="File" />}</span>
+                  <FileTextIcon
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 break-words font-medium text-foreground">
+                    {file.name ?? <Trans message="File" />}
+                  </span>
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  <Trans message=":count of :limit downloads" values={{count: file.download_count, limit: file.download_limit}} />
+                <span className="flex items-center gap-2">
+                  {file.revoked_at ? (
+                    <Badge variant="destructive">
+                      <Trans message="Revoked" />
+                    </Badge>
+                  ) : null}
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    <Trans
+                      message=":count of :limit downloads"
+                      values={{
+                        count: file.download_count,
+                        limit: file.download_limit,
+                      }}
+                    />
+                  </span>
                 </span>
               </li>
             ))}
           </ul>
         )}
-      </DetailSection>
+      </section>
 
       {order.manual_review && (
-        <div role="note" className="min-w-0 rounded-card-sm border border-warning/20 bg-warning/10 p-3 text-sm">
-          <p className="font-medium text-warning"><Trans message="Payment needs support review" /></p>
-          <p className="mt-1 text-muted-foreground">
-            <Trans message="Linket support must resolve this payment. You cannot mark this order paid or release buyer downloads." />
-          </p>
-          <a href="/help" className="mt-2 inline-flex min-h-9 items-center text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-            <Trans message="Open Help Center" />
-          </a>
-          {order.manual_review.reason_code && (
-            <details className="mt-2 text-xs text-muted-foreground">
-              <summary className="cursor-pointer py-1"><Trans message="Technical reason" /></summary>
-              <code className="block break-all pt-1">{order.manual_review.reason_code}</code>
-            </details>
-          )}
-        </div>
+        <Alert.Root variant="warning" fillStyle="subtleFill">
+          <AlertTriangleIcon aria-hidden="true" />
+          <Alert.Title>
+            <Trans message="Payment needs support review" />
+          </Alert.Title>
+          <Alert.Description>
+            <p>
+              <Trans message="Linket support must resolve this payment. You cannot mark this order paid or release buyer downloads." />
+            </p>
+            <a href="/help" className="mt-2 inline-flex min-h-8 items-center">
+              <Trans message="Open Help Center" />
+            </a>
+            {order.manual_review.reason_code && (
+              <details className="mt-2 text-xs text-muted-foreground">
+                <summary className="cursor-pointer py-1">
+                  <Trans message="Technical reason" />
+                </summary>
+                <code className="block break-all pt-1">
+                  {order.manual_review.reason_code}
+                </code>
+              </details>
+            )}
+          </Alert.Description>
+        </Alert.Root>
       )}
+    </div>
+  );
+}
+
+function OrderDetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" aria-busy="true">
+      <div className="flex items-center justify-between gap-3 rounded-card-sm bg-muted/50 p-3.5">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-10 rounded-card-sm" />
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-3 w-44" />
+          </div>
+        </div>
+        <Skeleton className="h-6 w-16" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+      <Separator />
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-8 w-full" />
+      </div>
     </div>
   );
 }
@@ -1132,23 +1380,56 @@ function DetailRow({
   emphasis?: boolean;
 }) {
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start gap-3 text-sm">
+    <div
+      className={cn(
+        'grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-center gap-3 py-2.5 text-sm',
+        'grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-center gap-3 py-1 text-sm',
+        emphasis && 'font-semibold text-foreground',
+      )}
+    >
       <span className="min-w-0 text-muted-foreground">{label}</span>
-      <span className={emphasis ? 'min-w-0 break-words text-end font-medium tabular-nums' : 'min-w-0 break-words text-end'}>
+      <span
+        className={
+          emphasis
+            ? 'min-w-0 break-words text-end font-semibold tabular-nums'
+            : 'min-w-0 break-words text-end'
+        }
+      >
         {value}
       </span>
     </div>
   );
 }
 
-function OrderMark({order}: {order: Order}) {
+function OrderMark({
+  order,
+  className,
+}: {
+  order: Order;
+  className?: string;
+}) {
   const title = order.product?.title;
   const coverUrl = order.product?.cover_url;
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [coverUrl]);
 
   return (
-    <span className="flex size-9 shrink-0 overflow-hidden rounded-card-sm bg-muted ring-1 ring-foreground/10">
-      {coverUrl ? (
-        <img src={coverUrl} alt="" className="size-full object-cover" />
+    <span
+      className={cn(
+        'flex size-9 shrink-0 overflow-hidden rounded-card-sm bg-muted ring-1 ring-foreground/10',
+        className,
+      )}
+    >
+      {coverUrl && !imageFailed ? (
+        <img
+          src={coverUrl}
+          alt=""
+          className="size-full object-cover"
+          onError={() => setImageFailed(true)}
+        />
       ) : (
         <span className="flex size-full items-center justify-center text-xs font-medium text-muted-foreground">
           {Avatar.initials(title) || 'P'}
@@ -1294,9 +1575,25 @@ function Pagination({
 
 function TableLoading() {
   return (
-    <div className="flex flex-col gap-2 p-6" aria-busy="true">
+    <div
+      className="divide-y divide-border/60 rounded-card-sm border border-border"
+      aria-busy="true"
+    >
       {[0, 1, 2, 3].map(row => (
-        <Skeleton key={row} className="h-12 w-full" />
+        <div
+          key={row}
+          className="flex items-center justify-between gap-4 px-3 py-3"
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Skeleton className="size-9 shrink-0 rounded-card-sm" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <Skeleton className="hidden h-4 w-28 sm:block" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
       ))}
     </div>
   );

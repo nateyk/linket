@@ -40,7 +40,7 @@ export function CreatorAboutEditor({
       onChange={onChange}
       onCreate={({editor}) => onEditorReady?.(editor.getHTML())}
     >
-      <div className="overflow-hidden rounded-card-sm border bg-background focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
+      <div className="overflow-hidden rounded-input border border-input bg-background transition-colors focus-within:border-transparent focus-within:outline-2 focus-within:outline-solid focus-within:outline-ring">
         <div
           role="toolbar"
           aria-label={trans({message: 'Text formatting'})}
