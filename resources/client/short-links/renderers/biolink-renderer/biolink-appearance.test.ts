@@ -40,48 +40,53 @@ function readSource(file: string): string {
 }
 
 describe('corner roundness radius variables', () => {
-  const systemVariables = {
-    '--be-radius-button': 'var(--radius-3xl)',
-    '--be-radius-input': 'var(--radius-xl)',
-    '--be-radius-card': 'var(--radius-3xl)',
-    '--be-radius-card-sm': 'var(--radius-2xl)',
-    '--be-radius-card-xs': 'var(--radius-xl)',
+  const defaultVariables = {
+    '--be-radius-button': '6px',
+    '--be-radius-badge': '4px',
+    '--be-radius-input': '6px',
+    '--be-radius-card': '8px',
+    '--be-radius-card-sm': '8px',
+    '--be-radius-card-xs': '6px',
   };
 
-  test('renders the core UI radius tokens before the creator picks anything', () => {
-    expect(resolveBiolinkRadiusVariables(null)).toEqual(systemVariables);
-    expect(resolveBiolinkRadiusVariables(undefined)).toEqual(systemVariables);
+  test('defaults unset roundness to Round so storefronts match the Appearance editor default', () => {
+    expect(resolveBiolinkRadiusVariables(null)).toEqual(defaultVariables);
+    expect(resolveBiolinkRadiusVariables(undefined)).toEqual(defaultVariables);
     expect(resolveBiolinkRadiusVariables({btnConfig: {}})).toEqual(
-      systemVariables,
+      defaultVariables,
     );
   });
 
-  test('steps controls, fields and surfaces through one shared scale', () => {
+  test('steps controls, badges, fields and surfaces through one clearly distinct scale', () => {
     const cases: Record<RadiusSetting, Record<string, string>> = {
       'rounded-none': {
         '--be-radius-button': '0',
+        '--be-radius-badge': '0',
         '--be-radius-input': '0',
         '--be-radius-card': '0',
         '--be-radius-card-sm': '0',
         '--be-radius-card-xs': '0',
       },
       'rounded-sm': {
-        '--be-radius-button': '4px',
-        '--be-radius-input': '12px',
+        '--be-radius-button': '6px',
+        '--be-radius-badge': '4px',
+        '--be-radius-input': '6px',
         '--be-radius-card': '8px',
         '--be-radius-card-sm': '8px',
-        '--be-radius-card-xs': '8px',
+        '--be-radius-card-xs': '6px',
       },
       'rounded-lg': {
-        '--be-radius-button': '8px',
-        '--be-radius-input': '16px',
-        '--be-radius-card': '24px',
-        '--be-radius-card-sm': '24px',
+        '--be-radius-button': '12px',
+        '--be-radius-badge': '8px',
+        '--be-radius-input': '12px',
+        '--be-radius-card': '18px',
+        '--be-radius-card-sm': '18px',
         '--be-radius-card-xs': '12px',
       },
       'rounded-full': {
         '--be-radius-button': '9999px',
-        '--be-radius-input': '24px',
+        '--be-radius-badge': '9999px',
+        '--be-radius-input': '20px',
         '--be-radius-card': '32px',
         '--be-radius-card-sm': '32px',
         '--be-radius-card-xs': '16px',
@@ -107,10 +112,6 @@ describe('corner roundness radius variables', () => {
   });
 
   test('renders Round containers at the admin Round card radius', () => {
-    // The admin theme's Round (`.radius-sm` in common-tailwind.css) maps the
-    // card tokens to `var(--radius-lg)` — 8px by Tailwind default. Storefront
-    // Round must resolve its containers to that same length, or Round reads
-    // as Rounder next to the dashboard.
     const round = resolveBiolinkRadiusVariables({
       btnConfig: {radius: 'rounded-sm'},
     });
@@ -124,38 +125,41 @@ describe('corner roundness radius variables', () => {
     expect(container.avatarValue).toBe('8px');
   });
 
-  test('matches the length the roundness knob draws its own tiles with', () => {
-    // The selector keeps drawing `rounded-none|sm|lg|full`; the button radius
-    // has to resolve to the same length as those utilities, or the storefront
-    // button and the rest of the scale would disagree.
-    const utilityLengths: Record<RadiusSetting, string> = {
-      'rounded-none': '0',
-      'rounded-sm': '4px',
-      'rounded-lg': '8px',
-      'rounded-full': '9999px',
-    };
+  test('keeps Square, Round, Rounder and Full noticeably separated across buttons, badges and cards', () => {
+    const vars = radiusSettings.map(setting =>
+      resolveBiolinkRadiusVariables({btnConfig: {radius: setting}}),
+    );
+    const px = (value: string) => parseInt(value, 10);
 
-    for (const setting of radiusSettings) {
-      expect(
-        resolveBiolinkRadiusVariables({btnConfig: {radius: setting}})[
-          '--be-radius-button'
-        ],
-      ).toBe(utilityLengths[setting]);
+    // Every step strictly increases without collapsing Round -> Rounder or Rounder -> Full.
+    for (const key of [
+      '--be-radius-button',
+      '--be-radius-badge',
+      '--be-radius-card',
+    ] as const) {
+      expect(px(vars[0][key])).toBe(0);
+      expect(px(vars[1][key])).toBeGreaterThan(px(vars[0][key]));
+      expect(px(vars[2][key])).toBeGreaterThanOrEqual(px(vars[1][key]) * 2);
+      expect(px(vars[3][key])).toBeGreaterThan(px(vars[2][key]));
     }
+    // Rounder stays well short of Full capsule/card radii so Rounder and Full stay distinct.
+    expect(px(vars[2]['--be-radius-button'])).toBeLessThanOrEqual(12);
+    expect(px(vars[2]['--be-radius-badge'])).toBeLessThanOrEqual(8);
+    expect(px(vars[3]['--be-radius-card']) - px(vars[2]['--be-radius-card'])).toBeGreaterThanOrEqual(12);
   });
 
   test('ships with the theme variables the public page root applies', () => {
     expect(
       resolveBiolinkThemeVariables({btnConfig: {radius: 'rounded-lg'}}),
-    ).toMatchObject({'--be-radius-card': '24px'});
-    expect(resolveBiolinkThemeVariables(null)).toMatchObject(systemVariables);
+    ).toMatchObject({'--be-radius-card': '18px'});
+    expect(resolveBiolinkThemeVariables(null)).toMatchObject(defaultVariables);
     // An unparseable background color falls back to the defaults, radius in tow.
     expect(
       resolveBiolinkThemeVariables({
         bgConfig: {color: 'definitely-not-a-color'},
         btnConfig: {radius: 'rounded-lg'},
       }),
-    ).toMatchObject({'--be-radius-card': '24px'});
+    ).toMatchObject({'--be-radius-card': '18px'});
   });
 
   test('painted stores claim the site token set; unpainted ones need nothing', () => {
@@ -274,10 +278,11 @@ describe('storefront appearance token wiring', () => {
     const segmented = resolveBiolinkSegmentedTabsAppearance({
       btnConfig: {radius: 'rounded-sm', shadow: 'strong', color: '#000000'},
     });
-    expect(segmented.listClassName).toContain('rounded-button');
+    expect(segmented.listClassName).toContain('rounded-card');
     expect(segmented.listClassName).toContain(
-      'bg-[var(--biolink-surface-strong)]',
+      'bg-[var(--biolink-surface)]',
     );
+    expect(segmented.listClassName).toContain('backdrop-blur-xl');
     expect(segmented.listClassName).toContain(
       'group-data-horizontal/tabs:h-auto',
     );
@@ -290,8 +295,9 @@ describe('storefront appearance token wiring', () => {
     expect(segmented.indicatorClassName).toContain(
       '[background:var(--biolink-button-background)]!',
     );
-    // The pill wears the creator's roundness token, same as the track.
+    // Track wears rounded-card so it wraps the rounded-button pill concentrically.
     expect(segmented.indicatorClassName).toContain('rounded-button');
+    expect(segmented.tabClassName).toContain('rounded-button');
     expect(segmented.tabClassName).toContain(
       'data-active:text-[var(--biolink-button-text)]!',
     );
@@ -326,7 +332,7 @@ describe('storefront appearance token wiring', () => {
 });
 
 describe('container corner roundness', () => {
-  test('falls back to the core UI card token when the creator picked nothing', () => {
+  test('falls back to Round when the creator picked nothing', () => {
     const appearances: (BiolinkAppearanceConfig | null | undefined)[] = [
       null,
       undefined,
@@ -334,15 +340,13 @@ describe('container corner roundness', () => {
     ];
 
     for (const appearance of appearances) {
-      // The page remaps `--be-radius-card` for an unset roundness too, so the
-      // crop preview has to read the length off the same scale.
       const remapped = resolveBiolinkRadiusVariables(appearance);
 
       expect(resolveBiolinkContainerRadius(appearance)).toEqual({
-        className: 'rounded-card',
-        avatarClassName: 'rounded-card',
-        value: remapped['--be-radius-card'],
-        avatarValue: remapped['--be-radius-card'],
+        className: 'rounded-card-sm',
+        avatarClassName: 'rounded-card-sm',
+        value: remapped['--be-radius-card-sm'],
+        avatarValue: remapped['--be-radius-card-sm'],
       });
     }
   });
@@ -393,7 +397,7 @@ describe('container corner roundness', () => {
     const cases: Record<RadiusSetting, {value: string; avatarValue: string}> = {
       'rounded-none': {value: '0px', avatarValue: '0px'},
       'rounded-sm': {value: '8px', avatarValue: '8px'},
-      'rounded-lg': {value: '24px', avatarValue: '24px'},
+      'rounded-lg': {value: '18px', avatarValue: '18px'},
       'rounded-full': {value: 'var(--radius-4xl)', avatarValue: '9999px'},
     };
 
@@ -510,7 +514,9 @@ describe('creator profile card wiring', () => {
   });
 
   test('draws the cover at the 3:1 box the editor crops to', () => {
-    expect(source).toContain('className="relative aspect-[3/1] w-full');
+    expect(source).toContain(
+      'relative aspect-[3/1] w-full shrink-0 overflow-hidden rounded-t-[inherit]',
+    );
   });
 
   test('clips the cover image to the 3:1 frame without stretching it', () => {
@@ -518,7 +524,7 @@ describe('creator profile card wiring', () => {
       'aspect-[3/1] w-full shrink-0 overflow-hidden',
     );
     expect(source).toMatch(
-      /className="absolute -inset-px block size-\[calc\(100%_\+_2px\)\] object-cover object-center"\s+src=\{profile\.cover_url\}/,
+      /className="absolute -inset-px block size-\[calc\(100%_\+_2px\)\] max-w-none object-cover object-center"\s+src=\{profile\.cover_url\}/,
     );
   });
 });
@@ -606,7 +612,7 @@ describe('storefront surface edge chrome', () => {
   test('skill chips are soft filled pills that follow Appearance roundness', () => {
     expect(layoutSource).toContain('formatSkillLabel');
     expect(layoutSource).toContain('variant="secondary"');
-    expect(layoutSource).toContain('rounded-button');
+    expect(layoutSource).toContain('rounded-badge');
     // Ink-tinted fill + ring — readable on the white card face.
     expect(layoutSource).toContain(
       'bg-[color-mix(in_srgb,var(--biolink-text)_8%,var(--biolink-surface))]!',
@@ -1118,5 +1124,28 @@ describe('storefront contrast wiring', () => {
     expect(source).toContain('measureContrastRatio');
     expect(source).toContain('MIN_TEXT_CONTRAST');
     expect(source).toContain('text-warning');
+  });
+
+  test('pattern backgrounds derive contrast-safe foregrounds and glass keeps a translucent edge', () => {
+    const patternVars = resolveBiolinkThemeVariables({
+      bgConfig: {
+        backgroundImage: 'linear-gradient(45deg, var(--bg-pattern-front) 50%, var(--bg-pattern-back) 50%)',
+        backgroundColor: '#f5f5f5',
+        patternFrontColor: '#111111',
+      } as BiolinkAppearanceConfig['bgConfig'],
+    });
+    expect(patternVars['--biolink-text']).toBe('#000000');
+    expect(patternVars['--biolink-positive']).toBe('oklch(0.49 0.192 149.58)');
+
+    const darkVars = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundColor: '#111111', color: '#ffffff'},
+    });
+    expect(darkVars['--biolink-positive']).toBe('oklch(0.7227 0.192 149.58)');
+
+    const glass = resolveBiolinkButtonAppearance({
+      bgConfig: {backgroundColor: '#ffffff', color: '#000000'},
+      btnConfig: {variant: 'glass'},
+    });
+    expect(buttonVars(glass)['--biolink-button-border']).toContain('color-mix(');
   });
 });

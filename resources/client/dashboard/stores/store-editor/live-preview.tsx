@@ -11,6 +11,7 @@ import {
 } from '@app/dashboard/stores/store-editor/store-preview-protocol';
 import {Button} from '@shadcn/button/button';
 import {Drawer} from '@shadcn/drawer/drawer';
+import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
@@ -30,10 +31,10 @@ const PREVIEW_READY_MESSAGE = 'linket:store-preview-ready';
 
 /**
  * Edits arrive one keystroke at a time; the frame only needs the latest
- * snapshot. Waiting a beat keeps a paste or a slider drag from queueing a
- * message per character.
+ * snapshot. Waiting a short beat keeps a paste or slider drag responsive
+ * without queueing a message per character.
  */
-const SYNC_DEBOUNCE_MS = 150;
+const SYNC_DEBOUNCE_MS = 80;
 
 /**
  * The phone frame and its postMessage protocol. The stacked panel and the
@@ -73,28 +74,36 @@ function PreviewDevice() {
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [frameReady, setFrameReady] = useState(false);
+
+  const previewPayload = useMemo(
+    () => ({biolink, appearance, content, profileConfig}),
+    [biolink, appearance, content, profileConfig],
+  );
+  const latestPayloadRef = useRef(previewPayload);
+  latestPayloadRef.current = previewPayload;
+  const lastPostedPayloadRef = useRef<typeof previewPayload | null>(null);
 
   // The frame is the real public route; drafts stream in over postMessage so
   // edits appear without reloading or flickering.
-  const syncPreview = useCallback(() => {
+  const postPayload = useCallback((force = false) => {
+    const payload = latestPayloadRef.current;
+    if (!force && lastPostedPayloadRef.current === payload) return;
+    lastPostedPayloadRef.current = payload;
     iframeRef.current?.contentWindow?.postMessage(
       {
         type: PREVIEW_MESSAGE,
-        payload: {biolink, appearance, content, profileConfig},
+        payload,
       },
       window.location.origin,
     );
-  }, [biolink, appearance, content, profileConfig]);
-
-  const scheduleSync = useCallback(() => {
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(syncPreview, SYNC_DEBOUNCE_MS);
-  }, [syncPreview]);
+  }, []);
 
   useEffect(() => {
-    scheduleSync();
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => postPayload(), SYNC_DEBOUNCE_MS);
     return () => clearTimeout(debounceRef.current);
-  }, [scheduleSync]);
+  }, [previewPayload, postPayload]);
 
   // Posted whenever the tab mapping changes — never on data syncs, so a
   // section tapped manually inside the preview survives edits (A-06).
@@ -109,6 +118,8 @@ function PreviewDevice() {
         : null,
     [editorTab, previewSection],
   );
+  const latestTabMessageRef = useRef(tabMessage);
+  latestTabMessageRef.current = tabMessage;
 
   useEffect(() => {
     if (!tabMessage) return;
@@ -122,13 +133,14 @@ function PreviewDevice() {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if ((event.data as {type?: string})?.type === PREVIEW_READY_MESSAGE) {
+        setFrameReady(true);
         // The frame just (re)loaded and has no draft yet: this one goes
         // straight through, or the preview would sit empty for the debounce.
-        syncPreview();
+        postPayload(true);
         // Initial load must also land on the section of the current tab.
-        if (tabMessage) {
+        if (latestTabMessageRef.current) {
           iframeRef.current?.contentWindow?.postMessage(
-            tabMessage,
+            latestTabMessageRef.current,
             window.location.origin,
           );
         }
@@ -136,9 +148,14 @@ function PreviewDevice() {
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [syncPreview, tabMessage]);
+  }, [postPayload]);
 
   const backHalf = biolink.back_half;
+
+  useEffect(() => {
+    setFrameReady(false);
+    lastPostedPayloadRef.current = null;
+  }, [backHalf]);
 
   return (
     // Fit the whole device inside whatever space is on offer.
@@ -154,18 +171,39 @@ function PreviewDevice() {
         }}
       >
         {backHalf ? (
-          <iframe
-            ref={iframeRef}
-            key={backHalf}
-            src={`/${backHalf}?preview=1`}
-            title={trans({
-              message: 'Live preview of the store page on an iPhone 14 Pro',
-            })}
-            width={PHONE_GEOMETRY.viewport.width}
-            height={PHONE_GEOMETRY.viewport.height}
-            scrolling="auto"
-            className="block h-full w-full border-0 bg-background"
-          />
+          <>
+            {!frameReady && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-10 flex flex-col gap-3 bg-background p-4 pt-16"
+              >
+                <Skeleton className="h-24 w-full rounded-card-sm" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-16 shrink-0 rounded-full" />
+                  <div className="flex flex-1 flex-col gap-2">
+                    <Skeleton className="h-4 w-3/4 rounded-button" />
+                    <Skeleton className="h-3 w-1/2 rounded-button" />
+                  </div>
+                </div>
+                <Skeleton className="h-10 w-full rounded-button" />
+                <Skeleton className="h-16 w-full rounded-card-sm" />
+              </div>
+            )}
+            <iframe
+              ref={iframeRef}
+              key={backHalf}
+              src={`/${backHalf}?preview=1`}
+              title={trans({
+                message: 'Live preview of the store page on an iPhone 14 Pro',
+              })}
+              width={PHONE_GEOMETRY.viewport.width}
+              height={PHONE_GEOMETRY.viewport.height}
+              loading="eager"
+              scrolling="auto"
+              onLoad={() => setFrameReady(true)}
+              className="block h-full w-full border-0 bg-background"
+            />
+          </>
         ) : null}
       </PhonePreview>
     </div>

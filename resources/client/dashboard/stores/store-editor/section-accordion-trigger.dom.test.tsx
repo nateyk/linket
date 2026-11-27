@@ -115,6 +115,7 @@ test('collapsible section names and descriptions remain accessible', () => {
 
   const trigger = screen.getByRole('button', {name: 'Products'});
   expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  expect(trigger.className).toContain('focus-visible:outline-ring');
   expect(describedTexts(trigger)).toContain('Feature up to six items.');
   expect(describedTexts(trigger)).toContain('2 of 6 products featured');
   fireEvent.click(trigger);

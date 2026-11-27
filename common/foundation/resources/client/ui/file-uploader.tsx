@@ -441,11 +441,11 @@ export function SharedFileUploader({
           }}
           {...dropHandlers}
           className={cn(
-            'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center transition-colors outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/20',
-            dense && 'flex-row flex-wrap justify-start gap-3 p-3 text-start',
+            'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card-sm border border-dashed p-5 text-center transition-colors outline-none hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring sm:p-6',
+            dense && 'flex-row flex-wrap justify-start gap-3 p-3 text-start sm:p-3.5',
             isDragging
               ? 'border-primary bg-primary/5'
-              : 'border-border bg-muted/40 hover:bg-muted/60',
+              : 'border-border/80 bg-muted/35 hover:bg-muted/55',
           )}
         >
           {fileInput}

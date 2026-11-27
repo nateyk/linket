@@ -1,9 +1,10 @@
 import {BackgroundSelectorConfig} from '@common/background-selector/background-selector-config';
-import {Radio} from '@ui/forms/radio-group/radio';
-import {RadioGroup} from '@ui/forms/radio-group/radio-group';
+import {Label} from '@shadcn/forms/label';
+import {RadioGroup, RadioGroupItem} from '@shadcn/forms/radio-group/radio-group';
 import {message} from '@ui/i18n/message';
 import {MessageDescriptor} from '@ui/i18n/message-descriptor';
 import {Trans} from '@ui/i18n/trans';
+import {useId} from 'react';
 
 const BackgroundPositions: Record<
   'cover' | 'contain' | 'repeat',
@@ -56,14 +57,15 @@ export function SimpleBackgroundPositionSelector<
   compactLabels,
   disabled,
 }: Props<T>) {
+  const groupId = useId();
   const selectedPosition = positionKeyFromValue(imageBgValue);
   return (
     <div className={className}>
       <RadioGroup
-        size="sm"
+        orientation="horizontal"
         disabled={!imageBgValue}
         value={selectedPosition}
-        onChange={value => {
+        onValueChange={value => {
           if (imageBgValue) {
             onChange?.({
               ...imageBgValue,
@@ -73,20 +75,21 @@ export function SimpleBackgroundPositionSelector<
           }
         }}
       >
-        {Object.entries(BackgroundPositions).map(([key, position]) => (
-          <Radio
-            key={key}
-            disabled={disabled}
-            name="background-position"
-            value={key}
-          >
-            {compactLabels ? (
-              <Trans {...(position.compactLabel ?? position.label)} />
-            ) : (
-              <Trans {...position.label} />
-            )}
-          </Radio>
-        ))}
+        {Object.entries(BackgroundPositions).map(([key, position]) => {
+          const itemId = `${groupId}-${key}`;
+          return (
+            <div key={key} className="flex items-center gap-2">
+              <RadioGroupItem id={itemId} disabled={disabled} value={key} />
+              <Label htmlFor={itemId} className="font-normal">
+                {compactLabels ? (
+                  <Trans {...(position.compactLabel ?? position.label)} />
+                ) : (
+                  <Trans {...position.label} />
+                )}
+              </Label>
+            </div>
+          );
+        })}
       </RadioGroup>
     </div>
   );

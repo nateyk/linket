@@ -98,6 +98,7 @@ export function coverZoomForCrop(
   stageWidth: number,
   stageHeight: number,
   cropWidth: number,
+  cropHeight?: number,
 ): number {
   if (
     !naturalWidth ||
@@ -113,8 +114,11 @@ export function coverZoomForCrop(
     stageHeight / naturalHeight,
   );
   const fittedWidth = naturalWidth * scale;
-  if (fittedWidth <= 0) return 1;
-  return Math.min(3, Math.max(1, cropWidth / fittedWidth));
+  const fittedHeight = naturalHeight * scale;
+  if (fittedWidth <= 0 || fittedHeight <= 0) return 1;
+  const zoomX = cropWidth / fittedWidth;
+  const zoomY = cropHeight ? cropHeight / fittedHeight : 1;
+  return Math.min(3, Math.max(1, zoomX, zoomY));
 }
 
 const ImageCropContext = React.createContext<ImageCropContextValue | null>(
@@ -327,6 +331,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
         live.width,
         live.height,
         size.width,
+        size.height,
       );
       setMinZoom(cover);
       setZoom(cover);
@@ -633,20 +638,19 @@ async function getCroppedImage({
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not create canvas context');
 
-  canvas.width = crop.width;
-  canvas.height = crop.height;
+  const outWidth = Math.max(1, Math.round(crop.width));
+  const outHeight = Math.max(1, Math.round(crop.height));
+  canvas.width = outWidth;
+  canvas.height = outHeight;
 
-  ctx.drawImage(
-    image,
-    crop.x,
-    crop.y,
-    crop.width,
-    crop.height,
-    0,
-    0,
-    crop.width,
-    crop.height,
-  );
+  const maxX = Math.max(0, image.naturalWidth - 1);
+  const maxY = Math.max(0, image.naturalHeight - 1);
+  const sx = Math.max(0, Math.min(crop.x, maxX));
+  const sy = Math.max(0, Math.min(crop.y, maxY));
+  const sw = Math.max(1, Math.min(crop.width, image.naturalWidth - sx));
+  const sh = Math.max(1, Math.min(crop.height, image.naturalHeight - sy));
+
+  ctx.drawImage(image, sx, sy, sw, sh, 0, 0, outWidth, outHeight);
 
   const croppedFile = await encodeCanvasToImageFile(canvas, file.name);
   const previewUrl = URL.createObjectURL(croppedFile);

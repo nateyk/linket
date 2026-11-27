@@ -81,20 +81,16 @@ describe('product preview wiring', () => {
     expect(source).toContain('fileCount={buyerOnly ? undefined : files.length}');
   });
 
-  test('approved update review state is read from the API flag, not inferred from draft status', () => {
+  test('approved update review state is read from the API flag and keeps inline status out of random body air', () => {
     const source = fs.readFileSync(
       path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
       'utf8',
     );
-    expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
     expect(source).toContain('product.has_pending_update === true');
     expect(source).toContain('This product remains approved while an update is under review.');
-    // Keep approval feedback available to creators, but outside the H1 header.
-    const header = source.split('</DashboardLayout.SectionHeader>')[0] ?? '';
-    const body = source.split('<DashboardLayout.SectionContent')[1] ?? '';
-    expect(header).not.toContain('<ProductStatus');
-    expect(body).toContain('<ProductStatus');
-    expect(body).toContain("product.status !== 'draft'");
+    // No floating icon-only ProductStatus circle in header or body; screen-reader save status stays sr-only.
+    expect(source).not.toContain('<ProductStatus');
+    expect(source).toContain('<span role="status" aria-live="polite" className="sr-only">');
   });
 
   test('status tones use semantic warning tokens, not raw amber', () => {

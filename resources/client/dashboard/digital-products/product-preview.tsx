@@ -52,6 +52,8 @@ export type ProductFormCustomerPreviewProps = {
   /** When set, shows the download-file meta row (digital/ebook/audio). */
   fileCount?: number;
   imageFallback?: ReactNode;
+  hideHeading?: boolean;
+  quiet?: boolean;
 };
 
 /**
@@ -69,6 +71,8 @@ export function ProductFormCustomerPreview({
   descriptionLength,
   fileCount,
   imageFallback,
+  hideHeading = false,
+  quiet = false,
 }: ProductFormCustomerPreviewProps) {
   const {trans} = useTrans();
   const trimmedTitle = title.trim();
@@ -77,12 +81,15 @@ export function ProductFormCustomerPreview({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium">
-          <Trans message="Customer preview" />
-        </p>
-      </div>
+      {!hideHeading && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-medium">
+            <Trans message="Customer preview" />
+          </p>
+        </div>
+      )}
       <ProductCard
+        quiet={quiet}
         images={coverUrl ? [coverUrl] : []}
         title={trimmedTitle || trans({message: emptyTitle})}
         tags={[trans({message: PRODUCT_TYPE_LABELS[productType]})]}
@@ -160,6 +167,8 @@ export function ProductPreview({buyerOnly = false}: {buyerOnly?: boolean}) {
       description={buyerOnly ? description : undefined}
       descriptionLength={buyerOnly ? undefined : description?.length ?? 0}
       fileCount={buyerOnly ? undefined : files.length}
+      hideHeading={buyerOnly}
+      quiet={buyerOnly}
     />
   );
 }

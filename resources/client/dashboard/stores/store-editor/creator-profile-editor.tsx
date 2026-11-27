@@ -67,7 +67,7 @@ import {
   UserRoundIcon,
   XIcon,
 } from 'lucide-react';
-import {type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
 import {Link} from 'react-router';
 
@@ -985,7 +985,7 @@ function SelectedProduct({
           message('Remove :title', {values: {title: product.title}}),
         )}
         onClick={onRemove}
-        className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        className="shrink-0 text-muted-foreground transition-opacity hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
       >
         <XIcon />
       </Button>

@@ -90,6 +90,8 @@ export function ImageBackgroundTab({
           uploadType={uploadType}
           onSelected={url => {
             onChange?.({
+              ...defaultPosition,
+              backgroundColor: value?.backgroundColor,
               backgroundImage: `url(${url})`,
               tint: value?.tint ?? 50,
               noise: value?.noise,
@@ -272,21 +274,30 @@ export function EffectButton({
   onClick,
 }: EffectButtonProps) {
   const id = useId();
+  const labelId = `${id}-label`;
   return (
     <div
-      className="group flex flex-col items-center gap-2"
+      className="group flex flex-col items-center gap-1.5"
       data-active={active}
     >
       <button
         id={id}
-        aria-labelledby={id}
+        aria-pressed={!!active}
+        aria-labelledby={labelId}
         type="button"
-        className="flex w-full items-center justify-center overflow-hidden rounded-card-sm bg-accent p-4 text-sm outline-offset-3 outline-primary group-data-active:outline-2 focus-visible:outline-2"
+        className={cn(
+          'flex w-full items-center justify-center overflow-hidden rounded-card-sm border border-border bg-muted/40 p-3.5 text-sm text-foreground transition-colors hover:bg-muted/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
+          active &&
+            'border-primary bg-primary/10 ring-1 ring-primary hover:bg-primary/15',
+        )}
         onClick={() => onClick()}
       >
         {children}
       </button>
-      <div className="text-xs" id={id}>
+      <div
+        className="text-xs font-medium text-muted-foreground group-data-[active=true]:text-foreground"
+        id={labelId}
+      >
         {label}
       </div>
     </div>

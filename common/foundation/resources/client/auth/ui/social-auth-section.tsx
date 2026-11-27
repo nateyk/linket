@@ -55,15 +55,15 @@ export function SocialAuthSection({
 
   return (
     <Fragment>
-      <div className="relative my-5 text-center before:absolute before:top-1/2 before:left-0 before:h-px before:w-full before:-translate-y-1/2 before:bg-border">
-        <span className="relative z-10 bg-background px-2.5 text-sm text-muted-foreground dark:bg-card">
+      <div className="relative text-center before:absolute before:top-1/2 before:left-0 before:h-px before:w-full before:-translate-y-1/2 before:bg-border/70">
+        <span className="relative z-10 bg-background px-3 text-xs text-muted-foreground in-data-[slot=auth-card]:bg-card">
           {dividerMessage}
         </span>
       </div>
       <div
         className={clsx(
           'flex items-center justify-center',
-          social?.compact_buttons ? 'gap-2' : 'flex-col gap-3.5',
+          social?.compact_buttons ? 'gap-2.5' : 'flex-col gap-3',
         )}
       >
         {social?.google?.enable ? (
@@ -187,7 +187,7 @@ function SocialLoginButton({onClick, label, icon}: SocialLoginButtonProps) {
   }
 
   return (
-    <Button variant="outline" onClick={onClick} className="w-full">
+    <Button variant="outline" size="lg" onClick={onClick} className="w-full">
       {icon}
       <span className="min-w-40 text-start">{label}</span>
     </Button>

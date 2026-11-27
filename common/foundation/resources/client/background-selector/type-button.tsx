@@ -35,7 +35,7 @@ export function TypeButton({isActive, icon, title, onClick, style}: Props) {
       <span
         style={style}
         className={cn(
-          'flex size-18 items-center justify-center rounded-card-xs border outline-offset-3 outline-primary group-focus-visible:outline-2 group-data-active:outline-2 md:size-23 [&_svg]:size-8',
+          'flex size-18 items-center justify-center rounded-card-sm border border-border transition-colors group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring group-data-[active=true]:border-primary group-data-[active=true]:ring-2 group-data-[active=true]:ring-primary/25 md:size-23 [&_svg]:size-8 motion-reduce:transition-none',
           foregroundColor,
         )}
       >

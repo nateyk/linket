@@ -104,7 +104,7 @@ export function ProductSummary({
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {showRating && (
           <div className="flex items-center gap-2 text-sm">
-            <RatingStars value={Math.round(average)} />
+            <RatingStars value={average} />
             <span className="font-medium text-[var(--biolink-text)]">
               {average.toFixed(1)}
             </span>

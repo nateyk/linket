@@ -60,13 +60,16 @@ describe('public product reviews', () => {
     expect(source).toContain('<ReviewRow review={toCustomerReview(review)} />');
   });
 
-  test('header shows average RatingStars plus the out-of-5 copy', () => {
+  test('header shows average Rating plus the out-of-5 copy and Progress bars', () => {
     const source = readSource();
 
     expect(source).toContain('<Trans message="Customer Reviews" />');
+    expect(source).toContain('<Rating rating={average} size="md" />');
     expect(source).toContain(
       '<Trans\n                  message=":average out of 5 · :count reviews"',
     );
+    expect(source).toContain('<Progress.Track');
+    expect(source).toContain('<Progress.Indicator');
     expect(source).toContain('Verified Purchase');
     expect(source).toContain('variant="positive"');
   });

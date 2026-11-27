@@ -58,6 +58,7 @@ html.dark {
 
   --radius-input: var(--be-radius-input, var(--radius-xl));
   --radius-button: var(--be-radius-button, var(--radius-3xl));
+  --radius-badge: var(--be-radius-badge, var(--be-radius-card-sm, var(--radius-2xl)));
   --radius-card: var(--be-radius-card, var(--radius-3xl));
   --radius-card-sm: var(--be-radius-card-sm, var(--radius-2xl));
   --radius-card-xs: var(--be-radius-card-xs, var(--radius-xl));

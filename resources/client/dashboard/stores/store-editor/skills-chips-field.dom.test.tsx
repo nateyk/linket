@@ -56,10 +56,13 @@ function skillRemoveLabels(): string[] {
     .map(button => button.getAttribute('aria-label') ?? '');
 }
 
-test('the draft input carries the field label', () => {
+test('the draft input carries the field label without a nested focus outline', () => {
   renderSkills('');
 
-  expect(input().type).toBe('text');
+  const el = input();
+  expect(el.type).toBe('text');
+  expect(el.getAttribute('autocomplete')).toBe('off');
+  expect(el.className).toContain('focus-visible:outline-none');
 });
 
 test('typing a skill and pressing Enter adds a chip and stores it', () => {

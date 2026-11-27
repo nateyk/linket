@@ -2,6 +2,7 @@ import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-confi
 import {
   biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
+  resolveBiolinkContainerRadius,
   resolveBiolinkPublicAppearanceStyle,
   shouldUseLightBiolinkLogo,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
@@ -13,7 +14,6 @@ import {
   ProductSampleStage,
   ProductSampleTracklist,
 } from '@app/digital-products/public/product-page/product-sample-player';
-import {ProductCreatorCard} from '@app/digital-products/public/product-page/product-creator-card';
 import {ProductOverview} from '@app/digital-products/public/product-page/product-overview';
 import {ProductPricingCard} from '@app/digital-products/public/product-page/product-pricing-card';
 import {isSuccessfulFreeCheckoutResponse} from './free-checkout-response';
@@ -264,6 +264,35 @@ export function PublicDigitalProductPage({
     content: <ProductOverview product={data.product} />,
   });
 
+  if (audioSamples.length > 0 || pdfSample) {
+    const hasAudio = audioSamples.length > 0;
+    tabSections.push({
+      value: 'sample',
+      label: hasAudio ? (
+        <Trans message="Samples" />
+      ) : (
+        <Trans message="Sample" />
+      ),
+      content:
+        hasAudio && pdfSample ? (
+          <div className="flex min-w-0 flex-col gap-5">
+            <ProductSampleTracklist appearance={data.appearance} />
+            <ProductSamplePdf
+              sample={pdfSample}
+              appearance={data.appearance}
+            />
+          </div>
+        ) : hasAudio ? (
+          <ProductSampleTracklist appearance={data.appearance} />
+        ) : (
+          <ProductSamplePdf
+            sample={pdfSample!}
+            appearance={data.appearance}
+          />
+        ),
+    });
+  }
+
   if (data.product.is_course && data.product.course_id) {
     tabSections.push({
       value: 'curriculum',
@@ -295,19 +324,6 @@ export function PublicDigitalProductPage({
       ),
     });
   }
-
-  tabSections.push({
-    value: 'creator',
-    label: <Trans message="Creator" />,
-    content: (
-      <ProductCreatorCard
-        creator={data.creator}
-        biolink={data.biolink}
-        storeUrl={data.back_url}
-        appearance={data.appearance}
-      />
-    ),
-  });
 
   return (
     <PublicProductShell
@@ -362,9 +378,17 @@ export function PublicDigitalProductPage({
         <ProductSamplePlayer samples={audioSamples}>
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
-            <Card.Root className={biolinkSurfaceCard}>
+            <Card.Root
+              className={cn(
+                biolinkSurfaceCard,
+                resolveBiolinkContainerRadius(data.appearance).className,
+              )}
+            >
               {audioSamples.length > 0 ? (
-                <ProductSampleStage product={data.product} />
+                <ProductSampleStage
+                  product={data.product}
+                  appearance={data.appearance}
+                />
               ) : (
                 <ProductGallery product={data.product} />
               )}
@@ -376,7 +400,6 @@ export function PublicDigitalProductPage({
                   reviews={reviewsSummary}
                 />
               </Card.Content>
-              {audioSamples.length > 0 && <ProductSampleTracklist />}
             </Card.Root>
           </div>
 
@@ -394,7 +417,6 @@ export function PublicDigitalProductPage({
           </aside>
 
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-2">
-            {pdfSample && <ProductSamplePdf sample={pdfSample} />}
             <ProductTabs
               sections={tabSections}
               appearance={data.appearance}

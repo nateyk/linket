@@ -3,11 +3,20 @@ import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
 import {HookForm} from '@shadcn/forms/form/hook-form';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
-import {LinkStyle} from '@ui/buttons/external-link';
+import {Spinner} from '@shadcn/spinner/spinner';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {useSettings} from '@ui/settings/use-settings';
-import {ReactNode, useContext} from 'react';
+import {EyeIcon, EyeOffIcon} from 'lucide-react';
+import {ReactNode, useContext, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import {Link, useLocation, useSearchParams} from 'react-router';
 import {
@@ -31,6 +40,8 @@ export function LoginPage({
 }: Props) {
   const [searchParams] = useSearchParams();
   const {pathname} = useLocation();
+  const {trans} = useTrans();
+  const [showPassword, setShowPassword] = useState(false);
 
   const isWorkspaceLogin = pathname.includes('workspace');
   const searchParamsEmail = searchParams.get('email') || undefined;
@@ -46,37 +57,30 @@ export function LoginPage({
   });
   const login = useLogin(form);
 
-  const heading = isWorkspaceLogin ? (
+  const workspaceHeading = (
     <Trans
       values={{siteName: branding?.site_name}}
       message="To join your team on :siteName, login to your account"
     />
-  ) : (
-    <Trans message="Sign in to your account" />
   );
 
-  const messages = (registrationEnabled || bottomMessages) && (
-    <div className="flex flex-col gap-2">
-      {registrationEnabled && (
-        <div>
-          <Trans
-            message="Don't have an account? <a>Sign up.</a>"
-            values={{
-              a: parts => (
-                <Link
-                  className={`${LinkStyle} inline-flex min-h-6 items-center`}
-                  to="/register"
-                >
-                  {parts}
-                </Link>
-              ),
-            }}
-          />
-        </div>
-      )}
-      {bottomMessages}
-    </div>
-  );
+  const signupPrompt = registrationEnabled ? (
+    <p className="text-sm text-muted-foreground">
+      <Trans
+        message="Don't have an account? <a>Sign up</a>"
+        values={{
+          a: parts => (
+            <Link
+              className="font-medium text-primary hover:underline"
+              to="/register"
+            >
+              {parts}
+            </Link>
+          ),
+        }}
+      />
+    </p>
+  ) : null;
 
   return (
     <AuthLayoutV2>
@@ -86,18 +90,18 @@ export function LoginPage({
 
       {children}
 
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          {isWorkspaceLogin ? heading : <Trans message="Login to your account" />}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {isWorkspaceLogin ? null : (
-            <Trans message="Please enter your details to login." />
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          {isWorkspaceLogin ? (
+            workspaceHeading
+          ) : (
+            <Trans message="Login to your account" />
           )}
-        </p>
+        </h1>
+        {signupPrompt}
       </div>
 
-      <div className="space-y-5">
+      <div className="flex flex-col gap-5">
         <HookForm.Root
           form={form}
           onSubmit={payload => {
@@ -113,6 +117,7 @@ export function LoginPage({
           <Field.Group className="gap-4">
             <HookForm.Field
               name="email"
+              className="gap-1.5"
               invalid={!!form.formState.errors.email || undefined}
               disabled={!!searchParamsEmail}
             >
@@ -124,6 +129,7 @@ export function LoginPage({
                 type="email"
                 placeholder="you@example.com"
                 autoComplete="email"
+                className="h-10"
                 required
               />
               {form.formState.errors.email?.message ? (
@@ -137,58 +143,76 @@ export function LoginPage({
 
             <HookForm.Field
               name="password"
+              className="gap-1.5"
               invalid={!!form.formState.errors.password || undefined}
             >
-              <div className="flex items-center justify-between gap-4">
-                <Field.Label htmlFor="login-password">
-                  <Trans message="Password" />
-                </Field.Label>
-                <Link
-                  className="inline-flex min-h-6 items-center text-sm hover:underline"
-                  to="/forgot-password"
-                >
-                  <Trans message="Forgot your password?" />
-                </Link>
-              </div>
-              <Input
-                id="login-password"
-                type="password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-              />
+              <Field.Label htmlFor="login-password">
+                <Trans message="Password" />
+              </Field.Label>
+              <InputGroup className="h-10">
+                <InputGroupInput
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    size="icon-xs"
+                    aria-label={trans(
+                      showPassword
+                        ? message('Hide password')
+                        : message('Show password'),
+                    )}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword(value => !value)}
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
               <Field.Error />
             </HookForm.Field>
 
-            <HookForm.Field name="remember">
-              <Field.Root orientation="horizontal">
-                <Checkbox id="login-remember" />
-                <Field.Label htmlFor="login-remember" className="font-normal">
-                  <Trans message="Remember me for 30 days" />
-                </Field.Label>
-              </Field.Root>
-            </HookForm.Field>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <HookForm.Field name="remember">
+                <Field.Root orientation="horizontal">
+                  <Checkbox id="login-remember" />
+                  <Field.Label
+                    htmlFor="login-remember"
+                    className="font-normal text-muted-foreground"
+                  >
+                    <Trans message="Remember me" />
+                  </Field.Label>
+                </Field.Root>
+              </HookForm.Field>
+              <Link
+                className="inline-flex min-h-6 items-center text-sm font-medium text-primary hover:underline"
+                to="/forgot-password"
+              >
+                <Trans message="Forgot password?" />
+              </Link>
+            </div>
 
             <Button
               className="w-full"
+              size="lg"
               type="submit"
               variant="default"
               color="primary"
               disabled={login.isPending}
             >
+              {login.isPending && <Spinner data-icon="inline-start" />}
               <Trans message="Login" />
             </Button>
           </Field.Group>
         </HookForm.Root>
-        <SocialAuthSection
-          dividerMessage={<Trans message="Or continue with" />}
-        />
+        <SocialAuthSection dividerMessage={<Trans message="or" />} />
       </div>
 
-      {messages && (
-        <div className="text-sm text-muted-foreground">
-          {messages}
-        </div>
+      {bottomMessages && (
+        <div className="text-sm text-muted-foreground">{bottomMessages}</div>
       )}
     </AuthLayoutV2>
   );

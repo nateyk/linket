@@ -23,9 +23,9 @@ export function ProductEditorSection({
       role="region"
       aria-labelledby={id}
       data-slot="product-editor-section"
-      className="min-w-0 rounded-card-sm border border-border bg-card p-4 sm:p-5"
+      className="min-w-0 rounded-card-sm border border-border/75 bg-card shadow-2xs p-4 sm:p-5"
     >
-      <header className="mb-4 flex flex-col gap-1 border-b border-border pb-3">
+      <header className="mb-4 flex flex-col gap-1 border-b border-border/60 pb-3">
         <h2
           id={id}
           tabIndex={-1}

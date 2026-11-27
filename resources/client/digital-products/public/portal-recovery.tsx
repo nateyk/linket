@@ -268,8 +268,10 @@ function PurchaseCodeInput({
   label: string;
   onChange: (code: string) => void;
 }) {
+  const activeSlot = Math.min(code.length, 5);
+
   return (
-    <div className="relative w-full rounded-lg focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-foreground">
+    <div className="group relative w-full">
       <input
         id="purchase-code"
         type="text"
@@ -284,23 +286,37 @@ function PurchaseCodeInput({
         disabled={disabled}
         aria-label={label}
         aria-invalid={invalid || undefined}
-        className="absolute inset-0 z-10 h-full w-full cursor-text opacity-0 disabled:cursor-not-allowed"
+        className="absolute inset-0 z-10 h-full w-full cursor-text opacity-0 outline-none disabled:cursor-not-allowed"
       />
       <div className="flex gap-2" aria-hidden="true">
-        {Array.from({length: 6}, (_, index) => (
-          <span
-            key={index}
-            data-testid="purchase-otp-slot"
-            className={cn(
-              'flex h-12 min-w-0 flex-1 items-center justify-center rounded-lg border border-input bg-background text-lg font-semibold tabular-nums',
-              code.length === index && 'border-primary bg-primary/5',
-              invalid && 'border-destructive',
-              disabled && 'opacity-60',
-            )}
-          >
-            {code[index] || ''}
-          </span>
-        ))}
+        {Array.from({length: 6}, (_, index) => {
+          const isActive = index === activeSlot;
+          return (
+            <span
+              key={index}
+              data-testid="purchase-otp-slot"
+              className={cn(
+                'flex h-12 min-w-0 flex-1 items-center justify-center rounded-input border border-input bg-background text-lg font-semibold tabular-nums transition-colors',
+                isActive &&
+                  !invalid &&
+                  'group-focus-within:border-primary group-focus-within:bg-primary/5 group-focus-within:ring-2 group-focus-within:ring-primary/25 group-has-[:focus-visible]:outline-2 group-has-[:focus-visible]:outline-offset-2 group-has-[:focus-visible]:outline-primary',
+                invalid && 'border-destructive',
+                isActive &&
+                  invalid &&
+                  'group-focus-within:ring-2 group-focus-within:ring-destructive/25 group-has-[:focus-visible]:outline-2 group-has-[:focus-visible]:outline-offset-2 group-has-[:focus-visible]:outline-destructive',
+                disabled && 'opacity-60',
+              )}
+            >
+              {code[index] ? (
+                code[index]
+              ) : isActive && !disabled ? (
+                <span className="hidden h-5 w-px animate-pulse bg-foreground group-focus-within:block" />
+              ) : (
+                ''
+              )}
+            </span>
+          );
+        })}
       </div>
     </div>
   );

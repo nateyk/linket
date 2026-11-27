@@ -29,6 +29,7 @@ export function BiolinkRenderer({
       profileConfig={profileConfig}
       enableLinkAnimations
       showAds={!preview}
+      isPreview={preview}
       previewSection={previewSection}
     />
   );

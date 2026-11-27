@@ -22,6 +22,7 @@ type BiolinkThemeVariables = CSSProperties & {
   '--biolink-accent': string;
   '--biolink-accent-foreground': string;
   '--biolink-focus': string;
+  '--biolink-positive'?: string;
   // Site token remap for painted stores. Primitives that still paint with
   // dashboard tokens read these so they resolve inside the buyer world.
   '--be-foreground'?: string;
@@ -44,6 +45,7 @@ type BiolinkThemeVariables = CSSProperties & {
 
 type BiolinkRadiusVariables = CSSProperties & {
   '--be-radius-button': string;
+  '--be-radius-badge': string;
   '--be-radius-input': string;
   '--be-radius-card': string;
   '--be-radius-card-sm': string;
@@ -52,6 +54,7 @@ type BiolinkRadiusVariables = CSSProperties & {
 
 type BiolinkRadiusScale = {
   button: string;
+  badge: string;
   input: string;
   card: string;
   cardSm: string;
@@ -60,29 +63,24 @@ type BiolinkRadiusScale = {
 
 /**
  * The appearance editor's "Corner roundness" choice is the storefront's radius
- * dimension. One selection remaps every rounded surface of the public page the
- * same way the dashboard's `radius-*` theme utilities do.
+ * dimension. One selection remaps every rounded surface of the public page so
+ * cards, avatar, buttons, navigation, and badges move together in four
+ * clearly distinct steps (`Square` < `Round` < `Rounder` < `Full`).
  *
  * Two rules hold the scale together:
  *
- * - **Surfaces share one radius.** `card` and `card-sm` are deliberately equal,
- *   so the creator card (which rounds itself with `rounded-card`) and everything
- *   that rounds with `rounded-card-sm` (the About panel, badges, the editor's
- *   cover and avatar previews) can never drift apart — one number, whichever
- *   token a component happens to reach for. `card-xs` stays a step tighter for
- *   media nested inside a framed slot.
- * - **Controls stay crisp.** Buttons keep the control-scale value the selector
- *   previews; fields sit between the two.
+ * - **Surfaces share one radius.** `card` and `card-sm` are equal so the
+ *   creator card, About panel, product/service cards, and avatar share one
+ *   surface radius at each step (until `Full`, where the avatar becomes a true
+ *   circle while cards hold at `32px`).
+ * - **Controls & badges stay below pill until `Full`.** Buttons/navs step
+ *   `0 -> 6px -> 12px -> 9999px` and compact skill/status badges step
+ *   `0 -> 4px -> 8px -> 9999px` so `Rounder` reads unmistakably softer than
+ *   `Round` without collapsing into `Full` capsules on shorter chips or bars.
  *
- * Round (`rounded-sm`) is the calm step: cards render at 8px
- * (`--radius-lg`), exactly the admin theme's Round (`.radius-sm`) card, with
- * buttons at 4px and fields at 12px. Each step up grows every surface together
- * (`rounded-lg`: 8px / 16px / 24px; `rounded-full`: capsule controls, 24px
- * fields, 32px cards).
- *
- * `systemRadiusScale` is what the page renders before the creator picks a
- * roundness — the core UI tokens themselves, so an untouched Appearance tab
- * renders exactly what it did before the knob existed.
+ * Unset roundness defaults to `rounded-sm` (`Round`), matching the Appearance
+ * editor's default selected option so initial storefronts never mix pill controls
+ * with squircle avatars.
  */
 const radiusScales: Record<
   NonNullable<BiolinkAppearanceConfigBtnConfig['radius']>,
@@ -90,40 +88,36 @@ const radiusScales: Record<
 > = {
   'rounded-none': {
     button: '0',
+    badge: '0',
     input: '0',
     card: '0',
     cardSm: '0',
     cardXs: '0',
   },
   'rounded-sm': {
-    button: '4px',
-    input: '12px',
+    button: '6px',
+    badge: '4px',
+    input: '6px',
     card: '8px',
     cardSm: '8px',
-    cardXs: '8px',
+    cardXs: '6px',
   },
   'rounded-lg': {
-    button: '8px',
-    input: '16px',
-    card: '24px',
-    cardSm: '24px',
+    button: '12px',
+    badge: '8px',
+    input: '12px',
+    card: '18px',
+    cardSm: '18px',
     cardXs: '12px',
   },
   'rounded-full': {
     button: '9999px',
-    input: '24px',
+    badge: '9999px',
+    input: '20px',
     card: '32px',
     cardSm: '32px',
     cardXs: '16px',
   },
-};
-
-const systemRadiusScale: BiolinkRadiusScale = {
-  button: 'var(--radius-3xl)',
-  input: 'var(--radius-xl)',
-  card: 'var(--radius-3xl)',
-  cardSm: 'var(--radius-2xl)',
-  cardXs: 'var(--radius-xl)',
 };
 
 /**
@@ -140,10 +134,11 @@ export const biolinkSurfaceEdgeClassName =
   'border-0 ring-1 ring-(color:--biolink-border)';
 
 /**
- * Segmented Tabs chrome for the public store (Products/About + product-page
- * sections). Roundness follows Appearance → Corner roundness via
- * `rounded-button`; active fill/label/shadow follow Buttons tokens so the
- * strip stays in step with View / Buy / bottom-nav actions.
+ * Segmented Tabs chrome for the public store (Products/Services/About +
+ * product/service pages). The outer track uses `rounded-card` so it stays
+ * concentric with the `rounded-button` active pill and tabs across all four
+ * Corner roundness steps (`Square` 0/0, `Round` 8/6, `Rounder` 18/12,
+ * `Full` 32/pill); active fill/label/shadow follow Buttons tokens.
  *
  * Soft / Strong / Hard shadows need inset room inside the track — the same
  * soft-pop offset the Appearance button preview uses — otherwise the cast
@@ -171,12 +166,12 @@ export function resolveBiolinkSegmentedTabsAppearance(
 
   return {
     listClassName: cn(
-      // Solid track (not washed muted) so the active pill + soft-pop cast
-      // read like the dashboard Appearance preview / soft-pop segmented control.
+      // Translucent frosted surface track + blur so painted gradients/images
+      // glow through behind the active pill while keeping labels legible.
       // Must beat Tabs.List's `group-data-horizontal/tabs:h-9` — plain `h-auto`
       // does not conflict with that variant in twMerge, and a fixed 36px height
       // crushes the soft-pop inset padding below.
-      'h-auto max-w-full justify-start gap-1 overflow-visible rounded-button bg-[var(--biolink-surface-strong)] text-[var(--biolink-muted-text)] group-data-horizontal/tabs:h-auto',
+      'h-auto max-w-full justify-start gap-1 overflow-visible rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] backdrop-blur-xl backdrop-saturate-150 group-data-horizontal/tabs:h-auto',
       // p-2 (8px) contains the Strong/Hard cast (≤7px) on every side — the
       // previous pe-3/pb-3 inset the pill toward the top-left. No-shadow keeps
       // the tighter p-1.
@@ -197,11 +192,12 @@ export function resolveBiolinkSegmentedTabsAppearance(
 export function resolveBiolinkRadiusVariables(
   appearance?: BiolinkAppearanceConfig | null,
 ): BiolinkRadiusVariables {
-  const setting = appearance?.btnConfig?.radius;
-  const scale = (setting && radiusScales[setting]) || systemRadiusScale;
+  const setting = appearance?.btnConfig?.radius ?? 'rounded-sm';
+  const scale = radiusScales[setting] ?? radiusScales['rounded-sm'];
 
   return {
     '--be-radius-button': scale.button,
+    '--be-radius-badge': scale.badge,
     '--be-radius-input': scale.input,
     '--be-radius-card': scale.card,
     '--be-radius-card-sm': scale.cardSm,
@@ -334,7 +330,10 @@ export function resolveBiolinkButtonAppearance(
     '--biolink-button-background': backgrounds.base,
     '--biolink-button-hover': backgrounds.hover,
     '--biolink-button-pressed': backgrounds.pressed,
-    '--biolink-button-border': variant === 'glass' ? 'transparent' : face,
+    '--biolink-button-border':
+      variant === 'glass'
+        ? `color-mix(in srgb, ${label} 18%, transparent)`
+        : face,
     '--biolink-button-text': label,
     '--biolink-button-focus': focus,
     boxShadow: availableShadows[shadow],
@@ -433,18 +432,16 @@ const containerRadiusLength: Record<
 };
 
 /**
- * Container radius for a profile surface. Falls back to the core UI card token
- * when the creator hasn't picked a roundness, so an untouched Appearance tab
- * keeps rendering the theme default.
+ * Container radius for a profile surface. Falls back to `rounded-sm` (`Round`)
+ * when the creator hasn't picked a roundness, matching the Appearance editor
+ * default and keeping cards, avatar, buttons, and badges aligned.
  */
 export function resolveBiolinkContainerRadius(
   appearance?: BiolinkAppearanceConfig | null,
 ): ResolvedBiolinkContainerRadius {
-  const setting = appearance?.btnConfig?.radius;
-  const className =
-    (setting && containerRadiusForSetting[setting]) || 'rounded-card';
-  const avatarClassName =
-    (setting && avatarRadiusForSetting[setting]) || className;
+  const setting = appearance?.btnConfig?.radius ?? 'rounded-sm';
+  const className = containerRadiusForSetting[setting] ?? 'rounded-card-sm';
+  const avatarClassName = avatarRadiusForSetting[setting] ?? className;
   const radius = resolveBiolinkRadiusVariables(appearance);
 
   return {
@@ -479,6 +476,7 @@ export function resolveBiolinkThemeVariables(
       '--biolink-accent': 'var(--color-primary)',
       '--biolink-accent-foreground': 'var(--color-primary-foreground)',
       '--biolink-focus': 'var(--be-primary)',
+      '--biolink-positive': 'var(--color-positive)',
     };
   }
 
@@ -494,13 +492,16 @@ export function resolveBiolinkThemeVariables(
     ...radius,
     '--biolink-text': background.foreground,
     '--biolink-muted-text': mutedText,
-    '--biolink-surface': `color-mix(in srgb, ${surfaceBase} 96%, transparent)`,
-    '--biolink-surface-strong': `color-mix(in srgb, ${surfaceBase} 99%, transparent)`,
-    '--biolink-surface-muted': `color-mix(in srgb, ${surfaceBase} 90%, transparent)`,
-    '--biolink-border': `color-mix(in srgb, ${background.foreground} 24%, transparent)`,
+    '--biolink-surface': `color-mix(in srgb, ${surfaceBase} 78%, transparent)`,
+    '--biolink-surface-strong': `color-mix(in srgb, ${surfaceBase} 88%, transparent)`,
+    '--biolink-surface-muted': `color-mix(in srgb, ${surfaceBase} 58%, transparent)`,
+    '--biolink-border': `color-mix(in srgb, ${background.foreground} 18%, transparent)`,
     '--biolink-accent': accent.accent,
     '--biolink-accent-foreground': accent.accentForeground,
     '--biolink-focus': accent.focus,
+    '--biolink-positive': isLightSurface(surfaceColor)
+      ? 'oklch(0.49 0.192 149.58)'
+      : 'oklch(0.7227 0.192 149.58)',
     // Claim the whole site token set for the painted store: primitives that
     // still paint with dashboard tokens (outline buttons, accordion
     // chevrons, badges, hover washes) would otherwise flip under a dark OS
@@ -692,7 +693,7 @@ interface BiolinkBackgroundContext {
  * solid backgrounds keep today's verbatim behavior.
  */
 function resolveBackgroundContext(
-  bgConfig?: BiolinkAppearanceConfigBgConfig | null,
+  bgConfig?: (BiolinkAppearanceConfigBgConfig & {patternFrontColor?: string}) | null,
 ): BiolinkBackgroundContext {
   let sample: Color | null = null;
   if (bgConfig?.backgroundImage) {
@@ -700,7 +701,19 @@ function resolveBackgroundContext(
     sample = average ? parseColor(average) : null;
   }
   if (!sample && bgConfig?.backgroundColor) {
-    sample = parseColor(bgConfig.backgroundColor);
+    const back = parseColor(bgConfig.backgroundColor);
+    const patternFront = bgConfig.patternFrontColor
+      ? parseColor(bgConfig.patternFrontColor)
+      : null;
+    if (back && patternFront) {
+      // Blend pattern foreground over base color using its alpha channel so
+      // high-contrast pattern presets derive readable text & card surfaces.
+      const frontAlpha = Math.max(0, Math.min(1, patternFront.alpha ?? 1));
+      const effectiveMix = frontAlpha * 0.5;
+      sample = patternFront.mix(back, 1 - effectiveMix, {space: 'srgb'});
+    } else {
+      sample = back;
+    }
   }
 
   const explicitColor = bgConfig?.color || null;

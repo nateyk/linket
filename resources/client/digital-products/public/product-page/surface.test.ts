@@ -34,7 +34,9 @@ const reviews = read(
 );
 
 describe('product page surface chrome', () => {
-  test('reuses the storefront edge token and Appearance soft-pop var', () => {
+  test('reuses the storefront glassmorphism surface, edge token, and Appearance soft-pop var', () => {
+    expect(surface).toContain('var(--biolink-surface,');
+    expect(surface).toContain('backdrop-blur-xl backdrop-saturate-150');
     expect(surface).toContain('biolinkSurfaceEdgeClassName');
     expect(surface).toContain(
       '[box-shadow:var(--biolink-surface-shadow,none)]',
@@ -57,6 +59,7 @@ describe('product page tabs', () => {
     expect(tabs).toContain('resolveBiolinkSegmentedTabsAppearance');
     expect(tabs).toContain('style={segmented.style}');
     expect(tabs).toContain('appearance');
+    expect(tabs).toContain('-mx-1');
     expect(tabs).not.toContain('variant="line"');
     expect(tabs).not.toContain('rounded-full');
   });

@@ -22,7 +22,7 @@ export function ProductPreviewDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="sm:max-w-2xl">
+        <Dialog.Content className="gap-3 p-4 sm:max-w-lg sm:gap-4 sm:p-5">
           <Dialog.Header>
             <Dialog.Title>
               <Trans message="Customer preview" />
@@ -31,10 +31,10 @@ export function ProductPreviewDialog({
               <Trans message="Preview only. Buying and downloading are unavailable here." />
             </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body className="min-h-0 max-h-[70dvh] overflow-y-auto">
+          <Dialog.Body className="-mx-4 max-h-[70dvh] min-h-0 overflow-y-auto px-4 sm:-mx-5 sm:px-5">
             {children}
           </Dialog.Body>
-          <Dialog.Footer>
+          <Dialog.Footer className="-mx-4 -mb-4 px-4 pb-4 sm:-mx-5 sm:-mb-5 sm:px-5 sm:pb-5">
             <Dialog.CloseButton render={<Button variant="outline" />}>
               <Trans message="Close" />
             </Dialog.CloseButton>

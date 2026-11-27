@@ -116,10 +116,10 @@ export function Component() {
                   }
                 }}
               >
-                <div className="w-full px-4 py-2 sm:px-6 lg:px-8">
+                <div className="w-full px-4 sm:px-6 lg:px-8">
                   <Tabs.List
-                    variant="default"
-                    className="w-full justify-start rounded-card-sm"
+                    variant="line"
+                    className="w-full justify-start gap-2"
                     activateOnFocus
                   >
                     <Tabs.LinkTab value="content" to={baseUrl} replace>
@@ -517,7 +517,7 @@ function MoreActionsButton() {
               size="icon-sm"
               variant="outline"
               aria-label={trans({message: 'More actions'})}
-              className="ml-auto"
+              className="ms-auto"
             />
           }
         >
@@ -666,7 +666,7 @@ function CreatorProfileUpgrade() {
 export function BiolinkItemList() {
   const content = useBiolinkEditorStore(s => s.content);
   return (
-    <>
+    <div className="flex flex-col gap-3">
       {content.map(contentItem => {
         const ContentItem =
           contentItem.model_type === 'biolinkWidget'
@@ -679,7 +679,7 @@ export function BiolinkItemList() {
           />
         );
       })}
-    </>
+    </div>
   );
 }
 

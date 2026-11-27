@@ -385,16 +385,16 @@ export function ProductAiCopyReview({
 
   return (
     <section
-      className="flex min-w-0 flex-col gap-3 rounded-card-sm border border-border bg-muted/20 p-3 sm:p-4"
+      className="flex min-w-0 flex-col gap-3 rounded-card-sm border border-border/75 bg-muted/20 p-3 sm:p-4"
       aria-labelledby={titleId}
       aria-busy={busy}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="flex flex-col gap-0.5">
           <h3 id={titleId} className="text-sm font-medium">
             <Trans message="AI writing assistant" />
           </h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             <Trans message="Review and edit a private suggestion before using it." />
           </p>
         </div>
@@ -436,7 +436,7 @@ export function ProductAiCopyReview({
       )}
 
       {draft && (
-        <div className="flex flex-col gap-3 border-t border-border pt-3">
+        <div className="flex flex-col gap-3 border-t border-border/60 pt-3">
           <div>
             <p className="text-xs font-medium text-muted-foreground">
               <Trans message="Suggested title (preview only)" />

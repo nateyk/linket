@@ -23,7 +23,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
 import {cn} from '@ui/utils/cn';
-import {ReactElement, useEffect} from 'react';
+import {ReactElement, useEffect, useMemo} from 'react';
 import {Link} from 'react-router';
 
 interface BiolinkLayoutProps {
@@ -33,6 +33,7 @@ interface BiolinkLayoutProps {
   className?: string;
   enableLinkAnimations?: boolean;
   showAds?: boolean;
+  isPreview?: boolean;
   profileConfig?: CreatorProfileConfig;
   /** Section the editor's current tab maps to; only set in preview mode. */
   previewSection?: StorePreviewSection;
@@ -44,6 +45,7 @@ export function BiolinkLayout({
   content,
   enableLinkAnimations,
   showAds,
+  isPreview = false,
   profileConfig,
   previewSection,
 }: BiolinkLayoutProps) {
@@ -53,6 +55,11 @@ export function BiolinkLayout({
   if (!content) {
     content = biolink.content || [];
   }
+
+  const publicAppearanceStyle = useMemo(
+    () => resolveBiolinkPublicAppearanceStyle(appearance),
+    [appearance],
+  );
 
   useEffect(() => {
     const id = 'biolink-fonts';
@@ -92,7 +99,7 @@ export function BiolinkLayout({
             the sticky CreatorCard inside. */}
         <div
           className="relative z-2 min-h-screen overflow-x-clip"
-          style={resolveBiolinkPublicAppearanceStyle(appearance)}
+          style={publicAppearanceStyle}
         >
           {isCreatorProfileBiolink(biolink) ? (
             <CreatorProfileLayout
@@ -101,6 +108,7 @@ export function BiolinkLayout({
               content={content}
               profileConfig={profileConfig}
               showAds={showAds}
+              isPreview={isPreview}
               previewSection={previewSection}
             />
           ) : (
@@ -157,7 +165,7 @@ function SidebarLayout({
       >
         <section
           className={cn(
-            'min-w-0 overflow-hidden rounded-card bg-[var(--biolink-surface)] p-4 text-[var(--biolink-text)] backdrop-blur-sm sm:p-5',
+            'min-w-0 overflow-hidden rounded-card bg-[var(--biolink-surface)] p-4 text-[var(--biolink-text)] backdrop-blur-xl backdrop-saturate-150 sm:p-5',
             biolinkSurfaceEdgeClassName,
           )}
           aria-label="Biolink profile and links"

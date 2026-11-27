@@ -93,6 +93,14 @@ const createBiolinkEditorStore = (biolink: StoreBiolink) => {
     appearance: {
       ...defaultAppearance,
       ...(biolink.appearance?.config ?? {}),
+      bgConfig: {
+        ...defaultAppearance.bgConfig,
+        ...(biolink.appearance?.config?.bgConfig ?? {}),
+      },
+      btnConfig: {
+        ...defaultAppearance.btnConfig,
+        ...(biolink.appearance?.config?.btnConfig ?? {}),
+      },
       layout: 'profile-sidebar',
     },
     appearanceIsDirty: false,
@@ -144,7 +152,9 @@ const createBiolinkEditorStore = (biolink: StoreBiolink) => {
       });
     },
     setProfileIsDirty: (isDirty: boolean) => {
-      set(() => ({profileIsDirty: isDirty}));
+      set(state =>
+        state.profileIsDirty === isDirty ? state : {profileIsDirty: isDirty},
+      );
     },
     markProfileSaved: (config: CreatorProfileConfig) => {
       set(() => ({
@@ -165,10 +175,16 @@ const createBiolinkEditorStore = (biolink: StoreBiolink) => {
       }));
     },
     setFeaturedProductIds: (ids: number[]) => {
-      set(() => ({featuredProductIds: ids}));
+      set(state =>
+        sameNumberArrays(state.featuredProductIds, ids)
+          ? state
+          : {featuredProductIds: ids},
+      );
     },
     setOpenSection: (section: CreatorProfileSection | null) => {
-      set(() => ({openSection: section}));
+      set(state =>
+        state.openSection === section ? state : {openSection: section},
+      );
     },
     setSaveError: (error: StoreSaveError) => {
       set(() => ({saveError: error}));
@@ -202,12 +218,54 @@ const createBiolinkEditorStore = (biolink: StoreBiolink) => {
       // Only stores the payload. Dirtiness is owned by setProfileIsDirty,
       // because the form sync pushes on every change — including pushes
       // that carry a clean, reverted form back to the preview (A-05).
-      set(() => ({
-        profileConfig: payload,
-      }));
+      set(state =>
+        sameProfileConfigs(state.profileConfig, payload)
+          ? state
+          : {profileConfig: payload},
+      );
     },
   }));
 };
+
+function sameNumberArrays(first: number[], second: number[]): boolean {
+  if (first.length !== second.length) return false;
+  return first.every((value, index) => value === second[index]);
+}
+
+function sameProfileConfigs(
+  first: CreatorProfileConfig,
+  second: CreatorProfileConfig,
+): boolean {
+  if (first === second) return true;
+  if (
+    first.display_name !== second.display_name ||
+    first.profile_title !== second.profile_title ||
+    first.headline !== second.headline ||
+    first.bio !== second.bio ||
+    first.about_html !== second.about_html ||
+    first.avatar_url !== second.avatar_url ||
+    first.cover_url !== second.cover_url ||
+    first.available_for_work !== second.available_for_work ||
+    first.follow_url !== second.follow_url ||
+    first.contact_url !== second.contact_url
+  ) {
+    return false;
+  }
+
+  if (first.skills.length !== second.skills.length) return false;
+  for (let i = 0; i < first.skills.length; i++) {
+    if (first.skills[i] !== second.skills[i]) return false;
+  }
+
+  const firstSocials = Object.entries(first.social_links);
+  const secondSocials = Object.entries(second.social_links);
+  if (firstSocials.length !== secondSocials.length) return false;
+  for (const [key, value] of firstSocials) {
+    if (second.social_links[key] !== value) return false;
+  }
+
+  return true;
+}
 
 type BiolinkEditorStore = ReturnType<typeof createBiolinkEditorStore>;
 const BiolinkEditorStoreContext = createContext<BiolinkEditorStore>(

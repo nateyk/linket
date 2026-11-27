@@ -3,6 +3,8 @@ import {resolveBiolinkButtonAppearance} from '@app/short-links/renderers/biolink
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
+import {Progress} from '@shadcn/progress/progress';
+import {Rating} from '@shadcn/rating';
 import {Separator} from '@shadcn/separator';
 import {apiClient} from '@common/http/query-client';
 import {FormattedDate} from '@ui/i18n/formatted-date';
@@ -143,12 +145,7 @@ export function ProductReviewsBlock({
         </h2>
         {(loading || total > 0) && (
           <div className="mt-2 flex items-center gap-3">
-            {!loading && (
-              <RatingStars
-                value={Math.round(average)}
-                starClassName="size-5"
-              />
-            )}
+            {!loading && <Rating rating={average} size="md" />}
             <p className="text-sm text-[var(--biolink-muted-text)]">
               {loading ? (
                 '—'
@@ -167,16 +164,18 @@ export function ProductReviewsBlock({
         <div className="flex flex-col gap-1.5">
           {[5, 4, 3, 2, 1].map(star => (
             <div key={star} className="flex items-center gap-2 text-xs">
-              <span className="flex w-6 items-center justify-end gap-0.5 text-[var(--biolink-muted-text)]">
+              <span className="flex w-6 items-center justify-end gap-0.5 text-[var(--biolink-muted-text)] tabular-nums">
                 {star}
                 <StarIcon className="size-3 fill-current text-warning" />
               </span>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--biolink-surface-strong)]">
-                <div
-                  className="h-full rounded-full bg-warning"
-                  style={{width: `${percentages[star] ?? 0}%`}}
-                />
-              </div>
+              <Progress.Root
+                value={percentages[star] ?? 0}
+                className="flex-1 gap-0"
+              >
+                <Progress.Track className="h-1.5 bg-[var(--biolink-surface-strong)]">
+                  <Progress.Indicator className="bg-warning" />
+                </Progress.Track>
+              </Progress.Root>
               <span className="w-4 text-end text-[var(--biolink-muted-text)] tabular-nums">
                 {counts[star] ?? 0}
               </span>

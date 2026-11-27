@@ -34,7 +34,12 @@ export function ColorBackgroundTab({
     <ColorField
       label={<Trans message="Background color" />}
       value={colorValue}
-      onChange={newColor => onChange?.({backgroundColor: newColor})}
+      onChange={newColor =>
+        onChange?.({
+          backgroundColor: newColor,
+          ...(value?.color ? {color: value.color} : {}),
+        })
+      }
     />
   );
 }

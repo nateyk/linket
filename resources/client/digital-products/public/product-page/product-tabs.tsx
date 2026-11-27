@@ -32,7 +32,7 @@ export function ProductTabs({
     <Tabs.Root defaultValue={sections[0].value} className="min-w-0 gap-4">
       {/* Padding (not bare overflow-x) keeps soft-pop tab shadows inside the
           scrollport — overflow-x:auto forces y-clip that would shear Hard. */}
-      <div className="sticky top-0 z-20 flex snap-x snap-mandatory scroll-px-1 scrollbar-none overflow-x-auto overscroll-x-contain px-1 pt-1 pb-3">
+      <div className="sticky top-0 z-20 -mx-1 flex snap-x snap-mandatory scroll-px-1 scrollbar-none overflow-x-auto overscroll-x-contain px-1 pt-1 pb-3">
         <Tabs.List
           aria-label={trans({message: 'Product information'})}
           style={segmented.style}

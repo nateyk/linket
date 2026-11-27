@@ -33,7 +33,10 @@ export function AuthLayout({heading, children, message}: AuthPageProps) {
           alt=""
         />
       </Link>
-      <div className="mx-auto w-full max-w-110 rounded-card bg-card px-10 pt-10 pb-8 shadow-sm md:shadow-xl">
+      <div
+        data-slot="auth-card"
+        className="mx-auto w-full max-w-110 rounded-card bg-card px-10 pt-10 pb-8 shadow-sm md:shadow-xl"
+      >
         {heading && <h1 className="mb-5 text-xl">{heading}</h1>}
         {children}
       </div>

@@ -38,12 +38,12 @@ export function CreateProductDialog({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="gap-4 sm:max-w-xl">
+        <Dialog.Content className="gap-3 p-4 sm:max-w-xl sm:gap-4 sm:p-5">
           <Dialog.Header>
             <div className="flex items-start gap-3 pe-8">
               <span
                 aria-hidden="true"
-                className="flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-primary/10 text-primary"
+                className="flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-primary/10 text-primary ring-1 ring-primary/15"
               >
                 <PackagePlusIcon className="size-4.5" />
               </span>
@@ -57,13 +57,13 @@ export function CreateProductDialog({
               </div>
             </div>
           </Dialog.Header>
-          <Dialog.Body className="min-h-0 overflow-y-auto pt-1">
+          <Dialog.Body className="-mx-4 min-h-0 overflow-y-auto px-4 pt-1 sm:-mx-5 sm:px-5">
             <ProductTypePicker
               value={selectedType}
               onValueChange={setSelectedType}
             />
           </Dialog.Body>
-          <Dialog.Footer className="pt-2 max-sm:flex-row max-sm:justify-between sm:justify-between">
+          <Dialog.Footer className="-mx-4 -mb-4 px-4 pt-2 pb-4 max-sm:flex-row max-sm:justify-between sm:-mx-5 sm:-mb-5 sm:justify-between sm:px-5 sm:pb-5">
             <Dialog.CloseButton
               render={<Button variant="outline" className="min-h-10" />}
             >

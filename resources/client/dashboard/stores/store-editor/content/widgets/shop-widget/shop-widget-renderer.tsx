@@ -163,7 +163,7 @@ export function ShopWidgetRenderer({
     : {'aria-label': trans(message('Products'))};
 
   const emptySurfaceClassName = cn(
-    'bg-[var(--biolink-surface)] py-10 text-[var(--biolink-text)]',
+    'bg-[var(--biolink-surface)] py-10 text-[var(--biolink-text)] backdrop-blur-xl backdrop-saturate-150',
     biolinkSurfaceEdgeClassName,
   );
 
@@ -293,7 +293,7 @@ export function ShopWidgetRenderer({
               }
               classNames={{
                 root: cn(
-                  'bg-[var(--biolink-surface)] text-[var(--biolink-text)]',
+                  'bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-xl backdrop-saturate-150',
                   biolinkSurfaceEdgeClassName,
                 ),
                 // Keep ProductCard's default aspect-video — portrait 4/5

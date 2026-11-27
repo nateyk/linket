@@ -13,7 +13,7 @@
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {AxiosError} from 'axios';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {beforeAll, beforeEach, expect, test, vi} from 'vitest';
@@ -518,4 +518,38 @@ test('description editor is bordered as a field, not as a nested card', async ()
   expect(className).toContain('border-input');
   expect(className).not.toContain('border-border');
   expect(className).not.toContain('rounded-card-sm');
+});
+
+test('renders accessible review status badges for non-draft products and omits them for drafts', async () => {
+  const cases: Array<{
+    status: string;
+    has_pending_update?: boolean;
+    label: string | null;
+  }> = [
+    {status: 'approved', label: 'Approved'},
+    {
+      status: 'approved',
+      has_pending_update: true,
+      label: 'Approved · update under review',
+    },
+    {status: 'pending_approval', label: 'In review'},
+    {status: 'rejected', label: 'Needs changes'},
+    {status: 'archived', label: 'Archived'},
+    {status: 'draft', label: null},
+  ];
+
+  for (const item of cases) {
+    h.reset();
+    mount();
+    await loadProduct({...serverProduct, ...item});
+    if (item.label) {
+      const badge = document.querySelector(`[aria-label="${item.label}"]`);
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain(item.label);
+    } else {
+      expect(document.querySelector('[aria-label="Approved"]')).toBeNull();
+      expect(document.querySelector('[aria-label="In review"]')).toBeNull();
+    }
+    cleanup();
+  }
 });

@@ -8,7 +8,7 @@ export type CreatorProfileForm = Omit<CreatorProfileConfig, 'skills'> & {
 
 /** Max characters for the short "bio" field, enforced by the input and shown
  * in the live character counter (A-18). */
-export const BIO_MAX_LENGTH = 600;
+export const BIO_MAX_LENGTH = 150;
 
 /**
  * TipTap re-serializes the normalized About HTML slightly differently than

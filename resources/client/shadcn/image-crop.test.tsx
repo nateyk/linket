@@ -26,10 +26,14 @@ describe('crop window math', () => {
       height: 740 / (16 / 9),
     });
   });
-  test('coverZoomForCrop pre-zooms portrait media to fill the window', () => {
-    const zoom = coverZoomForCrop(900, 1600, 740, 460, 740);
-    expect(zoom).toBeGreaterThan(1);
-    expect(zoom).toBeLessThanOrEqual(3);
+  test('coverZoomForCrop pre-zooms both portrait and ultra-wide media to fill the crop box', () => {
+    const portraitZoom = coverZoomForCrop(900, 1600, 740, 460, 740, 460);
+    expect(portraitZoom).toBeGreaterThan(1);
+    expect(portraitZoom).toBeLessThanOrEqual(3);
+
+    const ultraWideZoom = coverZoomForCrop(2400, 600, 740, 250, 732, 244);
+    expect(ultraWideZoom).toBeGreaterThan(1);
+    expect(ultraWideZoom).toBeLessThanOrEqual(3);
   });
   test('coverZoomForCrop stays at 1 for landscape media', () => {
     expect(coverZoomForCrop(1600, 900, 740, 460, 740)).toBe(1);

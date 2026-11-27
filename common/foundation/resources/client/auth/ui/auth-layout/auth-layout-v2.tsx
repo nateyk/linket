@@ -48,8 +48,8 @@ export function AuthLayoutV2({
               {topAction}
             </div>
           ) : null}
-          <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-6 py-10 sm:px-10 sm:py-12">
-            <div className="w-full max-w-sm">{children}</div>
+          <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-6 py-8 sm:px-10 sm:py-12">
+            <div className="flex w-full max-w-sm flex-col gap-6">{children}</div>
           </div>
           <footer className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-6 pb-6 text-xs text-muted-foreground sm:px-10 sm:pb-8">
             <span>© {new Date().getFullYear()} {branding.site_name}</span>

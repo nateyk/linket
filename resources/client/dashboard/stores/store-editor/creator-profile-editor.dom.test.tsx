@@ -381,6 +381,8 @@ test('content sections use compact, theme-aware collapsible cards', () => {
     expect(section.classList.contains('rounded-card-sm')).toBe(true);
     expect(section.classList.contains('border-border')).toBe(true);
     expect(section.classList.contains('bg-card')).toBe(true);
+    expect(section.classList.contains('data-open:shadow-bottom')).toBe(true);
+    expect(section.classList.contains('data-open:shadow')).toBe(false);
   }
 });
 

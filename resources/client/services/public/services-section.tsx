@@ -56,7 +56,7 @@ export function ServicesSection({
   }, [biolink.id]);
 
   const emptySurfaceClassName = cn(
-    'bg-[var(--biolink-surface)] py-10 text-[var(--biolink-text)]',
+    'bg-[var(--biolink-surface)] py-10 text-[var(--biolink-text)] backdrop-blur-xl backdrop-saturate-150',
     biolinkSurfaceEdgeClassName,
   );
 
