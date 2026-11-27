@@ -531,6 +531,7 @@ describe('product editor compact breadcrumb header', () => {
     expect(source).toContain('max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1');
     expect(source).toContain('max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden');
     expect(source).toContain('product.has_pending_update === true');
+    expect(source).toContain("aria-label={trans({message: 'Approved'})}");
     expect(source).not.toContain('<ProductStatus');
     expect(source).toContain('ms-auto flex');
   });

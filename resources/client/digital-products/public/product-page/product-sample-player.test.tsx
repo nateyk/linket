@@ -223,5 +223,77 @@ describe('pdf sample viewer', () => {
 
     fireEvent.click(screen.getByRole('button', {name: 'Fit to width'}));
     expect(screen.getByText('100%')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Zoom out'}));
+    expect(screen.getByText('75%')).toBeTruthy();
+
+    const region = screen.getByRole('region', {name: 'Page 2 of 3'});
+    fireEvent.keyDown(region, {key: 'ArrowRight'});
+    expect(screen.getByTestId('mock-pdf-page').getAttribute('data-page')).toBe('3');
+    fireEvent.keyDown(region, {key: 'PageUp'});
+    expect(screen.getByTestId('mock-pdf-page').getAttribute('data-page')).toBe('2');
+
+    const pageInput = screen.getByRole('textbox', {name: 'Page'}) as HTMLInputElement;
+    fireEvent.change(pageInput, {target: {value: '3'}});
+    fireEvent.blur(pageInput);
+    expect(screen.getByTestId('mock-pdf-page').getAttribute('data-page')).toBe('3');
+  });
+});
+
+describe('audio visualizer canvas', () => {
+  test('draws bars onto a 2d canvas context and responds to play/pause events', () => {
+    const playSpy = vi
+      .spyOn(HTMLMediaElement.prototype, 'play')
+      .mockImplementation(() => Promise.resolve());
+    const ctxMock = {
+      clearRect: vi.fn(),
+      beginPath: vi.fn(),
+      rect: vi.fn(),
+      roundRect: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 1,
+      lineJoin: 'round',
+      lineCap: 'round',
+      globalAlpha: 1,
+    } as unknown as CanvasRenderingContext2D;
+
+    const getContextSpy = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(ctxMock);
+    const widthSpy = vi
+      .spyOn(HTMLCanvasElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(300);
+    const heightSpy = vi
+      .spyOn(HTMLCanvasElement.prototype, 'clientHeight', 'get')
+      .mockReturnValue(40);
+
+    try {
+      render(
+        <ProductSamplePlayer samples={samples}>
+          <ProductSampleStage product={product} />
+        </ProductSamplePlayer>,
+      );
+
+      expect(ctxMock.roundRect).toHaveBeenCalled();
+      expect(ctxMock.fill).toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', {name: 'Play preview'}));
+      expect(playSpy).toHaveBeenCalled();
+      const audio = document.querySelector('audio')!;
+      fireEvent.play(audio);
+      expect(screen.getByRole('button', {name: 'Pause preview'})).toBeTruthy();
+      fireEvent.pause(audio);
+      expect(screen.getByRole('button', {name: 'Play preview'})).toBeTruthy();
+    } finally {
+      playSpy.mockRestore();
+      getContextSpy.mockRestore();
+      widthSpy.mockRestore();
+      heightSpy.mockRestore();
+    }
   });
 });

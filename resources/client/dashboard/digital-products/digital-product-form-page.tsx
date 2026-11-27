@@ -45,6 +45,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
+  CheckIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -96,6 +97,7 @@ import {
   type ProductSetupSection,
 } from './product-form-section';
 import {ProductPreview} from './product-preview';
+import {resolveProductReviewState} from './product-authoring-status';
 import {ProductAiCopyReview} from './product-ai-copy-review';
 import type {ProductType} from './product-type-picker';
 
@@ -995,6 +997,67 @@ function DigitalProductForm() {
             </span>
           )}
           <div className="mb-4 flex flex-col gap-3 empty:hidden">
+          {!loading && !unavailable && product && product.status !== 'draft' && (() => {
+            const reviewState = resolveProductReviewState(
+              product.status,
+              product.has_pending_update === true,
+            );
+            if (reviewState === 'approved') {
+              return (
+                <Badge
+                  variant="positive"
+                  aria-label={trans({message: 'Approved'})}
+                >
+                  <CheckIcon data-icon="inline-start" aria-hidden="true" />
+                  <Trans message="Approved" />
+                </Badge>
+              );
+            }
+            if (reviewState === 'approved_update_review') {
+              return (
+                <Badge
+                  variant="warning"
+                  aria-label={trans({message: 'Approved · update under review'})}
+                >
+                  <Clock3Icon data-icon="inline-start" aria-hidden="true" />
+                  <Trans message="Approved · update under review" />
+                </Badge>
+              );
+            }
+            if (reviewState === 'pending_approval') {
+              return (
+                <Badge
+                  variant="warning"
+                  aria-label={trans({message: 'In review'})}
+                >
+                  <Clock3Icon data-icon="inline-start" aria-hidden="true" />
+                  <Trans message="In review" />
+                </Badge>
+              );
+            }
+            if (reviewState === 'rejected') {
+              return (
+                <Badge
+                  variant="destructive"
+                  aria-label={trans({message: 'Needs changes'})}
+                >
+                  <TriangleAlertIcon data-icon="inline-start" aria-hidden="true" />
+                  <Trans message="Needs changes" />
+                </Badge>
+              );
+            }
+            if (reviewState === 'archived') {
+              return (
+                <Badge
+                  variant="secondary"
+                  aria-label={trans({message: 'Archived'})}
+                >
+                  <Trans message="Archived" />
+                </Badge>
+              );
+            }
+            return null;
+          })()}
           {!loading && !unavailable && product?.status === 'draft' && autoSaveState === 'failed' && dirty && (
             <Alert.Root variant="warning" role="alert" fillStyle="subtleFill">
               <TriangleAlertIcon aria-hidden="true" />
